@@ -22,4 +22,13 @@ class HealthControllerTest {
                 .andExpect(jsonPath("$.success").value(true))
                 .andExpect(jsonPath("$.data.status").value("UP"));
     }
+
+    @Test
+    void undefinedRouteShouldReturnFormatted404() throws Exception {
+        mockMvc.perform(get("/api/v1/invalid-route"))
+                .andExpect(status().isNotFound())
+                .andExpect(jsonPath("$.success").value(false))
+                .andExpect(jsonPath("$.status").value(404))
+                .andExpect(jsonPath("$.error").value("Not Found"));
+    }
 }

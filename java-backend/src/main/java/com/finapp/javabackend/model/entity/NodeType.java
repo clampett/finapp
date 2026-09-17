@@ -4,6 +4,9 @@ public enum NodeType {
     INCOME,
     CHECKING,
     SAVINGS,
+    EXPENSE,
+    ASSET,
+    DEPOSIT,
     DEBT,
     INVESTMENT
 }

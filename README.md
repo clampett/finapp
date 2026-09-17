@@ -5,13 +5,13 @@ A full-stack, microservice-based personal finance simulator that maps cash flow 
 
 ---
 
-## Executive Summary
+## Executive Summary (model to change as we populate the repository at our discretion)
 
 Traditional personal finance tools track historical spending through static pie charts and text ledgers. **Financial Cascade** models money as an interactive flow network. Users visually connect income streams, fixed expenses, debt obligations, and investment portfolios to run real-time Monte Carlo simulations based on live market yields and AI-driven strategies.
 
 ---
 
-## Key Features
+## Key Features (model to change as we populate the repository at our discretion)
 
 * **Interactive Node Canvas:** Drag, drop, and link income sources, accounts, and investment buckets on a D3.js-powered visual canvas.
 * **Monte Carlo Simulation Engine:** Runs 1,000-iteration probability projections using historical index fund returns (via Yahoo Finance API) to forecast 5, 10, and 30-year net worth trajectories.
@@ -20,7 +20,7 @@ Traditional personal finance tools track historical spending through static pie 
 
 ---
 
-## System Architecture
+## System Architecture (model to change as we populate the repository at our discretion)
 
 [ Frontend: HTML5 / CSS / JS / D3.js ]
 │
@@ -37,7 +37,7 @@ HTTP REST / JSON
 
 ---
 
-## Tech Stack & Team Responsibilities
+## Tech Stack & Team Responsibilities (model to change as we populate the repository at our discretion)
 
 | Subsystem | Core Technologies | Primary Focus & Team Allocation |
 | :--- | :--- | :--- |
@@ -48,7 +48,7 @@ HTTP REST / JSON
 
 ---
 
-## Repository Structure (model to change as we populate the repository)
+## Repository Structure (model to change as we populate the repository at our discretion)
 
 ```text
 finapp/

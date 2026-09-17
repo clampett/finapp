@@ -19,6 +19,11 @@
     </properties>
 
     <dependencies>
+        <dependency>
+            <groupId>com.h2database</groupId>
+            <artifactId>h2</artifactId>
+            <scope>test</scope>
+        </dependency>
         <!-- Web Starter (Includes REST, Spring MVC, Jackson) -->
         <dependency>
             <groupId>org.springframework.boot</groupId>

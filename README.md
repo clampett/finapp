@@ -7,7 +7,7 @@ A full-stack, microservice-based personal finance simulator that maps cash flow 
 
 ## Executive Summary (model to change as we populate the repository at our discretion)
 
-Traditional personal finance tools track historical spending through static pie charts and text ledgers. **Financial Cascade** models money as an interactive flow network. Users visually connect income streams, fixed expenses, debt obligations, and investment portfolios to run real-time Monte Carlo simulations based on live market yields and AI-driven strategies.
+Traditional personal finance tools track historical spending through static pie charts and text ledgers. **Our Dashboard Project** models money as an interactive flow network. Users visually connect income streams, fixed expenses, debt obligations, and investment portfolios to run real-time Monte Carlo simulations based on live market yields and AI-driven strategies.
 
 ---
 

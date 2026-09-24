@@ -19,22 +19,30 @@ public class NodeEdge {
     @JoinColumn(name = "target_node_id", nullable = false)
     private FinancialNode targetNode;
 
-    @Column(name = "percentage_flow", precision = 5, scale = 2)
+    private BigDecimal monthlyFixedFlow;
     private BigDecimal percentageFlow;
-
-    @Column(name = "fixed_amount_flow", precision = 12, scale = 2)
-    private BigDecimal fixedAmountFlow;
 
     public NodeEdge() {}
 
-    // Getters and Setters
+    public NodeEdge(FinancialNode sourceNode, FinancialNode targetNode, BigDecimal monthlyFixedFlow, BigDecimal percentageFlow) {
+        this.sourceNode = sourceNode;
+        this.targetNode = targetNode;
+        this.monthlyFixedFlow = monthlyFixedFlow;
+        this.percentageFlow = percentageFlow;
+    }
+
     public Long getId() { return id; }
+    public void setId(Long id) { this.id = id; }
+
     public FinancialNode getSourceNode() { return sourceNode; }
     public void setSourceNode(FinancialNode sourceNode) { this.sourceNode = sourceNode; }
+
     public FinancialNode getTargetNode() { return targetNode; }
     public void setTargetNode(FinancialNode targetNode) { this.targetNode = targetNode; }
+
+    public BigDecimal getMonthlyFixedFlow() { return monthlyFixedFlow; }
+    public void setMonthlyFixedFlow(BigDecimal monthlyFixedFlow) { this.monthlyFixedFlow = monthlyFixedFlow; }
+
     public BigDecimal getPercentageFlow() { return percentageFlow; }
     public void setPercentageFlow(BigDecimal percentageFlow) { this.percentageFlow = percentageFlow; }
-    public BigDecimal getFixedAmountFlow() { return fixedAmountFlow; }
-    public void setFixedAmountFlow(BigDecimal fixedAmountFlow) { this.fixedAmountFlow = fixedAmountFlow; }
 }

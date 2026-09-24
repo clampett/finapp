@@ -6,6 +6,6 @@ public record EdgeDTO(
         Long id,
         Long sourceNodeId,
         Long targetNodeId,
-        BigDecimal percentageFlow,
-        BigDecimal fixedAmountFlow
+        BigDecimal monthlyFixedFlow,
+        BigDecimal percentageFlow
 ) {}

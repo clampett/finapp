@@ -1,2 +1,28 @@
-@import "tailwindcss";
+@import 'tailwindcss';
 
+@config '../tailwind.config.js';
+
+@theme {
+  /* Custom theme variables can be added here if needed */
+}
+
+/* Custom styles can be added here */
+body {
+  @apply font-sans margin-0 padding-0 bg-gray-100;
+}
+
+#app {
+  @apply max-w-6xl mx-auto bg-white p-5 rounded-lg shadow-md;
+}
+
+h1 {
+  @apply text-center text-blue-900;
+}
+
+p {
+  @apply text-center text-gray-600;
+}
+
+#graph-container {
+  @apply w-full h-96 border border-gray-300 mt-5 bg-white;
+}

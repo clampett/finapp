@@ -7,7 +7,10 @@
     "doc": "docs"
   },
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "dev": "serve frontend/",
+    "build": "tailwindcss -i ./frontend/css/style.css -o ./frontend/dist/output.css --minify",
+    "build:watch": "tailwindcss -i ./frontend/css/style.css -o ./frontend/dist/output.css --minify --watch"
   },
   "repository": {
     "type": "git",
@@ -26,6 +29,8 @@
     "tailwindcss": "^4.3.3"
   },
   "dependencies": {
-    "d3": "^7.9.0"
+    "@tailwindcss/postcss": "^4.3.3",
+    "d3": "^7.9.0",
+    "serve": "^14.2.1"
   }
 }

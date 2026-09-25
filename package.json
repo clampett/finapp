@@ -1,0 +1,31 @@
+{
+  "name": "finapp",
+  "version": "1.0.0",
+  "description": "A full-stack, microservice-based personal finance simulator that maps cash flow as an interactive, node-based pipeline. Built to simulate multi-year net worth trajectories, compare debt payoff strategies, and deliver AI-driven financial optimization.",
+  "main": "index.js",
+  "directories": {
+    "doc": "docs"
+  },
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/clampett/finapp.git"
+  },
+  "keywords": [],
+  "type": "commonjs",
+  "bugs": {
+    "url": "https://github.com/clampett/finapp/issues"
+  },
+  "homepage": "https://github.com/clampett/finapp#readme",
+  "devDependencies": {
+    "autoprefixer": "^10.6.1",
+    "postcss": "^8.5.28",
+    "postcss-cli": "^12.0.0",
+    "tailwindcss": "^4.3.3"
+  },
+  "dependencies": {
+    "d3": "^7.9.0"
+  }
+}

@@ -11,35 +11,49 @@ public class FinancialNode {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "profile_id", nullable = false)
-    private FinancialProfile profile;
+    @Column(name = "profile_id")
+    private Long profileId;
 
-    @Column(nullable = false, length = 100)
+    public Long getProfileId() {
+        return profileId;
+    }
+
+    public void setProfileId(Long profileId) {
+        this.profileId = profileId;
+    }
+
+    @Column(nullable = false)
     private String name;
 
-    @Enumerated(EnumType.STRING)
-    @Column(name = "node_type", nullable = false, length = 30)
-    private NodeType nodeType;
+    @Column(nullable = false)
+    private String nodeType; // e.g. "INCOME", "CHECKING", "SAVINGS", "DEBT", "INVESTMENT"
 
-    @Column(name = "current_balance", precision = 12, scale = 2)
-    private BigDecimal currentBalance;
+    @Column(nullable = false)
+    private BigDecimal amountOrBalance;
 
-    @Column(name = "interest_rate_apr", precision = 5, scale = 2)
     private BigDecimal interestRateApr;
 
     public FinancialNode() {}
 
-    // Getters and Setters
+    public FinancialNode(String name, String nodeType, BigDecimal amountOrBalance, BigDecimal interestRateApr) {
+        this.name = name;
+        this.nodeType = nodeType;
+        this.amountOrBalance = amountOrBalance;
+        this.interestRateApr = interestRateApr;
+    }
+
     public Long getId() { return id; }
-    public FinancialProfile getProfile() { return profile; }
-    public void setProfile(FinancialProfile profile) { this.profile = profile; }
+    public void setId(Long id) { this.id = id; }
+
     public String getName() { return name; }
     public void setName(String name) { this.name = name; }
-    public NodeType getNodeType() { return nodeType; }
-    public void setNodeType(NodeType nodeType) { this.nodeType = nodeType; }
-    public BigDecimal getCurrentBalance() { return currentBalance; }
-    public void setCurrentBalance(BigDecimal currentBalance) { this.currentBalance = currentBalance; }
+
+    public String getNodeType() { return nodeType; }
+    public void setNodeType(String nodeType) { this.nodeType = nodeType; }
+
+    public BigDecimal getAmountOrBalance() { return amountOrBalance; }
+    public void setAmountOrBalance(BigDecimal amountOrBalance) { this.amountOrBalance = amountOrBalance; }
+
     public BigDecimal getInterestRateApr() { return interestRateApr; }
     public void setInterestRateApr(BigDecimal interestRateApr) { this.interestRateApr = interestRateApr; }
 }

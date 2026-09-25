@@ -4,117 +4,80 @@ import com.finapp.javabackend.dto.EdgeDTO;
 import com.finapp.javabackend.dto.GraphDTO;
 import com.finapp.javabackend.dto.NodeDTO;
 import com.finapp.javabackend.model.entity.FinancialNode;
-import com.finapp.javabackend.model.entity.FinancialProfile;
 import com.finapp.javabackend.model.entity.NodeEdge;
 import com.finapp.javabackend.repository.FinancialNodeRepository;
-import com.finapp.javabackend.repository.FinancialProfileRepository;
 import com.finapp.javabackend.repository.NodeEdgeRepository;
 import com.finapp.javabackend.service.GraphService;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
-import java.util.stream.Collectors;
 
 @Service
-@Transactional
 public class GraphServiceImpl implements GraphService {
 
-    private final FinancialProfileRepository profileRepository;
     private final FinancialNodeRepository nodeRepository;
     private final NodeEdgeRepository edgeRepository;
 
-    public GraphServiceImpl(FinancialProfileRepository profileRepository,
-                            FinancialNodeRepository nodeRepository,
-                            NodeEdgeRepository edgeRepository) {
-        this.profileRepository = profileRepository;
+    public GraphServiceImpl(FinancialNodeRepository nodeRepository, NodeEdgeRepository edgeRepository) {
         this.nodeRepository = nodeRepository;
         this.edgeRepository = edgeRepository;
     }
 
     @Override
-    @Transactional(readOnly = true)
-    public GraphDTO getUserGraphByProfileId(Long profileId) {
-        List<FinancialNode> nodes = nodeRepository.findByProfileId(profileId);
-
-        List<NodeDTO> nodeDTOs = nodes.stream()
-                .map(node -> new NodeDTO(
-                        node.getId(),
-                        node.getName(),
-                        node.getNodeType(),
-                        node.getCurrentBalance(),
-                        node.getInterestRateApr()
-                ))
-                .collect(Collectors.toList());
-
-        List<Long> nodeIds = nodes.stream().map(FinancialNode::getId).toList();
-
-        List<NodeEdge> edges = nodeIds.stream()
-                .flatMap(id -> edgeRepository.findAllByNodeId(id).stream())
-                .distinct()
+    @Transactional
+    public GraphDTO saveGraph(GraphDTO graphDTO) {
+        // Map DTOs -> Entities for Nodes
+        List<FinancialNode> nodesToSave = graphDTO.nodes().stream()
+                .map(dto -> {
+                    FinancialNode node = new FinancialNode(dto.name(), dto.nodeType(), dto.amountOrBalance(), dto.interestRateApr());
+                    if (dto.id() != null) {
+                        node.setId(dto.id());
+                    }
+                    return node;
+                })
                 .toList();
 
-        List<EdgeDTO> edgeDTOs = edges.stream()
-                .map(edge -> new EdgeDTO(
-                        edge.getId(),
-                        edge.getSourceNode().getId(),
-                        edge.getTargetNode().getId(),
-                        edge.getPercentageFlow(),
-                        edge.getFixedAmountFlow()
-                ))
-                .collect(Collectors.toList());
+        List<FinancialNode> savedNodes = nodeRepository.saveAll(nodesToSave);
 
-        return new GraphDTO(profileId, nodeDTOs, edgeDTOs);
+        // Map DTOs -> Entities for Edges using FinancialNode proxies
+        List<NodeEdge> edgesToSave = graphDTO.edges().stream()
+                .map(dto -> {
+                    FinancialNode sourceNode = nodeRepository.getReferenceById(dto.sourceNodeId());
+                    FinancialNode targetNode = nodeRepository.getReferenceById(dto.targetNodeId());
+                    NodeEdge edge = new NodeEdge(sourceNode, targetNode, dto.monthlyFixedFlow(), dto.percentageFlow());
+                    if (dto.id() != null) {
+                        edge.setId(dto.id());
+                    }
+                    return edge;
+                })
+                .toList();
+
+        List<NodeEdge> savedEdges = edgeRepository.saveAll(edgesToSave);
+
+        // Map Entities -> DTOs
+        List<NodeDTO> nodeDTOs = savedNodes.stream()
+                .map(n -> new NodeDTO(n.getId(), n.getName(), n.getNodeType(), n.getAmountOrBalance(), n.getInterestRateApr()))
+                .toList();
+
+        List<EdgeDTO> edgeDTOs = savedEdges.stream()
+                .map(e -> new EdgeDTO(e.getId(), e.getSourceNode().getId(), e.getTargetNode().getId(), e.getMonthlyFixedFlow(), e.getPercentageFlow()))
+                .toList();
+
+        return new GraphDTO(nodeDTOs, edgeDTOs);
     }
 
     @Override
-    public NodeDTO addNode(Long profileId, NodeDTO nodeDTO) {
-        FinancialProfile profile = profileRepository.findById(profileId)
-                .orElseThrow(() -> new IllegalArgumentException("Profile not found: " + profileId));
+    @Transactional(readOnly = true)
+    public GraphDTO getFullGraph() {
+        List<NodeDTO> nodeDTOs = nodeRepository.findAll().stream()
+                .map(n -> new NodeDTO(n.getId(), n.getName(), n.getNodeType(), n.getAmountOrBalance(), n.getInterestRateApr()))
+                .toList();
 
-        FinancialNode node = new FinancialNode();
-        node.setProfile(profile);
-        node.setName(nodeDTO.name());
-        node.setNodeType(nodeDTO.type());
-        node.setCurrentBalance(nodeDTO.currentBalance());
-        node.setInterestRateApr(nodeDTO.interestRateApr());
+        List<EdgeDTO> edgeDTOs = edgeRepository.findAll().stream()
+                .map(e -> new EdgeDTO(e.getId(), e.getSourceNode().getId(), e.getTargetNode().getId(), e.getMonthlyFixedFlow(), e.getPercentageFlow()))
+                .toList();
 
-        FinancialNode saved = nodeRepository.save(node);
-
-        return new NodeDTO(
-                saved.getId(),
-                saved.getName(),
-                saved.getNodeType(),
-                saved.getCurrentBalance(),
-                saved.getInterestRateApr()
-        );
-    }
-
-    @Override
-    public NodeDTO updateNode(Long nodeId, NodeDTO nodeDTO) {
-        FinancialNode node = nodeRepository.findById(nodeId)
-                .orElseThrow(() -> new IllegalArgumentException("Node not found: " + nodeId));
-
-        node.setName(nodeDTO.name());
-        node.setNodeType(nodeDTO.type());
-        node.setCurrentBalance(nodeDTO.currentBalance());
-        node.setInterestRateApr(nodeDTO.interestRateApr());
-
-        FinancialNode updated = nodeRepository.save(node);
-
-        return new NodeDTO(
-                updated.getId(),
-                updated.getName(),
-                updated.getNodeType(),
-                updated.getCurrentBalance(),
-                updated.getInterestRateApr()
-        );
-    }
-
-    @Override
-    public void deleteNode(Long nodeId) {
-        List<NodeEdge> connectedEdges = edgeRepository.findAllByNodeId(nodeId);
-        edgeRepository.deleteAll(connectedEdges);
-        nodeRepository.deleteById(nodeId);
+        return new GraphDTO(nodeDTOs, edgeDTOs);
     }
 }

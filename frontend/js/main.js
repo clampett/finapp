@@ -12,6 +12,11 @@ document.addEventListener('DOMContentLoaded', function() {
 function createDashboard() {
     const container = document.getElementById('graph-container');
     
+    if (!container) {
+        console.error('Graph container not found');
+        return;
+    }
+    
     // Simple test to verify D3 is working
     const svg = d3.select('#graph-container')
         .append('svg')

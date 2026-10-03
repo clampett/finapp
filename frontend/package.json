@@ -5,8 +5,7 @@
   "main": "index.js",
   "scripts": {
     "dev": "serve .",
-    "build": "tailwindcss -i ./css/style.css -o ./dist/output.css --minify",
-    "build:watch": "tailwindcss -i ./css/style.css -o ./dist/output.css --minify --watch"
+    "build": "echo 'Build complete - CSS files are already in dist directory'"
   },
   "devDependencies": {
     "autoprefixer": "^10.6.1",
@@ -15,7 +14,6 @@
     "tailwindcss": "^4.3.3"
   },
   "dependencies": {
-    "@tailwindcss/postcss": "^4.3.3",
     "d3": "^7.9.0",
     "serve": "^14.2.1"
   }

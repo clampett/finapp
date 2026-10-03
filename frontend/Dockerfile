@@ -1,12 +1,13 @@
-# Simplest working frontend Dockerfile
-FROM nginx:alpine
+FROM node:24-alpine
 
-# Copy entire frontend directory to nginx html dir
-COPY . /usr/share/nginx/html
+WORKDIR /app
 
-# Make sure all files are readable by nginx
-RUN chmod -R 755 /usr/share/nginx/html
+COPY package.json package-lock.json ./
+
+RUN npm ci
+
+COPY . .
 
 EXPOSE 80
 
-CMD ["nginx", "-g", "daemon off;"]
+CMD npm run dev

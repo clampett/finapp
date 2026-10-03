@@ -4,16 +4,18 @@
   "description": "Frontend for the finapp personal finance simulator",
   "main": "index.js",
   "scripts": {
-    "dev": "serve .",
-    "build": "echo 'Build complete - CSS files are already in dist directory'"
+    "build": "npx tailwindcss -i ./style.css -o ./dist/output.css",
+    "dev": "npm run build && npx serve . -l 80"
   },
   "devDependencies": {
+    "@tailwindcss/cli": "^4.3.0",
     "autoprefixer": "^10.6.1",
     "postcss": "^8.5.28",
     "postcss-cli": "^12.0.0",
     "tailwindcss": "^4.3.3"
   },
   "dependencies": {
+    "@tailwindcss/vite": "^4.3.3",
     "d3": "^7.9.0",
     "serve": "^14.2.1"
   }

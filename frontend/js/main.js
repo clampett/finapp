@@ -1,0 +1,1 @@
+console.log('Finance Dashboard loaded');

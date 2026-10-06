@@ -60,11 +60,11 @@ The app is broken into three distinct pieces: the database, the backend, and the
 ### Step 4: Use the App!
 1. Open your web browser (Chrome, Edge, Safari, etc.).
 2. Go to: **`http://localhost:8080`**
-3. You will immediately see the Finance Dashboard load up with your interactive node graph!
+3. You will immediately see the Finance Dashboard load up with our interactive node graph!
 
 ---
 
-## Tech Stack
+## Tech Stack (As of 10/06/2026)
 
 | Piece of the App | Technology Used | What it does |
 | :--- | :--- | :--- |

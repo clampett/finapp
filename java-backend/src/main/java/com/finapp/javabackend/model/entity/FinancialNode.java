@@ -11,26 +11,21 @@ public class FinancialNode {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @Column(name = "profile_id")
+    // Maps to the 'user_id' column from init.sql
+    @Column(name = "user_id", nullable = false)
     private Long profileId;
-
-    public Long getProfileId() {
-        return profileId;
-    }
-
-    public void setProfileId(Long profileId) {
-        this.profileId = profileId;
-    }
 
     @Column(nullable = false)
     private String name;
 
-    @Column(nullable = false)
+    @Column(name = "node_type", nullable = false)
     private String nodeType; // e.g. "INCOME", "CHECKING", "SAVINGS", "DEBT", "INVESTMENT"
 
-    @Column(nullable = false)
+    // Maps to the 'current_balance' column from init.sql
+    @Column(name = "current_balance", nullable = false)
     private BigDecimal amountOrBalance;
 
+    @Column(name = "interest_rate_apr", nullable = false)
     private BigDecimal interestRateApr;
 
     public FinancialNode() {}
@@ -44,6 +39,13 @@ public class FinancialNode {
 
     public Long getId() { return id; }
     public void setId(Long id) { this.id = id; }
+
+    public Long getProfileId() {
+        return profileId;
+    }
+    public void setProfileId(Long profileId) {
+        this.profileId = profileId;
+    }
 
     public String getName() { return name; }
     public void setName(String name) { this.name = name; }

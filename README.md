@@ -1,4 +1,4 @@
-# SOFTWARE ENGINEERING PROJECT TEAM 1
+# SOFTWARE ENGINEERING PROJECT TEAM 1 (Version 2.0.0 10/06/2026)
 # FinApp Dashboard Cash-Flow Engine, Budget Tracker and Investing Strategy Simulator
 
 A visual, interactive personal finance dashboard that maps your money as a connected web. See exactly where your income goes, track your expenses, and manage your debts in a clear, drag-and-drop interface.

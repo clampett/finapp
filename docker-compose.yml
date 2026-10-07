@@ -25,6 +25,16 @@ services:
     networks:
       - finapp-network
 
+  python-backend:
+    build:
+      context: ./python-backend
+    ports:
+      - "5000:5000"
+    environment:
+      - ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY}
+    networks:
+      - finapp-network    
+      
   db:
     image: postgres:15-alpine
     ports:

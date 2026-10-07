@@ -13,4 +13,7 @@ public interface NodeEdgeRepository extends JpaRepository<NodeEdge, Long> {
 
     @Query("SELECT e FROM NodeEdge e WHERE e.sourceNode.id = :nodeId OR e.targetNode.id = :nodeId")
     List<NodeEdge> findAllByNodeId(@Param("nodeId") Long nodeId);
+
+    @Query("SELECT e FROM NodeEdge e WHERE e.sourceNode.profileId = :userId")
+    List<NodeEdge> findEdgesByUserId(@Param("userId") Long userId);
 }

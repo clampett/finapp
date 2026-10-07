@@ -1,0 +1,22 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Finance Dashboard</title>
+    <link rel="stylesheet" href="./dist/output.css">
+    <link rel="icon" type="image/svg+xml" href="assets/favicon.svg">
+</head>
+<body>
+    <div class="font-display text-white bg-primary items-center-safe justify-center">
+        <h1>Finance Dashboard</h1>
+        <p>Backend service running at http://localhost:8081/api/v1</p>
+        <div id="graph-container"></div>
+    </div>
+    
+    <!-- Load D3.js first -->
+    <script src="https://d3js.org/d3.v7.min.js"></script>
+    <!-- Then load your main logic -->
+    <script src="js/main.js"></script>
+</body>
+</html>

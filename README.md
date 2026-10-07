@@ -1,117 +1,81 @@
-# SOFTWARE ENGINNERING PROJECT TEAM 1
-# Finance Dashboard Cash-Flow Engine & Wealth Simulator
+# SOFTWARE ENGINEERING PROJECT TEAM 1 (Version 2.0.0 10/06/2026)
+# FinApp Dashboard Cash-Flow Engine, Budget Tracker and Investing Strategy Simulator
 
-A full-stack, microservice-based personal finance simulator that maps cash flow as an interactive, node-based pipeline. Built to simulate multi-year net worth trajectories, compare debt payoff strategies, and deliver AI-driven financial optimization.
-
----
-
-## Executive Summary (model to change as we populate the repository at our discretion)
-
-Traditional personal finance tools track historical spending through static pie charts and text ledgers. **Our Dashboard Project** models money as an interactive flow network. Users visually connect income streams, fixed expenses, debt obligations, and investment portfolios to run real-time Monte Carlo simulations based on live market yields and AI-driven strategies.
+A visual, interactive personal finance dashboard that maps your money as a connected web. See exactly where your income goes, track your expenses, and manage your debts in a clear, drag-and-drop interface.
 
 ---
 
-## Key Features (model to change as we populate the repository at our discretion)
+## What It Does
 
-* **Interactive Node Canvas:** Drag, drop, and link income sources, accounts, and investment buckets on a D3.js-powered visual canvas.
-* **Monte Carlo Simulation Engine:** Runs 1,000-iteration probability projections using historical index fund returns (via Yahoo Finance API) to forecast 5, 10, and 30-year net worth trajectories.
-* **AI Financial Co-Pilot:** Leverages the Claude API to analyze the visual graph state, detect cash leaks, and suggest optimal debt payoff strategies (Avalanche vs. Snowball).
-* **Pre-Seeded Archetypes:** Test system dynamics instantly using populated database profiles (e.g., *Recent Grad with Student Debt*, *Mid-Career Family*, *FIRE Strategist*).
+Traditional finance apps usually just show you a boring list of transactions or a static pie chart. **Our Dashboard** treats your money like a living network. You visually connect your salary to your checking account, and then route that money out to your rent, student loans, and investments.
 
----
+**Current Features:**
+* **Interactive Visual Canvas:** See your finances as floating, connected circles (nodes). You can click and drag them around the screen to organize your financial life.
+* **Live Balances:** View exactly how much money is sitting in your accounts or how much you owe on loans directly on the screen.
+* **Pre-Loaded Profiles:** Start instantly with ready-made user profiles (like the "Recent Grad") to see how the system works without typing in all your own data.
 
-## System Architecture (model to change as we populate the repository at our discretion)
-
-[ Frontend: HTML5 / CSS / JS / D3.js ]
-│
-HTTP REST / JSON
-▼
-[ Backend Core: Java Spring Boot Engine ] ◄──► [ Database: PostgreSQL ]
-│
-HTTP REST / JSON
-▼
-[ Analytics & AI: Python FastAPI Service ]
-├── Yahoo Finance API (yfinance)
-└── Anthropic Claude API
-
+*(Coming soon: Multi-year wealth forecasting and AI financial advice!)*
 
 ---
 
-## Tech Stack & Team Responsibilities (model to change as we populate the repository at our discretion)
+## What You Need Installed (Prerequisites)
 
-| Subsystem | Core Technologies | Primary Focus & Team Allocation |
+To run this app on your computer (As of now), you need three standard developer tools:
+1. **Docker Desktop:** Runs our database seamlessly in the background.
+2. **IntelliJ IDEA (or any Java IDE):** Used to run the backend Java code.
+3. **Node.js:** Used to run the frontend website server.
+
+---
+
+## How to Start the App (Step-by-Step)
+
+The app is broken into three distinct pieces: the database, the backend, and the frontend. You need to start them in this exact order for the application to work.
+
+### Step 1: Start the Database
+1. Open **Docker Desktop** and make sure the engine is running.
+2. Open a terminal (Command Prompt, PowerShell, or VS Code Terminal).
+3. Navigate into the main project folder (`finapp`).
+4. Run this command:
+   ```bash
+   docker-compose up -d db
+   ```
+   *(This downloads and starts a database with our sample user profiles already loaded inside).*
+
+### Step 2: Start the Backend (The Brain)
+1. Open the `java-backend` folder using **IntelliJ IDEA**.
+2. Let the IDE load the project files.
+3. Find the `JavaBackendApplication.java` file.
+4. Click the green **Play** button next to the code to run it.
+5. Watch the console at the bottom of the screen. You are good to go once it says "Started JavaBackendApplication" (it runs in the background on port 8081).
+
+### Step 3: Start the Frontend (The Visual Canvas)
+1. Open a new terminal window.
+2. Navigate into the `frontend` folder (`cd frontend`).
+3. Run this command to start the web server:
+   ```bash
+   npm run dev
+   ```
+4. The terminal will confirm it is serving your files on port 8080.
+
+### Step 4: Use the App!
+1. Open your web browser (Chrome, Edge, Safari, etc.).
+2. Go to: **`http://localhost:8080`**
+3. You will immediately see the Finance Dashboard load up with our interactive node graph!
+
+---
+
+## Tech Stack (As of 10/06/2026)
+
+| Piece of the App | Technology Used | What it does |
 | :--- | :--- | :--- |
-| **Backend Core** | Java, Spring Boot, Spring Data JPA | REST APIs, business logic, financial utilities (2 Developers) |
-| **Analytics & AI** | Python, FastAPI, NumPy, Pandas, Claude SDK | Monte Carlo engine, market data fetching, LLM integration (2 Developers) |
-| **Database** | PostgreSQL, SQL | Relational schema design, seed profiles, query optimization (1 Developer) |
-| **Frontend** | HTML5, Tailwind CSS, JavaScript, D3.js | Interactive node canvas, responsive dashboard layout (1 Developer) |
+| **Frontend** | HTML, Tailwind CSS, JavaScript, D3.js | Draws the interactive visual canvas you see in the browser. |
+| **Backend** | Java, Spring Boot | The engine that processes requests and talks to the database. |
+| **Database** | PostgreSQL | Stores all the user profiles, account balances, and connections securely. |
 
 ---
 
-## Repository Structure (model to change as we populate the repository at our discretion)
+## Team Workflow
 
-```text
-finapp/
-├── docker-compose.yml          # Master local environment setup
-├── README.md                   # Project documentation
-├── java-backend/               # Spring Boot REST API & Business Logic
-│   └── src/main/resources/     # Includes static/ for frontend delivery
-├── python-backend/             # FastAPI Monte Carlo Engine & Claude Pipeline
-│   ├── app/                    # Service endpoints and calculation scripts
-│   └── requirements.txt        # Python dependencies
-├── database/                   # PostgreSQL DDL and Seeding Scripts
-│   └── init.sql                # Auto-executing database initialization
-└── docs/                       # Scrum artifacts, sprint retros, and architecture diagrams
-Quickstart: Running Locally via Docker
-Ensure Docker Desktop is installed and running on your system.
-
-Clone the repository:
-
-Bash
-git clone [https://github.com/clampett/finapp.git](https://github.com/clampett/finapp.git)
-cd finapp
-Configure Environment Variables:
-Create a .env file in the root directory and add your Anthropic API key:
-
-Code snippet
-ANTHROPIC_API_KEY=your_actual_api_key_here
-Spin up the stack:
-
-Bash
-docker compose up --build
-Access the application:
-
-Web Dashboard: http://localhost:8080
-
-Spring Boot REST API: http://localhost:8080/api/v1
-
-Python FastAPI Docs: http://localhost:5000/docs
-
-Git & Scrum Workflow
-Branching Strategy: Enforce a main -> develop -> feature/US-x.x workflow. No direct pushes to main or develop.
-
-Pull Requests: All PRs require at least 2 peer reviews before merging into develop.
-
-Issue Tracking: Every task must correspond to a GitHub Issue tagged with its story point estimate and sprint milestone.
-
-Local Development (Without Docker)
-If you need to run and debug individual components locally on your host machine:
-
-Java Spring Boot:
-
-Bash
-cd java-backend
-./mvnw spring-boot:run
-Python FastAPI Service:
-
-Bash
-cd python-backend
-python -m venv venv
-source venv/bin/activate  # On Windows: venv\Scripts\activate
-pip install -r requirements.txt
-uvicorn app.main:app --port 5000 --reload
-PostgreSQL Database:
-Ensure a local PostgreSQL instance is running on port 5432 with database finance_db and user spring_user, or run a standalone container using:
-
-Bash
-docker run --name local-postgres -e POSTGRES_DB=finance_db -e POST
+* **Branching:** We use a safe `main` -> `feature/your-feature-name` workflow. Please do not push code directly to `main`.
+* **Reviews:** All new code must be reviewed by teammates through a Pull Request on GitHub before being merged.
+* **Tracking:** Every task must correspond to a GitHub Issue.

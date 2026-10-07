@@ -80,4 +80,23 @@ public class GraphServiceImpl implements GraphService {
 
         return new GraphDTO(nodeDTOs, edgeDTOs);
     }
+
+    @Override
+    @Transactional(readOnly = true)
+    public GraphDTO getGraphForUser(Long userId) {
+        // Fetch filtered data using your new repository methods
+        List<FinancialNode> nodes = nodeRepository.findByProfileId(userId);
+        List<NodeEdge> edges = edgeRepository.findEdgesByUserId(userId);
+
+        // Map Entities -> DTOs using your exact existing mapping logic
+        List<NodeDTO> nodeDTOs = nodes.stream()
+                .map(n -> new NodeDTO(n.getId(), n.getName(), n.getNodeType(), n.getAmountOrBalance(), n.getInterestRateApr()))
+                .toList();
+
+        List<EdgeDTO> edgeDTOs = edges.stream()
+                .map(e -> new EdgeDTO(e.getId(), e.getSourceNode().getId(), e.getTargetNode().getId(), e.getMonthlyFixedFlow(), e.getPercentageFlow()))
+                .toList();
+
+        return new GraphDTO(nodeDTOs, edgeDTOs);
+    }
 }

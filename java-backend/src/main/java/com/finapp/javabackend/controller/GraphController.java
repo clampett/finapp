@@ -23,9 +23,9 @@ public class GraphController {
         return ResponseEntity.ok(ApiResponse.success(saved, "Graph persisted successfully"));
     }
 
-    @GetMapping
-    public ResponseEntity<ApiResponse<GraphDTO>> getGraph() {
-        GraphDTO graph = graphService.getFullGraph();
+    @GetMapping("/{userId}")
+    public ResponseEntity<ApiResponse<GraphDTO>> getGraph(@PathVariable Long userId) {
+        GraphDTO graph = graphService.getGraphForUser(userId);
         return ResponseEntity.ok(ApiResponse.success(graph, "Graph fetched successfully"));
     }
 }

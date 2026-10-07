@@ -19,7 +19,9 @@ public class NodeEdge {
     @JoinColumn(name = "target_node_id", nullable = false)
     private FinancialNode targetNode;
 
+    @Column(name = "fixed_amount_flow")
     private BigDecimal monthlyFixedFlow;
+
     private BigDecimal percentageFlow;
 
     public NodeEdge() {}

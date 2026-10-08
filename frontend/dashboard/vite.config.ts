@@ -6,7 +6,7 @@ export default defineConfig({
   plugins: [react(), tailwindcss()],
   base: '/dashboard/',
   build: {
-    outDir: '../../java-backend/src/main/resources/static/dashboard',
+    outDir: '../build/dashboard',
     emptyOutDir: true,
   },
   server: {

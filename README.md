@@ -76,6 +76,6 @@ The app is broken into three distinct pieces: the database, the backend, and the
 
 ## Team Workflow
 
-* **Branching:** We use a safe `main` -> `feature/your-feature-name` workflow. Please do not push code directly to `main`.
+* **Branching:** We use a safe `main` -> `feature/your-feature-name` workflow. Please do not push code directly to `dev`. Do **NOT** push to `main`.
 * **Reviews:** All new code must be reviewed by teammates through a Pull Request on GitHub before being merged.
 * **Tracking:** Every task must correspond to a GitHub Issue.

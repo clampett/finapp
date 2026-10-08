@@ -1,15 +1,14 @@
 {
-  "name": "landing",
+  "name": "frontend-landing",
   "version": "1.0.0",
   "description": "",
   "main": "index.js",
   "scripts": {
-    "build:css": "tailwindcss -i src/css/*.css -o ../../java-backend/src/main/resources/static/assets/css/styles.css --minify",
-    "build:ts": "esbuild src/ts/*.ts --bundle --minify --outdir=../../java-backend/src/main/resources/static/assets/js/",
-    "build:html": "cpy \"pages/*.html\" ../../java-backend/src/main/resources/static",
+    "build:css": "tailwindcss -i src/css/*.css -o ../build/landing/src/styles.css --minify",
+    "build:ts": "esbuild src/ts/*.ts --bundle --minify --outdir=../build/landing/src",
+    "build:html": "cpy \"pages/*.html\" ../build/landing/",
     "typecheck": "npx tsc --noEmit",
-    "build": "npm run typecheck && npm run build:css && npm run build:ts && npm run build:html",
-    "dev": "npm run build:html && concurrently \"chokidar \\\"pages/*.html\\\" -c \\\"npm run build:html\\\"\" \"npm run build:css -- --watch\" \"npm run build:ts -- --watch\""
+    "build": "npm run typecheck && npm run build:css && npm run build:ts && npm run build:html"
   },
   "keywords": [],
   "type": "commonjs",

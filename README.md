@@ -51,8 +51,9 @@ The app is broken into three distinct pieces: the database, the backend, and the
 ### Step 3: Start the Frontend (The Visual Canvas)
 1. Open a new terminal window.
 2. Navigate into the `frontend` folder (`cd frontend`).
-3. Run this command to start the web server:
+3. Run these commands to start the web server:
    ```bash
+   npm run in
    npm run dev
    ```
 4. The terminal will confirm it is serving your files on port 8080.

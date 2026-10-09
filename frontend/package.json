@@ -4,6 +4,7 @@
   "description": "",
   "main": "express.js",
   "scripts": {
+    "in": "npm install --prefix ./landing && npm install --prefix ./dashboard && npm install",
     "build": "npm run build --prefix ./landing && npm run build --prefix ./dashboard",
     "dev": "npm run build && node express.js"
   },

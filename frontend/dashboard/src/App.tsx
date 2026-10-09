@@ -1,6 +1,7 @@
 import { loadArchetypeGraph } from './graphs.tsx'
 
 export default function App() {
+  console.log("loaded dashboard")
   loadArchetypeGraph(1)
   return (
     <div className="min-h-screen bg-white p-8">

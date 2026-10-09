@@ -1,7 +1,7 @@
 import * as d3 from 'd3';
 import { useEffect, useRef } from 'react';
 
-const API_BASE_URL = 'http://localhost:8080/api/v1';
+const API_BASE_URL = 'http://localhost:8081/api/v1';
 
 // Define TypeScript interfaces for our graph data
 interface GraphNode {

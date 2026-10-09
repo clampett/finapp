@@ -5,9 +5,12 @@ target/
 !**/src/test/**/target/
 .env
 
-### NPM ###
-*/node_modules/
-frontend/dist
+### Frontend ###
+**/node_modules/
+/java-backend/src/main/resources/static/assets/css
+/java-backend/src/main/resources/static/assets/js
+/java-backend/src/main/resources/static/dashboard
+/java-backend/src/main/resources/static/*.html
 
 ### STS ###
 .apt_generated

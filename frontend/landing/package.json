@@ -1,0 +1,24 @@
+{
+  "name": "frontend-landing",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "build:css": "tailwindcss -i src/css/*.css -o ../build/landing/src/styles.css --minify",
+    "build:ts": "esbuild src/ts/*.ts --bundle --minify --outdir=../build/landing/src",
+    "build:html": "cpy \"pages/*.html\" ../build/landing/",
+    "typecheck": "npx tsc --noEmit",
+    "build": "npm run typecheck && npm run build:css && npm run build:ts && npm run build:html"
+  },
+  "keywords": [],
+  "type": "commonjs",
+  "devDependencies": {
+    "@tailwindcss/cli": "^4.3.3",
+    "chokidar-cli": "^3.0.0",
+    "concurrently": "^10.0.5",
+    "cpy-cli": "^7.0.0",
+    "esbuild": "^0.28.2",
+    "tailwindcss": "^4.3.3",
+    "typescript": "^7.0.2"
+  }
+}

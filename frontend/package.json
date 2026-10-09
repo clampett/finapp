@@ -1,22 +1,15 @@
 {
-  "name": "finapp-frontend",
+  "name": "frontend-server",
   "version": "1.0.0",
-  "description": "Frontend for the finapp personal finance simulator",
-  "main": "index.js",
+  "description": "",
+  "main": "express.js",
   "scripts": {
-    "build": "npx tailwindcss -i ./style.css -o ./dist/output.css",
-    "dev": "npm run build && npx serve . -l 8080"
+    "build": "npm run build --prefix ./landing && npm run build --prefix ./dashboard",
+    "dev": "npm run build && node express.js"
   },
-  "devDependencies": {
-    "@tailwindcss/cli": "^4.3.0",
-    "autoprefixer": "^10.6.1",
-    "postcss": "^8.5.28",
-    "postcss-cli": "^12.0.0",
-    "tailwindcss": "^4.3.3"
-  },
+  "keywords": [],
+  "type": "commonjs",
   "dependencies": {
-    "@tailwindcss/vite": "^4.3.3",
-    "d3": "^7.9.0",
-    "serve": "^14.2.1"
+    "express": "^5.2.1"
   }
 }

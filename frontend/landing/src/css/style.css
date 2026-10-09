@@ -1,0 +1,35 @@
+@import "tailwindcss";
+@source "../../pages";
+
+@theme {
+  --color-primary: #ef0b0b;
+  --color-primary-white: #ffffff;
+  --font-display: "Gilroy", serif;
+}
+
+/* Additional custom styles */
+body {
+  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+}
+
+.bg-gradient-to-r {
+  background: linear-gradient(90deg, var(--tw-gradient-stops));
+}
+
+@layer base {
+  body {
+    @apply bg-gray-50;
+  }
+  
+  h1, h2, h3, h4, h5, h6 {
+    @apply font-bold;
+  }
+  
+  .text-primary {
+    @apply text-red-600;
+  }
+  
+  .btn-primary {
+    @apply bg-red-600 text-white px-6 py-3 rounded-lg hover:bg-red-700 transition duration-300;
+  }
+}

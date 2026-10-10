@@ -5,20 +5,38 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Login</title>
   <link rel="stylesheet" href="/assets/styles.css">
-  <link rel="icon" type="image/svg+xml" href="/static/favicon.svg" sizes="any">
+  <link rel="icon" type="image/svg+xml" href="/static/logo_green.svg" sizes="any">
 </head>
 <body>
   <div class="bg-background text-text_color space-y-10">
+    <div>
+      <nav class="navbar" role="navigation" aria-label="main navigation">
+        <ul class="flex flex-row space-x-10">
+          <li>
+            <a href="#">
+              <img id="main_logo" type="image/svg+xml" src="/static/logo_full_light.svg" alt="FinApp Logo">
+            </a>
+          </li>
+          <li><a href="#about">About</a></li>
+          <li><a href="#features">Features</a></li>
+          <li><a href="#contact">Contact</a></li>
+          <li>
+            <button id="theme_button" type="button">
+              <img id="theme_button_img" type="image/svg+xml" src="/static/theme_change_light.svg" alt="Change theme" width="32" height="32">
+            </button>
+          </li>
+        </ul>
+      </nav>
+    </div>
+
     <div class="flex text-9xl items-center justify-center">
         <img src="/static/money_spin.gif" alt="cash money" width="100" height="100">
         <h1>FINAPP</h1>
         <img src="/static/money_spin.gif" alt="cash money" width="100" height="100">
     </div>
+
     <div>
       <a href="login.html" class="button flex justify-center px-4 py-2 bg-indigo-600 text-white rounded hover:bg-indigo-700">Go to Login Page</a>
-    </div>
-    <div>
-      <button id="theme_button" class="flex justify-center">Change Theme</button>
     </div>
   </div>
   <script src="/assets/main.js" defer></script>

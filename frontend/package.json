@@ -5,12 +5,15 @@
   "main": "express.js",
   "scripts": {
     "in": "npm install --prefix ./landing && npm install --prefix ./dashboard && npm install",
-    "build": "npm run build --prefix ./landing && npm run build --prefix ./dashboard",
+    "build": "npm run build --prefix ./landing && npm run build --prefix ./dashboard && cpy \"static/*\" \"build/landing/static/\"",
     "dev": "npm run build && node express.js"
   },
   "keywords": [],
   "type": "commonjs",
   "dependencies": {
     "express": "^5.2.1"
+  },
+  "devDependencies": {
+    "cpy-cli": "^7.0.0"
   }
 }

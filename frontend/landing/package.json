@@ -11,7 +11,7 @@
     "build": "npm run typecheck && npm run build:css && npm run build:ts && npm run build:html"
   },
   "keywords": [],
-  "type": "commonjs",
+  "type": "module",
   "devDependencies": {
     "@tailwindcss/cli": "^4.3.3",
     "chokidar-cli": "^3.0.0",
@@ -19,6 +19,7 @@
     "cpy-cli": "^7.0.0",
     "esbuild": "^0.28.2",
     "tailwindcss": "^4.3.3",
+    "tslog": "^5.2.0",
     "typescript": "^7.0.2"
   }
 }

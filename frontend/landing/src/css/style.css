@@ -2,34 +2,50 @@
 @source "../../pages";
 
 @theme {
-  --color-primary: #ef0b0b;
-  --color-primary-white: #ffffff;
-  --font-display: "Gilroy", serif;
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-primary: var(--primary);
+  --color-muted: var(--muted);
+  --color-border: var(--border);
+  --color-text_color: var(--text_color);
 }
 
-/* Additional custom styles */
-body {
-  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+:root, [data-theme="dark"] {
+  --background: #090d10;
+  --foreground: #91989f;
+  --card: #1d2126;
+  --card-foreground: #91989f;
+  --primary: #1E40AF;
+  --primary-foreground: #EFF6FF;
+  --muted: #F1F5F9;
+  --muted-foreground: #64748B;
+  --border: #E2E8F0;
+  --text_color: #FFFFFF;
 }
 
-.bg-gradient-to-r {
-  background: linear-gradient(90deg, var(--tw-gradient-stops));
+[data-theme="light"] {
+  --background: #FFFFFF;
+  --foreground: #020817;
+  --card: #FFFFFF;
+  --card-foreground: #020817;
+  --primary: #1E40AF;
+  --primary-foreground: #EFF6FF;
+  --muted: #F1F5F9;
+  --muted-foreground: #64748B;
+  --border: #E2E8F0;
+  --text_color: #000000;
 }
 
-@layer base {
-  body {
-    @apply bg-gray-50;
-  }
-  
-  h1, h2, h3, h4, h5, h6 {
-    @apply font-bold;
-  }
-  
-  .text-primary {
-    @apply text-red-600;
-  }
-  
-  .btn-primary {
-    @apply bg-red-600 text-white px-6 py-3 rounded-lg hover:bg-red-700 transition duration-300;
-  }
+[data-theme="funky"] {
+  --background: #42ea00;
+  --foreground: #000000;
+  --card: #f40505;
+  --card-foreground: #000000;
+  --primary: #bb17b2;
+  --primary-foreground: #000000;
+  --muted: #ffff00;
+  --muted-foreground: #000000;
+  --border: #1e40af;
+  --text_color: #f37c0d;
 }

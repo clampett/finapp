@@ -46,18 +46,18 @@ export default function App() {
         <div className="px-8 pt-6 flex space-x-4">
           <button 
             onClick={() => setActiveArchetype(1)}
-            className={`px-4 py-2 rounded-md font-semibold text-sm transition-colors ${activeArchetype === 1 ? 'bg-teal-500 text-white' : 'bg-[#1A1A1F] text-gray-400 hover:text-white border border-gray-800'}`}>
+            className={`px-4 py-2 rounded-md font-semibold text-sm transition-colors ${activeArchetype === 1 ? 'bg-blue-600 text-white border border-blue-500 shadow-md' : 'bg-[#1A1A1F] text-gray-400 hover:text-white border border-gray-800'}`}>
             Archetype 1: Recent Grad
           </button>
           <button 
             onClick={() => setActiveArchetype(2)}
-            className={`px-4 py-2 rounded-md font-semibold text-sm transition-colors ${activeArchetype === 2 ? 'bg-teal-500 text-white' : 'bg-[#1A1A1F] text-gray-400 hover:text-white border border-gray-800'}`}>
+            className={`px-4 py-2 rounded-md font-semibold text-sm transition-colors ${activeArchetype === 2 ? 'bg-blue-600 text-white border border-blue-500 shadow-md' : 'bg-[#1A1A1F] text-gray-400 hover:text-white border border-gray-800'}`}>
             Archetype 2: Mid-Career Family
           </button>
           <button 
             onClick={() => setActiveArchetype(3)}
-            className={`px-4 py-2 rounded-md font-semibold text-sm transition-colors ${activeArchetype === 3 ? 'bg-teal-500 text-white' : 'bg-[#1A1A1F] text-gray-400 hover:text-white border border-gray-800'}`}>
-            Archetype 3: Fire Strategist
+            className={`px-4 py-2 rounded-md font-semibold text-sm transition-colors ${activeArchetype === 3 ? 'bg-blue-600 text-white border border-blue-500 shadow-md' : 'bg-[#1A1A1F] text-gray-400 hover:text-white border border-gray-800'}`}>
+            Archetype 3: FIRE Strategist
           </button>
         </div>
 

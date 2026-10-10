@@ -8,6 +8,7 @@ interface GraphNode {
   id: string;
   name: string;
   amountOrBalance: number | string;
+  nodeType?: string;
 }
 
 interface GraphEdge {
@@ -122,14 +123,14 @@ export function ArchetypeGraph({ userId }: { userId: number }) {
       .attr("overflow", "visible")
       .call(drag(simulation) as any);
 
-    // Inject Tailwind HTML into the SVG
+    // Inject Tailwind HTML into the SVG with a sleek, uniform Indigo theme
     node.append("xhtml:div")
-      .attr("class", "w-full h-full bg-[#1A1A1F] border border-gray-700 rounded-lg shadow-lg flex flex-col justify-center items-center text-white cursor-grab active:cursor-grabbing hover:border-teal-400 transition-colors duration-200 select-none")
+      .attr("class", "w-full h-full bg-[#1A1A1F] border border-gray-700 rounded-lg shadow-lg flex flex-col justify-center items-center text-white cursor-grab active:cursor-grabbing hover:border-indigo-400 transition-colors duration-200 select-none")
       .html((d: any) => {
         const formattedAmount = Number(d.amountOrBalance).toLocaleString();
         return `
           <div class="text-[11px] text-gray-400 font-semibold truncate w-11/12 text-center tracking-wide uppercase">${d.name}</div>
-          <div class="text-sm font-bold text-teal-400 mt-1">$${formattedAmount}</div>
+          <div class="text-sm font-bold text-indigo-400 mt-1">$${formattedAmount}</div>
         `;
       });
 

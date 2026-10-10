@@ -4,7 +4,7 @@
   "description": "",
   "main": "index.js",
   "scripts": {
-    "build:css": "tailwindcss -i src/css/*.css -o ../build/landing/src/styles.css --minify",
+    "build:css": "tailwindcss -i src/css/style.css -o ../build/landing/src/styles.css --minify",
     "build:ts": "esbuild src/ts/*.ts --bundle --minify --outdir=../build/landing/src",
     "build:html": "cpy \"pages/*.html\" ../build/landing/",
     "typecheck": "npx tsc --noEmit",

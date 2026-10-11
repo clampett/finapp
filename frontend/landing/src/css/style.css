@@ -36,16 +36,3 @@
   --border: #E2E8F0;
   --text_color: #000000;
 }
-
-[data-theme="funky"] {
-  --background: #42ea00;
-  --foreground: #000000;
-  --card: #f40505;
-  --card-foreground: #000000;
-  --primary: #bb17b2;
-  --primary-foreground: #000000;
-  --muted: #ffff00;
-  --muted-foreground: #000000;
-  --border: #1e40af;
-  --text_color: #f37c0d;
-}

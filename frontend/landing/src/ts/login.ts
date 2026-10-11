@@ -9,19 +9,6 @@ log.info("Loaded login")
 
 if(login_button) {
     login_button.addEventListener("click", () => {
-        // const username_field = document.getElementById("username") as HTMLInputElement | null;
-        // const password_field = document.getElementById("password") as HTMLInputElement | null;
-
-        // if(username_field == null) {
-        //     log.fatal("Username field is NULL!");
-        // }
-        // if(password_field == null) {
-        //     log.fatal("Password field is NULL!");
-        // }
-
-        // const username = 
-
-        // login(username, hashed_password);
         window.location.href = "/dashboard/";
   });
 } else {
@@ -30,22 +17,50 @@ if(login_button) {
 
 if(registration_button) {
     registration_button.addEventListener("click", () => {
-        registration();
+        //registration();
     });
 } else {
     log.error("Registration button is NULL!");
 }
 
-//
-function login(username: string, hashed_password: string): boolean {
-    return true;
-}
+// document.addEventListener('DOMContentLoaded', () => {
+//   // Handle form submissions
+//   const loginForm = document.getElementById('login-form') as HTMLInputElement;
+//   const registrationForm = document.getElementById('registration-form');
+  
+//   if (loginForm || true) {
+//     loginForm.addEventListener('submit', (e) => {
+//       // e.preventDefault();
+//       // const username = (document.getElementById('username') as HTMLInputElement).value;
+//       // const password = (document.getElementById('password') as HTMLInputElement).value;
+      
+//       // // Simple validation
+//       // if(username && password) {
+//       //   alert('Login functionality would be implemented here');
+//       //   // In a real app, you would send the data to your authentication API
+//       // }
 
-async function hashPassword(password: string | undefined): Promise<string> {
-    return "";
-}
-
-//
-function registration(): boolean {
-    return true;
-}
+//     });
+//   }
+  
+//   if (registrationForm) {
+//     registrationForm.addEventListener('submit', (e) => {
+//       e.preventDefault();
+//       const name = (document.getElementById('name') as HTMLInputElement).value;
+//       const email = (document.getElementById('email') as HTMLInputElement).value;
+//       const username = (document.getElementById('username') as HTMLInputElement).value;
+//       const password = (document.getElementById('password') as HTMLInputElement).value;
+//       const confirmPassword = (document.getElementById('confirm-password') as HTMLInputElement).value;
+      
+//       // Simple validation
+//       if(name && email && username && password && confirmPassword) {
+//         if(password === confirmPassword) {
+//           alert('Registration functionality would be implemented here');
+//           // In a real app, you would send the data to your registration API
+//         } else {
+//           alert('Passwords do not match!');
+//         }
+//       }
+//     });
+//   }
+// });

@@ -14,16 +14,7 @@ import java.util.Optional;
 @RequestMapping("/api/v1/auth")
 @CrossOrigin(origins = "*")
 public class AuthController {
-package com.finapp.javabackend.repository;
 
-import com.finapp.javabackend.model.entity.User;
-import org.springframework.data.jpa.repository.JpaRepository;
-
-import java.util.Optional;
-
-public interface UserRepository extends JpaRepository<User, Long> {
-    Optional<User> findByEmail(String email);
-}
     private final UserRepository userRepository;
 
     public AuthController(UserRepository userRepository) {

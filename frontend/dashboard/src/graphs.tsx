@@ -8,6 +8,7 @@ interface GraphNode {
   id: string;
   name: string;
   amountOrBalance: number | string;
+  nodeType?: string;
 }
 
 interface GraphEdge {
@@ -28,7 +29,6 @@ interface GraphResponse {
 
 export function ArchetypeGraph({ userId }: { userId: number }) {
   const containerRef = useRef<HTMLDivElement>(null);
-  console.log("running graph")
   
   useEffect(() => {
     const fetchAndRenderGraph = async () => {
@@ -44,8 +44,6 @@ export function ArchetypeGraph({ userId }: { userId: number }) {
         
         if (responseBody.success && responseBody.data) {
           const graphData = responseBody.data;
-          console.log('Successfully extracted GraphDTO:', graphData);
-          
           // Render the graph
           renderGraph(graphData);
         } else {
@@ -82,7 +80,10 @@ export function ArchetypeGraph({ userId }: { userId: number }) {
       .attr("width", width)
       .attr("height", height)
       .attr("viewBox", [0, 0, width, height])
-      .attr("style", "max-width: 100%; height: auto;");
+      .attr("style", "max-width: 100%; height: auto; outline: none;");
+
+    // Create a master group for zooming so nodes and links zoom together
+    const g = svg.append("g");
 
     // Format data for D3
     const nodes = graphData.nodes.map(d => Object.create(d));
@@ -94,48 +95,46 @@ export function ArchetypeGraph({ userId }: { userId: number }) {
 
     // Setup physics simulation
     const simulation = d3.forceSimulation(nodes)
-      .force("link", d3.forceLink(links).id((d: any) => d.id).distance(150))
-      .force("charge", d3.forceManyBody().strength(-400))
-      .force("center", d3.forceCenter(width / 2, height / 2));
+      .force("link", d3.forceLink(links).id((d: any) => d.id).distance(200)) // Increased distance for wider cards
+      .force("charge", d3.forceManyBody().strength(-500)) // Push them apart slightly more
+      .force("center", d3.forceCenter(width / 2, height / 2))
+      .force("collide", d3.forceCollide(85)); // Prevent cards from overlapping
 
-    // Draw edges (links)
-    const link = svg.append("g")
-      .attr("stroke", "#999")
+    // Draw edges (links) inside the zoom group
+    const link = g.append("g")
+      .attr("stroke", "#4b5563") // Darker slate gray for the connecting lines
       .attr("stroke-opacity", 0.6)
       .selectAll("line")
       .data(links)
       .join("line")
       .attr("stroke-width", 2);
 
-    // Draw nodes
-    const node = svg.append("g")
-      .attr("stroke", "#fff")
-      .attr("stroke-width", 1.5)
-      .selectAll("circle")
+    // Setup node dimensions
+    const nodeWidth = 140;
+    const nodeHeight = 65;
+
+    // Draw nodes as HTML containers using foreignObject
+    const node = g.append("g")
+      .selectAll("foreignObject")
       .data(nodes)
-      .join("circle")
-      .attr("r", 20)
-      .attr("fill", "#69b3a2")
+      .join("foreignObject")
+      .attr("width", nodeWidth)
+      .attr("height", nodeHeight)
+      .attr("overflow", "visible")
       .call(drag(simulation) as any);
 
-    // Add labels (text)
-    const labels = svg.append("g")
-      .selectAll("text")
-      .data(nodes)
-      .join("text")
-      .attr("dy", -25)
-      .attr("text-anchor", "middle")
-      .attr("fill", "#333")
-      .attr("font-family", "sans-serif")
-      .attr("font-weight", "bold")
-      .attr("font-size", "14px")
-      .text((d: any) => {
-        // Format the amount with commas (e.g., 22000 -> 22,000)
+    // Inject Tailwind HTML into the SVG with a sleek, uniform Indigo theme
+    node.append("xhtml:div")
+      .attr("class", "w-full h-full bg-[#1A1A1F] border border-gray-700 rounded-lg shadow-lg flex flex-col justify-center items-center text-white cursor-grab active:cursor-grabbing hover:border-indigo-400 transition-colors duration-200 select-none")
+      .html((d: any) => {
         const formattedAmount = Number(d.amountOrBalance).toLocaleString();
-        return `${d.name} ($${formattedAmount})`;
+        return `
+          <div class="text-[11px] text-gray-400 font-semibold truncate w-11/12 text-center tracking-wide uppercase">${d.name}</div>
+          <div class="text-sm font-bold text-indigo-400 mt-1">$${formattedAmount}</div>
+        `;
       });
 
-    // Tick function to update positions
+    // Tick function to update positions on every animation frame
     simulation.on("tick", () => {
       link
         .attr("x1", (d: any) => d.source.x)
@@ -143,20 +142,17 @@ export function ArchetypeGraph({ userId }: { userId: number }) {
         .attr("x2", (d: any) => d.target.x)
         .attr("y2", (d: any) => d.target.y);
 
+      // Offset the X and Y so the links connect exactly to the center of the card
       node
-        .attr("cx", (d: any) => d.x)
-        .attr("cy", (d: any) => d.y);
-        
-      labels
-        .attr("x", (d: any) => d.x)
-        .attr("y", (d: any) => d.y);
+        .attr("x", (d: any) => d.x - (nodeWidth / 2))
+        .attr("y", (d: any) => d.y - (nodeHeight / 2));
     });
 
-    // Handle zoom and pan
+    // Handle zoom and pan (now targeting the master 'g' group)
     const zoom = d3.zoom<SVGSVGElement, unknown>()
       .scaleExtent([0.1, 5])
       .on("zoom", (event) => {
-        svg.select("g").attr("transform", event.transform);
+        g.attr("transform", event.transform);
       });
 
     svg.call(zoom);
@@ -187,32 +183,5 @@ export function ArchetypeGraph({ userId }: { userId: number }) {
     }
   };
 
-  return <div ref={containerRef} />;
-}
-
-export async function loadArchetypeGraph(userId: number): Promise<void> {
-  // This is a wrapper for the fetch functionality if needed elsewhere
-  try {
-    console.log(`Fetching graph for Archetype ${userId}...`);
-    const response = await fetch(`${API_BASE_URL}/graph/${userId}`);
-    
-    if (!response.ok) {
-      throw new Error(`HTTP error! status: ${response.status}`);
-    }
-    
-    const responseBody: GraphResponse = await response.json();
-    
-    if (responseBody.success) {
-      const graphData = responseBody.data;
-      console.log('Successfully extracted GraphDTO:', graphData);
-      
-      // This function would be used in other contexts where you need the raw data
-      // For rendering, we use ArchetypeGraph component instead
-    } else {
-      console.error('Backend returned an error:', responseBody.message);
-    }
-    
-  } catch (error) {
-    console.error('Failed to fetch graph data:', error);
-  }
+  return <div ref={containerRef} className="w-full h-full" />;
 }

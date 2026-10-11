@@ -7,6 +7,8 @@ target/
 
 ### Frontend ###
 **/node_modules/
+frontend/dist/
+frontend/build/
 /java-backend/src/main/resources/static/assets/css
 /java-backend/src/main/resources/static/assets/js
 /java-backend/src/main/resources/static/dashboard

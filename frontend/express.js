@@ -7,8 +7,23 @@ const PORT = process.env.PORT || 8080;
 const landingDir = path.join(__dirname, 'build', 'landing');
 const dashboardDir = path.join(__dirname, 'build', 'dashboard');
 
+// Redirect /something.html -> /something (and /index.html -> /)
+// Skips /dashboard so the React app's own files are untouched
+app.use((req, res, next) => {
+  if (req.path.startsWith('/dashboard')) return next();
+  if (!req.path.endsWith('.html')) return next();
+
+  let clean = req.path.replace(/\.html$/, '');
+  if (clean.endsWith('/index')) clean = clean.slice(0, -'index'.length);
+  if (clean === '') clean = '/';
+
+  const query = req.url.slice(req.path.length); // preserve ?query=string
+  res.redirect(301, clean + query);
+});
+
 // Static landing page at /
-app.use(express.static(landingDir));
+// `extensions` lets /about serve about.html without the suffix
+app.use(express.static(landingDir, { extensions: ['html'] }));
 
 // React dashboard at /dashboard
 app.use('/dashboard', express.static(dashboardDir));

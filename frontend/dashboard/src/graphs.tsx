@@ -93,25 +93,25 @@ export function ArchetypeGraph({ userId }: { userId: number }) {
       target: d.targetNodeId
     }));
 
-    // Setup physics simulation
+    // Setup physics simulation with increased spacing for larger nodes
     const simulation = d3.forceSimulation(nodes)
-      .force("link", d3.forceLink(links).id((d: any) => d.id).distance(200)) // Increased distance for wider cards
-      .force("charge", d3.forceManyBody().strength(-500)) // Push them apart slightly more
+      .force("link", d3.forceLink(links).id((d: any) => d.id).distance(300)) 
+      .force("charge", d3.forceManyBody().strength(-800)) 
       .force("center", d3.forceCenter(width / 2, height / 2))
-      .force("collide", d3.forceCollide(85)); // Prevent cards from overlapping
+      .force("collide", d3.forceCollide(110)); 
 
     // Draw edges (links) inside the zoom group
     const link = g.append("g")
-      .attr("stroke", "#4b5563") // Darker slate gray for the connecting lines
+      .attr("stroke", "#4b5563") 
       .attr("stroke-opacity", 0.6)
       .selectAll("line")
       .data(links)
       .join("line")
       .attr("stroke-width", 2);
 
-    // Setup node dimensions
-    const nodeWidth = 140;
-    const nodeHeight = 65;
+    // Setup larger node dimensions for ultrawide visibility
+    const nodeWidth = 160;
+    const nodeHeight = 70;
 
     // Draw nodes as HTML containers using foreignObject
     const node = g.append("g")
@@ -123,14 +123,14 @@ export function ArchetypeGraph({ userId }: { userId: number }) {
       .attr("overflow", "visible")
       .call(drag(simulation) as any);
 
-    // Inject Tailwind HTML into the SVG with a sleek, uniform Indigo theme
+    // Inject Tailwind HTML into the SVG with upscale text sizes
     node.append("xhtml:div")
       .attr("class", "w-full h-full bg-[#1A1A1F] border border-gray-700 rounded-lg shadow-lg flex flex-col justify-center items-center text-white cursor-grab active:cursor-grabbing hover:border-indigo-400 transition-colors duration-200 select-none")
       .html((d: any) => {
         const formattedAmount = Number(d.amountOrBalance).toLocaleString();
         return `
-          <div class="text-[11px] text-gray-400 font-semibold truncate w-11/12 text-center tracking-wide uppercase">${d.name}</div>
-          <div class="text-sm font-bold text-indigo-400 mt-1">$${formattedAmount}</div>
+          <div class="text-sm text-gray-400 font-semibold truncate w-11/12 text-center tracking-wide uppercase">${d.name}</div>
+          <div class="text-lg font-bold text-indigo-400 mt-1">$${formattedAmount}</div>
         `;
       });
 
@@ -148,7 +148,7 @@ export function ArchetypeGraph({ userId }: { userId: number }) {
         .attr("y", (d: any) => d.y - (nodeHeight / 2));
     });
 
-    // Handle zoom and pan (now targeting the master 'g' group)
+    // Handle zoom and pan
     const zoom = d3.zoom<SVGSVGElement, unknown>()
       .scaleExtent([0.1, 5])
       .on("zoom", (event) => {
@@ -156,6 +156,14 @@ export function ArchetypeGraph({ userId }: { userId: number }) {
       });
 
     svg.call(zoom);
+
+    // Drop the artificial zoom and let it render at true 1:1 scale
+    const initialTransform = d3.zoomIdentity
+      .translate(width / 2, height / 2)
+      .scale(1)
+      .translate(-width / 2, -height / 2);
+      
+    svg.call(zoom.transform, initialTransform);
 
     // Add drag behavior to nodes
     function drag(simulation: d3.Simulation<any, undefined>) {

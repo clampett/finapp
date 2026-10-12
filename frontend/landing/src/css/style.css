@@ -12,27 +12,27 @@
 }
 
 :root, [data-theme="dark"] {
-  --background: #090d10;
-  --foreground: #91989f;
-  --card: #1d2126;
-  --card-foreground: #91989f;
-  --primary: #1E40AF;
-  --primary-foreground: #EFF6FF;
-  --muted: #F1F5F9;
-  --muted-foreground: #64748B;
-  --border: #E2E8F0;
+  --background: #1A1A1F;
+  --foreground: #D1D5DB;
+  --card: #232329;
+  --card-foreground: #D1D5DB;
+  --primary: #4F46E5;
+  --primary-foreground: #FFFFFF;
+  --muted: #374151;
+  --muted-foreground: #9CA3AF;
+  --border: #374151;
   --text_color: #FFFFFF;
 }
 
 [data-theme="light"] {
-  --background: #FFFFFF;
-  --foreground: #020817;
-  --card: #FFFFFF;
-  --card-foreground: #020817;
-  --primary: #1E40AF;
-  --primary-foreground: #EFF6FF;
-  --muted: #F1F5F9;
-  --muted-foreground: #64748B;
-  --border: #E2E8F0;
-  --text_color: #000000;
+  --background: #F9FAFB; 
+  --foreground: #1F2937; 
+  --card: #FFFFFF; 
+  --card-foreground: #1F2937;
+  --primary: #2563EB; /* Changed from Indigo to a crisp, classic Blue */
+  --primary-foreground: #FFFFFF; /* Forces the text inside the button to be pure white */
+  --muted: #F3F4F6;
+  --muted-foreground: #4B5563;
+  --border: #E5E7EB; 
+  --text_color: #1F2937;
 }

@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" class="scroll-smooth">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
@@ -9,60 +9,69 @@
 </head>
 <body class="bg-background text-text_color min-h-screen">
   <!-- Navbar -->
-  <nav class="bg-card border-b border-border py-4 px-6 shadow-lg">
+  <nav class="bg-card border-b border-border py-4 px-6 shadow-lg sticky top-0 z-50">
     <div class="flex justify-between items-center max-w-7xl mx-auto">
-      <!-- Logo on the left -->
-      <div>
-        <a href="index.html">
-          <img id="main_logo" type="image/svg+xml" src="/static/logo_full_light.svg" alt="FinApp Logo" class="h-10 w-auto">
-        </a>
+      
+      <!-- Logo on the left (Prevents shrinking) -->
+      <a href="index.html" class="flex items-center group shrink-0">
+        <div class="w-8 h-8 rounded-full bg-teal-400 mr-3 group-hover:bg-teal-300 transition-colors"></div>
+        <h1 class="text-2xl font-bold tracking-wide">FinApp</h1>
+      </a>
+
+      <!-- Navigation options in the center (Hidden on mobile, sleek text-base on desktop) -->
+      <div class="hidden md:flex space-x-8">
+        <a href="#about" class="text-base font-medium text-foreground hover:text-primary transition-colors">About</a>
+        <a href="#features" class="text-base font-medium text-foreground hover:text-primary transition-colors">Features</a>
+        <a href="#how-it-works" class="text-base font-medium text-foreground hover:text-primary transition-colors">How It Works</a>
+        <a href="#contact" class="text-base font-medium text-foreground hover:text-primary transition-colors">Contact</a>
       </div>
 
-      <!-- Navigation options in the center -->
-      <div class="flex space-x-8">
-        <a href="#about" class="text-lg font-medium hover:text-primary transition-colors">About</a>
-        <a href="#features" class="text-lg font-medium hover:text-primary transition-colors">Features</a>
-        <a href="#how-it-works" class="text-lg font-medium hover:text-primary transition-colors">How It Works</a>
-        <a href="#contact" class="text-lg font-medium hover:text-primary transition-colors">Contact</a>
-      </div>
-
-      <!-- Login button and theme change button on the right -->
-      <div class="flex items-center space-x-4">
-        <a href="login.html" class="px-4 py-2 bg-primary text-primary-foreground rounded-lg font-medium hover:bg-primary/90 transition-colors">Login</a>
-        <button id="theme_button" type="button" class="p-2 rounded-full hover:bg-muted transition-colors">
-          <img id="theme_button_img" type="image/svg+xml" src="/static/theme_change_light.svg" alt="Change theme" width="32" height="32">
+      <!-- Login, Demo, and Theme buttons on the right (Prevents text wrapping) -->
+      <div class="flex items-center space-x-3 md:space-x-4 shrink-0">
+        <!-- Hides Live Demo on extremely small screens to save space -->
+        <a href="/dashboard/" class="hidden sm:inline-block px-4 py-2 text-primary border border-primary rounded-lg font-medium hover:bg-primary/10 transition-colors whitespace-nowrap">Live Demo</a>
+        <a href="login.html" class="px-4 py-2 bg-primary text-white rounded-lg font-medium hover:bg-primary/90 transition-colors whitespace-nowrap">Login</a>
+        <button id="theme_button" type="button" class="p-2 rounded-full hover:bg-muted transition-colors cursor-pointer shrink-0">
+          <img id="theme_button_img" type="image/svg+xml" src="/static/theme_change_light.svg" alt="Change theme" width="24" height="24" class="md:w-8 md:h-8">
         </button>
       </div>
+
     </div>
   </nav>
 
   <!-- Hero Section -->
-  <section class="py-20 px-6 text-center max-w-5xl mx-auto">
+  <section id="about" class="py-20 px-6 text-center max-w-5xl mx-auto scroll-mt-24">
     <h1 class="text-5xl md:text-6xl font-bold mb-6">Visualize Your Financial Life</h1>
     <p class="text-xl md:text-2xl mb-8 text-foreground">See exactly where your income goes, track expenses, and manage debts in an intuitive, connected interface.</p>
     <div class="flex justify-center gap-4">
-      <a href="login.html" class="px-6 py-3 bg-primary text-primary-foreground rounded-lg font-medium hover:bg-primary/90 transition-colors">Get Started</a>
-      <a href="#features" class="px-6 py-3 border border-border rounded-lg font-medium hover:bg-muted transition-colors">Learn More</a>
+      <a href="login.html" class="px-6 py-3 bg-primary text-white rounded-lg font-medium shadow-lg hover:shadow-primary/30 hover:-translate-y-1 transition-all duration-200">Get Started</a>
+      <a href="#features" class="px-6 py-3 border border-border rounded-lg font-medium hover:bg-card hover:-translate-y-1 transition-all duration-200">Learn More</a>
     </div>
   </section>
 
   <!-- Features Section -->
-  <section id="features" class="py-16 px-6 bg-card">
+  <section id="features" class="py-16 px-6 bg-card scroll-mt-20">
     <div class="max-w-7xl mx-auto">
       <h2 class="text-3xl font-bold text-center mb-12">Powerful Financial Tools</h2>
       <div class="grid grid-cols-1 md:grid-cols-3 gap-8">
-        <div class="bg-background rounded-lg p-6 shadow-md">
+        <!-- Card 1 (Static) -->
+        <div class="bg-background rounded-lg p-6 shadow-md hover:shadow-lg transition-shadow duration-300 border border-transparent hover:border-border">
           <h3 class="text-xl font-bold mb-3">Interactive Visual Canvas</h3>
           <p class="text-foreground">See your finances as floating, connected circles (nodes). Click and drag to organize your financial life.</p>
         </div>
-        <div class="bg-background rounded-lg p-6 shadow-md">
+        <!-- Card 2 (Static) -->
+        <div class="bg-background rounded-lg p-6 shadow-md hover:shadow-lg transition-shadow duration-300 border border-transparent hover:border-border">
           <h3 class="text-xl font-bold mb-3">Live Balances</h3>
           <p class="text-foreground">View exactly how much money is sitting in your accounts or how much you owe on loans directly on the screen.</p>
         </div>
-        <div class="bg-background rounded-lg p-6 shadow-md">
-          <h3 class="text-xl font-bold mb-3">Pre-Loaded Profiles</h3>
-          <p class="text-foreground">Start instantly with ready-made user profiles to see how the system works without typing in your own data.</p>
-        </div>
+        <!-- Card 3 (Interactive Link to Dashboard) -->
+        <a href="/dashboard/" class="bg-background rounded-lg p-6 shadow-md hover:shadow-xl hover:-translate-y-2 hover:border-primary border border-transparent transition-all duration-300 group cursor-pointer block">
+          <div class="flex justify-between items-center mb-3">
+            <h3 class="text-xl font-bold group-hover:text-primary transition-colors">Pre-Loaded Profiles</h3>
+            <span class="text-primary opacity-0 group-hover:opacity-100 transition-opacity translate-x-[-10px] group-hover:translate-x-0 duration-300">➔</span>
+          </div>
+          <p class="text-foreground">Start instantly with ready-made user profiles to see how the system works without typing in your own data. <span class="font-semibold text-primary mt-2 block">Try the Demo</span></p>
+        </a>
       </div>
     </div>
   </section>
@@ -76,22 +85,22 @@
           <div class="inline-block p-4 bg-primary/10 rounded-full mb-4">
             <span class="text-3xl font-bold text-primary">1</span>
           </div>
-          <h3 class="text-xl font-bold mb-2">Connect Your Money</h3>
-          <p class="text-foreground">Link your salary, checking account, rent, student loans, and investments in one visual dashboard.</p>
+          <h3 class="text-xl font-bold mb-2">Map Your Portfolio</h3>
+          <p class="text-foreground">Easily input your accounts or import existing datasets to instantly generate a visual, interconnected map of your net worth.</p>
         </div>
         <div class="flex-1">
           <div class="inline-block p-4 bg-primary/10 rounded-full mb-4">
             <span class="text-3xl font-bold text-primary">2</span>
           </div>
-          <h3 class="text-xl font-bold mb-2">Track Everything</h3>
-          <p class="text-foreground">Monitor your expenses, income streams, and asset values in real-time with our interactive visuals.</p>
+          <h3 class="text-xl font-bold mb-2">Model the Future</h3>
+          <p class="text-foreground">Move beyond static spreadsheets. Run sophisticated Monte Carlo simulations to visualize long-term growth and stress-test your investments.</p>
         </div>
         <div class="flex-1">
           <div class="inline-block p-4 bg-primary/10 rounded-full mb-4">
             <span class="text-3xl font-bold text-primary">3</span>
           </div>
-          <h3 class="text-xl font-bold mb-2">Make Smart Decisions</h3>
-          <p class="text-foreground">Use the insights and forecasts to optimize your financial strategy.</p>
+          <h3 class="text-xl font-bold mb-2">Optimize Your Strategy</h3>
+          <p class="text-foreground">Track the exact flow of your cash and leverage dynamic forecasting tools to make confident, data-driven financial decisions.</p>
         </div>
       </div>
     </div>

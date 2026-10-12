@@ -13,16 +13,13 @@ log.info("Loaded main");
 if(theme_button) {
     theme_button.addEventListener('click', () => {
         const current: string | null = doc.getAttribute('data-theme');
-        const main_logo = document.getElementById("main_logo") as HTMLImageElement;
         const theme_button_img = document.getElementById("theme_button_img") as HTMLImageElement;
 
         if(current === "light") {
             switchTheme("dark");
-            main_logo.src = "/static/logo_full_light.svg";
             theme_button_img.src = "/static/theme_change_light.svg";
         } else {
             switchTheme("light");
-            main_logo.src = "/static/logo_full_dark.svg";
             theme_button_img.src = "/static/theme_change_dark.svg";
         }
     });

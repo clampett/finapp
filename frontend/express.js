@@ -39,6 +39,11 @@ app.get('/', (req, res) => {
   res.sendFile(path.join(landingDir, 'index.html'));
 });
 
+// Custom 404 handler
+app.use((req, res) => {
+  res.status(404).sendFile(path.join(landingDir, '404.html'));
+});
+
 app.listen(PORT, () => {
   console.log(`Server running at http://localhost:${PORT}`);
 });

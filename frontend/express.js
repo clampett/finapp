@@ -1,8 +1,16 @@
 const express = require('express');
 const path = require('path');
+const rateLimit = require('express-rate-limit');
 
 const app = express();
 const PORT = process.env.PORT || 8080;
+
+// Rate limiting for file access routes
+const fileAccessLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  max: 100, // limit each IP to 100 requests per windowMs
+  message: 'Too many file access attempts, please try again later.'
+});
 
 const landingDir = path.join(__dirname, 'build', 'landing');
 const dashboardDir = path.join(__dirname, 'build', 'dashboard');
@@ -17,6 +25,12 @@ app.use((req, res, next) => {
   if (clean.endsWith('/index')) clean = clean.slice(0, -'index'.length);
   if (clean === '') clean = '/';
 
+  // Sanitize the redirect URL to prevent open redirect vulnerabilities
+  if (!clean.startsWith('/')) {
+    // If the path doesn't start with '/', it's likely malicious
+    return res.status(400).send('Invalid redirect path');
+  }
+
   const query = req.url.slice(req.path.length); // preserve ?query=string
   res.redirect(301, clean + query);
 });
@@ -30,12 +44,12 @@ app.use('/dashboard', express.static(dashboardDir));
 
 // SPA fallback: any /dashboard/* route returns the React app's index.html
 // so client-side routing (React Router) works on refresh/deep links
-app.get('/dashboard/*splat', (req, res) => {
+app.get('/dashboard/*splat', fileAccessLimiter, (req, res) => {
   res.sendFile(path.join(dashboardDir, 'index.html'));
 });
 
 // Landing page index (explicit, in case static middleware is bypassed)
-app.get('/', (req, res) => {
+app.get('/', fileAccessLimiter, (req, res) => {
   res.sendFile(path.join(landingDir, 'index.html'));
 });
 

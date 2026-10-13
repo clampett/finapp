@@ -54,8 +54,8 @@ app.get('/', fileAccessLimiter, (req, res) => {
 });
 
 // Custom 404 handler
-app.use((req, res) => {
-  res.status(404).sendFile(path.join(landingDir, '404.html'));
+app.use(fileAccessLimiter, (req, res) => {
+   res.status(404).sendFile(path.join(landingDir, '404.html'));
 });
 
 app.listen(PORT, () => {

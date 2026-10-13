@@ -11,7 +11,8 @@
   "keywords": [],
   "type": "commonjs",
   "dependencies": {
-    "express": "^5.2.1"
+    "express": "^5.2.1",
+    "express-rate-limit": "^8.7.1"
   },
   "devDependencies": {
     "cpy-cli": "^7.0.0"

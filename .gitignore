@@ -46,3 +46,6 @@ build/
 venv/
 __pycache__/
 *.pyc
+
+### Price cache ###
+*.db

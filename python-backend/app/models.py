@@ -14,3 +14,5 @@ class NodeDTO(BaseModel):
 class GraphDTO(BaseModel):
     nodes: List[NodeDTO]
     edges: List[EdgeDTO]
+    investment_rate: float = 100.0
+    inflation_rate: float = 0.0

@@ -6,10 +6,11 @@
 
 CREATE TABLE users (
     id            BIGSERIAL PRIMARY KEY,
-    username      VARCHAR(50)  NOT NULL UNIQUE,
-    email         VARCHAR(255) NOT NULL UNIQUE,
-    is_archetype  BOOLEAN      NOT NULL DEFAULT FALSE,
-    created_at    TIMESTAMP    NOT NULL DEFAULT NOW()
+    username      VARCHAR(50)   NOT NULL UNIQUE,
+    email         VARCHAR(255)  NOT NULL UNIQUE,
+    is_archetype  BOOLEAN       NOT NULL DEFAULT FALSE,
+    created_at    TIMESTAMP     NOT NULL DEFAULT NOW(),
+    net_worth     NUMERIC(14,2) NOT NULL DEFAULT 0,
 );
 
 CREATE TABLE financial_profiles (

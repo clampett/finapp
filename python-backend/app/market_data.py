@@ -1,0 +1,36 @@
+import numpy as np
+import pandas as pd
+
+from app.asset_classes import DEFAULT_ASSET_CLASS, ticker_for
+from app.price_cache import get_prices
+
+
+def get_market_stats(asset_class: str = DEFAULT_ASSET_CLASS, years: int = 10) -> dict:
+    """Trailing return and volatility for an asset class, from cached prices."""
+    ticker = ticker_for(asset_class)
+    prices = get_prices(ticker)
+
+    cutoff = prices.index[-1] - pd.DateOffset(years=years)
+    prices = prices[prices.index >= cutoff]
+    if len(prices) < 2:
+        raise RuntimeError(f"Not enough price history for {ticker}")
+
+    elapsed_years = (prices.index[-1] - prices.index[0]).days / 365.25
+    cagr = (prices.iloc[-1] / prices.iloc[0]) ** (1 / elapsed_years) - 1
+
+    daily_returns = prices.pct_change().dropna()
+    volatility = daily_returns.std() * np.sqrt(252)  # 252 trading days/year
+    # Average yearly return (not compounded). Simulations that add random swings
+    # on top of a mean return should use this one; the CAGR runs lower than the
+    # average whenever returns are volatile.
+    expected_return = daily_returns.mean() * 252
+
+    return {
+        "asset_class": asset_class.upper(),
+        "ticker": ticker,
+        "start_date": prices.index[0].date().isoformat(),
+        "end_date": prices.index[-1].date().isoformat(),
+        "cagr": round(float(cagr), 4),
+        "expected_annual_return": round(float(expected_return), 4),
+        "annual_volatility": round(float(volatility), 4),
+    }

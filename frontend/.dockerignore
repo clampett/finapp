@@ -1,0 +1,44 @@
+# Node.js modules (to be installed in container with npm install)
+node_modules
+dashboard/node_modules
+landing/node_modules
+
+# Build artifacts (will be generated during build process)
+build/
+
+# Development and testing files
+*.test.*
+*.spec.*
+
+# NPM cache
+.npm
+npm-cache/
+.cache
+
+# IDE files
+.idea/
+.vscode/
+*.swp
+*.swo
+.DS_Store
+
+# OS files
+Thumbs.db
+*.tmp
+
+# Environment configuration
+.env
+.env.local
+.env.*.local
+
+# Git and version control
+.git/
+.gitignore
+.github/
+
+# Logs
+*.log
+
+# Configuration files that should be set in container
+yarn.lock
+pnpm-lock.yaml

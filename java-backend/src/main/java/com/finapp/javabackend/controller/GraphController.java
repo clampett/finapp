@@ -8,7 +8,7 @@ import org.springframework.web.bind.annotation.*;
 
 @RestController
 @RequestMapping("/api/v1/graph")
-@CrossOrigin(origins = "*")
+
 public class GraphController {
 
     private final GraphService graphService;

@@ -68,6 +68,7 @@ class GraphServiceTest {
         verify(edgeRepository, times(1)).findAll();
     }
 
+    @SuppressWarnings("null")
     @Test
     @DisplayName("saveGraph - Should map DTOs to entities and return saved GraphDTO")
     void saveGraph_ShouldSaveAndReturnGraphDTO() {

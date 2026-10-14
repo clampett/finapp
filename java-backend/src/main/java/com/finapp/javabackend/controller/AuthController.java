@@ -3,51 +3,53 @@ package com.finapp.javabackend.controller;
 import com.finapp.javabackend.common.ApiResponse;
 import com.finapp.javabackend.dto.LoginRequest;
 import com.finapp.javabackend.dto.LoginResponse;
+import com.finapp.javabackend.dto.RegistrationRequest;
 import com.finapp.javabackend.model.entity.User;
 import com.finapp.javabackend.repository.UserRepository;
+import com.finapp.javabackend.service.AuthService;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
-
-import java.util.Optional;
 
 @RestController
 @RequestMapping("/api/v1/auth")
 @CrossOrigin(origins = "*")
 public class AuthController {
 
-    private final UserRepository userRepository;
+    private final AuthService authService;
+    //private final UserRepository userRepository;
 
-    public AuthController(UserRepository userRepository) {
-        this.userRepository = userRepository;
+    public AuthController(AuthService authService, UserRepository userRepository) {
+        this.authService = authService;
+        //this.userRepository = userRepository;
     }
 
     @PostMapping("/login")
     public ResponseEntity<ApiResponse<LoginResponse>> login(
             @RequestBody LoginRequest request) {
 
-        if (!"demo123".equals(request.password())) {
+        try {
+            LoginResponse response = authService.authenticate(request);
+            return ResponseEntity.ok(
+                    ApiResponse.success(response, "Login successful")
+            );
+        } catch (Exception e) {
             return ResponseEntity.status(401)
                     .body(ApiResponse.error("Invalid username or password"));
         }
+    }
 
-        Optional<User> user =
-                userRepository.findByUsername(request.username());
+    @PostMapping("/register")
+    public ResponseEntity<ApiResponse<User>> register(
+            @RequestBody RegistrationRequest request) {
 
-        if (user.isEmpty()) {
-            return ResponseEntity.status(401)
-                    .body(ApiResponse.error("Invalid username or password"));
+        try {
+            User user = authService.register(request);
+            return ResponseEntity.ok(
+                    ApiResponse.success(user, "Registration successful")
+            );
+        } catch (Exception e) {
+            return ResponseEntity.status(400)
+                    .body(ApiResponse.error(e.getMessage()));
         }
-
-        User foundUser = user.get();
-
-        LoginResponse response = new LoginResponse(
-                foundUser.getId(),
-                foundUser.getUsername(),
-                foundUser.getEmail()
-        );
-
-        return ResponseEntity.ok(
-                ApiResponse.success(response, "Login successful")
-        );
     }
 }

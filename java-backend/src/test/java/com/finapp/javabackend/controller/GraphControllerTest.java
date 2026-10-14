@@ -53,6 +53,7 @@ class GraphControllerTest {
                 .andExpect(jsonPath("$.data.nodes[0].nodeType").value("CHECKING"));
     }
 
+    @SuppressWarnings("null")
     @Test
     @DisplayName("POST /api/v1/graph - Should persist graph and return 200 OK")
     void saveGraph_ShouldSaveAndReturnGraph() throws Exception {
@@ -63,13 +64,18 @@ class GraphControllerTest {
 
         when(graphService.saveGraph(any(GraphDTO.class))).thenReturn(savedGraph);
 
-        // Act & Assert
-        mockMvc.perform(post("/api/v1/graph")
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content(objectMapper.writeValueAsString(inputGraph)))
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$.success").value(true))
-                .andExpect(jsonPath("$.data.nodes[0].id").value(1))
-                .andExpect(jsonPath("$.data.nodes[0].name").value("Salary Income"));
+        final MediaType application_JSON2 = MediaType.APPLICATION_JSON;
+        if (application_JSON2 != null) {
+            // Act & Assert
+            mockMvc.perform(post("/api/v1/graph")
+                            .contentType(application_JSON2)
+                            .content(objectMapper.writeValueAsString(inputGraph)))
+                    .andExpect(status().isOk())
+                    .andExpect(jsonPath("$.success").value(true))
+                    .andExpect(jsonPath("$.data.nodes[0].id").value(1))
+                    .andExpect(jsonPath("$.data.nodes[0].name").value("Salary Income"));
+        } else {
+            // TODO handle null value
+        }
     }
 }

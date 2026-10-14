@@ -1,24 +1,28 @@
 from fastapi import APIRouter, HTTPException
 from app.models import GraphDTO
-# Import your Monte Carlo engine here (e.g., from app.monte_carlo import run_projection)
+from app.simulation import process_and_simulate
+from app.market_data import get_market_stats
 
 router = APIRouter()
 
-def simulate_graph(graph: GraphDTO):
-    """
-    Handles topological sorting, chronological cash flow evaluation 
-    (Income -> Checking -> Expenses -> Investments), and the bankruptcy hard-stop.
-    """
-    # [Insert your existing graph traversal and sorting logic here]
-    
-    # Example hard-stop logic:
-    # if checking_balance < 0:
-    #     raise HTTPException(status_code=400, detail="Bankruptcy error: Checking account dropped below zero.")
-    
-    # [Insert your Monte Carlo integration here]
-    
-    return {"status": "success", "message": "Simulation complete"}
-
 @router.post("/api/simulate")
 async def run_simulation(graph: GraphDTO):
-    return simulate_graph(graph)
+    # Fetch real market data for the simulation (using US_STOCKS as the default)
+    stats = get_market_stats("US_STOCKS", years=10)
+    
+    # Run the updated Monte Carlo simulation engine
+    # process_and_simulate now handles sorting nodes, debts, inflation, and investment rates
+    projection = process_and_simulate(
+        nodes=graph.nodes,
+        investment_rate=graph.investment_rate,
+        inflation_rate=graph.inflation_rate,
+        annual_return=stats["expected_annual_return"],
+        annual_volatility=stats["annual_volatility"],
+        years=30
+    )
+    
+    return {
+        "status": "success",
+        "market_stats": stats,
+        "forecast": projection
+    }

@@ -46,21 +46,22 @@ Ensure the following runtimes and tools are installed locally:
 
 A unified PowerShell automation script orchestrates dependencies, starts background containers, and streams backend and frontend logs concurrently.
 
-1. **Configure Environment:** (OPTIONAL)
+1. **Configure Environment:** (OPTIONAL)  
    Create an `.env` file in the repository root:
    ```env
    ANTHROPIC_API_KEY=your_key_here
 (If not using external LLM analysis features immediately, a placeholder value such as dummy_key can be used).
 
 Execute the Startup Script:
+
 From the repository root in PowerShell:
 
-(For windows users)
 PowerShell
 .\start.ps1
 The script boots Docker Desktop if not active, runs docker compose up --build -d db python-backend, builds static assets, and concurrently starts Spring Boot and the Express frontend server.
 
 Graceful Teardown:
+
 Press Ctrl + C in the PowerShell terminal to trigger the cleanup routine, stopping Java, Node, and Docker services cleanly.
 
 Option 2: Manual Multi-Service Startup
@@ -69,14 +70,17 @@ If running individual components manually across separate terminals:
 1. Start Infrastructure Containers
 Launch PostgreSQL and the Python simulation engine:
 
+Bash
 docker compose up -d db python-backend
 Note on Seed Data Updates: If updating schema.sql seed configurations, drop existing database volumes to ensure fresh initialization:
 
+Bash
 docker compose down -v
 docker compose up -d db python-backend
 2. Start the Spring Boot Service
 Navigate to the Java backend directory and launch via the Maven wrapper:
 
+Bash
 cd java-backend
 ./mvnw spring-boot:run
 The Spring service initializes on http://localhost:8081 and connects to PostgreSQL on port 5432.
@@ -84,6 +88,7 @@ The Spring service initializes on http://localhost:8081 and connects to PostgreS
 3. Build & Serve the Frontend
 From the root directory:
 
+Bash
 cd frontend
 npm in
 npm run build --prefix ./landing

@@ -1,9 +1,22 @@
 const express = require('express');
 const path = require('path');
 const rateLimit = require('express-rate-limit');
+const { createProxyMiddleware } = require('http-proxy-middleware');
 
 const app = express();
 const PORT = process.env.PORT || 8080;
+
+// API proxy setup for development
+// const apiProxy = createProxyMiddleware('/api', {
+//   target: 'http://localhost:8081',
+//   changeOrigin: true,
+//   pathRewrite: {
+//     '^/api': '/api'
+//   }
+// });
+
+// Apply the proxy middleware to all routes starting with /api
+//app.use('/api', apiProxy);
 
 // Rate limiting for file access routes
 const fileAccessLimiter = rateLimit({

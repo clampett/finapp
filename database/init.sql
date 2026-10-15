@@ -75,4 +75,6 @@ INSERT INTO financial_nodes (user_id, node_type, name, current_balance, interest
 (3, 'real_estate', 'Primary Home', 300000.00, 0.00);
 
 -- Add new user with registration endpoint
+-- username: test_user
+-- password: password123
 INSERT INTO users (username, email, password) VALUES ('test_user', 'test@example.com', '$2a$10$abcdefghijklmnopqrstuvwxyZ1234567890');

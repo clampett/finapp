@@ -5,6 +5,13 @@ export default function App() {
   // State to track which archetype is active (defaults to 1)
   const [activeArchetype, setActiveArchetype] = useState(1);
 
+  // Logout function
+  const handleLogout = () => {
+    localStorage.removeItem('auth_token');
+    sessionStorage.removeItem('user_id');
+    window.location.href = "/login.html";
+  };
+
   return (
     <div className="flex h-screen w-screen bg-[#111115] text-white font-sans overflow-hidden">
       
@@ -38,7 +45,7 @@ export default function App() {
           <div className="flex items-center space-x-8 text-gray-400">
             <span className="cursor-pointer hover:text-white text-xl">🔔</span>
             <div className="w-10 h-10 rounded-full bg-gray-600 cursor-pointer"></div>
-            <a href="/" className="text-base font-semibold text-indigo-400 hover:text-indigo-300">Logout</a>
+            <a href="#" onClick={handleLogout} className="text-base font-semibold text-indigo-400 hover:text-indigo-300">Logout</a>
           </div>
         </header>
 

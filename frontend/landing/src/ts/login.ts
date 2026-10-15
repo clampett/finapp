@@ -15,12 +15,9 @@ if (loginForm) {
             log.info("Login attempt with username:", username);
             
             try {
-                // === REAL BACKEND INTEGRATION POINT ===
-                // In a real implementation, this would be replaced with actual API calls:
-                
-                /*
-                // Example of how the real implementation would work:
-                const response = await fetch('/api/auth/login', {
+                // Make actual API call to login endpoint
+                // Using explicit backend URL for development purposes
+                const response = await fetch('http://localhost:8081/api/v1/auth/login', {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
@@ -32,28 +29,23 @@ if (loginForm) {
                 });
                 
                 if (!response.ok) {
-                    throw new Error('Authentication failed');
+                    // Handle authentication failure
+                    const errorData = await response.json();
+                    throw new Error(errorData.message || 'Authentication failed');
                 }
                 
                 const data = await response.json();
                 
-                // Store the authentication token (JWT or session cookie)
-                localStorage.setItem('auth_token', data.token);
-                sessionStorage.setItem('user_id', data.user.id);
+                // Store the authentication token (JWT)
+                localStorage.setItem('auth_token', data.data.token);
+                sessionStorage.setItem('user_id', data.data.id);
                 
                 // Redirect to dashboard
                 window.location.href = "/dashboard/";
-                */
-                
-                // Dummy API call simulation for demonstration purposes
-                setTimeout(() => {
-                    alert('Login functionality would be implemented here! In a real app, this would authenticate you against the backend.');
-                    window.location.href = "/dashboard/";
-                }, 500);
                 
             } catch (error) {
                 log.error("Login error:", error);
-                alert('Login failed. Please check your credentials and try again.');
+                alert('Login failed: ' + (error as Error).message || 'Please check your credentials and try again.');
             }
         } else {
             alert('Please enter both username and password');
@@ -72,49 +64,39 @@ if (registrationForm) {
         
         // Simple validation
         if(name && email && username && password && confirmPassword) {
-            if(password === confirmPassword) {
-                log.info("Registration attempt with username:", username);
-                
-                try {
-                    // === REAL BACKEND INTEGRATION POINT ===
-                    // In a real implementation, this would be replaced with actual API calls:
-                    
-                    /*
-                    // Example of how the real implementation would work:
-                    const response = await fetch('/api/auth/register', {
-                        method: 'POST',
-                        headers: {
-                            'Content-Type': 'application/json',
-                        },
-                        body: JSON.stringify({
-                            name: name,
-                            email: email,
-                            username: username,
-                            password: password
-                        })
-                    });
-                    
-                    if (!response.ok) {
-                        const errorData = await response.json();
-                        throw new Error(errorData.message || 'Registration failed');
-                    }
-                    
-                    // Registration successful - redirect to login page
-                    window.location.href = "login.html";
-                    */
-                    
-                    // Dummy API call simulation for demonstration purposes
-                    setTimeout(() => {
-                        alert('Registration functionality would be implemented here! Your account would be created on the backend.');
-                        window.location.href = "login.html";
-                    }, 500);
-                    
-                } catch (error) {
-                    log.error("Registration error:", error);
-                    alert('Registration failed. Please try again.');
-                }
-            } else {
+            if (password !== confirmPassword) {
                 alert('Passwords do not match!');
+                return;
+            }
+            
+            log.info("Registration attempt with username:", username);
+            
+            try {
+                // Make actual API call to register endpoint
+                const response = await fetch('http://localhost:8081/api/v1/auth/register', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        username: username,
+                        email: email,
+                        password: password
+                    })
+                });
+                
+                if (!response.ok) {
+                    const errorData = await response.json();
+                    throw new Error(errorData.message || 'Registration failed');
+                }
+                
+                const data = await response.json();
+                alert('Registration successful! Please login.');
+                window.location.href = '/login.html';
+                
+            } catch (error) {
+                log.error("Registration error:", error);
+                alert('Registration failed: ' + (error as Error).message || 'Please try again.');
             }
         } else {
             alert('Please fill in all fields');

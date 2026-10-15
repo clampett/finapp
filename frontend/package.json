@@ -12,7 +12,8 @@
   "type": "commonjs",
   "dependencies": {
     "express": "^5.2.1",
-    "express-rate-limit": "^8.7.1"
+    "express-rate-limit": "^8.7.1",
+    "http-proxy-middleware": "^3.0.3"
   },
   "devDependencies": {
     "cpy-cli": "^7.0.0"

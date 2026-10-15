@@ -1,12 +1,20 @@
-import React from 'react'
-import ReactDOM from 'react-dom/client'
+import { StrictMode } from 'react'
+import { createRoot } from 'react-dom/client'
 import App from './App.tsx'
+import './index.css'
 
-// Add this line. Adjust the path if your file is inside a css/ folder
-import './index.css' 
+// Check authentication before rendering the app
+if (typeof window !== 'undefined') {
+  const token = localStorage.getItem('auth_token');
+  
+  if (!token) {
+    // Redirect to login page if not authenticated
+    window.location.href = "/login.html";
+  }
+}
 
-ReactDOM.createRoot(document.getElementById('root')!).render(
-  <React.StrictMode>
+createRoot(document.getElementById('root')!).render(
+  <StrictMode>
     <App />
-  </React.StrictMode>,
+  </StrictMode>,
 )

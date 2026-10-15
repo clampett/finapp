@@ -46,7 +46,7 @@ Ensure the following runtimes and tools are installed locally:
 
 A unified PowerShell automation script orchestrates dependencies, starts background containers, and streams backend and frontend logs concurrently.
 
-1. **Configure Environment:**
+1. **Configure Environment:** (OPTIONAL)
    Create an `.env` file in the repository root:
    ```env
    ANTHROPIC_API_KEY=your_key_here

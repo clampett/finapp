@@ -64,7 +64,7 @@ Graceful Teardown:
 
 Press Ctrl + C in the PowerShell terminal to trigger the cleanup routine, stopping Java, Node, and Docker services cleanly.
 
-Option 2: Manual Multi-Service Startup
+### Option 2: Manual Multi-Service Startup
 If running individual components manually across separate terminals:
 
 1. Start Infrastructure Containers
@@ -96,7 +96,7 @@ npm run build --prefix ./dashboard
 npm run dev
 The Express server hosts the static landing interface and compiled React dashboard on http://localhost:8080.
 
-Access Points
+### Access Points
 Landing Page & Authentication: http://localhost:8080
 
 Interactive Dashboard: http://localhost:8080/dashboard/

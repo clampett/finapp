@@ -105,7 +105,7 @@ Java REST API Root: http://localhost:8081/api/v1
 
 Python Simulation API Docs: http://localhost:5000/docs
 
-Development Workflow
+### Development Workflow
 Branching Model: Feature development follows dev -> your_branch_name. Direct commits to main and dev are protected.
 
 Cross-Service Testing: Ensure frontend TypeScript interfaces (GraphData, NodeDTO, EdgeDTO) remain strictly typed against Spring Boot entities and FastAPI Pydantic schemas.

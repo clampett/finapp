@@ -29,7 +29,7 @@
       <!-- Login, Demo, and Theme buttons on the right (Prevents text wrapping) -->
       <div class="flex items-center space-x-3 md:space-x-4 shrink-0">
         <!-- Hides Live Demo on extremely small screens to save space -->
-        <a href="/dashboard/" class="hidden sm:inline-block px-4 py-2 text-primary border border-primary rounded-lg font-medium hover:bg-primary/10 transition-colors whitespace-nowrap">Live Demo</a>
+        <a href="/dashboard/?demo=true" class="hidden sm:inline-block px-4 py-2 text-primary border border-primary rounded-lg font-medium hover:bg-primary/10 transition-colors whitespace-nowrap">Live Demo</a>
         <a href="login.html" class="px-4 py-2 bg-primary text-white rounded-lg font-medium hover:bg-primary/90 transition-colors whitespace-nowrap">Login</a>
         <button id="theme_button" type="button" class="p-2 rounded-full hover:bg-muted transition-colors cursor-pointer shrink-0">
           <img id="theme_button_img" type="image/svg+xml" src="/static/theme_change_light.svg" alt="Change theme" width="24" height="24" class="md:w-8 md:h-8">
@@ -64,8 +64,8 @@
           <h3 class="text-xl font-bold mb-3">Live Balances</h3>
           <p class="text-foreground">View exactly how much money is sitting in your accounts or how much you owe on loans directly on the screen.</p>
         </div>
-        <!-- Card 3 (Interactive Link to Dashboard) -->
-        <a href="/dashboard/" class="bg-background rounded-lg p-6 shadow-md hover:shadow-xl hover:-translate-y-2 hover:border-primary border border-transparent transition-all duration-300 group cursor-pointer block">
+        <!-- Card 3 (Interactive Link to Dashboard Demo) -->
+        <a href="/dashboard/?demo=true" class="bg-background rounded-lg p-6 shadow-md hover:shadow-xl hover:-translate-y-2 hover:border-primary border border-transparent transition-all duration-300 group cursor-pointer block">
           <div class="flex justify-between items-center mb-3">
             <h3 class="text-xl font-bold group-hover:text-primary transition-colors">Pre-Loaded Profiles</h3>
             <span class="text-primary opacity-0 group-hover:opacity-100 transition-opacity translate-x-[-10px] group-hover:translate-x-0 duration-300">➔</span>

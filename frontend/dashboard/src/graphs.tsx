@@ -26,20 +26,31 @@ export function ArchetypeGraph({ userId }: { userId: number }) {
   const [currentGraph, setCurrentGraph] = useState<GraphData | null>(null);
   const [showModal, setShowModal] = useState(false);
   
+  const searchParams = new URLSearchParams(window.location.search);
+  const isDemoMode = searchParams.get('demo') === 'true';
+
   useEffect(() => {
     const fetchAndRenderGraph = async () => {
       try {
         const response = await fetch(`${API_BASE_URL}/graph/${userId}`);
-        if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
+        if (!response.ok) {
+          setCurrentGraph({ nodes: [], edges: [] });
+          if (containerRef.current) d3.select(containerRef.current).selectAll("svg").remove();
+          return;
+        }
+        
         const responseBody = await response.json();
         
         if (responseBody.success && responseBody.data) {
           setCurrentGraph(responseBody.data);
           renderGraph(responseBody.data);
-          setShowModal(false); 
+        } else {
+          setCurrentGraph({ nodes: [], edges: [] });
+          if (containerRef.current) d3.select(containerRef.current).selectAll("svg").remove();
         }
       } catch (error) {
         console.error('Failed to fetch graph data:', error);
+        setCurrentGraph({ nodes: [], edges: [] });
       }
     };
 
@@ -52,9 +63,10 @@ export function ArchetypeGraph({ userId }: { userId: number }) {
 
   const renderGraph = (graphData: GraphData) => {
     if (containerRef.current) d3.select(containerRef.current).selectAll("svg").remove();
+    if (!graphData.nodes || graphData.nodes.length === 0) return;
 
     const width = window.innerWidth;
-    const height = window.innerHeight - 100;
+    const height = window.innerHeight - 150;
     
     const svg = d3.select(containerRef.current)
       .append("svg")
@@ -63,52 +75,17 @@ export function ArchetypeGraph({ userId }: { userId: number }) {
       .attr("viewBox", [0, 0, width, height])
       .attr("style", "max-width: 100%; height: auto; outline: none; background-color: #0B0B10;");
 
-    // ==========================================
-    // 1. PREMIUM GRAPH PAPER BACKGROUND
-    // ==========================================
+    // Grid Background
     const defs = svg.append("defs");
-    
-    // Minor Grid (Faint 20px squares)
-    const minorGrid = defs.append("pattern")
-      .attr("id", "minorGrid")
-      .attr("width", 20)
-      .attr("height", 20)
-      .attr("patternUnits", "userSpaceOnUse");
-      
-    minorGrid.append("path")
-      .attr("d", "M 20 0 L 0 0 0 20")
-      .attr("fill", "none")
-      .attr("stroke", "rgba(255,255,255,0.03)") // 3% opacity
-      .attr("stroke-width", 1);
+    const minorGrid = defs.append("pattern").attr("id", "minorGrid").attr("width", 20).attr("height", 20).attr("patternUnits", "userSpaceOnUse");
+    minorGrid.append("path").attr("d", "M 20 0 L 0 0 0 20").attr("fill", "none").attr("stroke", "rgba(255,255,255,0.03)").attr("stroke-width", 1);
 
-    // Major Grid (Slightly brighter 100px squares)
-    const majorGrid = defs.append("pattern")
-      .attr("id", "majorGrid")
-      .attr("width", 100)
-      .attr("height", 100)
-      .attr("patternUnits", "userSpaceOnUse");
-      
-    majorGrid.append("rect")
-      .attr("width", 100)
-      .attr("height", 100)
-      .attr("fill", "url(#minorGrid)");
-      
-    majorGrid.append("path")
-      .attr("d", "M 100 0 L 0 0 0 100")
-      .attr("fill", "none")
-      .attr("stroke", "rgba(255,255,255,0.06)") // 6% opacity
-      .attr("stroke-width", 1);
+    const majorGrid = defs.append("pattern").attr("id", "majorGrid").attr("width", 100).attr("height", 100).attr("patternUnits", "userSpaceOnUse");
+    majorGrid.append("rect").attr("width", 100).attr("height", 100).attr("fill", "url(#minorGrid)");
+    majorGrid.append("path").attr("d", "M 100 0 L 0 0 0 100").attr("fill", "none").attr("stroke", "rgba(255,255,255,0.06)").attr("stroke-width", 1);
 
-    // Render the grid background to fill the screen
-    svg.append("rect")
-      .attr("width", "100%")
-      .attr("height", "100%")
-      .attr("fill", "url(#majorGrid)");
+    svg.append("rect").attr("width", "100%").attr("height", "100%").attr("fill", "url(#majorGrid)");
 
-
-    // ==========================================
-    // 2. GRAPH NODES & EDGES
-    // ==========================================
     const g = svg.append("g");
     const nodes = graphData.nodes.map(d => Object.create(d));
     const links = graphData.edges.map(d => ({ ...Object.create(d), source: d.sourceNodeId, target: d.targetNodeId }));
@@ -119,13 +96,7 @@ export function ArchetypeGraph({ userId }: { userId: number }) {
       .force("center", d3.forceCenter(width / 2, height / 2))
       .force("collide", d3.forceCollide(110)); 
 
-    const link = g.append("g")
-      .attr("stroke", "#4b5563")
-      .attr("stroke-opacity", 0.6)
-      .selectAll("line")
-      .data(links)
-      .join("line")
-      .attr("stroke-width", 2);
+    const link = g.append("g").attr("stroke", "#4b5563").attr("stroke-opacity", 0.6).selectAll("line").data(links).join("line").attr("stroke-width", 2);
 
     const nodeWidth = 160;
     const nodeHeight = 70;
@@ -158,13 +129,10 @@ export function ArchetypeGraph({ userId }: { userId: number }) {
       .scaleExtent([0.1, 5])
       .on("zoom", (event) => {
         g.attr("transform", event.transform);
-        // Dynamically translate and scale the grid pattern to perfectly match the user's view
         majorGrid.attr("patternTransform", `translate(${event.transform.x}, ${event.transform.y}) scale(${event.transform.k})`);
       });
 
     svg.call(zoom);
-
-    // Dynamic zoom based on screen size (Updated to be slightly larger: 0.65/0.95)
     const initialScale = width < 1024 ? 0.65 : 0.95;
     svg.call(zoom.transform, d3.zoomIdentity.translate(width / 2, height / 2).scale(initialScale).translate(-width / 2, -height / 2));
 
@@ -177,18 +145,36 @@ export function ArchetypeGraph({ userId }: { userId: number }) {
   };
 
   return (
-    <div className="relative w-full h-full overflow-hidden">
-      <div className="absolute top-4 right-4 z-10">
+    <div className="relative w-full h-full overflow-hidden flex flex-col">
+      
+      {/* TOP ACTION BAR: Clean header with Forecast Button */}
+      <div className="flex items-center justify-between px-6 py-4 bg-[#111116] border-b border-gray-800 z-10">
+        <div>
+          <h1 className="text-lg font-bold text-white">{isDemoMode ? "Demo Financial Canvas" : "Your Financial Canvas"}</h1>
+          <p className="text-xs text-gray-400">Map your income, assets, and liabilities below.</p>
+        </div>
         <button 
           onClick={() => setShowModal(true)}
-          disabled={!currentGraph}
-          className="px-6 py-2 bg-indigo-600 hover:bg-indigo-500 text-white font-bold rounded-lg shadow-lg transition-colors disabled:opacity-50"
+          disabled={!currentGraph || currentGraph.nodes.length === 0}
+          className="px-5 py-2 bg-indigo-600 hover:bg-indigo-500 text-white text-sm font-bold rounded-lg shadow-lg transition-colors disabled:opacity-50 cursor-pointer"
         >
           Run 30-Year Forecast
         </button>
       </div>
 
-      <div ref={containerRef} className="w-full h-full cursor-grab active:cursor-grabbing" />
+      {/* GRAPH CANVAS OR EMPTY STATE */}
+      <div className="relative flex-1 w-full h-full">
+        <div ref={containerRef} className="w-full h-full cursor-grab active:cursor-grabbing" />
+
+        {/* Empty state for real users who haven't added nodes yet */}
+        {(!currentGraph || currentGraph.nodes.length === 0) && !isDemoMode && (
+          <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none text-center p-6 bg-[#0B0B10]">
+            <div className="w-16 h-16 rounded-full bg-indigo-500/10 border border-indigo-500/20 flex items-center justify-center mb-4 text-indigo-400 text-2xl font-bold">+</div>
+            <h2 className="text-xl font-bold text-white mb-2">Your canvas is empty</h2>
+            <p className="text-sm text-gray-400 max-w-md mb-6">It looks like you haven't added any financial accounts or income streams yet. Start mapping your financial web to run forecasts.</p>
+          </div>
+        )}
+      </div>
 
       {showModal && currentGraph && (
         <SimulationModal 

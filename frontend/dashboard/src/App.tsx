@@ -2,8 +2,12 @@ import { useState } from 'react';
 import { ArchetypeGraph } from './graphs.tsx';
 
 export default function App() {
-  // State to track which archetype is active (defaults to 1)
-  const [activeArchetype, setActiveArchetype] = useState(1);
+  const searchParams = new URLSearchParams(window.location.search);
+  const isDemoMode = searchParams.get('demo') === 'true';
+
+  // If demo mode, default to archetype 1. If real dashboard, look for real user ID, otherwise default to 0 (empty canvas)
+  const realUserId = Number(localStorage.getItem('finapp_user_id')) || 0;
+  const [activeArchetype, setActiveArchetype] = useState(isDemoMode ? 1 : realUserId);
 
   return (
     <div className="flex h-screen w-screen bg-[#111115] text-white font-sans overflow-hidden">
@@ -42,24 +46,27 @@ export default function App() {
           </div>
         </header>
 
-        {/* UPGRADED ARCHETYPE TOGGLE MENU: Larger buttons */}
-        <div className="px-10 pt-8 flex space-x-6">
-          <button 
-            onClick={() => setActiveArchetype(1)}
-            className={`px-6 py-3 rounded-lg font-bold text-base transition-colors ${activeArchetype === 1 ? 'bg-blue-600 text-white border border-blue-500 shadow-md' : 'bg-[#1A1A1F] text-gray-400 hover:text-white border border-gray-800'}`}>
-            Archetype 1: Recent Grad
-          </button>
-          <button 
-            onClick={() => setActiveArchetype(2)}
-            className={`px-6 py-3 rounded-lg font-bold text-base transition-colors ${activeArchetype === 2 ? 'bg-blue-600 text-white border border-blue-500 shadow-md' : 'bg-[#1A1A1F] text-gray-400 hover:text-white border border-gray-800'}`}>
-            Archetype 2: Mid-Career Family
-          </button>
-          <button 
-            onClick={() => setActiveArchetype(3)}
-            className={`px-6 py-3 rounded-lg font-bold text-base transition-colors ${activeArchetype === 3 ? 'bg-blue-600 text-white border border-blue-500 shadow-md' : 'bg-[#1A1A1F] text-gray-400 hover:text-white border border-gray-800'}`}>
-            Archetype 3: FIRE Strategist
-          </button>
-        </div>
+        {/* CONDITIONAL ARCHETYPE TOGGLE MENU: Only renders if ?demo=true is in the URL */}
+        {isDemoMode && (
+          <div className="px-10 pt-8 flex items-center space-x-6">
+            <span className="px-3 py-1 bg-amber-500/10 text-amber-400 border border-amber-500/20 text-xs font-semibold rounded-full uppercase tracking-wider">Demo Mode</span>
+            <button 
+              onClick={() => setActiveArchetype(1)}
+              className={`px-6 py-3 rounded-lg font-bold text-base transition-colors ${activeArchetype === 1 ? 'bg-blue-600 text-white border border-blue-500 shadow-md' : 'bg-[#1A1A1F] text-gray-400 hover:text-white border border-gray-800'}`}>
+              Archetype 1: Recent Grad
+            </button>
+            <button 
+              onClick={() => setActiveArchetype(2)}
+              className={`px-6 py-3 rounded-lg font-bold text-base transition-colors ${activeArchetype === 2 ? 'bg-blue-600 text-white border border-blue-500 shadow-md' : 'bg-[#1A1A1F] text-gray-400 hover:text-white border border-gray-800'}`}>
+              Archetype 2: Mid-Career Family
+            </button>
+            <button 
+              onClick={() => setActiveArchetype(3)}
+              className={`px-6 py-3 rounded-lg font-bold text-base transition-colors ${activeArchetype === 3 ? 'bg-blue-600 text-white border border-blue-500 shadow-md' : 'bg-[#1A1A1F] text-gray-400 hover:text-white border border-gray-800'}`}>
+              Archetype 3: FIRE Strategist
+            </button>
+          </div>
+        )}
 
         {/* D3 Graph Canvas */}
         <div className="flex-1 p-10 overflow-hidden relative" id="d3-container">

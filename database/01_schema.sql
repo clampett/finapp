@@ -19,6 +19,18 @@ CREATE TABLE users (
     )
 );
 
+CREATE TABLE user_sessions (
+    id         BIGSERIAL PRIMARY KEY,
+    user_id    BIGINT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    token      VARCHAR(255) NOT NULL UNIQUE,
+    ip_address VARCHAR(45),
+    created_at TIMESTAMP NOT NULL DEFAULT NOW(),
+    expires_at TIMESTAMP NOT NULL,
+
+    -- Prevents a session from being created already expired.
+    CONSTRAINT chk_session_expiry CHECK (expires_at > created_at)
+);
+
 CREATE TABLE financial_profiles (
     id                BIGSERIAL PRIMARY KEY,
     user_id           BIGINT NOT NULL UNIQUE REFERENCES users(id) ON DELETE CASCADE,
@@ -52,3 +64,5 @@ CREATE INDEX idx_profiles_user ON financial_profiles(user_id);
 CREATE INDEX idx_nodes_user    ON financial_nodes(user_id);
 CREATE INDEX idx_edges_source  ON node_edges(source_node_id);
 CREATE INDEX idx_edges_target  ON node_edges(target_node_id);
+CREATE INDEX idx_sessions_user  ON user_sessions(user_id);
+CREATE INDEX idx_sessions_token ON user_sessions(token);

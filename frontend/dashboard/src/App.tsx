@@ -1,18 +1,40 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { ArchetypeGraph } from './graphs.tsx';
 
 export default function App() {
   const searchParams = new URLSearchParams(window.location.search);
   const isDemoMode = searchParams.get('demo') === 'true';
 
-  // If demo mode, default to archetype 1. If real dashboard, look for real user ID, otherwise default to 0 (empty canvas)
-  const realUserId = Number(localStorage.getItem('finapp_user_id')) || 0;
+  // 1. ROUTE GUARD: Kick unauthenticated users out immediately
+  useEffect(() => {
+    const loggedInUserId = sessionStorage.getItem('finapp_user_id');
+    if (!isDemoMode && !loggedInUserId) {
+      window.location.replace('/login.html');
+    }
+  }, [isDemoMode]);
+
+  // 2. SECURE LOGOUT HANDLERS
+  const handleLogout = () => {
+    sessionStorage.removeItem('finapp_user_id');
+    window.location.replace('/login.html');
+  };
+
+  const handleExitDemo = () => {
+    window.location.replace('/');
+  };
+
+  const realUserId = Number(sessionStorage.getItem('finapp_user_id')) || 0;
   const [activeArchetype, setActiveArchetype] = useState(isDemoMode ? 1 : realUserId);
+
+  // If we are redirecting, render nothing to prevent a flash of the dashboard
+  if (!isDemoMode && !sessionStorage.getItem('finapp_user_id')) {
+    return null; 
+  }
 
   return (
     <div className="flex h-screen w-screen bg-[#111115] text-white font-sans overflow-hidden">
       
-      {/* UPGRADED SIDEBAR: Wider (w-80) and larger text for ultrawide screens */}
+      {/* SIDEBAR */}
       <aside className="w-80 bg-[#1A1A1F] border-r border-gray-800 flex flex-col justify-between">
         <div>
           <div className="h-24 flex items-center px-8 border-b border-gray-800">
@@ -42,11 +64,14 @@ export default function App() {
           <div className="flex items-center space-x-8 text-gray-400">
             <span className="cursor-pointer hover:text-white text-xl">🔔</span>
             <div className="w-10 h-10 rounded-full bg-gray-600 cursor-pointer"></div>
-            <a href="/" className="text-base font-semibold text-indigo-400 hover:text-indigo-300">Logout</a>
+            {/* Dynamic Logout / Exit Demo Button */}
+            <button onClick={isDemoMode ? handleExitDemo : handleLogout} className="text-base font-semibold text-indigo-400 hover:text-indigo-300 transition-colors cursor-pointer">
+              {isDemoMode ? "Exit Demo" : "Logout"}
+            </button>
           </div>
         </header>
 
-        {/* CONDITIONAL ARCHETYPE TOGGLE MENU: Only renders if ?demo=true is in the URL */}
+        {/* CONDITIONAL ARCHETYPE TOGGLE MENU */}
         {isDemoMode && (
           <div className="px-10 pt-8 flex items-center space-x-6">
             <span className="px-3 py-1 bg-amber-500/10 text-amber-400 border border-amber-500/20 text-xs font-semibold rounded-full uppercase tracking-wider">Demo Mode</span>
@@ -70,7 +95,6 @@ export default function App() {
 
         {/* D3 Graph Canvas */}
         <div className="flex-1 p-10 overflow-hidden relative" id="d3-container">
-           {/* Pass the active state down as a prop so D3 fetches the new ID */}
            <ArchetypeGraph userId={activeArchetype} />
         </div>
       </main>

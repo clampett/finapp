@@ -6,12 +6,11 @@ class MarkovRegimeSimulator:
         self,
         p_bull_to_bear: float = 0.05,
         p_bear_to_bull: float = 0.15,
-        bull_mu: float = 0.008,    # ~9.6% annual return
-        bull_sigma: float = 0.035, # Low volatility
-        bear_mu: float = -0.005,   # Negative drift
-        bear_sigma: float = 0.08   # High volatility / fat tail
+        bull_mu: float = 0.008,
+        bull_sigma: float = 0.035,
+        bear_mu: float = -0.020,
+        bear_sigma: float = 0.08
     ):
-        # 2x2 Transition Matrix P: [[P(0->0), P(0->1)], [P(1->0), P(1->1)]]
         self.P = np.array([
             [1.0 - p_bull_to_bear, p_bull_to_bear],
             [p_bear_to_bull, 1.0 - p_bear_to_bull]
@@ -21,29 +20,36 @@ class MarkovRegimeSimulator:
             1: (bear_mu, bear_sigma)
         }
 
-    def simulate_trajectory(self, initial_balance: float, monthly_contributions: List[float], rng: np.random.Generator = None) -> List[float]:
-        """
-        Runs a regime-switching simulation for N months.
-        Incorporates sequence-of-returns risk and dynamically varying contribution streams.
-        """
-        if rng is None:
-            rng = np.random.default_rng()
-
+    def simulate_trajectory(self, initial_balance: float, monthly_contributions: List[float], iterations: int = 1000, rng: np.random.Generator = None) -> List[dict]:
+        if rng is None: rng = np.random.default_rng(42)
         months = len(monthly_contributions)
-        balances = [initial_balance]
-        current_state = 0  # Start in Bull / Expansion state
 
-        current_balance = initial_balance
+        states = np.zeros(iterations, dtype=int)
+        balances = np.full(iterations, float(initial_balance))
+
+        yearly_results = []
+
         for m in range(months):
-            # 1. State Transition
-            current_state = rng.choice([0, 1], p=self.P[current_state])
-            
-            # 2. Draw return from the active regime's distribution
-            mu, sigma = self.params[current_state]
-            monthly_return = rng.normal(mu, sigma)
+            rands = rng.random(iterations)
+            switch_to_bear = (states == 0) & (rands < self.P[0, 1])
+            switch_to_bull = (states == 1) & (rands < self.P[1, 0])
+            states[switch_to_bear] = 1
+            states[switch_to_bull] = 0
 
-            # 3. Compounding + Cash Flow Injection
-            current_balance = (current_balance * (1.0 + monthly_return)) + monthly_contributions[m]
-            balances.append(round(float(current_balance), 2))
+            mus = np.where(states == 0, self.params[0][0], self.params[1][0])
+            sigmas = np.where(states == 0, self.params[0][1], self.params[1][1])
+            returns = rng.normal(mus, sigmas)
 
-        return balances
+            # RESTORED REALISM: Applies standard regime volatility to the entire balance
+            balances = balances * (1 + returns) + monthly_contributions[m]
+
+            if (m + 1) % 12 == 0:
+                yr = (m + 1) // 12
+                yearly_results.append({
+                    "year": yr,
+                    "p10": float(np.percentile(balances, 10)),
+                    "p50": float(np.percentile(balances, 50)),
+                    "p90": float(np.percentile(balances, 90))
+                })
+
+        return yearly_results

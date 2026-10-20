@@ -111,3 +111,8 @@ Branching Model: Feature development follows dev -> your_branch_name. Direct com
 Cross-Service Testing: Ensure frontend TypeScript interfaces (GraphData, NodeDTO, EdgeDTO) remain strictly typed against Spring Boot entities and FastAPI Pydantic schemas.
 
 Code Reviews: All contributions require passing local builds (npm run build, ./mvnw test) and pull request approvals prior to merging.
+
+
+## Current scenario workspace
+
+See [current implementation and model assumptions](docs/current-implementation.md) for scenario editing, local draft storage, debt payment rules, and verification commands.

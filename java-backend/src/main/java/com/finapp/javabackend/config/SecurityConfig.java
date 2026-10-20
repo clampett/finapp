@@ -16,11 +16,10 @@ public class SecurityConfig {
     @Bean
     public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
         http
-                // Disable CSRF since we will use Secure HttpOnly Cookies for our REST API
                 .csrf(AbstractHttpConfigurer::disable)
-                // Allow public access to auth endpoints and the graph endpoints (for the demo)
                 .authorizeHttpRequests(auth -> auth
-                        .requestMatchers("/api/v1/auth/**", "/api/v1/graph/**").permitAll()
+                        // Added /api/v1/simulate so the public Demo Mode can run forecasts
+                        .requestMatchers("/api/v1/auth/**", "/api/v1/graph/**", "/api/v1/simulate").permitAll()
                         .anyRequest().authenticated()
                 );
 

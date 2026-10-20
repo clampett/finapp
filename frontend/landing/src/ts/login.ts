@@ -1,118 +1,51 @@
-import { log } from "./main.js";
+import { authRequest, formError } from './main.js';
 
-// Constants
-const loginButton = document.getElementById('login_button') as HTMLButtonElement | null;
+const loginForm = document.getElementById('login-form') as HTMLFormElement | null;
 const registrationForm = document.getElementById('registration-form') as HTMLFormElement | null;
-const errorDisplay = document.getElementById('login-error') as HTMLParagraphElement | null;
+const value = (id: string) => (document.getElementById(id) as HTMLInputElement).value;
+const showError = (id: string, message: string) => { const target = document.getElementById(id); if (target) target.textContent = message; };
 
-// Startup
-log.info("Loaded login & registration module");
-
-// 1. Handle Login
-if (loginButton) {
-  loginButton.addEventListener('click', async (e) => {
-    e.preventDefault(); // Stop the browser from refreshing the page
-    
-    const usernameInput = document.getElementById('username') as HTMLInputElement | null;
-    const passwordInput = document.getElementById('password') as HTMLInputElement | null;
-
-    if (!usernameInput || !passwordInput) {
-      log.warn("Username or password input fields missing in HTML.");
-      return;
-    }
-
-    const username = usernameInput.value;
-    const password = passwordInput.value;
-
-    if (!username || !password) {
-      log.warn("Username or password missing.");
-      if (errorDisplay) errorDisplay.textContent = "Please fill in all fields.";
-      else alert("Please fill in all fields.");
-      return;
-    }
-
-    try {
-      log.info(`Attempting login for user: ${username}`);
-      
-      // Disable button to prevent double-clicks
-      loginButton.disabled = true;
-      loginButton.textContent = "Signing In...";
-
-      const response = await fetch('http://localhost:8081/api/v1/auth/login', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ username, password })
-      });
-
-      const data = await response.json();
-
-      if (response.ok) {
-      log.info("Login successful. Redirecting to dashboard...");
-      
-      // Use sessionStorage for banking-standard tab security
-      sessionStorage.setItem('finapp_user_id', data.userId);
-      localStorage.removeItem('finapp_user_id'); // Nuke the old bug
-      
-      window.location.href = "/dashboard/";
-    } else {
-        log.error("Login failed:", data.message);
-        if (errorDisplay) errorDisplay.textContent = data.message || "Invalid credentials.";
-        else alert(data.message || "Invalid credentials.");
-        
-        // Reset button
-        loginButton.disabled = false;
-        loginButton.textContent = "Sign In";
-      }
-    } catch (error) {
-      log.fatal("Connection to auth server failed:", error);
-      if (errorDisplay) errorDisplay.textContent = "Unable to connect to the server. Please try again later.";
-      else alert("Unable to connect to the server.");
-      
-      // Reset button
-      loginButton.disabled = false;
-      loginButton.textContent = "Sign In";
-    }
-  });
-} else {
-  log.warn("Login button not found on this page.");
+if (new URLSearchParams(location.search).get('verified') === 'true') {
+  const status = document.getElementById('login-status');
+  if (status) status.textContent = 'Email verified. You can now sign in.';
 }
 
-// 2. Handle Registration
-if (registrationForm) {
-  registrationForm.addEventListener('submit', async (e) => {
-    e.preventDefault();
-    
-    // Make sure your registration.html has these IDs
-    const username = (document.getElementById('username') as HTMLInputElement).value;
-    const email = (document.getElementById('email') as HTMLInputElement).value;
-    const password = (document.getElementById('password') as HTMLInputElement).value;
-    const confirmPassword = (document.getElementById('confirm-password') as HTMLInputElement).value;
-    
-    if (password !== confirmPassword) {
-      alert("Passwords do not match!");
-      return;
-    }
+loginForm?.addEventListener('submit', async event => {
+  event.preventDefault();
+  if (!loginForm.reportValidity()) return;
+  const button = document.getElementById('login_button') as HTMLButtonElement;
+  if (button.disabled) return;
+  showError('login-error', ''); button.disabled = true; button.textContent = 'Signing in…';
+  try {
+    const data = await authRequest('login', { username: value('username').trim(), password: value('password') });
+    if (!data.userId || !Number.isInteger(data.userId) || data.userId < 1) throw new Error('The server did not return a valid workspace. Please try again.');
+    try { sessionStorage.setItem('finapp_user_id', String(data.userId)); }
+    catch { throw new Error('Browser storage is required to open your workspace. Allow storage for this site and try again.'); }
+    location.assign('/dashboard/');
+  } catch (error) {
+    showError('login-error', formError(error)); button.disabled = false; button.textContent = 'Sign in ↗';
+  }
+});
 
-    try {
-      const response = await fetch('http://localhost:8081/api/v1/auth/register', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ username, email, password })
-      });
-
-      const data = await response.json();
-
-      if (response.ok) {
-        alert("Registration successful! Check your terminal for the verification code.");
-        window.location.href = "verify.html"; // Updated to prompt the 6-digit code screen
-      } else {
-        alert(`Registration failed: ${data.message}`);
-      }
-    } catch (error) {
-      log.fatal("Connection to auth server failed:", error);
-      alert("Unable to connect to the server.");
-    }
-  });
-} else {
-  log.warn("Registration form not found on this page.");
-}
+registrationForm?.addEventListener('submit', async event => {
+  event.preventDefault();
+  if (!registrationForm.reportValidity()) return;
+  const button = document.getElementById('register_button') as HTMLButtonElement;
+  if (button.disabled) return;
+  showError('registration-error', '');
+  if (value('password') !== value('confirm-password')) {
+    showError('registration-error', 'Your passwords do not match. Check both fields and try again.');
+    document.getElementById('confirm-password')?.focus(); return;
+  }
+  // BCrypt supports at most 72 bytes; a character limit alone is insufficient for Unicode.
+  if (new TextEncoder().encode(value('password')).length > 72) {
+    showError('registration-error', 'Use a password of at most 72 bytes. Some characters use more than one byte.'); return;
+  }
+  button.disabled = true; button.textContent = 'Creating your account…';
+  try {
+    await authRequest('register', { username: value('username').trim(), email: value('email').trim(), password: value('password') });
+    location.assign('/verify');
+  } catch (error) {
+    showError('registration-error', formError(error)); button.disabled = false; button.textContent = 'Create account ↗';
+  }
+});

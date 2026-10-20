@@ -31,6 +31,11 @@ app.use((req, res, next) => {
     return res.status(400).send('Invalid redirect path');
   }
 
+  // Additional validation: check for protocol or other malicious patterns in clean path
+  if (clean.includes('://') || clean.includes('\\') || clean.includes('../')) {
+    return res.status(400).send('Invalid redirect path');
+  }
+
   const query = req.url.slice(req.path.length); // preserve ?query=string
   res.redirect(301, clean + query);
 });

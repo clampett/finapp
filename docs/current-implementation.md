@@ -1,6 +1,6 @@
 # Scenario workspace and simulation behavior
 
-Launch from the repository root with `./start.ps1`. The script builds both landing pages and the dashboard, compiles Java, starts Java on 8081 and Express on 8080, and runs Python/PostgreSQL in Docker. It checks for existing processes and startup failures, without downloading a process runner at launch. Java logs are in `java-backend/target/finapp-start.log` and `finapp-start-error.log`.
+The intended team workflow is one hosted backend and the shared FinApp login `testuser` / `test123`. Teammates use the hosted URL or run `./start.ps1` for a local frontend. The default script builds the pages/dashboard and runs Express, forwarding same-origin `/api` requests to the public origin in `shared-backend.json`; no Neon login or database secrets are needed on teammates' machines. The origin stays empty until deployment is completed. See [shared hosting](shared-hosting.md). `./start.ps1 -Mode local` starts the isolated backend stack. `-Mode server` is the backend-owner path with Java logs and verification codes streamed as `[SPRING]` using ASCII output.
 
 ## Editing scenarios
 
@@ -29,6 +29,7 @@ Minimums plus the chosen share of remaining surplus form one fixed monthly payme
 
 ## Checks
 
+- Shared gateway: `node --test frontend/api-proxy.test.js`. Java `SharedBackendSecurityTest` exercises real filters for public demos, session expiry, owner checks, and blocked unsafe bulk writes.
 - Frontend: `npm run build --prefix ./frontend`, `npm run lint --prefix ./frontend/dashboard`.
 - Python: install `python-backend/requirements-dev.txt`, then run `python -m unittest tests.test_simulation -v` and `python -m pytest tests/test_price_cache.py` from `python-backend`.
 - Java: `./mvnw.cmd test` from `java-backend` (requires the configured PostgreSQL instance for the application context test). MVC slice tests exercise controller contracts without security filters; they do not establish authentication correctness.
@@ -36,7 +37,7 @@ Minimums plus the chosen share of remaining surplus form one fixed monthly payme
 
 ## Remaining integration work
 
-Server-side account/session authorization, authenticated graph editing/persistence, simulation history, AI advice, market-data calibration, full per-edge cash routing, taxes, and changing income/expenses remain separate work. Existing market cache utilities are retained.
+Existing session cookies now authenticate private workspace reads, including expiry and owner checks, while seeded demos remain public. The old graph bulk-write endpoint is blocked because it lacks ownership validation; UI scenario editing remains browser-local. Authenticated graph persistence, simulation history, AI advice, market-data calibration, full per-edge cash routing, taxes, and changing income/expenses remain separate work. Existing market cache utilities are retained.
 
 ## Landing page and entry flow
 

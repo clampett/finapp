@@ -46,54 +46,51 @@ Ensure the following runtimes and tools are installed locally:
 
 A unified PowerShell automation script orchestrates dependencies, starts background containers, and streams backend and frontend logs concurrently.
 
-1. **Configure Environment:** (OPTIONAL)  
-   Create an `.env` file in the repository root:
-   ```env
-   ANTHROPIC_API_KEY=your_key_here
-(If not using external LLM analysis features immediately, a placeholder value such as dummy_key can be used).
+1. Use the hosted FinApp URL, or pull the code and run `./start.ps1` for local frontend development. Teammates need no Neon account, invitation, database settings, or `.env` file. Only Node/npm is required for the local frontend path.
+2. Sign in with the shared development account: **`testuser` / `test123`**.
+3. The backend owner deploys the server once and commits its public origin in `shared-backend.json`. See [shared hosting setup](docs/shared-hosting.md). An empty URL means this one-time deployment has not been finished yet.
 
-Execute the Startup Script:
+The default script builds the landing pages/dashboard and runs Express, which forwards `/api` to the shared server. Press Ctrl+C to stop the local frontend. The shared backend and database remain online independently.
 
-From the repository root in PowerShell:
-
-PowerShell
-.\start.ps1
-The script boots Docker Desktop if not active, runs docker compose up --build -d db python-backend, builds static assets, and concurrently starts Spring Boot and the Express frontend server.
-
-Graceful Teardown:
-
-Press Ctrl + C in the PowerShell terminal to trigger the cleanup routine, stopping Java, Node, and Docker services cleanly.
+For deliberately isolated backend work, run `./start.ps1 -Mode local`. For the backend owner's local Java development against the shared database, use `./start.ps1 -Mode server`; Spring logs appear with `[SPRING]`. These advanced paths require the full prerequisites and are separate from normal team sign-in.
 
 ### Option 2: Manual Multi-Service Startup
 If running individual components manually across separate terminals:
 
 1. Start Infrastructure Containers
-Launch PostgreSQL and the Python simulation engine:
+For backend-owner work with the original multi-container stack and owner-only credentials, run:
 
-Bash
-docker compose up -d db python-backend
-Note on Seed Data Updates: If updating schema.sql seed configurations, drop existing database volumes to ensure fresh initialization:
+```powershell
+./start-docker.ps1
+```
 
-Bash
-docker compose down -v
+For isolated local infrastructure only:
+
+```powershell
+docker volume create finapp_postgres_data
 docker compose up -d db python-backend
+```
+
+Use new Flyway migrations for schema and seed changes. Do not delete database volumes to refresh seed data. The local volume is external and survives `docker compose down -v`; the hosted shared database is outside Compose entirely. Neither protection replaces backups.
 2. Start the Spring Boot Service
 Navigate to the Java backend directory and launch via the Maven wrapper:
 
-Bash
+```powershell
 cd java-backend
-./mvnw spring-boot:run
-The Spring service initializes on http://localhost:8081 and connects to PostgreSQL on port 5432.
+./mvnw.cmd spring-boot:run
+```
+The Spring service initializes on http://localhost:8081. Manual Maven launches do not load the root `.env` automatically; use `start.ps1 -Mode server` for owner-only shared settings or export the three `SPRING_DATASOURCE_*` variables in that terminal first.
 
 3. Build & Serve the Frontend
 From the root directory:
 
-Bash
+```powershell
 cd frontend
-npm in
+npm run in
 npm run build --prefix ./landing
 npm run build --prefix ./dashboard
 npm run dev
+```
 The Express server hosts the static landing interface and compiled React dashboard on http://localhost:8080.
 
 ### Access Points

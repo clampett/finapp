@@ -55,11 +55,11 @@ document.querySelectorAll<HTMLButtonElement>('[data-preview]').forEach(button =>
   if (link) { link.href = `/dashboard/?demo=true&profile=${id}`; link.textContent = `Open ${button.textContent} demo ↗`; }
 }));
 
-// Shared API helper for the existing local Java authentication service.
+// Same-origin API: Express forwards requests to the shared backend or local Java.
 export async function authRequest(path: string, body: Record<string, string>): Promise<{ message?: string; userId?: number }> {
-  const response = await fetch(`${location.protocol}//${location.hostname}:8081/api/v1/auth/${path}`, {
+  const response = await fetch(`/api/v1/auth/${path}`, {
     method: 'POST', credentials: 'include', headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(body), signal: AbortSignal.timeout(12000),
+    body: JSON.stringify(body), signal: AbortSignal.timeout(90000),
   });
   const data = await response.json();
   if (!response.ok) throw new Error(data.message || 'The request could not be completed. Please try again.');

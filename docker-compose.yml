@@ -20,7 +20,9 @@ services:
       - SPRING_PROFILES_ACTIVE=docker
       - PYTHON_SERVICE_URL=http://python-backend:5000
       # This allows the Docker backend to find the Docker database
-      - SPRING_DATASOURCE_URL=jdbc:postgresql://db:5432/finapp
+      - SPRING_DATASOURCE_URL=${SPRING_DATASOURCE_URL:-jdbc:postgresql://db:5432/finapp}
+      - SPRING_DATASOURCE_USERNAME=${SPRING_DATASOURCE_USERNAME:-postgres}
+      - SPRING_DATASOURCE_PASSWORD=${SPRING_DATASOURCE_PASSWORD:-postgres}
     depends_on:
       - db
     networks:
@@ -32,14 +34,14 @@ services:
     ports:
       - "5000:5000"
     environment:
-      - ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY}
+      - ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY:-}
     networks:
       - finapp-network
 
   db:
     image: postgres:15-alpine
     ports:
-      - "5432:5432"
+      - "127.0.0.1:5432:5432"
     environment:
       - POSTGRES_USER=postgres
       - POSTGRES_PASSWORD=postgres
@@ -51,6 +53,8 @@ services:
 
 volumes:
   postgres_data:
+    external: true
+    name: ${FINAPP_POSTGRES_VOLUME:-finapp_postgres_data}
 
 networks:
   finapp-network:

@@ -5,6 +5,10 @@ import com.finapp.javabackend.dto.GraphDTO;
 import com.finapp.javabackend.service.GraphService;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.security.core.Authentication;
+import org.springframework.web.server.ResponseStatusException;
+import org.springframework.http.HttpStatus;
+import com.finapp.javabackend.config.SessionUser;
 
 @RestController
 @RequestMapping("/api/v1/graph")
@@ -24,7 +28,11 @@ public class GraphController {
     }
 
     @GetMapping("/{userId}")
-    public ResponseEntity<ApiResponse<GraphDTO>> getGraph(@PathVariable Long userId) {
+    public ResponseEntity<ApiResponse<GraphDTO>> getGraph(@PathVariable Long userId, Authentication authentication) {
+        if (userId < 1 || (userId > 3 && (authentication == null ||
+                !(authentication.getPrincipal() instanceof SessionUser user) || !user.id().equals(userId)))) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "This workspace belongs to another user.");
+        }
         GraphDTO graph = graphService.getGraphForUser(userId);
         return ResponseEntity.ok(ApiResponse.success(graph, "Graph fetched successfully"));
     }

@@ -11,6 +11,7 @@ import com.finapp.javabackend.repository.UserSessionRepository;
 import com.finapp.javabackend.services.EmailService;
 import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseCookie;
@@ -26,6 +27,8 @@ import java.util.UUID;
 @RestController
 @RequestMapping("/api/v1/auth")
 public class AuthController {
+    @Value("${finapp.session.secure:false}")
+    private boolean secureSessionCookie;
 
     @Autowired
     private PasswordEncoder passwordEncoder;
@@ -151,7 +154,7 @@ public class AuthController {
         // 5. Build Secure HttpOnly Cookie
         ResponseCookie cookie = ResponseCookie.from("finapp_session", sessionToken)
                 .httpOnly(true)
-                .secure(false) // Set to true in production if running HTTPS
+                .secure(secureSessionCookie)
                 .path("/")
                 .maxAge(24 * 60 * 60)
                 .sameSite("Strict")

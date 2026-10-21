@@ -1,4 +1,4 @@
-export const API_BASE = import.meta.env.VITE_API_URL || `${window.location.protocol}//${window.location.hostname}:8081/api/v1`;
+export const API_BASE = import.meta.env.VITE_API_URL || '/api/v1';
 export type NodeType = 'INCOME' | 'CHECKING' | 'SAVINGS' | 'INVESTMENT' | 'DEBT' | 'EXPENSE';
 export type SimulationType = 'monte_carlo' | 'markov' | 'debt';
 export type View = 'overview' | 'graph' | 'budgeting' | 'investing';

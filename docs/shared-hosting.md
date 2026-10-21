@@ -2,6 +2,8 @@
 
 Everyone signs into the same FinApp backend with the existing development account:
 
+Shared URL: https://finapp-team-dev.onrender.com
+
 - Username: `testuser`
 - Password: `test123`
 
@@ -13,7 +15,7 @@ Open the hosted FinApp URL and sign in. No Neon membership, hosting account, Doc
 
 For frontend development, pull the repository and run `./start.ps1`. It installs missing npm dependencies, builds the landing pages/dashboard, and serves them at http://localhost:8080. Express proxies `/api` to the public server URL in `shared-backend.json`. The URL is safe to commit; database settings are not. Authentication cookies remain on the browser's frontend origin. Scenario edits currently remain browser drafts, even when everyone uses the same login.
 
-The initial public URL is deliberately empty until a real deployment exists. Startup explains this instead of pretending a server has been deployed. Once the owner fills it in and publishes that change, teammates need no setup beyond pulling the code.
+The public origin assigned by Render is committed in `shared-backend.json`. Teammates need no database setup. An empty URL is rejected with an explanation if the owner ever removes that configuration.
 
 ## One-time owner deployment on Render Free
 

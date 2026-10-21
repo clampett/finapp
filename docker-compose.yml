@@ -1,6 +1,6 @@
 services:
   frontend:
-    build: 
+    build:
       context: ./frontend
       dockerfile: Dockerfile
     ports:
@@ -18,13 +18,14 @@ services:
       - "8081:8081"
     environment:
       - SPRING_PROFILES_ACTIVE=docker
+      - PYTHON_SERVICE_URL=http://python-backend:5000
       # This allows the Docker backend to find the Docker database
       - SPRING_DATASOURCE_URL=jdbc:postgresql://db:5432/finapp
     depends_on:
       - db
     networks:
       - finapp-network
-    
+
   python-backend:
     build:
       context: ./python-backend
@@ -45,7 +46,6 @@ services:
       - POSTGRES_DB=finapp
     volumes:
       - postgres_data:/var/lib/postgresql/data
-      - ./database:/docker-entrypoint-initdb.d:ro
     networks:
       - finapp-network
 

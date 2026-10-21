@@ -9,6 +9,7 @@ import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
+import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.MockMvc;
@@ -22,6 +23,7 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
+@AutoConfigureMockMvc(addFilters = false)
 @WebMvcTest(GraphController.class)
 class GraphControllerTest {
 
@@ -35,17 +37,17 @@ class GraphControllerTest {
     private GraphService graphService;
 
     @Test
-    @DisplayName("GET /api/v1/graph - Should return 200 OK with full graph DTO")
+    @DisplayName("GET /api/v1/graph/1 - Should return 200 OK with full graph DTO")
     void getGraph_ShouldReturnGraphDTO() throws Exception {
         // Arrange
         NodeDTO node = new NodeDTO(1L, "Checking Account", "CHECKING", new BigDecimal("5000.00"), new BigDecimal("0.05"));
         EdgeDTO edge = new EdgeDTO(1L, 1L, 2L, new BigDecimal("500.00"), BigDecimal.ZERO);
         GraphDTO mockGraph = new GraphDTO(List.of(node), List.of(edge));
 
-        when(graphService.getFullGraph()).thenReturn(mockGraph);
+        when(graphService.getGraphForUser(1L)).thenReturn(mockGraph);
 
         // Act & Assert
-        mockMvc.perform(get("/api/v1/graph"))
+        mockMvc.perform(get("/api/v1/graph/1"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.success").value(true))
                 .andExpect(jsonPath("$.message").value("Graph fetched successfully"))

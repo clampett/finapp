@@ -1,125 +1,53 @@
 <!DOCTYPE html>
-<html lang="en" class="scroll-smooth">
+<html lang="en">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>FinApp</title>
+  <meta name="description" content="Map your money as connected nodes. Explore cash flow, compare debt strategies, and model possible financial futures with FinApp.">
+  <meta name="theme-color" content="#0c1018">
+  <title>FinApp — Your money, connected.</title>
   <link rel="stylesheet" href="/assets/styles.css">
-  <link rel="icon" type="image/svg+xml" href="/static/logo_green.svg" sizes="any">
+  <link rel="icon" type="image/svg+xml" href="/static/logo_green.svg">
+  <script>try{document.documentElement.dataset.theme=localStorage.getItem('user-theme')==='light'?'light':'dark'}catch{}</script>
 </head>
-<body class="bg-background text-text_color min-h-screen">
-  <!-- Navbar -->
-  <nav class="bg-card border-b border-border py-4 px-6 shadow-lg sticky top-0 z-50">
-    <div class="flex justify-between items-center max-w-7xl mx-auto">
-      
-      <!-- Logo on the left (Prevents shrinking) -->
-      <a href="index.html" class="flex items-center group shrink-0">
-        <div class="w-8 h-8 rounded-full bg-teal-400 mr-3 group-hover:bg-teal-300 transition-colors"></div>
-        <h1 class="text-2xl font-bold tracking-wide">FinApp</h1>
-      </a>
-
-      <!-- Navigation options in the center (Hidden on mobile, sleek text-base on desktop) -->
-      <div class="hidden md:flex space-x-8">
-        <a href="#about" class="text-base font-medium text-foreground hover:text-primary transition-colors">About</a>
-        <a href="#features" class="text-base font-medium text-foreground hover:text-primary transition-colors">Features</a>
-        <a href="#how-it-works" class="text-base font-medium text-foreground hover:text-primary transition-colors">How It Works</a>
-        <a href="#contact" class="text-base font-medium text-foreground hover:text-primary transition-colors">Contact</a>
-      </div>
-
-      <!-- Login, Demo, and Theme buttons on the right (Prevents text wrapping) -->
-      <div class="flex items-center space-x-3 md:space-x-4 shrink-0">
-        <!-- Hides Live Demo on extremely small screens to save space -->
-        <a href="/dashboard/?demo=true" class="hidden sm:inline-block px-4 py-2 text-primary border border-primary rounded-lg font-medium hover:bg-primary/10 transition-colors whitespace-nowrap">Live Demo</a>
-        <a href="login.html" class="px-4 py-2 bg-primary text-white rounded-lg font-medium hover:bg-primary/90 transition-colors whitespace-nowrap">Login</a>
-        <button id="theme_button" type="button" class="p-2 rounded-full hover:bg-muted transition-colors cursor-pointer shrink-0">
-          <img id="theme_button_img" type="image/svg+xml" src="/static/theme_change_light.svg" alt="Change theme" width="24" height="24" class="md:w-8 md:h-8">
-        </button>
-      </div>
-
-    </div>
-  </nav>
-
-  <!-- Hero Section -->
-  <section id="about" class="py-20 px-6 text-center max-w-5xl mx-auto scroll-mt-24">
-    <h1 class="text-5xl md:text-6xl font-bold mb-6">Visualize Your Financial Life</h1>
-    <p class="text-xl md:text-2xl mb-8 text-foreground">See exactly where your income goes, track expenses, and manage debts in an intuitive, connected interface.</p>
-    <div class="flex justify-center gap-4">
-      <a href="login.html" class="px-6 py-3 bg-primary text-white rounded-lg font-medium shadow-lg hover:shadow-primary/30 hover:-translate-y-1 transition-all duration-200">Get Started</a>
-      <a href="#features" class="px-6 py-3 border border-border rounded-lg font-medium hover:bg-card hover:-translate-y-1 transition-all duration-200">Learn More</a>
-    </div>
-  </section>
-
-  <!-- Features Section -->
-  <section id="features" class="py-16 px-6 bg-card scroll-mt-20">
-    <div class="max-w-7xl mx-auto">
-      <h2 class="text-3xl font-bold text-center mb-12">Powerful Financial Tools</h2>
-      <div class="grid grid-cols-1 md:grid-cols-3 gap-8">
-        <!-- Card 1 (Static) -->
-        <div class="bg-background rounded-lg p-6 shadow-md hover:shadow-lg transition-shadow duration-300 border border-transparent hover:border-border">
-          <h3 class="text-xl font-bold mb-3">Interactive Visual Canvas</h3>
-          <p class="text-foreground">See your finances as floating, connected circles (nodes). Click and drag to organize your financial life.</p>
-        </div>
-        <!-- Card 2 (Static) -->
-        <div class="bg-background rounded-lg p-6 shadow-md hover:shadow-lg transition-shadow duration-300 border border-transparent hover:border-border">
-          <h3 class="text-xl font-bold mb-3">Live Balances</h3>
-          <p class="text-foreground">View exactly how much money is sitting in your accounts or how much you owe on loans directly on the screen.</p>
-        </div>
-        <!-- Card 3 (Interactive Link to Dashboard Demo) -->
-        <a href="/dashboard/?demo=true" class="bg-background rounded-lg p-6 shadow-md hover:shadow-xl hover:-translate-y-2 hover:border-primary border border-transparent transition-all duration-300 group cursor-pointer block">
-          <div class="flex justify-between items-center mb-3">
-            <h3 class="text-xl font-bold group-hover:text-primary transition-colors">Pre-Loaded Profiles</h3>
-            <span class="text-primary opacity-0 group-hover:opacity-100 transition-opacity translate-x-[-10px] group-hover:translate-x-0 duration-300">➔</span>
-          </div>
-          <p class="text-foreground">Start instantly with ready-made user profiles to see how the system works without typing in your own data. <span class="font-semibold text-primary mt-2 block">Try the Demo</span></p>
-        </a>
-      </div>
-    </div>
-  </section>
-
-  <!-- How It Works Section -->
-  <section id="how-it-works" class="py-16 px-6">
-    <div class="max-w-7xl mx-auto text-center">
-      <h2 class="text-3xl font-bold mb-12">How FinApp Works</h2>
-      <div class="flex flex-col md:flex-row items-center justify-between gap-8">
-        <div class="flex-1">
-          <div class="inline-block p-4 bg-primary/10 rounded-full mb-4">
-            <span class="text-3xl font-bold text-primary">1</span>
-          </div>
-          <h3 class="text-xl font-bold mb-2">Map Your Portfolio</h3>
-          <p class="text-foreground">Easily input your accounts or import existing datasets to instantly generate a visual, interconnected map of your finances.</p>
-        </div>
-        <div class="flex-1">
-          <div class="inline-block p-4 bg-primary/10 rounded-full mb-4">
-            <span class="text-3xl font-bold text-primary">2</span>
-          </div>
-          <h3 class="text-xl font-bold mb-2">Model the Future</h3>
-          <p class="text-foreground">Move beyond static spreadsheets. Run sophisticated Monte Carlo simulations to visualize long-term growth and stress-test your investments.</p>
-        </div>
-        <div class="flex-1">
-          <div class="inline-block p-4 bg-primary/10 rounded-full mb-4">
-            <span class="text-3xl font-bold text-primary">3</span>
-          </div>
-          <h3 class="text-xl font-bold mb-2">Optimize Your Strategy</h3>
-          <p class="text-foreground">Track the exact flow of your cash and leverage dynamic forecasting tools to make confident, data-driven financial decisions.</p>
-        </div>
-      </div>
-    </div>
-  </section>
-
-  <!-- Contact Section -->
-  <section id="contact" class="py-8 px-6">
-    <div class="max-w-4xl mx-auto text-center">
-      <p class="text-lg text-foreground">If you have any questions, please contact Jason Mele at <a href="mailto:meleja49@rowan.edu" class="text-primary hover:underline">contact@finapp.com</a>.</p>
-    </div>
-  </section>
-
-  <!-- Footer -->
-  <footer class="bg-card border-t border-border py-4 px-6">
-    <div class="max-w-7xl mx-auto text-center">
-      <p>Created by: <b>Sean Bassi</b>, <b>Ali Canturk</b>, <b>Braden Elsworth</b>, <b>Quinn Johnson</b>, <b>Jason Mele</b> & <b>Lucas Polo</b></p>
-    </div>
-  </footer>
-
+<body class="site-page">
+  <a class="skip-link" href="#main">Skip to content</a>
+  <header class="site-header"><div class="site-container header-inner">
+    <a class="site-brand" href="/" aria-label="FinApp home"><span class="brand-circle" aria-hidden="true"></span>FinApp</a>
+    <nav id="site-navigation" class="site-navigation" aria-label="Main navigation"><a href="#features">Features</a><a href="#how-it-works">How it works</a><a href="#scenarios">Demo scenarios</a><a href="#questions">FAQ</a></nav>
+    <div class="header-actions"><a class="site-button subtle" href="/login" data-workspace-link>Sign in</a><a class="site-button primary header-demo" href="/dashboard/?demo=true">Open demo <span aria-hidden="true">↗</span></a><button id="theme_button" class="site-icon-button" aria-label="Switch to light theme" type="button" title="Switch theme"><span aria-hidden="true">◐</span></button><button class="site-icon-button menu-toggle" id="menu-toggle" type="button" aria-label="Open navigation" aria-expanded="false" aria-controls="site-navigation">☰</button></div>
+  </div></header>
+  <main id="main">
+    <section class="site-container hero" id="about">
+      <div class="hero-copy"><div class="site-eyebrow"><span class="tiny-dot"></span> PERSONAL FINANCE, CONNECTED</div><h1>See the connections.<br><span>Shape your next move.</span></h1><p>Your income, accounts, investments, and debts belong in the same picture. Map them as nodes, explore a scenario, and see how the possibilities change.</p><div class="hero-actions"><a class="site-button primary large" href="/dashboard/?demo=true">Explore the live demo <span aria-hidden="true">↗</span></a><a class="site-button large" href="/registration">Create an account</a></div><div class="hero-footnote"><span class="check-mark">✓</span> No account needed for the demo <span class="footnote-divider">/</span> No bank connection required</div></div>
+      <div class="preview-wrap"><div class="product-preview" aria-label="Interactive sample scenario preview">
+        <div class="preview-titlebar"><span class="preview-app"><span class="tiny-dot"></span> FinApp <span>/ Node Graph</span></span><span class="preview-tag">SAMPLE SCENARIO</span></div>
+        <div class="preview-metrics"><div><span>Starting net worth</span><strong id="preview-worth" class="negative">−$27,000</strong></div><div><span>Available each month</span><strong id="preview-surplus">$2,733</strong></div><div><span>Total debt</span><strong id="preview-debt">$30,000</strong></div></div>
+        <div class="preview-graph"><svg viewBox="0 0 550 300" role="img" aria-labelledby="preview-graph-title"><title id="preview-graph-title">Example nodes connecting income to checking, investments, expenses, and debt</title><defs><marker id="preview-arrow" viewBox="0 -5 10 10" refX="10" markerWidth="5" markerHeight="5" orient="auto"><path d="M0,-5L10,0L0,5" fill="#596a86"/></marker></defs><g class="preview-edges" fill="none" marker-end="url(#preview-arrow)"><path d="M160 150H205"/><path d="M345 150C370 150 365 60 395 60"/><path d="M345 150H395"/><path d="M345 150C370 150 365 240 395 240"/></g>
+        <g class="sample-node income" transform="translate(20,117)"><rect width="140" height="66" rx="9"/><text x="12" y="17" class="node-type">INCOME</text><text x="12" y="35" class="node-name">Monthly salary</text><text id="preview-income" x="12" y="54" class="node-amount">$4,583</text></g>
+        <g class="sample-node checking" transform="translate(205,117)"><rect width="140" height="66" rx="9"/><text x="12" y="17" class="node-type">CHECKING</text><text x="12" y="35" class="node-name">Checking account</text><text id="preview-checking" x="12" y="54" class="node-amount">$1,800</text></g>
+        <g class="sample-node investment" transform="translate(395,27)"><rect width="140" height="66" rx="9"/><text x="12" y="17" class="node-type">INVESTMENT</text><text x="12" y="35" id="preview-investment-name" class="node-name">Roth IRA</text><text x="12" y="54" id="preview-investment" class="node-amount">$1,200</text></g>
+        <g class="sample-node expense" transform="translate(395,117)"><rect width="140" height="66" rx="9"/><text x="12" y="17" class="node-type">EXPENSE</text><text x="12" y="35" class="node-name">Living expenses</text><text x="12" y="54" id="preview-expenses" class="node-amount">$1,400 /mo</text></g>
+        <g class="sample-node debt" transform="translate(395,207)"><rect width="140" height="66" rx="9"/><text x="12" y="17" class="node-type">DEBT</text><text x="12" y="35" id="preview-debt-name" class="node-name">Student loans</text><text x="12" y="54" id="preview-debt-node" class="node-amount">$30,000</text></g></svg></div>
+        <div class="preview-footer"><span><i class="tiny-dot"></i> A starting point, ready to explore</span><a id="preview-open" href="/dashboard/?demo=true&profile=1">Open this demo ↗</a></div>
+      </div><div class="preview-selector" role="group" aria-label="Preview a demo profile"><button data-preview="1" aria-pressed="true">Recent Grad</button><button data-preview="2" aria-pressed="false">Mid-Career Family</button><button data-preview="3" aria-pressed="false">FIRE Strategist</button></div><p class="preview-note">Sample values from our demo profiles. Open the workspace to edit nodes and run forecasts.</p></div>
+    </section>
+    <div class="site-container capability-strip"><span><b>01</b> Visual node graphs</span><span><b>02</b> Cash-flow scenarios</span><span><b>03</b> Wealth forecasts</span><span><b>04</b> Debt payoff comparisons</span></div>
+    <section id="features" class="site-container site-section"><div class="section-intro"><div><div class="site-eyebrow">THE BIGGER PICTURE</div><h2>Less scattered information.<br>More connected thinking.</h2></div><p>Start with the everyday numbers. Then explore the decisions that could change what comes next.</p></div>
+      <div class="feature-grid"><article class="feature-card"><span class="feature-icon mint" aria-hidden="true">⌘</span><span class="card-index">01 / MAP</span><h3>A node for every moving part.</h3><p>Add income, accounts, investments, debts, and expenses. Edit their values, connect nodes, and arrange a financial picture that makes sense to you.</p><a href="/dashboard/?demo=true">Explore the Node Graph <span aria-hidden="true">↗</span></a></article>
+      <article class="feature-card"><span class="feature-icon lavender" aria-hidden="true">↗</span><span class="card-index">02 / FORECAST</span><h3>See a range of possibilities.</h3><p>Explore Monte Carlo and bull/bear Markov forecasts. Change your investment allocation, time horizon, and inflation setting to compare possible outcomes.</p><a href="/dashboard/?demo=true">Build a what-if scenario <span aria-hidden="true">↗</span></a></article>
+      <article class="feature-card"><span class="feature-icon coral" aria-hidden="true">⇄</span><span class="card-index">03 / COMPARE</span><h3>Give your debt a plan.</h3><p>Compare avalanche and snowball strategies with the same payment budget. See interest accrued, remaining balances, and whether your plan reaches payoff.</p><a href="/dashboard/?demo=true&profile=1">Explore a debt scenario <span aria-hidden="true">↗</span></a></article></div>
+    </section>
+    <section id="how-it-works" class="workflow-section"><div class="site-container workflow-layout"><div><div class="site-eyebrow">FROM NUMBERS TO POSSIBILITIES</div><h2>Make a change.<br>See what follows.</h2><p class="section-copy">A workspace for asking better questions about your money, one scenario at a time.</p><a class="text-link" href="/dashboard/?demo=true">Start exploring ↗</a></div><ol class="workflow-steps"><li><span>01</span><div><h3>Choose your starting point</h3><p>Open a demo profile, create nodes of your own, or import a FinApp JSON scenario.</p></div></li><li><span>02</span><div><h3>Adjust the moving parts</h3><p>Change income, expenses, balances, or debt payments. See your monthly surplus update immediately.</p></div></li><li><span>03</span><div><h3>Explore and compare</h3><p>Run a forecast or debt comparison. Export the scenario and results when you want to keep a copy.</p></div></li></ol></div></section>
+    <section id="scenarios" class="site-container site-section"><div class="section-intro"><div><div class="site-eyebrow">THREE DIFFERENT STARTING POINTS</div><h2>Whose next chapter<br>will you explore?</h2></div><p>No registration or personal financial data needed. Each demo opens directly in the Node Graph workspace.</p></div><div class="scenario-grid">
+      <a class="scenario-card" href="/dashboard/?demo=true&profile=1"><div class="scenario-card-top"><span class="scenario-number">01</span><span class="scenario-pill coral">STARTING OUT</span></div><h3>Recent Grad</h3><p>A first salary, student loans, and an early start on investing. Explore the balance between saving and debt.</p><div class="scenario-stats"><span>Monthly income<strong>$4,583</strong></span><span>Student debt<strong>$30,000</strong></span></div><span class="scenario-link">Open Recent Grad demo ↗</span></a>
+      <a class="scenario-card" href="/dashboard/?demo=true&profile=2"><div class="scenario-card-top"><span class="scenario-number">02</span><span class="scenario-pill blue">BUILDING MOMENTUM</span></div><h3>Mid-Career Family</h3><p>Family expenses, an auto loan, a 401(k), and college savings. Explore several priorities in one connected plan.</p><div class="scenario-stats"><span>Monthly income<strong>$11,250</strong></span><span>401(k) balance<strong>$88,000</strong></span></div><span class="scenario-link">Open Family demo ↗</span></a>
+      <a class="scenario-card" href="/dashboard/?demo=true&profile=3"><div class="scenario-card-top"><span class="scenario-number">03</span><span class="scenario-pill mint">LOOKING AHEAD</span></div><h3>FIRE Strategist</h3><p>Investment accounts, an emergency fund, and an early-retirement ambition. Explore how allocation changes the forecast.</p><div class="scenario-stats"><span>Monthly income<strong>$8,167</strong></span><span>Investments<strong>$117,000</strong></span></div><span class="scenario-link">Open FIRE demo ↗</span></a>
+    </div></section>
+    <section id="questions" class="site-container faq-section"><div><div class="site-eyebrow">A FEW THINGS TO KNOW</div><h2>A clearer starting point.</h2><p>Built for exploration, with the assumptions in view.</p></div><div class="faq-list"><details><summary>Do I need to connect a bank account?</summary><p>No. FinApp uses manually entered scenarios, demo profiles, and FinApp JSON imports. It does not connect to your bank or execute transactions.</p></details><details><summary>Where are my scenario edits saved?</summary><p>Scenario edits are saved in this browser on this device, separately for each profile. Export a JSON copy to back up your work or move it to another device. Creating an account does not yet sync scenario edits between devices.</p></details><details><summary>Are forecasts guaranteed or based on live prices?</summary><p>No. The current forecasts use illustrative fixed market assumptions and randomized paths. You can inspect those assumptions in the simulation panel. Outcomes are educational scenarios, not guarantees or financial advice.</p></details><details><summary>Can I try it before creating an account?</summary><p>Yes. All three demo profiles let you edit nodes, run simulations, and export scenarios without signing in. Your edits do not overwrite the shared demo profiles.</p></details></div></section>
+    <section class="site-container final-cta"><div class="site-eyebrow">YOUR NEXT WHAT-IF STARTS HERE</div><h2>Your money. A clearer picture.</h2><p>Open a scenario and follow the connections.</p><div class="hero-actions"><a class="site-button primary large" href="/dashboard/?demo=true">Open the demo ↗</a><a class="site-button large" href="/registration">Create an account</a></div></section>
+  </main>
+  <footer class="site-footer"><div class="site-container"><div class="footer-main"><a class="site-brand" href="/"><span class="brand-circle" aria-hidden="true"></span>FinApp</a><p>A software engineering project at Rowan University.<br>Educational financial modeling. All amounts in USD.</p><a class="text-link" href="mailto:meleja49@rowan.edu">Contact the team ↗</a></div><div class="footer-bottom"><span>Built by Sean Bassi, Ali Canturk, Braden Elsworth, Quinn Johnson, Jason Mele & Lucas Polo.</span><a href="#main">Back to top ↑</a></div></div></footer>
   <script src="/assets/main.js" defer></script>
 </body>
 </html>

@@ -1,26 +1,44 @@
 package com.finapp.javabackend.controller;
 
-import com.finapp.javabackend.common.ApiResponse;
-import com.finapp.javabackend.dto.SimulationResultDTO;
-import org.springframework.http.ResponseEntity;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.boot.web.client.RestTemplateBuilder;
+import org.springframework.http.*;
 import org.springframework.web.bind.annotation.*;
-
-import java.math.BigDecimal;
+import org.springframework.web.client.HttpStatusCodeException;
+import org.springframework.web.client.RestClientException;
+import org.springframework.web.client.RestTemplate;
+import java.time.Duration;
+import java.util.Map;
 
 @RestController
-@RequestMapping("/api/v1/simulations")
+@RequestMapping("/api/v1/simulate")
 public class SimulationController {
+    private final RestTemplate restTemplate;
+    private final String pythonUrl;
 
-    @PostMapping("/run/{profileId}")
-    public ResponseEntity<ApiResponse<SimulationResultDTO>> runSimulation(@PathVariable Long profileId) {
-        // Mock stub result until the Python FastAPI integration client is set up
-        SimulationResultDTO stubResult = new SimulationResultDTO(
-                new BigDecimal("450000.00"),
-                new BigDecimal("620000.00"),
-                new BigDecimal("850000.00"),
-                "Increase monthly savings contributions by 5% to optimize long-term growth."
-        );
+    public SimulationController(RestTemplateBuilder builder,
+            @Value("${python.service.url:http://localhost:5000}") String pythonServiceUrl) {
+        restTemplate = builder.setConnectTimeout(Duration.ofSeconds(3))
+                .setReadTimeout(Duration.ofSeconds(12)).build();
+        pythonUrl = pythonServiceUrl.replaceAll("/+$", "") + "/api/simulate";
+    }
 
-        return ResponseEntity.ok(ApiResponse.success(stubResult, "Simulation executed successfully"));
+    @PostMapping
+    public ResponseEntity<String> proxySimulation(@RequestBody Map<String, Object> payload) {
+        try {
+            HttpHeaders headers = new HttpHeaders();
+            headers.setContentType(MediaType.APPLICATION_JSON);
+            ResponseEntity<String> response = restTemplate.postForEntity(
+                    pythonUrl, new HttpEntity<>(payload, headers), String.class);
+            return ResponseEntity.status(response.getStatusCode())
+                    .contentType(MediaType.APPLICATION_JSON).body(response.getBody());
+        } catch (HttpStatusCodeException e) {
+            // Preserve Python validation errors so the user can correct their input.
+            return ResponseEntity.status(e.getStatusCode())
+                    .contentType(MediaType.APPLICATION_JSON).body(e.getResponseBodyAsString());
+        } catch (RestClientException e) {
+            return ResponseEntity.status(HttpStatus.BAD_GATEWAY).contentType(MediaType.APPLICATION_JSON)
+                    .body("{\"status\":\"error\",\"message\":\"The simulation service is unavailable. Start the Python backend and try again.\"}");
+        }
     }
 }

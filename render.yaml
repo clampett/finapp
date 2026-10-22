@@ -1,0 +1,21 @@
+services:
+  - type: web
+    name: finapp-team-dev
+    runtime: docker
+    plan: free
+    region: virginia
+    dockerfilePath: ./Dockerfile
+    dockerContext: .
+    healthCheckPath: /api/v1/health
+    autoDeployTrigger: off
+    envVars:
+      - key: SPRING_DATASOURCE_URL
+        sync: false
+      - key: SPRING_DATASOURCE_USERNAME
+        sync: false
+      - key: SPRING_DATASOURCE_PASSWORD
+        sync: false
+      - key: FINAPP_SESSION_SECURE
+        value: "true"
+      - key: SPRING_JPA_SHOW_SQL
+        value: "false"

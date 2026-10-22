@@ -1,15 +1,21 @@
 from pydantic import BaseModel
 from typing import List
 
+# Retained the earlier generic graph DTOs for compatibility; the active endpoint
+# validated its richer simulation contract in app/routers/simulate.py instead.
+
+
 class EdgeDTO(BaseModel):
     source: str
     target: str
+
 
 class NodeDTO(BaseModel):
     id: str
     type: str
     balance: float = 0.0
     income_stream: float = 0.0
+
 
 class GraphDTO(BaseModel):
     nodes: List[NodeDTO]

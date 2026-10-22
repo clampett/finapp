@@ -1,5 +1,9 @@
 package com.finapp.javabackend.service;
 
+import static org.junit.jupiter.api.Assertions.*;
+import static org.mockito.ArgumentMatchers.anyList;
+import static org.mockito.Mockito.*;
+
 import com.finapp.javabackend.dto.EdgeDTO;
 import com.finapp.javabackend.dto.GraphDTO;
 import com.finapp.javabackend.dto.NodeDTO;
@@ -8,19 +12,14 @@ import com.finapp.javabackend.model.entity.NodeEdge;
 import com.finapp.javabackend.repository.FinancialNodeRepository;
 import com.finapp.javabackend.repository.NodeEdgeRepository;
 import com.finapp.javabackend.service.impl.GraphServiceImpl;
+import java.math.BigDecimal;
+import java.util.List;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
-
-import java.math.BigDecimal;
-import java.util.List;
-
-import static org.junit.jupiter.api.Assertions.*;
-import static org.mockito.ArgumentMatchers.anyList;
-import static org.mockito.Mockito.*;
 
 @ExtendWith(MockitoExtension.class)
 class GraphServiceTest {
@@ -41,13 +40,28 @@ class GraphServiceTest {
     @Test
     @DisplayName("getFullGraph - Should return all nodes and edges wrapped in GraphDTO")
     void getFullGraph_ShouldReturnGraphDTO() {
-        FinancialNode sourceNode = new FinancialNode("Checking Account", "CHECKING", new BigDecimal("5000.00"), new BigDecimal("0.05"));
+        FinancialNode sourceNode = new FinancialNode(
+            "Checking Account",
+            "CHECKING",
+            new BigDecimal("5000.00"),
+            new BigDecimal("0.05")
+        );
         sourceNode.setId(1L);
 
-        FinancialNode targetNode = new FinancialNode("Savings Account", "SAVINGS", new BigDecimal("10000.00"), new BigDecimal("0.04"));
+        FinancialNode targetNode = new FinancialNode(
+            "Savings Account",
+            "SAVINGS",
+            new BigDecimal("10000.00"),
+            new BigDecimal("0.04")
+        );
         targetNode.setId(2L);
 
-        NodeEdge mockEdge = new NodeEdge(sourceNode, targetNode, new BigDecimal("500.00"), BigDecimal.ZERO);
+        NodeEdge mockEdge = new NodeEdge(
+            sourceNode,
+            targetNode,
+            new BigDecimal("500.00"),
+            BigDecimal.ZERO
+        );
         mockEdge.setId(10L);
 
         when(nodeRepository.findAll()).thenReturn(List.of(sourceNode, targetNode));
@@ -71,17 +85,44 @@ class GraphServiceTest {
     @Test
     @DisplayName("saveGraph - Should map DTOs to entities and return saved GraphDTO")
     void saveGraph_ShouldSaveAndReturnGraphDTO() {
-        NodeDTO inputNodeDTO = new NodeDTO(null, "Salary", "INCOME", new BigDecimal("80000.00"), BigDecimal.ZERO);
-        EdgeDTO inputEdgeDTO = new EdgeDTO(null, 1L, 2L, new BigDecimal("1000.00"), BigDecimal.ZERO);
+        NodeDTO inputNodeDTO = new NodeDTO(
+            null,
+            "Salary",
+            "INCOME",
+            new BigDecimal("80000.00"),
+            BigDecimal.ZERO
+        );
+        EdgeDTO inputEdgeDTO = new EdgeDTO(
+            null,
+            1L,
+            2L,
+            new BigDecimal("1000.00"),
+            BigDecimal.ZERO
+        );
         GraphDTO inputGraph = new GraphDTO(List.of(inputNodeDTO), List.of(inputEdgeDTO));
 
-        FinancialNode sourceNode = new FinancialNode("Salary", "INCOME", new BigDecimal("80000.00"), BigDecimal.ZERO);
+        FinancialNode sourceNode = new FinancialNode(
+            "Salary",
+            "INCOME",
+            new BigDecimal("80000.00"),
+            BigDecimal.ZERO
+        );
         sourceNode.setId(1L);
 
-        FinancialNode targetNode = new FinancialNode("Checking", "CHECKING", new BigDecimal("5000.00"), BigDecimal.ZERO);
+        FinancialNode targetNode = new FinancialNode(
+            "Checking",
+            "CHECKING",
+            new BigDecimal("5000.00"),
+            BigDecimal.ZERO
+        );
         targetNode.setId(2L);
 
-        NodeEdge savedEdge = new NodeEdge(sourceNode, targetNode, new BigDecimal("1000.00"), BigDecimal.ZERO);
+        NodeEdge savedEdge = new NodeEdge(
+            sourceNode,
+            targetNode,
+            new BigDecimal("1000.00"),
+            BigDecimal.ZERO
+        );
         savedEdge.setId(100L);
 
         when(nodeRepository.saveAll(anyList())).thenReturn(List.of(sourceNode, targetNode));

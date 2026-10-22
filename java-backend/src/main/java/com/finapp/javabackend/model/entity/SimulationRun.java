@@ -38,21 +38,51 @@ public class SimulationRun {
     public SimulationRun() {}
 
     // Getters and Setters
-    public Long getId() { return id; }
-    public void setId(Long id) { this.id = id; }
+    public Long getId() {
+        return id;
+    }
 
-    public User getUser() { return user; }
-    public void setUser(User user) { this.user = user; }
+    public void setId(Long id) {
+        this.id = id;
+    }
 
-    public LocalDateTime getRunDate() { return runDate; }
-    public void setRunDate(LocalDateTime runDate) { this.runDate = runDate; }
+    public User getUser() {
+        return user;
+    }
 
-    public String getParameters() { return parameters; }
-    public void setParameters(String parameters) { this.parameters = parameters; }
+    public void setUser(User user) {
+        this.user = user;
+    }
 
-    public String getResults() { return results; }
-    public void setResults(String results) { this.results = results; }
+    public LocalDateTime getRunDate() {
+        return runDate;
+    }
 
-    public String getAiRecommendation() { return aiRecommendation; }
-    public void setAiRecommendation(String aiRecommendation) { this.aiRecommendation = aiRecommendation; }
+    public void setRunDate(LocalDateTime runDate) {
+        this.runDate = runDate;
+    }
+
+    public String getParameters() {
+        return parameters;
+    }
+
+    public void setParameters(String parameters) {
+        this.parameters = parameters;
+    }
+
+    public String getResults() {
+        return results;
+    }
+
+    public void setResults(String results) {
+        this.results = results;
+    }
+
+    public String getAiRecommendation() {
+        return aiRecommendation;
+    }
+
+    public void setAiRecommendation(String aiRecommendation) {
+        this.aiRecommendation = aiRecommendation;
+    }
 }

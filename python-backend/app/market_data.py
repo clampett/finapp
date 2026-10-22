@@ -4,6 +4,9 @@ import pandas as pd
 from app.asset_classes import DEFAULT_ASSET_CLASS, ticker_for
 from app.price_cache import get_prices
 
+# Kept observed historical statistics separate from the illustrative parameters
+# currently used by the simulation endpoint; no live calibration was implied.
+
 
 def get_market_stats(asset_class: str = DEFAULT_ASSET_CLASS, years: int = 10) -> dict:
     """Trailing return and volatility for an asset class, from cached prices."""
@@ -15,6 +18,8 @@ def get_market_stats(asset_class: str = DEFAULT_ASSET_CLASS, years: int = 10) ->
     if len(prices) < 2:
         raise RuntimeError(f"Not enough price history for {ticker}")
 
+    # Measured compounded growth across elapsed calendar time, while volatility
+    # below was annualized from daily returns using the trading-day convention.
     elapsed_years = (prices.index[-1] - prices.index[0]).days / 365.25
     cagr = (prices.iloc[-1] / prices.iloc[0]) ** (1 / elapsed_years) - 1
 

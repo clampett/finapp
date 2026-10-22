@@ -16,6 +16,8 @@ def make_prices(growth: float) -> pd.Series:
 
 @pytest.fixture
 def cache(tmp_path, monkeypatch):
+    # Isolated SQLite storage, provider responses, and time from the real machine,
+    # allowing freshness and outage behavior to be tested without network requests.
     monkeypatch.setenv("PRICE_CACHE_DB", str(tmp_path / "cache.db"))
     state = {
         "calls": 0,

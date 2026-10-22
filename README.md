@@ -42,56 +42,35 @@ Ensure the following runtimes and tools are installed locally:
 
 ## Quickstart Guide
 
-### Option 1: Automated Local Launch via PowerShell (Windows)
-
-A unified PowerShell automation script orchestrates dependencies, starts background containers, and streams backend and frontend logs concurrently.
-
-1. Use the hosted FinApp URL, or pull the code and run `./start.ps1` for local frontend development. Teammates need no Neon account, invitation, database settings, or `.env` file. Only Node/npm is required for the local frontend path.
-2. Sign in with the shared development account: **`testuser` / `test123`**.
-3. The backend owner deploys the server once and commits its public origin in `shared-backend.json`. See [shared hosting setup](docs/shared-hosting.md). An empty URL means this one-time deployment has not been finished yet.
-
-The default script builds the landing pages/dashboard and runs Express, which forwards `/api` to the shared server. Press Ctrl+C to stop the local frontend. The shared backend and database remain online independently.
-
-For deliberately isolated backend work, run `./start.ps1 -Mode local`. For the backend owner's local Java development against the shared database, use `./start.ps1 -Mode server`; Spring logs appear with `[SPRING]`. These advanced paths require the full prerequisites and are separate from normal team sign-in.
-
-### Option 2: Manual Multi-Service Startup
-If running individual components manually across separate terminals:
-
-1. Start Infrastructure Containers
-For backend-owner work with the original multi-container stack and owner-only credentials, run:
+Install Docker Desktop, Node/npm, and JDK 17 or 21. From the project root run:
 
 ```powershell
-./start-docker.ps1
+.\start.ps1
 ```
 
-For isolated local infrastructure only:
+Open http://localhost:8080 and sign in with **testuser / test123**. No Render, Neon, cloud account, or `.env` is required. The script installs missing npm dependencies, builds both frontends, starts local PostgreSQL/Python containers, and runs local Java/Express. Spring Boot output appears live as `[SPRING]`. Press Ctrl+C in that terminal to stop the stack; data remains on disk.
+
+The `local` Spring profile creates the test account with a BCrypt password hash and a sample Recent Grad node graph. It reuses existing matching accounts and preserves existing scenarios; it never replaces a different password. This fixture is only for local classroom development. Do not enable the `local` profile on a public server.
+
+### Registration and verification
+
+Create an account normally, then copy the six-digit `CODE:` printed in the terminal running `start.ps1` into the verification page. Console delivery skips SMTP entirely. Codes expire in 15 minutes and belong to one account. Use **Print a new code in the terminal** to replace an expired code. If you closed verification, sign in with that account to resume it. The seeded test account is already verified.
+
+### Team workflow and data
+
+- Each teammate pulls the same code and runs their own local stack. Everyone has the same test credentials, with a separate database on each computer.
+- Share feature changes through Git branches and pull requests. Share useful scenario data with the dashboard's JSON export/import; browser scenario edits do not currently write to PostgreSQL or sync across machines.
+- Keep schema changes in new Flyway migrations. Keep repeatable example data in development fixtures rather than making manual edits on one computer.
+- Registered accounts and password hashes persist in the local `finapp_postgres_data` external Docker volume. `docker compose down -v` does not delete this external volume, but explicitly deleting the volume or disk still loses data. Run `./backup-db.ps1 -DatabaseMode local` while the database is running for a private backup.
+- Old hosted `.env` datasource settings are ignored by `start.ps1` and the local Compose backend. Existing hosted services/data are not deleted or used by this workflow.
+
+### All-Docker alternative
 
 ```powershell
-docker volume create finapp_postgres_data
-docker compose up -d db python-backend
+.\start-docker.ps1
 ```
 
-Use new Flyway migrations for schema and seed changes. Do not delete database volumes to refresh seed data. The local volume is external and survives `docker compose down -v`; the hosted shared database is outside Compose entirely. Neither protection replaces backups.
-2. Start the Spring Boot Service
-Navigate to the Java backend directory and launch via the Maven wrapper:
-
-```powershell
-cd java-backend
-./mvnw.cmd spring-boot:run
-```
-The Spring service initializes on http://localhost:8081. Manual Maven launches do not load the root `.env` automatically; use `start.ps1 -Mode server` for owner-only shared settings or export the three `SPRING_DATASOURCE_*` variables in that terminal first.
-
-3. Build & Serve the Frontend
-From the root directory:
-
-```powershell
-cd frontend
-npm run in
-npm run build --prefix ./landing
-npm run build --prefix ./dashboard
-npm run dev
-```
-The Express server hosts the static landing interface and compiled React dashboard on http://localhost:8080.
+This builds all services in Docker and displays their logs, including verification codes. Run `docker compose stop` to stop the containers. For manual Java work, use `./mvnw.cmd spring-boot:run '-Dspring-boot.run.profiles=local'` from `java-backend` after starting `db` and `python-backend`. The profile is required to seed the development account.
 
 ### Access Points
 Landing Page & Authentication: http://localhost:8080
@@ -111,5 +90,7 @@ Code Reviews: All contributions require passing local builds (npm run build, ./m
 
 
 ## Current scenario workspace
+
+See [the code and debugging guide](docs/code-guide.md) for the file map, request flow, Python calculation responsibilities, and formatting commands.
 
 See [current implementation and model assumptions](docs/current-implementation.md) for scenario editing, local draft storage, debt payment rules, and verification commands.

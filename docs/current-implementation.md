@@ -1,6 +1,6 @@
 # Scenario workspace and simulation behavior
 
-The intended team workflow is one hosted backend and the shared FinApp login `testuser` / `test123`. Teammates use the hosted URL or run `./start.ps1` for a local frontend. The default script builds the pages/dashboard and runs Express, forwarding same-origin `/api` requests to the public origin in `shared-backend.json`; no Neon login or database secrets are needed on teammates' machines. The origin stays empty until deployment is completed. See [shared hosting](shared-hosting.md). `./start.ps1 -Mode local` starts the isolated backend stack. `-Mode server` is the backend-owner path with Java logs and verification codes streamed as `[SPRING]` using ASCII output.
+Team development runs locally: `./start.ps1` starts PostgreSQL, Python, Spring Boot, and Express on this computer. Sign in with the locally seeded `testuser` / `test123`. No hosted API or database is required. Account registration prints verification codes in the same terminal under `[SPRING]`; console mode skips SMTP. Each machine has its own accounts/data; Git shares code and JSON export/import shares scenarios. See README.md for the workflow.
 
 ## Editing scenarios
 
@@ -29,7 +29,7 @@ Minimums plus the chosen share of remaining surplus form one fixed monthly payme
 
 ## Checks
 
-- Shared gateway: `node --test frontend/api-proxy.test.js`. Java `SharedBackendSecurityTest` exercises real filters for public demos, session expiry, owner checks, and blocked unsafe bulk writes.
+- API gateway: `node --test frontend/api-proxy.test.js`. Java `SharedBackendSecurityTest` exercises real filters for public demos, session expiry, owner checks, and blocked unsafe bulk writes.
 - Frontend: `npm run build --prefix ./frontend`, `npm run lint --prefix ./frontend/dashboard`.
 - Python: install `python-backend/requirements-dev.txt`, then run `python -m unittest tests.test_simulation -v` and `python -m pytest tests/test_price_cache.py` from `python-backend`.
 - Java: `./mvnw.cmd test` from `java-backend` (requires the configured PostgreSQL instance for the application context test). MVC slice tests exercise controller contracts without security filters; they do not establish authentication correctness.
@@ -43,4 +43,14 @@ Existing session cookies now authenticate private workspace reads, including exp
 
 The landing page shares the dashboard palette and teal-circle FinApp logo, with a sample node graph, switchable profile previews, feature explanations, scenario cards, and expandable FAQs. Demo links use `?demo=true&profile=1`, `2`, or `3`; the dashboard validates the profile parameter and preserves demo profile changes in the URL. Invalid profile values fall back to Recent Grad. Sample landing values describe the seeded profiles, not saved local scenario edits.
 
-Sign-in, registration, and verification pages share the same styling. Forms use native required-field validation, inline server errors, pending states, password visibility controls, and a paste-friendly six-digit verification input. Existing authentication endpoints are retained; no server-side authorization changes are part of this page update. Password recovery remains unfinished and is no longer exposed as a dead link. Landing-page light/dark preferences are restored from browser storage; the dashboard retains its dark design.
+Sign-in, registration, and verification pages share the same styling. Forms use native required-field validation, inline server errors, pending states, password visibility controls, and a paste-friendly six-digit verification input. Verification now binds codes to the registered account, provides a resend action, and resumes from sign-in for unverified accounts. Local console delivery skips SMTP. Password recovery remains unfinished and is no longer exposed as a dead link. Landing-page light/dark preferences are restored from browser storage; the dashboard retains its dark design.
+
+## Session behavior
+
+Returning from the private dashboard to a public page (including Back to login) clears tab identity and calls backend logout, deleting that server session. Explicit Sign out does the same. Cached dashboard snapshots are hidden and revalidated before being shown again; expired/revoked sessions redirect to login instead of showing graph-load errors.
+
+Authentication requires the HttpOnly session cookie and its matching key in sessionStorage. A fresh tab cannot reuse a leftover cookie after the original tab closes. Refresh retains the active tab's sign-in. Tab closure does not reliably notify servers, so unused server records expire after 24 hours; closing a tab is not a guarantee of immediate database deletion, and browser session-restore features may restore tab storage. Back and Sign out explicitly revoke the record. Node drafts in localStorage are retained when signing out.
+
+The account seed is in java-backend/src/main/java/com/finapp/javabackend/config/LocalDevelopmentData.java. The matching testuser remains in each developer's own PostgreSQL database; it is not an authentication bypass or shared hosted account.
+
+Session checks: `node --test frontend/session.test.js`; Java LocalAuthTest and SharedBackendSecurityTest cover revocation, cookie expiry, and rejected cookie-only access.

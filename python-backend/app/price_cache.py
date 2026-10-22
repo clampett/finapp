@@ -4,6 +4,7 @@ Every simulation needs 10 years of daily prices per ticker. Fetching them from
 Yahoo on every click would get us rate limited, so each ticker is fetched at
 most once per CACHE_TTL and everything else is served from SQLite.
 """
+
 import os
 import sqlite3
 import threading
@@ -12,8 +13,11 @@ from datetime import datetime, timedelta, timezone
 
 import pandas as pd
 
+# Retained market-history caching as a separate utility; the current simulation
+# endpoint used fixed illustrative assumptions rather than calling this cache.
+
 HISTORY_PERIOD = "10y"
-CACHE_TTL = timedelta(hours=24)      # daily prices: refreshing more often gains nothing
+CACHE_TTL = timedelta(hours=24)  # daily prices: refreshing more often gains nothing
 RETRY_AFTER = timedelta(minutes=15)  # after a failed fetch, leave Yahoo alone for a while
 
 _refresh_lock = threading.Lock()
@@ -51,6 +55,8 @@ def _download(ticker: str) -> pd.Series:
 
 
 def _needs_refresh(ticker: str) -> bool:
+    # Distinguished a successful cache lifetime from a failed-request retry delay,
+    # preventing a provider outage from triggering a download on every page action.
     with closing(_connect()) as conn:
         row = conn.execute(
             "SELECT fetched_at, attempted_at FROM fetch_log WHERE ticker = ?", (ticker,)
@@ -67,6 +73,8 @@ def _needs_refresh(ticker: str) -> bool:
 
 
 def _record_failure(ticker: str) -> None:
+    # Updated only the attempt timestamp after failure, preserving the last known
+    # successful fetch time and any stale prices available for fallback.
     with closing(_connect()) as conn:
         with conn:
             conn.execute(
@@ -103,9 +111,10 @@ def _refresh(ticker: str) -> None:
 
 def _has_data(ticker: str) -> bool:
     with closing(_connect()) as conn:
-        return conn.execute(
-            "SELECT 1 FROM prices WHERE ticker = ? LIMIT 1", (ticker,)
-        ).fetchone() is not None
+        return (
+            conn.execute("SELECT 1 FROM prices WHERE ticker = ? LIMIT 1", (ticker,)).fetchone()
+            is not None
+        )
 
 
 def _load(ticker: str) -> pd.Series:
@@ -125,6 +134,8 @@ def _load(ticker: str) -> pd.Series:
 def get_prices(ticker: str) -> pd.Series:
     """Daily adjusted closing prices, served from SQLite when fresh enough."""
     ticker = ticker.upper()
+    # Rechecked freshness while holding the process lock so concurrent requests
+    # for the same stale ticker did not all repeat the same provider download.
     if _needs_refresh(ticker):
         with _refresh_lock:
             if _needs_refresh(ticker):  # another request may have refreshed while we waited

@@ -1,4 +1,88 @@
-<!DOCTYPE html>
-<html lang="en"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1"><meta name="theme-color" content="#0c1018"><title>Sign in — FinApp</title><link rel="stylesheet" href="/assets/styles.css"><link rel="icon" type="image/svg+xml" href="/static/logo_green.svg"><script>try{document.documentElement.dataset.theme=localStorage.getItem('user-theme')==='light'?'light':'dark'}catch{}</script></head>
-<body class="auth-page"><a class="skip-link" href="#main">Skip to content</a><header class="site-container auth-header"><a class="site-brand" href="/"><span class="brand-circle" aria-hidden="true"></span>FinApp</a><a href="/">← Back to home</a></header>
-<main id="main" class="auth-main"><div class="auth-layout"><section class="auth-intro"><div class="site-eyebrow">WELCOME TO YOUR WORKSPACE</div><h2>Pick up where<br>your plan left off.</h2><p>Bring your income, accounts, investments, and debts into one connected view.</p><ul><li>Map your financial life with nodes</li><li>Explore a range of future outcomes</li><li>Compare debt payoff strategies</li></ul></section><section class="auth-card" aria-labelledby="login-title"><h1 id="login-title">Welcome back.</h1><p class="auth-description">Sign in to open your financial workspace.</p><form id="login-form" class="auth-form"><div><label for="username">Username</label><input id="username" name="username" required maxlength="50" autocomplete="username" placeholder="Enter your username"></div><div><label for="password">Password</label><div class="password-field"><input id="password" name="password" type="password" autocomplete="current-password" required maxlength="72" placeholder="Enter your password"><button class="password-toggle" type="button" data-password-toggle="password" aria-label="Show or hide password" aria-pressed="false" aria-controls="password">Show</button></div></div><p id="login-error" class="form-message" role="alert"></p><p id="login-status" class="form-message form-success" role="status"></p><button id="login_button" class="site-button primary" type="submit">Sign in ↗</button></form><p class="auth-switch">New to FinApp? <a href="/registration">Create an account</a></p><div class="auth-divider">OR EXPLORE FIRST</div><a class="site-button" href="/dashboard/?demo=true">Try the demo without signing in ↗</a></section></div></main><footer class="auth-footer">FinApp · Educational financial modeling · Scenario edits stay in this browser</footer><script src="/assets/login.js" defer></script></body></html>
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="theme-color" content="#0c1018" />
+    <title>Sign in — FinApp</title>
+    <link rel="stylesheet" href="/assets/styles.css" />
+    <link rel="icon" type="image/svg+xml" href="/static/logo_green.svg" />
+    <script>
+      try {
+        document.documentElement.dataset.theme =
+          localStorage.getItem('user-theme') === 'light' ? 'light' : 'dark';
+      } catch {}
+    </script>
+  </head>
+  <body class="auth-page">
+    <a class="skip-link" href="#main">Skip to content</a>
+    <header class="site-container auth-header">
+      <a class="site-brand" href="/"><span class="brand-circle" aria-hidden="true"></span>FinApp</a
+      ><a href="/">← Back to home</a>
+    </header>
+    <main id="main" class="auth-main">
+      <div class="auth-layout">
+        <section class="auth-intro">
+          <div class="site-eyebrow">WELCOME TO YOUR WORKSPACE</div>
+          <h2>Pick up where<br />your plan left off.</h2>
+          <p>Bring your income, accounts, investments, and debts into one connected view.</p>
+          <ul>
+            <li>Map your financial life with nodes</li>
+            <li>Explore a range of future outcomes</li>
+            <li>Compare debt payoff strategies</li>
+          </ul>
+        </section>
+        <section class="auth-card" aria-labelledby="login-title">
+          <h1 id="login-title">Welcome back.</h1>
+          <p class="auth-description">Sign in to open your financial workspace.</p>
+          <form id="login-form" class="auth-form">
+            <div>
+              <label for="username">Username</label
+              ><input
+                id="username"
+                name="username"
+                required
+                maxlength="50"
+                autocomplete="username"
+                placeholder="Enter your username"
+              />
+            </div>
+            <div>
+              <label for="password">Password</label>
+              <div class="password-field">
+                <input
+                  id="password"
+                  name="password"
+                  type="password"
+                  autocomplete="current-password"
+                  required
+                  maxlength="72"
+                  placeholder="Enter your password"
+                /><button
+                  class="password-toggle"
+                  type="button"
+                  data-password-toggle="password"
+                  aria-label="Show or hide password"
+                  aria-pressed="false"
+                  aria-controls="password"
+                >
+                  Show
+                </button>
+              </div>
+            </div>
+            <p id="login-error" class="form-message" role="alert"></p>
+            <p id="login-status" class="form-message form-success" role="status"></p>
+            <button id="login_button" class="site-button primary" type="submit">Sign in ↗</button>
+          </form>
+          <p class="auth-switch">New to FinApp? <a href="/registration">Create an account</a></p>
+          <div class="auth-divider">OR EXPLORE FIRST</div>
+          <a class="site-button" href="/dashboard/?demo=true">Try the demo without signing in ↗</a>
+        </section>
+      </div>
+    </main>
+    <footer class="auth-footer">
+      FinApp · Educational financial modeling · Scenario edits stay in this browser
+    </footer>
+    <script src="/assets/login.js" defer></script>
+  </body>
+</html>

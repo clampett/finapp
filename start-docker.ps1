@@ -1,15 +1,19 @@
-# Backend-owner Docker stack; credentials are kept on the owner's machine.
 [CmdletBinding()]
 param()
 $ErrorActionPreference = 'Stop'
+Set-Location -LiteralPath $PSScriptRoot
 . (Join-Path $PSScriptRoot 'scripts\FinApp.Common.ps1')
-$keys = @('FINAPP_DATABASE_MODE', 'SPRING_DATASOURCE_URL', 'SPRING_DATASOURCE_USERNAME', 'SPRING_DATASOURCE_PASSWORD', 'ANTHROPIC_API_KEY', 'PYTHON_SERVICE_URL', 'FINAPP_POSTGRES_VOLUME', 'FINAPP_PG_CLIENT_IMAGE')
-$previous = @{}
-foreach ($key in $keys) { $previous[$key] = [Environment]::GetEnvironmentVariable($key, 'Process') }
-try {
-    Import-FinAppEnvironment (Join-Path $PSScriptRoot '.env')
-    Assert-FinAppSharedDatabase
-    Invoke-Checked 'docker' @('compose', '-f', (Join-Path $PSScriptRoot 'docker-compose.shared.yml'), 'up', '--build')
-} finally {
-    foreach ($key in $keys) { [Environment]::SetEnvironmentVariable($key, $previous[$key], 'Process') }
+$volume = if ($env:FINAPP_POSTGRES_VOLUME) {
+    $env:FINAPP_POSTGRES_VOLUME
 }
+else {
+    'finapp_postgres_data'
+}
+# Reused the external database volume so recreating application containers did
+# not silently replace the persistent account records with an empty database.
+if ((Invoke-Native 'docker' @('volume', 'inspect', $volume) -Quiet) -ne 0) {
+    Invoke-Checked 'docker' @('volume', 'create', $volume)
+}
+Write-Host 'Local FinApp: http://localhost:8080 - testuser / test123'
+Write-Host 'Verification codes appear in backend logs. Use docker compose stop to stop services.'
+Invoke-Checked 'docker' @('compose', 'up', '--build')

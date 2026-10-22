@@ -4,5 +4,7 @@ import java.security.Principal;
 
 public record SessionUser(Long id, String username) implements Principal {
     @Override
-    public String getName() { return username; }
+    public String getName() {
+        return username;
+    }
 }

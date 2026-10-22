@@ -4,6 +4,8 @@ from app.routers import simulate
 
 app = FastAPI()
 
+# Restricted browser-origin access to the local frontend. Normal dashboard calls
+# were forwarded through Express and Spring Boot before reaching this service.
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["http://localhost:8080"],

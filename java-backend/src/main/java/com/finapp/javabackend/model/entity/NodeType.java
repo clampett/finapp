@@ -8,5 +8,5 @@ public enum NodeType {
     ASSET,
     DEPOSIT,
     DEBT,
-    INVESTMENT
+    INVESTMENT,
 }

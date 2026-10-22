@@ -1,6 +1,7 @@
 package com.finapp.javabackend.health;
 
 public class HealthResponse {
+
     private String status;
     private String service;
 
@@ -9,6 +10,11 @@ public class HealthResponse {
         this.service = service;
     }
 
-    public String getStatus() { return status; }
-    public String getService() { return service; }
+    public String getStatus() {
+        return status;
+    }
+
+    public String getService() {
+        return service;
+    }
 }

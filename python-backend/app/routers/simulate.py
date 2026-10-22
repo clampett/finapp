@@ -6,6 +6,9 @@ from app.projection import project_household
 
 router = APIRouter()
 
+
+# Rejected non-finite numbers and excessive amounts before NumPy or repayment
+# loops were reached; these bounds matched the browser's scenario validation.
 class NodeInput(BaseModel):
     model_config = ConfigDict(allow_inf_nan=False)
     id: str = Field(min_length=1, max_length=100)
@@ -15,12 +18,14 @@ class NodeInput(BaseModel):
     apr: float = Field(default=0, ge=0, le=100)
     min_payment: float | None = Field(default=None, ge=0, le=1e9)
 
+
 class EdgeInput(BaseModel):
     model_config = ConfigDict(allow_inf_nan=False)
     source: str
     target: str
     monthly_fixed_flow: float | None = Field(default=None, ge=0, le=1e9)
     percentage_flow: float | None = Field(default=None, ge=0, le=100)
+
 
 class SimulationRequest(BaseModel):
     model_config = ConfigDict(allow_inf_nan=False)
@@ -33,6 +38,8 @@ class SimulationRequest(BaseModel):
 
     @model_validator(mode="after")
     def unique_nodes(self):
+        # Reserved chart field names and required one valid amount mode per edge,
+        # preventing imported account IDs from overwriting monthly chart metadata.
         ids = [n.id for n in self.nodes]
         if set(ids) & {"month", "freed_cash_flow"}:
             raise ValueError("Account ID conflicts with a reserved chart field")
@@ -45,35 +52,62 @@ class SimulationRequest(BaseModel):
                 raise ValueError("Each connection needs a fixed amount or a percentage")
         return self
 
+
 @router.post("/api/simulate")
 def run_simulation(payload: SimulationRequest):
+    # Interpreted income and expense node values as monthly flows, while account
+    # and debt values were treated as balances rather than recurring contributions.
     income = sum(n.balance for n in payload.nodes if n.type == "INCOME")
     expenses = sum(n.balance for n in payload.nodes if n.type == "EXPENSE")
     debts = []
     for n in payload.nodes:
         if n.type != "DEBT":
             continue
-        fixed = [e.monthly_fixed_flow for e in payload.edges if e.target == n.id and e.monthly_fixed_flow is not None]
-        minimum = n.min_payment if n.min_payment is not None else (sum(fixed) if fixed else n.balance * 0.02)
+        # Applied payment precedence: explicit node override, fixed incoming
+        # connections, then 2% of starting principal. An explicit zero was retained.
+        fixed = [
+            e.monthly_fixed_flow
+            for e in payload.edges
+            if e.target == n.id and e.monthly_fixed_flow is not None
+        ]
+        minimum = (
+            n.min_payment
+            if n.min_payment is not None
+            else (sum(fixed) if fixed else n.balance * 0.02)
+        )
         debts.append(DebtItem(n.id, n.name, n.balance, n.apr / 100, minimum))
+    # Converted percentage APR to decimal APR above; the debt engine performed
+    # the remaining annual-to-monthly conversion before accruing interest.
     minimums = sum(d.min_payment for d in debts if d.balance > 0)
     surplus = income - expenses - minimums
     contribution = max(0, surplus) * payload.investment_rate / 100
-    initial = sum(n.balance for n in payload.nodes if n.type in ("CHECKING", "SAVINGS", "INVESTMENT")) - sum(d.balance for d in debts)
-    result = {"status": "success", "metrics": {
-        "initial_investment": initial, "monthly_contribution": contribution,
-        "monthly_income": income, "monthly_expenses": expenses,
-        "minimum_debt_payments": minimums, "monthly_surplus": surplus, "years": payload.years,
-    }, "assumptions": [
-        "Income and expenses remain constant; enter take-home income.",
-        "Investments earn simulated returns; cash earns its account APR. Loans accrue their own APR.",
-        "Uninvested surplus stays in cash. Deficits use cash, then investments, then borrowing at 12% APR.",
-        "Wealth forecasts pay debt minimums; the debt tool compares allocating extra surplus.",
-        "Fixed incoming debt connections set payments unless overridden. Other connections are visual routing only.",
-        "Market parameters are illustrative fixed assumptions, not live market calibration.",
-        "Debt payment defaults to 2% of starting principal when no fixed connection or override is provided.",
-    ]}
+    initial = sum(
+        n.balance for n in payload.nodes if n.type in ("CHECKING", "SAVINGS", "INVESTMENT")
+    ) - sum(d.balance for d in debts)
+    result = {
+        "status": "success",
+        "metrics": {
+            "initial_investment": initial,
+            "monthly_contribution": contribution,
+            "monthly_income": income,
+            "monthly_expenses": expenses,
+            "minimum_debt_payments": minimums,
+            "monthly_surplus": surplus,
+            "years": payload.years,
+        },
+        "assumptions": [
+            "Income and expenses remain constant; enter take-home income.",
+            "Investments earn simulated returns; cash earns its account APR. Loans accrue their own APR.",
+            "Uninvested surplus stays in cash. Deficits use cash, then investments, then borrowing at 12% APR.",
+            "Wealth forecasts pay debt minimums; the debt tool compares allocating extra surplus.",
+            "Fixed incoming debt connections set payments unless overridden. Other connections are visual routing only.",
+            "Market parameters are illustrative fixed assumptions, not live market calibration.",
+            "Debt payment defaults to 2% of starting principal when no fixed connection or override is provided.",
+        ],
+    }
     if payload.sim_type == "debt":
+        # Compared both repayment priorities under the same affordable payment
+        # budget, without liquidating existing cash or investment accounts.
         result["assumptions"] = [
             "Income and living expenses remain constant; enter take-home monthly income.",
             "The payment budget comes from monthly cash flow, without liquidating existing assets.",
@@ -87,17 +121,31 @@ def run_simulation(payload: SimulationRequest):
         result["debt_labels"] = {d.id: d.name for d in debts if d.balance > 0}
         for strategy in ("avalanche", "snowball"):
             rows, _ = simulate_debt_waterfall(debts, extra, strategy, payload.years * 12)
+            # Reported an unfinished balance explicitly instead of labeling the
+            # last simulated month as a debt-free date when the horizon was reached.
             remaining = sum(rows[-1].get(d.id, 0) for d in debts)
             interest = sum(sum(row.get(d.id, 0) * d.apr / 12 for d in debts) for row in rows[:-1])
             result["debt"][strategy] = rows
             result["debt_summary"][strategy] = {
-                "paid_off": remaining < 0.005, "months": rows[-1]["month"] if remaining < 0.005 else None,
-                "remaining_balance": round(remaining, 2), "total_interest": round(interest, 2),
+                "paid_off": remaining < 0.005,
+                "months": rows[-1]["month"] if remaining < 0.005 else None,
+                "remaining_balance": round(remaining, 2),
+                "total_interest": round(interest, 2),
                 "monthly_budget": max(0, minimums + extra),
             }
     else:
-        forecast, baseline = project_household(payload.nodes, debts, income, expenses,
-            payload.investment_rate, payload.inflation_rate, payload.years, payload.sim_type)
+        # Delegated active wealth forecasts to the household engine, which kept
+        # cash, market assets, existing loans, and new borrowing in separate ledgers.
+        forecast, baseline = project_household(
+            payload.nodes,
+            debts,
+            income,
+            expenses,
+            payload.investment_rate,
+            payload.inflation_rate,
+            payload.years,
+            payload.sim_type,
+        )
         result[payload.sim_type] = forecast
         result["metrics"]["no_growth_baseline"] = baseline
     return result

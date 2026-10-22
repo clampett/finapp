@@ -1,4 +1,132 @@
-<!DOCTYPE html>
-<html lang="en"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1"><meta name="theme-color" content="#0c1018"><title>Create an account — FinApp</title><link rel="stylesheet" href="/assets/styles.css"><link rel="icon" type="image/svg+xml" href="/static/logo_green.svg"><script>try{document.documentElement.dataset.theme=localStorage.getItem('user-theme')==='light'?'light':'dark'}catch{}</script></head>
-<body class="auth-page"><a class="skip-link" href="#main">Skip to content</a><header class="site-container auth-header"><a class="site-brand" href="/"><span class="brand-circle" aria-hidden="true"></span>FinApp</a><a href="/">← Back to home</a></header>
-<main id="main" class="auth-main"><div class="auth-layout"><section class="auth-intro"><div class="site-eyebrow">A CLEARER STARTING POINT</div><h2>Your financial life.<br>All connected.</h2><p>Create an account to open your own workspace. Add nodes, shape a scenario, and explore what could come next.</p><ul><li>No bank connection required</li><li>Build and export your own scenarios</li><li>Keep assumptions in view</li></ul><p>Scenario edits currently save on this device. Export a JSON copy to keep a backup.</p></section><section class="auth-card" aria-labelledby="register-title"><h1 id="register-title">Create your account.</h1><p class="auth-description">Already have an account? <a href="/login">Sign in</a></p><form id="registration-form" class="auth-form"><div><label for="email">Email address</label><input id="email" name="email" type="email" required maxlength="255" autocomplete="email" placeholder="you@example.com"></div><div><label for="username">Username</label><input id="username" name="username" required maxlength="50" autocomplete="username" pattern="[A-Za-z0-9_.-]{3,50}" title="3–50 letters, numbers, underscores, periods, or hyphens" placeholder="Choose a username"></div><div><label for="password">Password</label><div class="password-field"><input id="password" name="password" type="password" autocomplete="new-password" required minlength="8" maxlength="72" placeholder="At least 8 characters"><button class="password-toggle" type="button" data-password-toggle="password" aria-label="Show or hide password" aria-pressed="false" aria-controls="password">Show</button></div></div><div><label for="confirm-password">Confirm password</label><div class="password-field"><input id="confirm-password" name="confirm-password" type="password" autocomplete="new-password" required minlength="8" maxlength="72" placeholder="At least 8 characters"><button class="password-toggle" type="button" data-password-toggle="confirm-password" aria-label="Show or hide confirm password" aria-pressed="false" aria-controls="confirm-password">Show</button></div></div><p id="registration-error" class="form-message" role="alert"></p><button id="register_button" class="site-button primary" type="submit">Create account ↗</button></form><p class="auth-switch"><a href="/dashboard/?demo=true">Just exploring? Open the demo instead ↗</a></p></section></div></main><footer class="auth-footer">FinApp · Educational financial modeling · Scenario edits stay in this browser</footer><script src="/assets/login.js" defer></script></body></html>
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="theme-color" content="#0c1018" />
+    <title>Create an account — FinApp</title>
+    <link rel="stylesheet" href="/assets/styles.css" />
+    <link rel="icon" type="image/svg+xml" href="/static/logo_green.svg" />
+    <script>
+      try {
+        document.documentElement.dataset.theme =
+          localStorage.getItem('user-theme') === 'light' ? 'light' : 'dark';
+      } catch {}
+    </script>
+  </head>
+  <body class="auth-page">
+    <a class="skip-link" href="#main">Skip to content</a>
+    <header class="site-container auth-header">
+      <a class="site-brand" href="/"><span class="brand-circle" aria-hidden="true"></span>FinApp</a
+      ><a href="/">← Back to home</a>
+    </header>
+    <main id="main" class="auth-main">
+      <div class="auth-layout">
+        <section class="auth-intro">
+          <div class="site-eyebrow">A CLEARER STARTING POINT</div>
+          <h2>Your financial life.<br />All connected.</h2>
+          <p>
+            Create an account to open your own workspace. Add nodes, shape a scenario, and explore
+            what could come next.
+          </p>
+          <ul>
+            <li>No bank connection required</li>
+            <li>Build and export your own scenarios</li>
+            <li>Keep assumptions in view</li>
+          </ul>
+          <p>Scenario edits currently save on this device. Export a JSON copy to keep a backup.</p>
+        </section>
+        <section class="auth-card" aria-labelledby="register-title">
+          <h1 id="register-title">Create your account.</h1>
+          <p class="auth-description">Already have an account? <a href="/login">Sign in</a></p>
+          <form id="registration-form" class="auth-form">
+            <div>
+              <label for="email">Email address</label
+              ><input
+                id="email"
+                name="email"
+                type="email"
+                required
+                maxlength="255"
+                autocomplete="email"
+                placeholder="you@example.com"
+              />
+            </div>
+            <div>
+              <label for="username">Username</label
+              ><input
+                id="username"
+                name="username"
+                required
+                maxlength="50"
+                autocomplete="username"
+                pattern="[A-Za-z0-9_.-]{3,50}"
+                title="3–50 letters, numbers, underscores, periods, or hyphens"
+                placeholder="Choose a username"
+              />
+            </div>
+            <div>
+              <label for="password">Password</label>
+              <div class="password-field">
+                <input
+                  id="password"
+                  name="password"
+                  type="password"
+                  autocomplete="new-password"
+                  required
+                  minlength="8"
+                  maxlength="72"
+                  placeholder="At least 8 characters"
+                /><button
+                  class="password-toggle"
+                  type="button"
+                  data-password-toggle="password"
+                  aria-label="Show or hide password"
+                  aria-pressed="false"
+                  aria-controls="password"
+                >
+                  Show
+                </button>
+              </div>
+            </div>
+            <div>
+              <label for="confirm-password">Confirm password</label>
+              <div class="password-field">
+                <input
+                  id="confirm-password"
+                  name="confirm-password"
+                  type="password"
+                  autocomplete="new-password"
+                  required
+                  minlength="8"
+                  maxlength="72"
+                  placeholder="At least 8 characters"
+                /><button
+                  class="password-toggle"
+                  type="button"
+                  data-password-toggle="confirm-password"
+                  aria-label="Show or hide confirm password"
+                  aria-pressed="false"
+                  aria-controls="confirm-password"
+                >
+                  Show
+                </button>
+              </div>
+            </div>
+            <p id="registration-error" class="form-message" role="alert"></p>
+            <button id="register_button" class="site-button primary" type="submit">
+              Create account ↗
+            </button>
+          </form>
+          <p class="auth-switch">
+            <a href="/dashboard/?demo=true">Just exploring? Open the demo instead ↗</a>
+          </p>
+        </section>
+      </div>
+    </main>
+    <footer class="auth-footer">
+      FinApp · Educational financial modeling · Scenario edits stay in this browser
+    </footer>
+    <script src="/assets/login.js" defer></script>
+  </body>
+</html>

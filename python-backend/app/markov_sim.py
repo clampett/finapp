@@ -1,6 +1,7 @@
 import numpy as np
 from typing import List
 
+
 class MarkovRegimeSimulator:
     def __init__(
         self,
@@ -9,19 +10,26 @@ class MarkovRegimeSimulator:
         bull_mu: float = 0.008,
         bull_sigma: float = 0.035,
         bear_mu: float = -0.020,
-        bear_sigma: float = 0.08
+        bear_sigma: float = 0.08,
     ):
-        self.P = np.array([
-            [1.0 - p_bull_to_bear, p_bull_to_bear],
-            [p_bear_to_bull, 1.0 - p_bear_to_bull]
-        ])
-        self.params = {
-            0: (bull_mu, bull_sigma),
-            1: (bear_mu, bear_sigma)
-        }
+        # Stored monthly bull/bear transition probabilities by source-state row;
+        # state 0 represented bull conditions and state 1 represented bear conditions.
+        self.P = np.array(
+            [[1.0 - p_bull_to_bear, p_bull_to_bear], [p_bear_to_bull, 1.0 - p_bear_to_bull]]
+        )
+        self.params = {0: (bull_mu, bull_sigma), 1: (bear_mu, bear_sigma)}
 
-    def simulate_trajectory(self, initial_balance: float, monthly_contributions: List[float], iterations: int = 1000, rng: np.random.Generator = None) -> List[dict]:
-        if rng is None: rng = np.random.default_rng(42)
+    def simulate_trajectory(
+        self,
+        initial_balance: float,
+        monthly_contributions: List[float],
+        iterations: int = 1000,
+        rng: np.random.Generator = None,
+    ) -> List[dict]:
+        # Retained the standalone trajectory helper for direct callers. The active
+        # household endpoint used this class's parameters through project_household.
+        if rng is None:
+            rng = np.random.default_rng(42)
         months = len(monthly_contributions)
 
         states = np.zeros(iterations, dtype=int)
@@ -36,6 +44,8 @@ class MarkovRegimeSimulator:
             states[switch_to_bear] = 1
             states[switch_to_bull] = 0
 
+            # Selected a return distribution per path after its market transition,
+            # preserving different market histories across the simulated population.
             mus = np.where(states == 0, self.params[0][0], self.params[1][0])
             sigmas = np.where(states == 0, self.params[0][1], self.params[1][1])
             returns = rng.normal(mus, sigmas)
@@ -45,11 +55,13 @@ class MarkovRegimeSimulator:
 
             if (m + 1) % 12 == 0:
                 yr = (m + 1) // 12
-                yearly_results.append({
-                    "year": yr,
-                    "p10": float(np.percentile(balances, 10)),
-                    "p50": float(np.percentile(balances, 50)),
-                    "p90": float(np.percentile(balances, 90))
-                })
+                yearly_results.append(
+                    {
+                        "year": yr,
+                        "p10": float(np.percentile(balances, 10)),
+                        "p50": float(np.percentile(balances, 50)),
+                        "p90": float(np.percentile(balances, 90)),
+                    }
+                )
 
         return yearly_results

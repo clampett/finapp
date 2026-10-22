@@ -5,6 +5,8 @@ services:
       dockerfile: Dockerfile
     ports:
       - "8080:8080"
+    environment:
+      - FINAPP_API_UPSTREAM=http://backend:8081
     depends_on:
       - backend
     networks:
@@ -17,12 +19,14 @@ services:
     ports:
       - "8081:8081"
     environment:
-      - SPRING_PROFILES_ACTIVE=docker
+      - SPRING_PROFILES_ACTIVE=local
+      - FINAPP_MAIL_MODE=console
+      - FINAPP_SESSION_SECURE=false
       - PYTHON_SERVICE_URL=http://python-backend:5000
       # This allows the Docker backend to find the Docker database
-      - SPRING_DATASOURCE_URL=${SPRING_DATASOURCE_URL:-jdbc:postgresql://db:5432/finapp}
-      - SPRING_DATASOURCE_USERNAME=${SPRING_DATASOURCE_USERNAME:-postgres}
-      - SPRING_DATASOURCE_PASSWORD=${SPRING_DATASOURCE_PASSWORD:-postgres}
+      - SPRING_DATASOURCE_URL=jdbc:postgresql://db:5432/finapp
+      - SPRING_DATASOURCE_USERNAME=postgres
+      - SPRING_DATASOURCE_PASSWORD=postgres
     depends_on:
       - db
     networks:

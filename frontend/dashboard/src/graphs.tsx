@@ -1,5 +1,6 @@
 import { AccountEditor } from './components/AccountEditor';
 import { Canvas } from './components/Canvas';
+import { DashboardTab } from './DashboardTab';
 import { clearSession, sessionHeaders } from './session';
 import { lazy, Suspense, useCallback, useEffect, useRef, useState } from 'react';
 import type { FormEvent } from 'react';
@@ -141,7 +142,8 @@ export function ArchetypeGraph({
   };
   return (
     <div className="workspace-content">
-      <div className="metric-grid">
+      {view !== 'overview' && (
+  <div className="metric-grid">
         {[
           [
             'Net worth',
@@ -170,6 +172,7 @@ export function ArchetypeGraph({
           </div>
         ))}
       </div>
+      )}
       <div className="section-heading workspace-toolbar">
         <div>
           <h2>
@@ -254,7 +257,9 @@ export function ArchetypeGraph({
         <>
           <div className="scenario-layout">
             <div className="scenario-main">
-              {view === 'graph' || view === 'overview' ? (
+              {view === 'overview' ? (
+                <DashboardTab graph={graph} />
+              ) : view === 'graph' ? (
                 <Canvas
                   graph={graph}
                   selected={selected?.id}

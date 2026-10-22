@@ -1,15 +1,24 @@
 const express = require('express');
 const path = require('path');
 const rateLimit = require('express-rate-limit');
+const { createApiProxy } = require('./api-proxy');
 
 const app = express();
 const PORT = process.env.PORT || 8080;
+// Render terminates TLS in front of this single public gateway.
+if (process.env.RENDER === 'true') app.set('trust proxy', 1);
+
+app.use(
+  '/api',
+  rateLimit({ windowMs: 60 * 1000, limit: 120, standardHeaders: 'draft-7', legacyHeaders: false }),
+  createApiProxy(process.env.FINAPP_API_UPSTREAM || 'http://127.0.0.1:8081'),
+);
 
 // Rate limiting for file access routes
 const fileAccessLimiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
   max: 100, // limit each IP to 100 requests per windowMs
-  message: 'Too many file access attempts, please try again later.'
+  message: 'Too many file access attempts, please try again later.',
 });
 
 const landingDir = path.join(__dirname, 'build', 'landing');
@@ -60,7 +69,7 @@ app.get('/', fileAccessLimiter, (req, res) => {
 
 // Custom 404 handler
 app.use(fileAccessLimiter, (req, res) => {
-   res.status(404).sendFile(path.join(landingDir, '404.html'));
+  res.status(404).sendFile(path.join(landingDir, '404.html'));
 });
 
 app.listen(PORT, () => {

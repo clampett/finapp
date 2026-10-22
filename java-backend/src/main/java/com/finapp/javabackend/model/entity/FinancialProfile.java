@@ -31,21 +31,51 @@ public class FinancialProfile {
     public FinancialProfile() {}
 
     // Getters and Setters
-    public Long getId() { return id; }
-    public void setId(Long id) { this.id = id; }
+    public Long getId() {
+        return id;
+    }
 
-    public User getUser() { return user; }
-    public void setUser(User user) { this.user = user; }
+    public void setId(Long id) {
+        this.id = id;
+    }
 
-    public Integer getAge() { return age; }
-    public void setAge(Integer age) { this.age = age; }
+    public User getUser() {
+        return user;
+    }
 
-    public BigDecimal getAnnualIncome() { return annualIncome; }
-    public void setAnnualIncome(BigDecimal annualIncome) { this.annualIncome = annualIncome; }
+    public void setUser(User user) {
+        this.user = user;
+    }
 
-    public String getRiskTolerance() { return riskTolerance; }
-    public void setRiskTolerance(String riskTolerance) { this.riskTolerance = riskTolerance; }
+    public Integer getAge() {
+        return age;
+    }
 
-    public Integer getTargetRetireAge() { return targetRetireAge; }
-    public void setTargetRetireAge(Integer targetRetireAge) { this.targetRetireAge = targetRetireAge; }
+    public void setAge(Integer age) {
+        this.age = age;
+    }
+
+    public BigDecimal getAnnualIncome() {
+        return annualIncome;
+    }
+
+    public void setAnnualIncome(BigDecimal annualIncome) {
+        this.annualIncome = annualIncome;
+    }
+
+    public String getRiskTolerance() {
+        return riskTolerance;
+    }
+
+    public void setRiskTolerance(String riskTolerance) {
+        this.riskTolerance = riskTolerance;
+    }
+
+    public Integer getTargetRetireAge() {
+        return targetRetireAge;
+    }
+
+    public void setTargetRetireAge(Integer targetRetireAge) {
+        this.targetRetireAge = targetRetireAge;
+    }
 }

@@ -44,8 +44,18 @@ build/
 
 ### Python ###
 venv/
+.venv/
+.python-runtime/
 __pycache__/
 *.pyc
 
 ### Price cache ###
 *.db
+
+### Private database credentials and backups ###
+.env.*
+!.env.example
+backups/
+*.dump
+*.backup
+.neon

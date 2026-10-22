@@ -6,7 +6,9 @@
   "scripts": {
     "in": "npm install --prefix ./landing && npm install --prefix ./dashboard && npm install",
     "build": "npm run build --prefix ./landing && npm run build --prefix ./dashboard && cpy \"static/*\" \"build/landing/static/\"",
-    "dev": "npm run build && node express.js"
+    "dev": "npm run build && node express.js",
+    "format": "node scripts/format-source.mjs",
+    "format:check": "node scripts/format-source.mjs --check"
   },
   "keywords": [],
   "type": "commonjs",
@@ -15,6 +17,8 @@
     "express-rate-limit": "^8.7.1"
   },
   "devDependencies": {
-    "cpy-cli": "^7.0.0"
+    "cpy-cli": "^7.0.0",
+    "prettier": "3.9.10",
+    "prettier-plugin-java": "2.11.0"
   }
 }

@@ -1,0 +1,11 @@
+**/node_modules/
+**/target/
+**/build/
+**/.venv/
+backups/
+tmp/
+.agents/
+.codex/
+**/package-lock.json
+# Preserved the legacy template with its existing malformed closing tag.
+frontend/landing/pages/404.html

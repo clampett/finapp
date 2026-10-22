@@ -4,16 +4,18 @@ US_STOCKS (VOO) and BONDS (AGG) are the two named in the design document.
 """
 
 ASSET_CLASS_TICKERS = {
-    "US_STOCKS": "VOO",     # Vanguard S&P 500 ETF
-    "BONDS": "AGG",         # iShares Core U.S. Aggregate Bond ETF
+    "US_STOCKS": "VOO",  # Vanguard S&P 500 ETF
+    "BONDS": "AGG",  # iShares Core U.S. Aggregate Bond ETF
     "INTL_STOCKS": "VXUS",  # Vanguard Total International Stock ETF
-    "REAL_ESTATE": "VNQ",   # Vanguard Real Estate ETF
+    "REAL_ESTATE": "VNQ",  # Vanguard Real Estate ETF
 }
 
 DEFAULT_ASSET_CLASS = "US_STOCKS"
 
 
 def ticker_for(asset_class: str) -> str:
+    # Normalized the category before lookup and reported allowed values when an
+    # unsupported category was supplied, rather than silently selecting another ETF.
     try:
         return ASSET_CLASS_TICKERS[asset_class.upper()]
     except KeyError:

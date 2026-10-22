@@ -1,12 +1,27 @@
-import React from 'react'
-import ReactDOM from 'react-dom/client'
-import App from './App.tsx'
+import React from 'react';
+import ReactDOM from 'react-dom/client';
+import App from './App.tsx';
+import { clearSession, endSession, installPrivateSessionGuard, validSession } from './session';
+import './index.css';
 
-// Add this line. Adjust the path if your file is inside a css/ folder
-import './index.css' 
-
-ReactDOM.createRoot(document.getElementById('root')!).render(
-  <React.StrictMode>
-    <App />
-  </React.StrictMode>,
-)
+async function startWorkspace() {
+  // Allowed public demos immediately, but verified private sessions before React
+  // mounted the workspace or started fetching account data.
+  const demo = new URLSearchParams(location.search).get('demo') === 'true';
+  if (demo) {
+    void endSession();
+  } else {
+    installPrivateSessionGuard();
+    if (!(await validSession())) {
+      clearSession();
+      location.replace('/login');
+      return;
+    }
+  }
+  ReactDOM.createRoot(document.getElementById('root')!).render(
+    <React.StrictMode>
+      <App />
+    </React.StrictMode>,
+  );
+}
+void startWorkspace();

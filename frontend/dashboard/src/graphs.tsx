@@ -142,7 +142,8 @@ export function ArchetypeGraph({
   };
   return (
     <div className="workspace-content">
-      <div className="metric-grid">
+      {view !== 'overview' && (
+  <div className="metric-grid">
         {[
           [
             'Net worth',
@@ -171,6 +172,7 @@ export function ArchetypeGraph({
           </div>
         ))}
       </div>
+      )}
       <div className="section-heading workspace-toolbar">
         <div>
           <h2>

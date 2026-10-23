@@ -24,7 +24,7 @@ for port in 5000 8080 8081; do
     exit 1
   fi
 done
-f ! docker info >/dev/null 2>&1; then
+if ! docker info >/dev/null 2>&1; then
   echo "Starting Docker Desktop..."
   open -a Docker 2>/dev/null || true
   for _ in $(seq 1 45); do docker info >/dev/null 2>&1 && break; sleep 2; done
@@ -58,7 +58,7 @@ chmod +x mvnw
 ./mvnw spring-boot:run 2>&1 | sed -u 's/^/[SPRING] /' &
 JAVA_PID=$!
 
-cho "Waiting for Spring Boot on port 8081 (verification codes show as [SPRING] CODE:)..."
+echo "Waiting for Spring Boot on port 8081 (verification codes show as [SPRING] CODE:)..."
 for _ in $(seq 1 90); do
   lsof -nP -iTCP:8081 -sTCP:LISTEN >/dev/null 2>&1 && break
   sleep 1

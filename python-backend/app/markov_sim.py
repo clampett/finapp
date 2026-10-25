@@ -19,6 +19,56 @@ class MarkovRegimeSimulator:
         )
         self.params = {0: (bull_mu, bull_sigma), 1: (bear_mu, bear_sigma)}
 
+    @classmethod
+    def from_assumptions(cls, annual_return, annual_volatility):
+        engine = cls()
+        sigma = annual_volatility / np.sqrt(12)
+        mean = (np.log1p(annual_return) - annual_volatility**2 / 2) / 12
+        # Matched stationary monthly log-return mean and variance to Monte Carlo,
+        # instead of comparing a 10% model against unrelated low-return regimes.
+        engine.log_params = {0: (mean + 0.4 * sigma, 0.6 * sigma), 1: (mean - 1.2 * sigma, sigma)}
+        engine.initial_probabilities = np.array([0.75, 0.25])
+        engine.return_pools = None
+        return engine
+
+    @classmethod
+    def from_monthly_returns(cls, returns, trend_returns=None):
+        engine = cls()
+        returns = np.asarray(returns, dtype=float)
+        log_returns = np.log1p(returns if trend_returns is None else trend_returns)
+        trend = np.convolve(log_returns, np.ones(12), mode="full")[: len(returns)]
+        states = (trend < 0).astype(int)
+        counts = np.ones((2, 2), dtype=float)
+        np.add.at(counts, (states[:-1], states[1:]), 1)
+        engine.P = counts / counts.sum(axis=1, keepdims=True)
+        engine.initial_probabilities = np.bincount(states, minlength=2) / len(states)
+        # Estimated both regime distributions from the same observed history;
+        # monthly samples retained crash observations instead of smoothing tails away.
+        engine.return_pools = [returns[states == state] for state in (0, 1)]
+        engine.return_pools = [pool if len(pool) else returns for pool in engine.return_pools]
+        engine.params = {
+            state: (float(pool.mean()), float(pool.std()))
+            for state, pool in enumerate(engine.return_pools)
+        }
+        return engine
+
+    def draw_returns(self, states, rng):
+        chance = rng.random(len(states))
+        to_bear = (states == 0) & (chance < self.P[0, 1])
+        to_bull = (states == 1) & (chance < self.P[1, 0])
+        states[to_bear], states[to_bull] = 1, 0
+        draws = np.zeros(len(states))
+        for state in (0, 1):
+            mask = states == state
+            if self.return_pools is not None:
+                draws[mask] = rng.choice(self.return_pools[state], mask.sum())
+            else:
+                # Exponentiated log returns so an invested dollar could lose at
+                # most its full value, even in an extreme simulated bear month.
+                mean, sigma = self.log_params[state]
+                draws[mask] = np.expm1(rng.normal(mean, sigma, mask.sum()))
+        return draws
+
     def simulate_trajectory(
         self,
         initial_balance: float,

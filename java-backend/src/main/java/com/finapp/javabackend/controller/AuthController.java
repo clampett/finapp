@@ -60,12 +60,10 @@ public class AuthController {
             request.getPassword() == null ||
             request.getUsername().isBlank() ||
             request.getUsername().trim().length() > 50 ||
-            
             // Limited email length before matching and prevented regex backtracking
             // with possessive quantifiers, avoiding repeated work on crafted input.
             request.getEmail().trim().length() > 255 ||
             !request.getEmail().trim().matches("[^\\s@]++@[^\\s@.]++\\.[^\\s@]++") ||
-            
             // Password check
             request.getPassword().length() < 6 ||
             request.getPassword().getBytes(StandardCharsets.UTF_8).length > 72

@@ -12,7 +12,27 @@ class DebtItem:
     min_payment: float
 
 
-def simulate_debt_waterfall(debts, monthly_surplus, strategy="avalanche", max_months=360):
+def minimum_payment_schedule(debts, months):
+    # Preserved each loan's own contractual payment instead of silently rolling
+    # a paid-off loan's minimum into other loans in the household wealth forecast.
+    balances = [float(d.balance) for d in debts]
+    rows = [dict(balance=sum(balances), payment=0.0, interest=0.0)]
+    for _ in range(months):
+        payment = interest = 0.0
+        for index, debt in enumerate(debts):
+            accrued = balances[index] * debt.apr / 12
+            due = balances[index] + accrued
+            paid = min(due, debt.min_payment) if due > 0 else 0.0
+            balances[index] = max(0.0, due - paid)
+            interest += accrued
+            payment += paid
+        rows.append(dict(balance=sum(balances), payment=payment, interest=interest))
+    return rows
+
+
+def simulate_debt_waterfall(
+    debts, monthly_surplus, strategy="avalanche", max_months=360, *, detailed=False
+):
     # Copied balances into working records so comparing strategies never mutated
     # the caller's original debts or contaminated the next simulation.
     if strategy not in ("avalanche", "snowball"):
@@ -27,6 +47,7 @@ def simulate_debt_waterfall(debts, monthly_surplus, strategy="avalanche", max_mo
     # surplus reduced affordability instead of inventing money for minimum payments.
     budget = max(0.0, sum(d["minimum"] for d in active) + monthly_surplus)
     freed = 0.0
+    total_interest = 0.0
     # Recorded month zero before interest or payments so chart totals and payoff
     # dates were measured from the same starting balance.
     log = [
@@ -37,7 +58,11 @@ def simulate_debt_waterfall(debts, monthly_surplus, strategy="avalanche", max_mo
             break
         available = budget
         for d in active:
-            d["balance"] += d["balance"] * d["apr"] / 12
+            # Accumulated interest before rounding chart balances, preserving an
+            # exact amortization total instead of reconstructing it from displayed cents.
+            accrued = d["balance"] * d["apr"] / 12
+            total_interest += accrued
+            d["balance"] += accrued
         # Prorated required payments when the available budget was insufficient;
         # unpaid principal and interest were retained in the following month.
         required = sum(min(d["balance"], d["minimum"]) for d in active)
@@ -70,4 +95,6 @@ def simulate_debt_waterfall(debts, monthly_surplus, strategy="avalanche", max_mo
             }
         )
         active = [d for d in active if d["balance"] > 0]
+    if detailed:
+        return log, freed + monthly_surplus, dict(interest=total_interest, budget=budget)
     return log, freed + monthly_surplus

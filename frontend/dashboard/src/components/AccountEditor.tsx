@@ -31,7 +31,19 @@ export function AccountEditor({
           <h3>{graph.nodes.some((n) => n.id === node.id) ? 'Edit node' : 'New node'}</h3>
         </div>
         <button className="icon-button" aria-label="Close node editor" onClick={onClose}>
-          ×
+          <svg
+            width="16"
+            height="16"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2"
+            strokeLinecap="round"
+            aria-hidden="true"
+            focusable="false"
+          >
+            <path d="m6 6 12 12M18 6 6 18" />
+          </svg>
         </button>
       </div>
       <form onSubmit={submit} className="editor-form">
@@ -73,7 +85,9 @@ export function AccountEditor({
         </label>
         {!['INCOME', 'EXPENSE'].includes(draft.nodeType) && (
           <label>
-            Annual rate / APR (%)
+            {draft.nodeType === 'INVESTMENT'
+              ? 'Reference return (%; model uses market settings)'
+              : 'Annual cash yield / loan APR (%)'}
             <input
               type="number"
               min={0}
@@ -108,7 +122,8 @@ export function AccountEditor({
           </label>
         )}
         <p className="muted small">
-          Use take-home monthly income. Balances and monthly flows are different quantities.
+          Income follows the scenario’s gross/net setting. Expenses are monthly flows; other nodes
+          hold balances.
         </p>
         <button className="button primary" disabled={!draft.name.trim()}>
           Apply to scenario

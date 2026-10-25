@@ -6,6 +6,8 @@ from app.price_cache import get_prices
 
 # Kept observed historical statistics separate from the illustrative parameters
 # currently used by the simulation endpoint; no live calibration was implied.
+# Kept this legacy trailing-statistics helper compatible, while the newer active
+# calibration in market_model.py reused the full-history cache without a ten-year cut.
 
 
 def get_market_stats(asset_class: str = DEFAULT_ASSET_CLASS, years: int = 10) -> dict:

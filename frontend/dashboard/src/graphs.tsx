@@ -1,5 +1,6 @@
 import { AccountEditor } from './components/AccountEditor';
 import { Canvas } from './components/Canvas';
+import { BudgetControls } from './components/BudgetControls';
 import { DashboardTab } from './DashboardTab';
 import { clearSession, sessionHeaders } from './session';
 import { lazy, Suspense, useCallback, useEffect, useRef, useState } from 'react';
@@ -103,6 +104,9 @@ export function ArchetypeGraph({
       (view !== 'investing' || ['INVESTMENT', 'SAVINGS'].includes(n.nodeType)),
   );
   const selectAccount = useCallback((n: GraphNode) => setSelected(n), []);
+  // Kept the close callback stable while budget assumptions changed, preventing
+  // the modal's focus trap from resetting the active tax input on every keystroke.
+  const closeSimulation = useCallback(() => setSimType(null), []);
   const add = () =>
     setSelected({
       id: crypto.randomUUID(),
@@ -143,35 +147,37 @@ export function ArchetypeGraph({
   return (
     <div className="workspace-content">
       {view !== 'overview' && (
-  <div className="metric-grid">
-        {[
-          [
-            'Net worth',
-            money(t.netWorth),
-            'Assets minus outstanding debt',
-            t.netWorth < 0 ? 'negative' : '',
-          ],
-          ['Monthly income', money(t.income), 'Recurring take-home income', ''],
-          [
-            'Monthly commitments',
-            money(t.expenses + t.payments),
-            `${money(t.payments)} in debt payments`,
-            '',
-          ],
-          [
-            'Available each month',
-            money(t.surplus),
-            t.surplus < 0 ? 'Expenses exceed your income' : 'After expenses and debt payments',
-            t.surplus < 0 ? 'negative' : 'positive',
-          ],
-        ].map(([label, value, hint, tone]) => (
-          <div className="metric-card" key={label}>
-            <span>{label}</span>
-            <strong className={tone}>{value}</strong>
-            <small>{hint}</small>
-          </div>
-        ))}
-      </div>
+        <div className="metric-grid">
+          {[
+            [
+              'Net worth',
+              money(t.netWorth),
+              'Assets minus outstanding debt',
+              t.netWorth < 0 ? 'negative' : '',
+            ],
+            ['Take-home income', money(t.takeHome), 'After the selected tax estimate', ''],
+            [
+              'Monthly commitments',
+              money(t.expenses + t.payments),
+              `${money(t.payments)} in debt payments`,
+              '',
+            ],
+            [
+              'Available each month',
+              money(t.surplus),
+              t.surplus < 0
+                ? 'Bills exceed take-home pay'
+                : 'After bills; before savings transfers',
+              t.surplus < 0 ? 'negative' : 'positive',
+            ],
+          ].map(([label, value, hint, tone]) => (
+            <div className="metric-card" key={label}>
+              <span>{label}</span>
+              <strong className={tone}>{value}</strong>
+              <small>{hint}</small>
+            </div>
+          ))}
+        </div>
       )}
       <div className="section-heading workspace-toolbar">
         <div>
@@ -242,6 +248,13 @@ export function ArchetypeGraph({
             Retry loading
           </button>
         </div>
+      )}
+      {loaded && (
+        <BudgetControls
+          graph={graph}
+          onChange={(assumptions) => update({ ...graph, assumptions })}
+          compact
+        />
       )}
       {t.surplus < 0 && (
         <div className="notice warning">
@@ -319,7 +332,7 @@ export function ArchetypeGraph({
                     disabled={!graph.nodes.length}
                     onClick={() => setSimType('monte_carlo')}
                   >
-                    Wealth projection ↗
+                    Monte Carlo Simulation ↗
                   </button>
                   <button
                     className="button"
@@ -382,8 +395,8 @@ export function ArchetypeGraph({
               <div className="connections-body">
                 <p className="muted small">
                   Fixed connections into debts set their monthly payments. Other connections
-                  describe your plan; the wealth forecast uses account totals and your
-                  investment-rate control.
+                  describe your plan. Simulations fund fixed saving/investment routes first, then
+                  percentage routes, then your extra-investment allocation.
                 </p>
                 <div className="connection-list">
                   {graph.edges.map((edge) => (
@@ -468,9 +481,10 @@ export function ArchetypeGraph({
           }
         >
           <SimulationModal
+            onAssumptionsChange={(assumptions) => update({ ...graph, assumptions })}
             graphData={graph}
             simulationType={simType}
-            onClose={() => setSimType(null)}
+            onClose={closeSimulation}
           />
         </Suspense>
       )}

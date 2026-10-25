@@ -20,6 +20,69 @@ export interface GraphEdge {
 export interface GraphData {
   nodes: GraphNode[];
   edges: GraphEdge[];
+  assumptions?: ScenarioAssumptions;
+}
+export interface ScenarioAssumptions {
+  incomeBasis: 'gross' | 'net';
+  taxRate: number;
+  incomeGrowth: number;
+  expenseGrowth: number;
+}
+export const defaultAssumptions: ScenarioAssumptions = {
+  incomeBasis: 'gross',
+  taxRate: 20,
+  incomeGrowth: 2.5,
+  expenseGrowth: 2.5,
+};
+export const assumptionsFor = (graph: GraphData): ScenarioAssumptions => ({
+  ...defaultAssumptions,
+  ...graph.assumptions,
+});
+export const dollars = (value: number) =>
+  new Intl.NumberFormat('en-US', {
+    style: 'currency',
+    currency: 'USD',
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  }).format(value);
+
+export function allocations(graph: GraphData, surplus: number, rate = 0) {
+  let fixedInvestment = 0,
+    fixedSavings = 0,
+    percentInvestment = 0,
+    percentSavings = 0;
+  const nodes = new Map(graph.nodes.map((n) => [n.id, n]));
+  // Mirrored Python's allocation order so the visible budget and the forecast
+  // funded fixed transfers before percentages and discretionary investing.
+  for (const edge of graph.edges) {
+    const source = nodes.get(edge.sourceNodeId),
+      target = nodes.get(edge.targetNodeId);
+    if (!source || !target || !['INCOME', 'CHECKING'].includes(source.nodeType)) continue;
+    if (target.nodeType === 'INVESTMENT') {
+      fixedInvestment += edge.monthlyFixedFlow ?? 0;
+      percentInvestment += edge.percentageFlow ?? 0;
+    } else if (target.nodeType === 'SAVINGS') {
+      fixedSavings += edge.monthlyFixedFlow ?? 0;
+      percentSavings += edge.percentageFlow ?? 0;
+    }
+  }
+  const available = Math.max(0, surplus),
+    fixed = fixedInvestment + fixedSavings;
+  const fixedScale = fixed ? Math.min(1, available / fixed) : 0;
+  const afterFixed = Math.max(0, available - fixed * fixedScale);
+  const percentScale = 1 / Math.max(100, percentInvestment + percentSavings);
+  const plannedInvestment =
+    fixedInvestment * fixedScale + afterFixed * percentInvestment * percentScale;
+  const plannedSavings = fixedSavings * fixedScale + afterFixed * percentSavings * percentScale;
+  const unassigned = Math.max(0, available - plannedInvestment - plannedSavings);
+  return {
+    plannedInvestment,
+    plannedSavings,
+    unassigned,
+    investment: plannedInvestment + (unassigned * rate) / 100,
+    cash: plannedSavings + unassigned * (1 - rate / 100),
+    overcommitted: fixed > available || percentInvestment + percentSavings > 100,
+  };
 }
 export const money = (value: number, compact = false) =>
   new Intl.NumberFormat('en-US', {
@@ -42,11 +105,15 @@ export function debtPayment(node: GraphNode, graph: GraphData): number {
   // Matched Python's payment precedence: node override, fixed incoming flows,
   // then 2% of principal. Explicit zero payments were retained as valid choices.
   if (node.amountOrBalance <= 0) return 0;
-  if (node.minPayment != null) return node.minPayment;
+  const payoff = node.amountOrBalance * (1 + node.interestRateApr / 1200);
+  if (node.minPayment != null) return Math.min(node.minPayment, payoff);
   const edges = graph.edges.filter((e) => e.targetNodeId === node.id && e.monthlyFixedFlow != null);
-  return edges.length
-    ? edges.reduce((sum, e) => sum + e.monthlyFixedFlow!, 0)
-    : node.amountOrBalance * 0.02;
+  return Math.min(
+    payoff,
+    edges.length
+      ? edges.reduce((sum, e) => sum + e.monthlyFixedFlow!, 0)
+      : node.amountOrBalance * 0.02,
+  );
 }
 export function totals(graph: GraphData) {
   // Kept monthly flows separate from point-in-time balances. Loan minimums were
@@ -62,6 +129,12 @@ export function totals(graph: GraphData) {
   const payments = graph.nodes
     .filter((n) => n.nodeType === 'DEBT')
     .reduce((s, n) => s + debtPayment(n, graph), 0);
+  // Applied the saved gross/net choice everywhere rather than silently giving
+  // the overview and simulation different disposable-income formulas.
+  const settings = assumptionsFor(graph);
+  const taxes = settings.incomeBasis === 'gross' ? (income * settings.taxRate) / 100 : 0;
+  const takeHome = income - taxes;
+  const surplus = takeHome - expenses - payments;
   return {
     income,
     expenses,
@@ -69,7 +142,10 @@ export function totals(graph: GraphData) {
     assets,
     payments,
     netWorth: assets - debt,
-    surplus: income - expenses - payments,
+    taxes,
+    takeHome,
+    surplus,
+    ...allocations(graph, surplus),
   };
 }
 // Validate database responses and imported drafts before rendering or calculating.
@@ -136,7 +212,22 @@ export function parseGraph(value: unknown): GraphData {
   });
   if (new Set(edges.map((e) => e.id)).size !== edges.length)
     throw new Error('Connection IDs must be unique.');
-  return { nodes, edges };
+  const assumptions = assumptionsFor(data);
+  if (
+    !['gross', 'net'].includes(assumptions.incomeBasis) ||
+    !Number.isFinite(assumptions.taxRate) ||
+    assumptions.taxRate < 0 ||
+    assumptions.taxRate > 60 ||
+    !Number.isFinite(assumptions.incomeGrowth) ||
+    assumptions.incomeGrowth < -50 ||
+    assumptions.incomeGrowth > 25 ||
+    !Number.isFinite(assumptions.expenseGrowth) ||
+    assumptions.expenseGrowth < -25 ||
+    assumptions.expenseGrowth > 25
+  ) {
+    throw new Error('Use a valid income basis and supported tax and growth percentages.');
+  }
+  return { nodes, edges, assumptions };
 }
 export function downloadJson(value: unknown, name: string) {
   // Released the temporary download URL after the browser had started reading

@@ -8,20 +8,24 @@ Team development runs locally: `./start.ps1` starts PostgreSQL, Python, Spring B
 - Add/remove accounts and connections, search by account name, drag nodes, and use Fit view or zoom controls.
 - Cash flow and Investments navigation show editable account tables. Overview currently shows the same financial summary and canvas.
 - Changes are scenario drafts saved in browser local storage, scoped by demo/user and profile ID. They do **not** write to PostgreSQL. Export JSON to back up or share, and Import to restore. Reset replaces the local scenario with the fetched server profile.
-- Income/expense amounts are monthly. Other node amounts are point-in-time balances. Use take-home income; taxes are not automatically deducted.
+- Income/expense amounts are monthly. Other node amounts are point-in-time balances. Choose gross pay or take-home pay in Income & monthly budget. New demo scenarios default to gross pay with an editable 20% effective tax estimate.
 - A fixed incoming connection into a debt sets its monthly payment unless a node payment override exists. Without either, the assumed payment is 2% of the initial balance. A zero APR or zero explicit payment is respected.
-- Other connections currently describe routing visually. They do not allocate wealth projections across individual accounts. Investment allocation is controlled in the forecast panel.
+- Savings/investment routes from income/checking now allocate after-bill surplus: affordable fixed transfers first, then percentages of the remainder, then the extra-investment slider. Other edges remain descriptive routing rather than a complete transaction ledger.
 
 ## Forecast assumptions
 
-- Wealth = cash + investments - outstanding loans - newly accrued shortfall borrowing.
-- Only investment assets receive random market returns. Cash grows at its balance-weighted account APR. Existing debt accrues its own APR and is amortized at the assumed monthly payment.
-- Positive surplus is split between investments and cash by the investment slider. Once a loan is paid, its payment becomes available surplus. New borrowing is repaid before additional saving/investing.
-- Shortfalls draw cash, then investments, then create borrowing at an illustrative 12% APR. Cash and investment balances never become negative market assets.
-- Monte Carlo uses 1,000 seeded paths with an illustrative 10% annual return assumption and 15% annual volatility. Markov uses the existing bull/bear parameters shown in the UI. These are fixed assumptions, not historical/live calibration.
-- A 0% investment allocation keeps surplus in cash; it does not remove income. Percentiles can coincide when the household has no market exposure. Negative net worth alone does not mean negative monthly cash flow.
-- Inflation divides net worth and the no-asset-growth reference by 1.025 raised to elapsed years. The reference uses the same household flows and borrowing rules with zero asset returns.
-- P10/P50/P90 are year-specific quantiles. P10 is not a worst-case bound, P50 is not a guarantee, and percentile lines are not individual bull/bear paths.
+See [simulation math and demo checks](simulation-model.md) for the equations, defaults, data source, and reference budgets.
+
+- The panel is named Monte Carlo simulation. It uses 1,000 seeded paths and a separate cashflow reference.
+- Gross income is reduced by an editable effective tax estimate before living expenses and contractual debt payments. Take-home income is not taxed again.
+- Scheduled investment/saving transfers are funded before extra investing. A 0% extra allocation still honors affordable planned transfers; other unassigned money stays in checking.
+- Each loan releases its own contractual payment after payoff. Checking and savings have separate yield pools; investments receive market returns. Shortfalls draw checking, savings, then investments before modeled borrowing.
+- The existing free yfinance/SQLite cache now fetches maximum available adjusted history. SPY is used as an explicitly labeled US-stock proxy; a verified download supplied 404 completed months, January 1993 through September 2026. Other benchmarks expose their actual available spans.
+- Historical Monte Carlo resamples twelve-month blocks. Markov uses regimes fitted to the same history. The default dashboard centers returns on an editable 7% forward assumption while retaining observed risk; observed historical mean can be selected instead.
+- The default dashboard grows income and living expenses 2.5% annually and displays purchasing power at 2.5% inflation. These are editable/scenario assumptions, not predictions. Additional portfolio fees default to zero.
+- P10/P50/P90 are annual quantiles, not individual market paths. A separate option displays eight actual sampled paths.
+- The cashflow reference follows the same budget, debt, and borrowing rules with cash/market returns and portfolio fees disabled. Contributions, total net worth, and differences from the reference are separate quantities.
+- History refresh happens in the background. Cached/stale history and explicit fallback assumptions remain usable without blocking requests on the free provider. The source and actual model inputs are shown in the panel and result export.
 
 ## Debt comparison
 
@@ -37,7 +41,7 @@ Minimums plus the chosen share of remaining surplus form one fixed monthly payme
 
 ## Remaining integration work
 
-Existing session cookies now authenticate private workspace reads, including expiry and owner checks, while seeded demos remain public. The old graph bulk-write endpoint is blocked because it lacks ownership validation; UI scenario editing remains browser-local. Authenticated graph persistence, simulation history, AI advice, market-data calibration, full per-edge cash routing, taxes, and changing income/expenses remain separate work. Existing market cache utilities are retained.
+Existing session cookies now authenticate private workspace reads, including expiry and owner checks, while seeded demos remain public. The old graph bulk-write endpoint is blocked because it lacks ownership validation; UI scenario editing remains browser-local. Authenticated graph persistence, simulation history, AI advice, full per-edge transaction routing, tax brackets, and retirement withdrawals remain separate work. Existing market cache utilities are retained.
 
 ## Landing page and entry flow
 

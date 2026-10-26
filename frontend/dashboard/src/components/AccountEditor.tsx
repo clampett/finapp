@@ -1,6 +1,7 @@
+import { NumberField } from './NumberField';
 import { useState } from 'react';
 import type { FormEvent } from 'react';
-import { debtPayment, types } from '../finance';
+import { debtPayment, expenseAmount, types } from '../finance';
 import type { GraphData, GraphNode } from '../finance';
 
 export function AccountEditor({
@@ -9,16 +10,29 @@ export function AccountEditor({
   onSave,
   onDelete,
   onClose,
+  onEditRoute,
 }: {
   node: GraphNode;
   graph: GraphData;
   onSave: (n: GraphNode) => void;
   onDelete: () => void;
   onClose: () => void;
+  onEditRoute: (id: string) => void;
 }) {
   // Kept edits in a local draft until Apply was chosen, preventing partial form
   // input from recalculating the saved scenario before validation had passed.
   const [draft, setDraft] = useState(node);
+  const expenseRoutes =
+    draft.nodeType === 'EXPENSE'
+      ? graph.edges.filter(
+          (edge) =>
+            edge.targetNodeId === draft.id &&
+            graph.nodes.some(
+              (source) =>
+                source.id === edge.sourceNodeId && ['INCOME', 'CHECKING'].includes(source.nodeType),
+            ),
+        )
+      : [];
   const submit = (e: FormEvent) => {
     e.preventDefault();
     onSave({ ...draft, name: draft.name.trim() });
@@ -73,22 +87,41 @@ export function AccountEditor({
           {['INCOME', 'EXPENSE'].includes(draft.nodeType)
             ? 'Monthly amount ($)'
             : 'Current balance ($)'}
-          <input
+          <NumberField
             type="number"
             min={0}
             max={1e12}
             step="0.01"
             required
-            value={draft.amountOrBalance}
+            value={expenseRoutes.length ? expenseAmount(draft, graph) : draft.amountOrBalance}
+            disabled={expenseRoutes.length > 0}
             onChange={(e) => setDraft({ ...draft, amountOrBalance: Number(e.target.value) })}
           />
         </label>
+        {expenseRoutes.length > 0 && (
+          <div className="notice">
+            <p>
+              This expense is controlled by {expenseRoutes.length} incoming route(s). Edit a route
+              to change its monthly amount without keeping two conflicting values.
+            </p>
+            {expenseRoutes.map((edge) => (
+              <button
+                type="button"
+                className="button"
+                key={edge.id}
+                onClick={() => onEditRoute(edge.id)}
+              >
+                Edit expense route
+              </button>
+            ))}
+          </div>
+        )}
         {!['INCOME', 'EXPENSE'].includes(draft.nodeType) && (
           <label>
             {draft.nodeType === 'INVESTMENT'
               ? 'Reference return (%; model uses market settings)'
               : 'Annual cash yield / loan APR (%)'}
-            <input
+            <NumberField
               type="number"
               min={0}
               max={100}
@@ -102,7 +135,7 @@ export function AccountEditor({
         {draft.nodeType === 'DEBT' && (
           <label>
             Monthly payment override ($)
-            <input
+            <NumberField
               type="number"
               min={0}
               max={1e9}
@@ -117,7 +150,8 @@ export function AccountEditor({
               }
             />
             <small>
-              Leave blank to use a fixed incoming connection, or 2% of the starting balance.
+              Leave blank to use incoming payment routes, or 2% of the starting balance when no
+              route is present.
             </small>
           </label>
         )}

@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { ArchetypeGraph } from './graphs';
 import type { View } from './finance';
+import { demoProfile } from './finance';
 import { endSession } from './session';
 // Defined navigation labels in one place so the sidebar and breadcrumb were
 // derived from the same selected view rather than separate UI state.
@@ -17,13 +18,12 @@ const views: {
 export default function App() {
   const params = new URLSearchParams(location.search);
   const demo = params.get('demo') === 'true';
-  const requestedProfile = Number(params.get('profile'));
-  const initialDemoProfile = [1, 2, 3].includes(requestedProfile) ? requestedProfile : 1;
+  const initialDemoProfile = demoProfile(params.get('profile'));
   const userId = Number(sessionStorage.getItem('finapp_user_id')) || 0;
   // Scoped the selected demo profile independently from the signed-in user;
   // the query parameter selected examples without changing account ownership.
   const [profile, setProfile] = useState(demo ? initialDemoProfile : userId);
-  const [view, setView] = useState<View>('graph');
+  const [view, setView] = useState<View>('overview');
   const [search, setSearch] = useState('');
   useEffect(() => {
     if (!demo && !userId) location.replace('/login');

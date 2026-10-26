@@ -138,7 +138,7 @@ const usd = (n: number) =>
   }).format(n);
 document.querySelectorAll<HTMLButtonElement>('[data-preview]').forEach((button) =>
   button.addEventListener('click', () => {
-    const id = button.dataset.preview ?? '1',
+    const id = button.dataset.preview ?? '2',
       sample = samples[id];
     if (!sample) return;
     document

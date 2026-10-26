@@ -134,6 +134,32 @@ def test_take_home_choice_does_not_deduct_tax_twice():
     assert metrics["monthly_surplus"] == pytest.approx(2733.33)
 
 
+@pytest.mark.parametrize("sim_type", ["monte_carlo", "markov", "debt"])
+def test_edited_expense_routes_reached_every_simulation(sim_type):
+    # Updated a route rather than its expense default; checked shared model
+    # inputs so a relabeled graph could not leave disposable income unchanged.
+    payload = seeded_demo(1, sim_type=sim_type)
+    expense = next(node for node in payload.nodes if node.type == "EXPENSE")
+    route = next(edge for edge in payload.edges if edge.target == expense.id)
+    route.monthly_fixed_flow = 1800
+    result = run_simulation(payload)
+    assert result["metrics"]["monthly_expenses"] == 1800
+    assert result["metrics"]["monthly_surplus"] == pytest.approx(1416.664)
+
+
+def test_percentage_expense_and_debt_routes_used_starting_take_home():
+    payload = seeded_demo(1)
+    targets = {node.id for node in payload.nodes if node.type in ("EXPENSE", "DEBT")}
+    for edge in payload.edges:
+        if edge.target in targets:
+            edge.monthly_fixed_flow = None
+            edge.percentage_flow = 10
+    result = run_simulation(payload)
+    take_home = 4583.33 * 0.8
+    assert result["metrics"]["monthly_expenses"] == pytest.approx(take_home * 0.1)
+    assert result["metrics"]["minimum_debt_payments"] == pytest.approx(take_home * 0.2)
+
+
 def test_manual_zero_returns_conserve_household_wealth():
     payload = seeded_demo(1)
     result = run_simulation(payload)

@@ -5,6 +5,36 @@ from dataclasses import dataclass
 import numpy as np
 
 
+def expense_total(nodes, edges, income_basis, tax_rate):
+    # Replaced an expense's default monthly amount with its funded-route plan;
+    # based percentage expense routes on starting household take-home income.
+    by_id = {node.id: node for node in nodes}
+    income = sum(node.balance for node in nodes if node.type == "INCOME")
+    take_home = income * (1 - tax_rate if income_basis == "gross" else 1)
+    total = 0.0
+    for node in nodes:
+        if node.type != "EXPENSE":
+            continue
+        routes = [
+            edge
+            for edge in edges
+            if edge.target == node.id and by_id[edge.source].type in ("INCOME", "CHECKING")
+        ]
+        total += (
+            sum(
+                (
+                    edge.monthly_fixed_flow
+                    if edge.monthly_fixed_flow is not None
+                    else take_home * edge.percentage_flow / 100
+                )
+                for edge in routes
+            )
+            if routes
+            else node.balance
+        )
+    return total
+
+
 @dataclass(frozen=True)
 class SavingPlan:
     investment_fixed: float = 0

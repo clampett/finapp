@@ -31,7 +31,7 @@
         </nav>
         <div class="header-actions">
           <a class="site-button subtle" href="/login" data-workspace-link>Sign in</a
-          ><a class="site-button primary header-demo" href="/dashboard/?demo=true"
+          ><a class="site-button primary header-demo" href="/dashboard/?demo=true&profile=2"
             >Open demo <span aria-hidden="true">↗</span></a
           ><button
             id="theme_button"
@@ -64,7 +64,7 @@
             nodes, explore a scenario, and see how the possibilities change.
           </p>
           <div class="hero-actions">
-            <a class="site-button primary large" href="/dashboard/?demo=true"
+            <a class="site-button primary large" href="/dashboard/?demo=true&profile=2"
               >Explore the live demo <span aria-hidden="true">↗</span></a
             ><a class="site-button large" href="/registration">Create an account</a>
           </div>
@@ -81,15 +81,12 @@
               ><span class="preview-tag">SAMPLE SCENARIO</span>
             </div>
             <div class="preview-metrics">
-              <div>
-                <span>Starting net worth</span
-                ><strong id="preview-worth" class="negative">−$27,000</strong>
-              </div>
+              <div><span>Starting net worth</span><strong id="preview-worth">$95,200</strong></div>
               <div>
                 <span>After bills · 20% example tax</span
-                ><strong id="preview-surplus">$1,817</strong>
+                ><strong id="preview-surplus">$3,950</strong>
               </div>
-              <div><span>Total debt</span><strong id="preview-debt">$30,000</strong></div>
+              <div><span>Total debt</span><strong id="preview-debt">$14,000</strong></div>
             </div>
             <div class="preview-graph">
               <svg viewBox="0 0 550 300" role="img" aria-labelledby="preview-graph-title">
@@ -118,42 +115,44 @@
                   <rect width="140" height="66" rx="9" />
                   <text x="12" y="17" class="node-type">INCOME</text>
                   <text x="12" y="35" class="node-name">Monthly salary</text>
-                  <text id="preview-income" x="12" y="54" class="node-amount">$4,583</text>
+                  <text id="preview-income" x="12" y="54" class="node-amount">$11,250</text>
                 </g>
                 <g class="sample-node checking" transform="translate(205,117)">
                   <rect width="140" height="66" rx="9" />
                   <text x="12" y="17" class="node-type">CHECKING</text>
                   <text x="12" y="35" class="node-name">Checking account</text>
-                  <text id="preview-checking" x="12" y="54" class="node-amount">$1,800</text>
+                  <text id="preview-checking" x="12" y="54" class="node-amount">$6,200</text>
                 </g>
                 <g class="sample-node investment" transform="translate(395,27)">
                   <rect width="140" height="66" rx="9" />
                   <text x="12" y="17" class="node-type">INVESTMENT</text>
-                  <text x="12" y="35" id="preview-investment-name" class="node-name">Roth IRA</text>
-                  <text x="12" y="54" id="preview-investment" class="node-amount">$1,200</text>
+                  <text x="12" y="35" id="preview-investment-name" class="node-name">401(k)</text>
+                  <text x="12" y="54" id="preview-investment" class="node-amount">$88,000</text>
                 </g>
                 <g class="sample-node expense" transform="translate(395,117)">
                   <rect width="140" height="66" rx="9" />
                   <text x="12" y="17" class="node-type">EXPENSE</text>
                   <text x="12" y="35" class="node-name">Living expenses</text>
-                  <text x="12" y="54" id="preview-expenses" class="node-amount">$1,400 /mo</text>
+                  <text x="12" y="54" id="preview-expenses" class="node-amount">$4,600 /mo</text>
                 </g>
                 <g class="sample-node debt" transform="translate(395,207)">
                   <rect width="140" height="66" rx="9" />
                   <text x="12" y="17" class="node-type">DEBT</text>
-                  <text x="12" y="35" id="preview-debt-name" class="node-name">Student loans</text>
-                  <text x="12" y="54" id="preview-debt-node" class="node-amount">$30,000</text>
+                  <text x="12" y="35" id="preview-debt-name" class="node-name">Auto loan</text>
+                  <text x="12" y="54" id="preview-debt-node" class="node-amount">$14,000</text>
                 </g>
               </svg>
             </div>
             <div class="preview-footer">
               <span><i class="tiny-dot"></i> A starting point, ready to explore</span
-              ><a id="preview-open" href="/dashboard/?demo=true&profile=1">Open this demo ↗</a>
+              ><a id="preview-open" href="/dashboard/?demo=true&profile=2"
+                >Open Mid-Career Family demo ↗</a
+              >
             </div>
           </div>
           <div class="preview-selector" role="group" aria-label="Preview a demo profile">
-            <button data-preview="1" aria-pressed="true">Recent Grad</button
-            ><button data-preview="2" aria-pressed="false">Mid-Career Family</button
+            <button data-preview="1" aria-pressed="false">Recent Grad</button
+            ><button data-preview="2" aria-pressed="true">Mid-Career Family</button
             ><button data-preview="3" aria-pressed="false">FIRE Strategist</button>
           </div>
           <p class="preview-note">
@@ -186,7 +185,7 @@
               Add income, accounts, investments, debts, and expenses. Edit their values, connect
               nodes, and arrange a financial picture that makes sense to you.
             </p>
-            <a href="/dashboard/?demo=true"
+            <a href="/dashboard/?demo=true&profile=2"
               >Explore the Node Graph <span aria-hidden="true">↗</span></a
             >
           </article>
@@ -198,7 +197,7 @@
               Explore Monte Carlo and bull/bear Markov forecasts. Change your investment allocation,
               time horizon, and inflation setting to compare possible outcomes.
             </p>
-            <a href="/dashboard/?demo=true"
+            <a href="/dashboard/?demo=true&profile=2"
               >Build a what-if scenario <span aria-hidden="true">↗</span></a
             >
           </article>
@@ -210,7 +209,7 @@
               Compare avalanche and snowball strategies with the same payment budget. See interest
               accrued, remaining balances, and whether your plan reaches payoff.
             </p>
-            <a href="/dashboard/?demo=true&profile=1"
+            <a href="/dashboard/?demo=true&profile=2"
               >Explore a debt scenario <span aria-hidden="true">↗</span></a
             >
           </article>
@@ -224,7 +223,7 @@
             <p class="section-copy">
               A workspace for asking better questions about your money, one scenario at a time.
             </p>
-            <a class="text-link" href="/dashboard/?demo=true">Start exploring ↗</a>
+            <a class="text-link" href="/dashboard/?demo=true&profile=2">Start exploring ↗</a>
           </div>
           <ol class="workflow-steps">
             <li>
@@ -266,8 +265,8 @@
             <h2>Whose next chapter<br />will you explore?</h2>
           </div>
           <p>
-            No registration or personal financial data needed. Each demo opens directly in the Node
-            Graph workspace.
+            No registration or personal financial data needed. Each demo opens on Overview, with its
+            Node Graph ready to explore.
           </p>
         </div>
         <div class="scenario-grid">
@@ -365,7 +364,8 @@
         <h2>Your money. A clearer picture.</h2>
         <p>Open a scenario and follow the connections.</p>
         <div class="hero-actions">
-          <a class="site-button primary large" href="/dashboard/?demo=true">Open the demo ↗</a
+          <a class="site-button primary large" href="/dashboard/?demo=true&profile=2"
+            >Open the demo ↗</a
           ><a class="site-button large" href="/registration">Create an account</a>
         </div>
       </section>

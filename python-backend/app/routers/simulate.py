@@ -3,7 +3,7 @@ from fastapi import APIRouter
 from pydantic import BaseModel, Field, ConfigDict, model_validator
 from app.debt_waterfall import DebtItem, simulate_debt_waterfall
 from app.projection import project_household
-from app.cashflow import saving_plan, monthly_budget
+from app.cashflow import saving_plan, monthly_budget, expense_total
 from app.market_model import get_market_model
 
 router = APIRouter()
@@ -74,7 +74,7 @@ def run_simulation(payload: SimulationRequest):
     # Interpreted income and expense node values as monthly flows, while account
     # and debt values were treated as balances rather than recurring contributions.
     income = sum(n.balance for n in payload.nodes if n.type == "INCOME")
-    expenses = sum(n.balance for n in payload.nodes if n.type == "EXPENSE")
+    expenses = expense_total(payload.nodes, payload.edges, payload.income_basis, payload.tax_rate)
     debts = []
     for n in payload.nodes:
         if n.type != "DEBT":
@@ -82,10 +82,19 @@ def run_simulation(payload: SimulationRequest):
         # Applied payment precedence: explicit node override, fixed incoming
         # connections, then 2% of starting principal. An explicit zero was retained.
         fixed = [
-            e.monthly_fixed_flow
+            (
+                e.monthly_fixed_flow
+                if e.monthly_fixed_flow is not None
+                else income
+                * (1 - payload.tax_rate if payload.income_basis == "gross" else 1)
+                * e.percentage_flow
+                / 100
+            )
             for e in payload.edges
-            if e.target == n.id and e.monthly_fixed_flow is not None
+            if e.target == n.id
         ]
+        # Extended incoming payment routes to percentages of starting take-home
+        # income; retained an explicit node override as the highest priority.
         minimum = (
             n.min_payment
             if n.min_payment is not None
@@ -115,7 +124,7 @@ def run_simulation(payload: SimulationRequest):
     ) - sum(d.balance for d in debts)
     result = {
         "status": "success",
-        "model_version": 2,
+        "model_version": 3,
         "inputs": payload.model_dump(),
         "metrics": {
             **budget,

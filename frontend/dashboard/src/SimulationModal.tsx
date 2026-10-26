@@ -1,3 +1,4 @@
+import { NumberField } from './components/NumberField';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import {
   AreaChart,
@@ -115,7 +116,7 @@ const quantiles = [
 ];
 const titles = {
   monte_carlo: 'Monte Carlo Simulation',
-  markov: 'Markov regime simulation',
+  markov: 'Markov Regime Simulation',
   debt: 'Debt payoff optimizer',
 };
 const duration = (months: number) => `${Math.floor(months / 12)} yrs, ${months % 12} mos`;
@@ -124,11 +125,13 @@ export function SimulationModal({
   simulationType,
   onClose,
   onAssumptionsChange,
+  scopeLabel,
 }: {
   graphData: GraphData;
   simulationType: SimulationType;
   onClose: () => void;
   onAssumptionsChange: (settings: ScenarioAssumptions) => void;
+  scopeLabel?: string;
 }) {
   const [forecast, setForecast] = useState<SimulationResult | null>(null);
   const [strategy, setStrategy] = useState<'avalanche' | 'snowball'>('avalanche');
@@ -270,7 +273,7 @@ export function SimulationModal({
             data.message || detail || `The simulation could not run (${response.status}).`,
           );
         }
-        if (data.model_version !== 2)
+        if (data.model_version !== 3)
           throw new Error('Restart FinApp to load the updated Python simulation model.');
         if (
           !data.metrics ||
@@ -353,6 +356,7 @@ export function SimulationModal({
               <span> / {simulationType === 'debt' ? 'REPAYMENT' : '1,000 SIMULATED PATHS'}</span>
             </div>
             <h2 id="simulation-title">{titles[simulationType]}</h2>
+            {scopeLabel && <div className="simulation-scope-label">{scopeLabel}</div>}
             <p>
               {simulationType === 'monte_carlo'
                 ? 'A Monte Carlo simulation runs many possible market paths to show a range of financial outcomes. These 1,000 paths include your cash, investments, and debt; they are scenarios, not guarantees.'
@@ -647,7 +651,7 @@ export function SimulationModal({
                       {marketSource === 'historical' && returnMode === 'observed'
                         ? 'Fallback annual return (%)'
                         : 'Forward expected return (%)'}
-                      <input
+                      <NumberField
                         type="number"
                         min={-50}
                         max={50}
@@ -660,7 +664,7 @@ export function SimulationModal({
                       {marketSource === 'historical'
                         ? 'Fallback volatility (%)'
                         : 'Annual volatility (%)'}
-                      <input
+                      <NumberField
                         type="number"
                         min={0}
                         max={100}
@@ -735,7 +739,7 @@ export function SimulationModal({
                 <>
                   <label className="control-label">
                     Net-worth target ($)
-                    <input
+                    <NumberField
                       type="number"
                       min={0}
                       max={1e12}
@@ -749,7 +753,7 @@ export function SimulationModal({
                     <div className="advanced-controls">
                       <label className="control-label">
                         Annual income growth (%)
-                        <input
+                        <NumberField
                           type="number"
                           min={-50}
                           max={25}
@@ -765,7 +769,7 @@ export function SimulationModal({
                       </label>
                       <label className="control-label">
                         Annual living-cost growth (%)
-                        <input
+                        <NumberField
                           type="number"
                           min={-25}
                           max={25}
@@ -781,7 +785,7 @@ export function SimulationModal({
                       </label>
                       <label className="control-label">
                         Additional portfolio fee (%)
-                        <input
+                        <NumberField
                           type="number"
                           min={0}
                           max={10}
@@ -792,7 +796,7 @@ export function SimulationModal({
                       </label>
                       <label className="control-label">
                         Shortfall borrowing APR (%)
-                        <input
+                        <NumberField
                           type="number"
                           min={0}
                           max={100}

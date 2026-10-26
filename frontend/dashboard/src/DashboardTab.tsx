@@ -1,5 +1,7 @@
 import type { GraphData } from './finance';
 import { money, totals } from './finance';
+import { lazy, Suspense } from 'react';
+const OverviewComposition = lazy(() => import('./components/OverviewComposition'));
 
 interface DashboardTabProps {
   graph: GraphData;
@@ -20,7 +22,7 @@ export function DashboardTab({ graph }: DashboardTabProps) {
         </div>
 
         <div className="metric-card">
-          <span>Monthly Income</span>
+          <span>Take-home Income</span>
           <strong>{money(t.takeHome)}</strong>
           <small>After the selected tax estimate</small>
         </div>
@@ -37,6 +39,15 @@ export function DashboardTab({ graph }: DashboardTabProps) {
           <small>After bills; before savings transfers</small>
         </div>
       </div>
+      <Suspense
+        fallback={
+          <div className="overview-chart-loading" role="status">
+            Loading your financial picture…
+          </div>
+        }
+      >
+        <OverviewComposition graph={graph} />
+      </Suspense>
     </div>
   );
 }

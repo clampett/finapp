@@ -1,3 +1,4 @@
+import { NumberField } from './NumberField';
 import { assumptionsFor, dollars, totals } from '../finance';
 import type { GraphData, ScenarioAssumptions } from '../finance';
 
@@ -33,7 +34,7 @@ export function BudgetControls({
           </label>
           <label>
             Estimated effective tax (%)
-            <input
+            <NumberField
               type="number"
               min={0}
               max={60}

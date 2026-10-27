@@ -34,13 +34,12 @@ interface Suggestion {
 
 type QuoteState = Quote | { error: string } | 'loading';
 
-const STORAGE_KEY = 'finapp.holdings.v1';
 const MAX_HOLDINGS = 25;
 const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
 
-function loadHoldings(): Holding[] {
+function loadHoldings(storageKey: string): Holding[] {
   try {
-    const parsed: unknown = JSON.parse(localStorage.getItem(STORAGE_KEY) ?? '[]');
+    const parsed: unknown = JSON.parse(localStorage.getItem(storageKey) ?? '[]');
     if (!Array.isArray(parsed)) return [];
     return parsed
       .filter(
@@ -86,8 +85,8 @@ const monthTicks = (history: { date: string }[]) =>
 
 const monthLabel = (date: string) => `${MONTHS[Number(date.slice(5, 7)) - 1]} ’${date.slice(2, 4)}`;
 
-export function Investing() {
-  const [holdings, setHoldings] = useState<Holding[]>(loadHoldings);
+export function Investing({ storageKey }: { storageKey: string }) {
+  const [holdings, setHoldings] = useState<Holding[]>(() => loadHoldings(storageKey));
   const [quotes, setQuotes] = useState<Record<string, QuoteState>>({});
   const [suggestions, setSuggestions] = useState<Suggestion[]>([]);
   const [symbol, setSymbol] = useState('');
@@ -98,11 +97,11 @@ export function Investing() {
 
   useEffect(() => {
     try {
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(holdings));
+      localStorage.setItem(storageKey, JSON.stringify(holdings));
     } catch {
       /* Private browsing can block storage; holdings just won't persist. */
     }
-  }, [holdings]);
+  }, [holdings, storageKey]);
 
   useEffect(() => {
     // Prices are not saved with the holdings, so reload them for each saved stock.

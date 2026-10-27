@@ -589,7 +589,12 @@ export function ArchetypeGraph({
         <>
           <div className="scenario-layout">
             <div className="scenario-main">
-              {view === 'investing' && <Investing />}
+              {view === 'investing' && (
+                <Investing
+                  key={`${demo}:${userId}`}
+                  storageKey={`finapp-holdings-v1:${demo ? 'demo' : 'user'}:${userId}`}
+                />
+              )}
               {view === 'overview' ? (
                 <DashboardTab graph={live} />
               ) : view === 'graph' ? (

@@ -178,6 +178,8 @@ export function Investing({ storageKey }: { storageKey: string }) {
       : (holdings[0]?.symbol ?? null);
   const activeState = activeSymbol ? quotes[activeSymbol] : undefined;
   const chartQuote = isQuote(activeState) ? activeState : null;
+  const available = suggestions.filter((s) => !holdings.some((h) => h.symbol === s.symbol));
+
 
   return (
     <section className="investing" aria-label="Stock holdings">
@@ -211,11 +213,11 @@ export function Investing({ storageKey }: { storageKey: string }) {
           {message}
         </p>
       )}
-      {suggestions.length > 0 && (
-        <div className="stock-chips">
-          {suggestions
-            .filter((s) => !holdings.some((h) => h.symbol === s.symbol))
-            .map((s) => (
+      {available.length > 0 && (
+        <div>
+          <div className="eyebrow">POPULAR STOCKS</div>
+          <div className="stock-chips">
+            {available.map((s) => (
               <button
                 key={s.symbol}
                 type="button"
@@ -227,6 +229,7 @@ export function Investing({ storageKey }: { storageKey: string }) {
                 + {s.symbol}
               </button>
             ))}
+          </div>
         </div>
       )}
       <div className="metric-grid">

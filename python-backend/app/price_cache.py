@@ -26,8 +26,10 @@ RETRY_AFTER = timedelta(minutes=15)  # after a failed fetch, leave Yahoo alone f
 
 _refresh_lock = threading.Lock()
 
+
 class NoPriceData(RuntimeError):
     """Yahoo has no price history for this ticker (an unknown or delisted symbol)."""
+
 
 def _db_path() -> str:
     return os.environ.get("PRICE_CACHE_DB", "price_cache.db")
@@ -141,11 +143,13 @@ def _has_data(ticker: str) -> bool:
             is not None
         )
 
+
 def cached_tickers() -> set[str]:
     with closing(_connect()) as conn:
         rows = conn.execute("SELECT DISTINCT ticker FROM prices").fetchall()
     return {ticker for (ticker,) in rows}
-    
+
+
 def _load(ticker: str) -> pd.Series:
     with closing(_connect()) as conn:
         rows = conn.execute(

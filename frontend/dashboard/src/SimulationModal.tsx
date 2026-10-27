@@ -1,4 +1,5 @@
-import { useEffect, useRef, useState } from 'react';
+import { NumberField } from './components/NumberField';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import {
   AreaChart,
   Area,
@@ -7,17 +8,28 @@ import {
   CartesianGrid,
   Tooltip,
   ResponsiveContainer,
-  ComposedChart,
-  Line,
-  ReferenceLine,
 } from 'recharts';
-import { API_BASE, downloadJson, money } from './finance';
-import type { GraphData, SimulationType } from './finance';
-type ForecastPoint = {
+import {
+  API_BASE,
+  allocations,
+  assumptionsFor,
+  dollars,
+  downloadJson,
+  money,
+  totals,
+} from './finance';
+import type { GraphData, ScenarioAssumptions, SimulationType } from './finance';
+import { BudgetControls } from './components/BudgetControls';
+import { ForecastChart } from './simulation/ForecastChart';
+import { ForecastInsights } from './simulation/ForecastInsights';
+import { SimulationGuide } from './simulation/SimulationGuide';
+export type ForecastPoint = {
   year: number;
   p10: number;
   p50: number;
   p90: number;
+  reference: number;
+  [key: string]: number;
 };
 type DebtRow = {
   month: number;
@@ -31,7 +43,7 @@ type DebtSummary = {
   total_interest: number;
   monthly_budget: number;
 };
-interface SimulationResult {
+export interface SimulationResult {
   // Documented the wire response here so chart fields could be traced back to
   // the metrics, percentile paths, and debt summaries returned by Python.
   status: string;
@@ -44,6 +56,12 @@ interface SimulationResult {
     monthly_surplus: number;
     years: number;
     no_growth_baseline?: number;
+    monthly_taxes: number;
+    take_home_income: number;
+    planned_investment: number;
+    planned_savings: number;
+    unassigned_surplus: number;
+    monthly_cash_saving: number;
   };
   monte_carlo?: ForecastPoint[];
   markov?: ForecastPoint[];
@@ -51,16 +69,54 @@ interface SimulationResult {
   debt_summary?: Record<'avalanche' | 'snowball', DebtSummary>;
   debt_labels?: Record<string, string>;
   assumptions: string[];
+  warnings?: string[];
+  summary?: {
+    probability_positive: number;
+    probability_target: number;
+    target: number;
+    median_contributions: number;
+    median_borrowing: number;
+    first_positive_median_year: number | null;
+  };
+  market_data?: {
+    status: string;
+    source: string;
+    ticker?: string;
+    start?: string;
+    end?: string;
+    years?: number;
+    observations: number;
+    annual_return: number;
+    annual_cagr?: number;
+    observed_annual_return?: number;
+    return_mode?: string;
+    annual_volatility: number;
+    method: string;
+    pending: boolean;
+    fetched_at?: string;
+    regime_transitions?: number[][] | null;
+  };
+  ending_distribution?: { lower: number; upper: number; count: number; share: number }[];
+  yearly_cashflow?: {
+    year: number;
+    income: number;
+    taxes: number;
+    expenses: number;
+    debt_payments: number;
+    debt_interest: number;
+    debt_remaining: number;
+    invested_contributions: number;
+  }[];
 }
 const palette = ['#fb7185', '#fbbf24', '#a78bfa', '#22d3ee', '#34d399', '#60a5fa'];
 const quantiles = [
-  { key: 'p90', label: 'Upper outcome (P90)', color: '#34d399' },
-  { key: 'p50', label: 'Median (P50)', color: '#a78bfa' },
-  { key: 'p10', label: 'Lower outcome (P10)', color: '#fb7185' },
+  { key: 'p90', label: 'Upper outcome (P90)', color: '#a4a3f6' },
+  { key: 'p50', label: 'Median (P50)', color: '#7de0bc' },
+  { key: 'p10', label: 'Lower outcome (P10)', color: '#ee8ea8' },
 ];
 const titles = {
-  monte_carlo: 'Lifetime wealth projection',
-  markov: 'Markov wealth forecast',
+  monte_carlo: 'Monte Carlo Simulation',
+  markov: 'Markov Regime Simulation',
   debt: 'Debt payoff optimizer',
 };
 const duration = (months: number) => `${Math.floor(months / 12)} yrs, ${months % 12} mos`;
@@ -68,19 +124,53 @@ export function SimulationModal({
   graphData,
   simulationType,
   onClose,
+  onAssumptionsChange,
+  scopeLabel,
 }: {
   graphData: GraphData;
   simulationType: SimulationType;
   onClose: () => void;
+  onAssumptionsChange: (settings: ScenarioAssumptions) => void;
+  scopeLabel?: string;
 }) {
   const [forecast, setForecast] = useState<SimulationResult | null>(null);
   const [strategy, setStrategy] = useState<'avalanche' | 'snowball'>('avalanche');
   const [rate, setRate] = useState(100);
-  const [inflation, setInflation] = useState(false);
+  const [scheduledInvesting, setScheduledInvesting] = useState(true);
+  const [inflation, setInflation] = useState(true);
   const [years, setYears] = useState(30);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [retry, setRetry] = useState(0);
+  const [marketSource, setMarketSource] = useState<'historical' | 'manual'>('historical');
+  const [returnMode, setReturnMode] = useState<'forward' | 'observed'>('forward');
+  const [assetClass, setAssetClass] = useState('US_STOCKS');
+  const [annualReturn, setAnnualReturn] = useState(7);
+  const [annualVolatility, setAnnualVolatility] = useState(15);
+  const [fee, setFee] = useState(0);
+  const [borrowingApr, setBorrowingApr] = useState(12);
+  const [target, setTarget] = useState(500000);
+  const settings = assumptionsFor(graphData);
+  const currentBudget = totals(graphData);
+  // Paused only new investment transfers in this experiment; retained existing
+  // assets, cash-saving routes, and the saved node graph for later use.
+  const scenarioEdges = useMemo(
+    () =>
+      scheduledInvesting
+        ? graphData.edges
+        : graphData.edges.filter(
+            (edge) =>
+              !graphData.nodes.some(
+                (node) => node.id === edge.targetNodeId && node.nodeType === 'INVESTMENT',
+              ),
+          ),
+    [graphData, scheduledInvesting],
+  );
+  const allocation = allocations(
+    { ...graphData, edges: scenarioEdges },
+    currentBudget.surplus,
+    rate,
+  );
   const dialog = useRef<HTMLDivElement>(null);
   useEffect(() => {
     const previous = document.activeElement as HTMLElement | null;
@@ -141,6 +231,18 @@ export function SimulationModal({
           inflation_rate: inflation ? 0.025 : 0,
           sim_type: simulationType,
           years,
+          income_basis: settings.incomeBasis,
+          tax_rate: settings.taxRate / 100,
+          income_growth: settings.incomeGrowth / 100,
+          expense_growth: settings.expenseGrowth / 100,
+          annual_fee: fee / 100,
+          borrowing_apr: borrowingApr / 100,
+          market_source: marketSource,
+          historical_return_mode: returnMode,
+          asset_class: assetClass,
+          annual_return: annualReturn / 100,
+          annual_volatility: annualVolatility / 100,
+          target,
           nodes: graphData.nodes.map((n) => ({
             id: n.id,
             name: n.name,
@@ -149,7 +251,7 @@ export function SimulationModal({
             apr: n.interestRateApr,
             ...(n.minPayment != null ? { min_payment: n.minPayment } : {}),
           })),
-          edges: graphData.edges.map((e) => ({
+          edges: scenarioEdges.map((e) => ({
             source: e.sourceNodeId,
             target: e.targetNodeId,
             monthly_fixed_flow: e.monthlyFixedFlow,
@@ -171,6 +273,8 @@ export function SimulationModal({
             data.message || detail || `The simulation could not run (${response.status}).`,
           );
         }
+        if (data.model_version !== 3)
+          throw new Error('Restart FinApp to load the updated Python simulation model.');
         if (
           !data.metrics ||
           !Array.isArray(simulationType === 'debt' ? data.debt?.avalanche : data[simulationType])
@@ -179,7 +283,6 @@ export function SimulationModal({
         if (!controller.signal.aborted) setForecast(data);
       } catch (err) {
         if (!controller.signal.aborted || timedOut) {
-          setForecast(null);
           setError(
             timedOut
               ? 'The simulation took too long. Check the Python service and try again.'
@@ -198,7 +301,27 @@ export function SimulationModal({
       clearTimeout(timeout);
       controller.abort();
     };
-  }, [graphData, rate, inflation, simulationType, years, retry]);
+  }, [
+    graphData,
+    scenarioEdges,
+    settings.incomeBasis,
+    settings.taxRate,
+    settings.incomeGrowth,
+    settings.expenseGrowth,
+    rate,
+    inflation,
+    simulationType,
+    years,
+    retry,
+    marketSource,
+    returnMode,
+    assetClass,
+    annualReturn,
+    annualVolatility,
+    fee,
+    borrowingApr,
+    target,
+  ]);
   // Prepared the P10-P90 envelope from year-specific quantiles; these bounds
   // represented a distribution, not one continuous bull or bear market path.
   const points = (simulationType === 'monte_carlo' ? forecast?.monte_carlo : forecast?.markov)?.map(
@@ -220,7 +343,7 @@ export function SimulationModal({
     >
       <div
         ref={dialog}
-        className="simulation-dialog"
+        className="simulation-dialog simulation-lab"
         role="dialog"
         aria-modal="true"
         aria-labelledby="simulation-title"
@@ -233,9 +356,10 @@ export function SimulationModal({
               <span> / {simulationType === 'debt' ? 'REPAYMENT' : '1,000 SIMULATED PATHS'}</span>
             </div>
             <h2 id="simulation-title">{titles[simulationType]}</h2>
+            {scopeLabel && <div className="simulation-scope-label">{scopeLabel}</div>}
             <p>
               {simulationType === 'monte_carlo'
-                ? 'Explore a distribution of future net worth, including cash and debt.'
+                ? 'A Monte Carlo simulation runs many possible market paths to show a range of financial outcomes. These 1,000 paths include your cash, investments, and debt; they are scenarios, not guarantees.'
                 : simulationType === 'markov'
                   ? 'Explore how changing bull and bear markets affect your financial plan.'
                   : 'Compare repayment priorities using the same monthly budget.'}
@@ -246,11 +370,51 @@ export function SimulationModal({
             aria-label="Close simulation"
             onClick={onClose}
           >
-            ×
+            <svg
+              width="16"
+              height="16"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2"
+              strokeLinecap="round"
+              aria-hidden="true"
+              focusable="false"
+            >
+              <path d="m6 6 12 12M18 6 6 18" />
+            </svg>
           </button>
         </header>
         <div className="simulation-body">
           <div className="simulation-main">
+            <div className="simulation-budget-ribbon">
+              <span>
+                <small>Take-home /mo</small>
+                <b>{dollars(currentBudget.takeHome)}</b>
+              </span>
+              <i>−</i>
+              <span>
+                <small>Living costs</small>
+                <b>{dollars(currentBudget.expenses)}</b>
+              </span>
+              <i>−</i>
+              <span>
+                <small>Loan payments</small>
+                <b>{dollars(currentBudget.payments)}</b>
+              </span>
+              <i>=</i>
+              <span className={currentBudget.surplus < 0 ? 'negative' : 'positive'}>
+                <small>Available after bills</small>
+                <b>{dollars(currentBudget.surplus)}</b>
+              </span>
+            </div>
+            {!!forecast?.warnings?.length && (
+              <div className="simulation-warnings" role="status">
+                {forecast.warnings.map((warning) => (
+                  <p key={warning}>{warning}</p>
+                ))}
+              </div>
+            )}
             <div className="chart-toolbar">
               <div className="chart-legend">
                 {simulationType !== 'debt'
@@ -298,78 +462,15 @@ export function SimulationModal({
                       Updating scenario…
                     </span>
                   )}
-                  <ResponsiveContainer width="100%" height="100%">
-                    {simulationType !== 'debt' ? (
-                      <ComposedChart
-                        data={points}
-                        margin={{ top: 20, right: 16, bottom: 8, left: 4 }}
-                      >
-                        <defs>
-                          <linearGradient id="forecast-band" x1="0" y1="0" x2="0" y2="1">
-                            <stop offset="0%" stopColor="#34d399" stopOpacity={0.18} />
-                            <stop offset="100%" stopColor="#a78bfa" stopOpacity={0.04} />
-                          </linearGradient>
-                        </defs>
-                        <CartesianGrid strokeDasharray="3 5" stroke="#263044" vertical={false} />
-                        <XAxis
-                          dataKey="year"
-                          interval="preserveStartEnd"
-                          minTickGap={24}
-                          tick={{ fill: '#93a1b8', fontSize: 11 }}
-                          tickLine={false}
-                          axisLine={false}
-                        />
-                        <YAxis
-                          width={72}
-                          tickFormatter={(v) => money(v, true)}
-                          tick={{ fill: '#93a1b8', fontSize: 11 }}
-                          axisLine={false}
-                          tickLine={false}
-                          domain={([min, max]) => [Math.min(0, min), Math.max(0, max)]}
-                          allowDataOverflow
-                        />
-                        <ReferenceLine y={0} stroke="#60708a" strokeDasharray="4 4" />
-                        <Tooltip
-                          content={({ active, payload, label }) =>
-                            active && payload?.length ? (
-                              <div className="chart-tooltip">
-                                <strong>Year {label}</strong>
-                                {quantiles.map((q) => {
-                                  const point = points?.find((p) => p.year === Number(label));
-                                  return point ? (
-                                    <div key={q.key} style={{ color: q.color }}>
-                                      <span>{q.label}</span>
-                                      <b>{money(point[q.key as 'p10' | 'p50' | 'p90'])}</b>
-                                    </div>
-                                  ) : null;
-                                })}
-                              </div>
-                            ) : null
-                          }
-                        />
-                        <Area
-                          dataKey="band"
-                          type="linear"
-                          fill="url(#forecast-band)"
-                          stroke="none"
-                          tooltipType="none"
-                          isAnimationActive={false}
-                        />
-                        {quantiles.map((q) => (
-                          <Line
-                            key={q.key}
-                            type="linear"
-                            dataKey={q.key}
-                            name={q.label}
-                            stroke={q.color}
-                            strokeWidth={q.key === 'p50' ? 2.8 : 1.8}
-                            dot={false}
-                            activeDot={{ r: 4, stroke: '#10141f', strokeWidth: 2 }}
-                            isAnimationActive={false}
-                          />
-                        ))}
-                      </ComposedChart>
-                    ) : (
+                  {simulationType !== 'debt' ? (
+                    <ForecastChart
+                      points={
+                        forecast[simulationType === 'markov' ? 'markov' : 'monte_carlo'] ?? []
+                      }
+                      realDollars={inflation}
+                    />
+                  ) : (
+                    <ResponsiveContainer width="100%" height="100%">
                       <AreaChart
                         data={debtRows}
                         margin={{ top: 20, right: 16, bottom: 8, left: 4 }}
@@ -422,8 +523,8 @@ export function SimulationModal({
                           />
                         ))}
                       </AreaChart>
-                    )}
-                  </ResponsiveContainer>
+                    </ResponsiveContainer>
+                  )}
                 </>
               )}
             </div>
@@ -435,7 +536,7 @@ export function SimulationModal({
                   : 'Net worth = cash + investments − debt'}
               </span>
             </div>
-            {forecast && !loading && !error && (
+            {forecast && (
               <div className="result-strip">
                 {simulationType !== 'debt' ? (
                   <>
@@ -480,24 +581,101 @@ export function SimulationModal({
                 )}
               </div>
             )}
-            {simulationType === 'debt' && summary && !loading && !summary.paid_off && (
+            {simulationType === 'debt' && summary && !summary.paid_off && (
               <div className="notice warning">
                 This budget does not clear your debt within {years} years. The last chart point is
                 not a payoff date.
               </div>
             )}
-            {simulationType === 'debt' && comparison && summary && !loading && (
+            {simulationType === 'debt' && comparison && summary && (
               <p className="muted small comparison-note">
                 {Math.abs(comparison.total_interest - summary.total_interest) < 0.01
                   ? 'Both strategies accrue the same interest in this scenario.'
                   : `${strategy === 'avalanche' ? 'Avalanche' : 'Snowball'} accrues ${money(Math.abs(comparison.total_interest - summary.total_interest))} ${summary.total_interest < comparison.total_interest ? 'less' : 'more'} interest than the alternative over this horizon.`}
               </p>
             )}
+            {forecast && simulationType !== 'debt' && (
+              <ForecastInsights forecast={forecast} mode={simulationType} realDollars={inflation} />
+            )}
+            <SimulationGuide mode={simulationType} />
           </div>
           <aside className="simulation-sidebar">
             <section className="simulation-controls">
               <div className="eyebrow">YOUR ASSUMPTIONS</div>
               <h3>Make it your scenario</h3>
+              <BudgetControls graph={graphData} onChange={onAssumptionsChange} compact />
+              {simulationType !== 'debt' && (
+                <section className="market-settings">
+                  <label className="control-label">
+                    Market assumptions
+                    <select
+                      value={marketSource}
+                      onChange={(e) => setMarketSource(e.target.value as 'historical' | 'manual')}
+                    >
+                      <option value="historical">Free historical calibration</option>
+                      <option value="manual">Editable return assumptions</option>
+                    </select>
+                  </label>
+                  <label className="control-label">
+                    Investment benchmark
+                    <select value={assetClass} onChange={(e) => setAssetClass(e.target.value)}>
+                      <option value="US_STOCKS">US stocks · SPY</option>
+                      <option value="BONDS">US bonds · AGG</option>
+                      <option value="INTL_STOCKS">International stocks · EFA</option>
+                      <option value="REAL_ESTATE">Real estate · VNQ</option>
+                    </select>
+                  </label>
+                  <div
+                    className={
+                      marketSource === 'manual' ? 'manual-market-inputs' : 'fallback-inputs'
+                    }
+                  >
+                    <p>
+                      {marketSource === 'manual'
+                        ? 'Used for this simulation'
+                        : returnMode === 'forward'
+                          ? 'Historical risk with an editable forward return'
+                          : 'Observed historical return; these values are fallbacks only'}
+                    </p>
+                    {marketSource === 'historical' && (
+                      <label className="forward-return-choice">
+                        <input
+                          type="checkbox"
+                          checked={returnMode === 'forward'}
+                          onChange={(e) => setReturnMode(e.target.checked ? 'forward' : 'observed')}
+                        />{' '}
+                        Use an editable forward return
+                      </label>
+                    )}
+                    <label className="control-label">
+                      {marketSource === 'historical' && returnMode === 'observed'
+                        ? 'Fallback annual return (%)'
+                        : 'Forward expected return (%)'}
+                      <NumberField
+                        type="number"
+                        min={-50}
+                        max={50}
+                        step={0.5}
+                        value={annualReturn}
+                        onChange={(e) => setAnnualReturn(Number(e.target.value))}
+                      />
+                    </label>
+                    <label className="control-label">
+                      {marketSource === 'historical'
+                        ? 'Fallback volatility (%)'
+                        : 'Annual volatility (%)'}
+                      <NumberField
+                        type="number"
+                        min={0}
+                        max={100}
+                        step={0.5}
+                        value={annualVolatility}
+                        onChange={(e) => setAnnualVolatility(Number(e.target.value))}
+                      />
+                    </label>
+                  </div>
+                </section>
+              )}
               <label className="control-label">
                 Time horizon
                 <select
@@ -508,7 +686,7 @@ export function SimulationModal({
                     setYears(Number(e.target.value));
                   }}
                 >
-                  {[5, 10, 20, 30, 40, 50].map((y) => (
+                  {[1, 5, 10, 20, 30, 40, 50].map((y) => (
                     <option key={y} value={y}>
                       {y} years
                     </option>
@@ -516,9 +694,21 @@ export function SimulationModal({
                 </select>
               </label>
               <label className="control-label" htmlFor="allocation">
-                {simulationType === 'debt' ? 'Extra surplus toward debt' : 'Surplus invested'}
+                {simulationType === 'debt'
+                  ? 'Extra surplus toward debt'
+                  : 'Invest still-unassigned money'}
                 <strong>{rate}%</strong>
               </label>
+              {simulationType !== 'debt' && (
+                <label className="forward-return-choice">
+                  <input
+                    type="checkbox"
+                    checked={scheduledInvesting}
+                    onChange={(e) => setScheduledInvesting(e.target.checked)}
+                  />{' '}
+                  Include scheduled investment transfers
+                </label>
+              )}
               <input
                 id="allocation"
                 type="range"
@@ -535,8 +725,95 @@ export function SimulationModal({
               <p className="muted small">
                 {simulationType === 'debt'
                   ? 'Minimum payments are included once. This adds a share of your remaining monthly surplus.'
-                  : 'The remainder stays in cash. A 0% allocation does not remove your income or expenses.'}
+                  : `${dollars(allocation.plannedInvestment)} scheduled + ${rate}% of ${dollars(allocation.unassigned)} unassigned = ${dollars(allocation.investment)}/mo invested initially. Remaining cash savings: ${dollars(allocation.cash)}/mo.`}
               </p>
+              {simulationType !== 'debt' && (
+                <p className="muted small">
+                  For $0 in new investments, turn off scheduled transfers and set the slider to 0%.
+                  Uninvested surplus stays in cash. Losses can still affect existing investments;
+                  expenses above take-home income can drain assets and create debt. Set a negative
+                  forward return to explore a prolonged market decline.
+                </p>
+              )}
+              {simulationType !== 'debt' && (
+                <>
+                  <label className="control-label">
+                    Net-worth target ($)
+                    <NumberField
+                      type="number"
+                      min={0}
+                      max={1e12}
+                      step={10000}
+                      value={target}
+                      onChange={(e) => setTarget(Number(e.target.value))}
+                    />
+                  </label>
+                  <details className="advanced-assumptions">
+                    <summary>Growth, fees & shortfalls</summary>
+                    <div className="advanced-controls">
+                      <label className="control-label">
+                        Annual income growth (%)
+                        <NumberField
+                          type="number"
+                          min={-50}
+                          max={25}
+                          step={0.5}
+                          value={settings.incomeGrowth}
+                          onChange={(e) =>
+                            onAssumptionsChange({
+                              ...settings,
+                              incomeGrowth: Number(e.target.value),
+                            })
+                          }
+                        />
+                      </label>
+                      <label className="control-label">
+                        Annual living-cost growth (%)
+                        <NumberField
+                          type="number"
+                          min={-25}
+                          max={25}
+                          step={0.5}
+                          value={settings.expenseGrowth}
+                          onChange={(e) =>
+                            onAssumptionsChange({
+                              ...settings,
+                              expenseGrowth: Number(e.target.value),
+                            })
+                          }
+                        />
+                      </label>
+                      <label className="control-label">
+                        Additional portfolio fee (%)
+                        <NumberField
+                          type="number"
+                          min={0}
+                          max={10}
+                          step={0.05}
+                          value={fee}
+                          onChange={(e) => setFee(Number(e.target.value))}
+                        />
+                      </label>
+                      <label className="control-label">
+                        Shortfall borrowing APR (%)
+                        <NumberField
+                          type="number"
+                          min={0}
+                          max={100}
+                          step={0.5}
+                          value={borrowingApr}
+                          onChange={(e) => setBorrowingApr(Number(e.target.value))}
+                        />
+                      </label>
+                      <p className="muted small">
+                        Growth is nominal and applied annually. Income continues through the
+                        horizon; retirement withdrawals are not modeled. The additional fee is
+                        separate from costs already reflected in adjusted fund prices.
+                      </p>
+                    </div>
+                  </details>
+                </>
+              )}
               {simulationType !== 'debt' && (
                 <label className="toggle-row">
                   <span>
@@ -570,6 +847,73 @@ export function SimulationModal({
                 </div>
               )}
             </section>
+            {simulationType !== 'debt' && forecast?.market_data && (
+              <section
+                className={`market-source-card ${forecast.market_data.status === 'fallback' ? 'is-fallback' : ''}`}
+              >
+                <div className="eyebrow">DATA BEHIND THE MODEL</div>
+                <h3>
+                  {['historical', 'stale_history'].includes(forecast.market_data.status)
+                    ? `${forecast.market_data.ticker} · ${forecast.market_data.years} years`
+                    : forecast.market_data.pending
+                      ? 'History loading'
+                      : 'Editable assumptions'}
+                </h3>
+                <p>{forecast.market_data.source}</p>
+                {forecast.market_data.start && (
+                  <p>
+                    {forecast.market_data.start} → {forecast.market_data.end}
+                    <br />
+                    {forecast.market_data.observations} completed monthly returns
+                  </p>
+                )}
+                <dl className="breakdown">
+                  <div>
+                    <dt>
+                      {forecast.market_data.return_mode === 'forward'
+                        ? 'Forward return assumption'
+                        : 'Annualized return input'}
+                    </dt>
+                    <dd>{(forecast.market_data.annual_return * 100).toFixed(2)}%</dd>
+                  </div>
+                  <div>
+                    <dt>Annual log-return volatility</dt>
+                    <dd>{(forecast.market_data.annual_volatility * 100).toFixed(2)}%</dd>
+                  </div>
+                </dl>
+                {forecast.market_data.observed_annual_return != null && (
+                  <p>
+                    Observed historical mean:{' '}
+                    {(forecast.market_data.observed_annual_return * 100).toFixed(2)}%. Historical
+                    movements have been centered on the selected forward assumption; the past
+                    average is not treated as a forecast.
+                  </p>
+                )}
+                <p>{forecast.market_data.method}</p>
+                {forecast.market_data.regime_transitions && (
+                  <p>
+                    Bull → bear:{' '}
+                    {(forecast.market_data.regime_transitions[0]![1]! * 100).toFixed(1)}%/mo · Bear
+                    → bull: {(forecast.market_data.regime_transitions[1]![0]! * 100).toFixed(1)}%/mo
+                  </p>
+                )}
+                {forecast.market_data.status === 'stale_history' && (
+                  <p>
+                    Cached history is older than 24 hours. Refresh is attempted in the background.
+                  </p>
+                )}
+                <button
+                  className="button"
+                  disabled={loading}
+                  onClick={() => setRetry((n) => n + 1)}
+                >
+                  {forecast.market_data.pending ? 'Check loaded history' : 'Refresh forecast'}
+                </button>
+                <small>
+                  Free, cached data · no API key · historical performance is not a promise.
+                </small>
+              </section>
+            )}
             {simulationType !== 'debt' && (
               <section className="chart-guide">
                 <h3>How to read this chart</h3>
@@ -594,13 +938,21 @@ export function SimulationModal({
                 </p>
               </section>
             )}
-            {metrics && !loading && simulationType !== 'debt' && (
+            {metrics && simulationType !== 'debt' && (
               <section>
                 <h3>What drives the result?</h3>
                 <dl className="breakdown">
                   <div>
-                    <dt>Monthly income</dt>
-                    <dd>{money(metrics.monthly_income)}</dd>
+                    <dt>Entered income</dt>
+                    <dd>{dollars(metrics.monthly_income)}</dd>
+                  </div>
+                  <div>
+                    <dt>Estimated tax</dt>
+                    <dd>−{dollars(metrics.monthly_taxes)}</dd>
+                  </div>
+                  <div>
+                    <dt>Take-home income</dt>
+                    <dd>{dollars(metrics.take_home_income)}</dd>
                   </div>
                   <div>
                     <dt>Living expenses</dt>
@@ -611,8 +963,12 @@ export function SimulationModal({
                     <dd>−{money(metrics.minimum_debt_payments)}</dd>
                   </div>
                   <div>
-                    <dt>Initial investment /mo</dt>
-                    <dd>{money(metrics.monthly_contribution)}</dd>
+                    <dt>Total initially invested /mo</dt>
+                    <dd>{dollars(metrics.monthly_contribution)}</dd>
+                  </div>
+                  <div>
+                    <dt>Initially kept in cash /mo</dt>
+                    <dd>{dollars(metrics.monthly_cash_saving)}</dd>
                   </div>
                   <div>
                     <dt>No-growth reference</dt>
@@ -635,18 +991,9 @@ export function SimulationModal({
                 ).map((a) => (
                   <li key={a}>{a}</li>
                 ))}
-                {simulationType === 'monte_carlo' && (
-                  <li>Investment return assumption: 10% annual growth, 15% annual volatility.</li>
-                )}
-                {simulationType === 'markov' && (
-                  <li>
-                    Monthly regimes: bull mean +0.8%, volatility 3.5%; bear mean −2%, volatility 8%.
-                    Transition probabilities: bull→bear 5%, bear→bull 15%.
-                  </li>
-                )}
                 <li>
-                  A fixed random seed makes comparisons repeatable. Taxes, changing salaries, and
-                  trading are not modeled.
+                  A fixed random seed makes comparisons repeatable. Market history is a modeling
+                  input, not a prediction of future returns.
                 </li>
               </ul>
             </details>

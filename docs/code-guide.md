@@ -51,11 +51,13 @@ The Python files are organized by calculation responsibility:
 
 - `app/main.py` creates FastAPI and registers the simulation router.
 - `app/routers/simulate.py` validates the payload, calculates monthly income/expenses and debt-payment defaults, selects the requested model, and packages the result.
-- `app/projection.py` implements the active household wealth forecast. Cash, investments, existing loans, and new borrowing are kept separate. Each month applies returns and interest, pays contractual debt, allocates surplus or covers a deficit, and records annual inflation-adjusted percentiles.
+- `app/cashflow.py` reconciles gross/net income, the effective tax estimate, affordable fixed/percentage saving routes, and extra investment allocation. Browser calculations in `frontend/dashboard/src/finance.ts` are tested against the same demo budgets.
+- `app/projection.py` implements the active household forecast. Checking, savings, investments, existing loans, and new borrowing are kept separate. Each month applies returns and interest, pays each contractual minimum, applies income/expense growth and tax, allocates surplus or covers a deficit, and records annual inflation-adjusted percentiles.
+- `app/market_model.py` calibrates monthly risk from the existing full-history cache, warms data in the background, identifies offline fallbacks, and separates historical averages from forward-return assumptions. See [the simulation model](simulation-model.md) for equations and defaults.
 - `app/debt_waterfall.py` compares debt-payment priorities with an affordable fixed monthly budget. Minimum payments are counted once, and freed payments roll into remaining debts.
 - `app/markov_sim.py` supplies monthly bull/bear probabilities and return distributions to the household forecast. Its standalone trajectory helper is retained separately.
 - `app/simulation.py` retains the earlier aggregate-balance simulator; it is not called by the current simulation route.
-- `app/asset_classes.py`, `app/price_cache.py`, and `app/market_data.py` retain ticker mapping, SQLite price caching, and historical statistics. The active forecast still uses illustrative parameters; these utilities do not currently calibrate its returns.
+- `app/price_cache.py` now fetches maximum available adjusted history and supplies the active calibration. `app/asset_classes.py` and `app/market_data.py` retain the team's existing ticker mapping and trailing-statistics helpers; the active model uses explicitly labeled older benchmark proxies for longer coverage.
 - `app/models.py` retains the earlier generic graph DTOs. The active request contract is defined in `app/routers/simulate.py`.
 
 Read the comments beside payment precedence, APR conversion, the no-growth reference path, deficit funding, and percentile extraction when debugging financial results. Those operations explain most differences between cash flow, net worth, contributions, and compound growth.

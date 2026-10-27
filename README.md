@@ -11,7 +11,7 @@ Traditional finance platforms limit analysis to static ledger tables or backward
 - **Interactive Visual Canvas:** Render cash flows across nodes representing income streams, checking/savings reserves, debt instruments, and investment vehicles.
 - **Dynamic Graph Grid:** Infinite-canvas background grid built with D3.js that pans and zooms relative to user actions, adapting automatically to different screen resolutions.
 - **Pre-Loaded Archetypes:** Load pre-configured financial profiles (e.g., *Recent Grad with Loans*, *Mid-Career Family*, *FIRE Strategist*) seeded directly from PostgreSQL.
-- **Monte Carlo 30-Year Wealth Forecast:** Execute 1,000-iteration stochastic simulations modeling market volatility against historical S&P 500 benchmarks.
+- **Monte Carlo Simulation:** Compare 1,000 paths over an adjustable horizon with free cached market history, explicit forward-return assumptions, and an auditable gross-to-net monthly budget.
 - **Parametric Simulation Controls:** Adjust the dynamic savings rate slider ($0/mo to 100% of net surplus) and toggle real-time purchasing power discounting via an integrated 2.5% inflation rate model.
 
 ---

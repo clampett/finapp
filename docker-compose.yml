@@ -39,6 +39,9 @@ services:
       - "5000:5000"
     environment:
       - ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY:-}
+      - PRICE_CACHE_DB=/data/price_cache.db
+    volumes:
+      - market_cache:/data
     networks:
       - finapp-network
 
@@ -56,6 +59,7 @@ services:
       - finapp-network
 
 volumes:
+  market_cache:
   postgres_data:
     external: true
     name: ${FINAPP_POSTGRES_VOLUME:-finapp_postgres_data}

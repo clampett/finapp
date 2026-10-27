@@ -15,8 +15,12 @@ import pandas as pd
 
 # Retained market-history caching as a separate utility; the current simulation
 # endpoint used fixed illustrative assumptions rather than calling this cache.
+# Connected this previously separate cache to active calibration in market_model.py;
+# the earlier integration notes above were retained as implementation history.
 
-HISTORY_PERIOD = "10y"
+# Extended the earlier ten-year implementation to the provider's full available
+# adjusted history; the original module notes were retained above for context.
+HISTORY_PERIOD = "max"
 CACHE_TTL = timedelta(hours=24)  # daily prices: refreshing more often gains nothing
 RETRY_AFTER = timedelta(minutes=15)  # after a failed fetch, leave Yahoo alone for a while
 
@@ -44,13 +48,17 @@ def _connect() -> sqlite3.Connection:
         "CREATE TABLE IF NOT EXISTS fetch_log ("
         "ticker TEXT PRIMARY KEY, fetched_at TEXT, attempted_at TEXT NOT NULL)"
     )
+    conn.execute(
+        "CREATE TABLE IF NOT EXISTS cache_metadata ("
+        "ticker TEXT PRIMARY KEY, history_period TEXT NOT NULL)"
+    )
     return conn
 
 
 def _download(ticker: str) -> pd.Series:
     import yfinance as yf  # imported here so the cache can be tested without it
 
-    prices = yf.Ticker(ticker).history(period=HISTORY_PERIOD, auto_adjust=True)["Close"]
+    prices = yf.Ticker(ticker).history(period=HISTORY_PERIOD, auto_adjust=True, timeout=8)["Close"]
     return prices.dropna()
 
 
@@ -61,11 +69,19 @@ def _needs_refresh(ticker: str) -> bool:
         row = conn.execute(
             "SELECT fetched_at, attempted_at FROM fetch_log WHERE ticker = ?", (ticker,)
         ).fetchone()
+        coverage = conn.execute(
+            "SELECT history_period FROM cache_metadata WHERE ticker = ?", (ticker,)
+        ).fetchone()
     if row is None:
         return True
     fetched_at, attempted_at = row
     now = _now()
-    if fetched_at and now - datetime.fromisoformat(fetched_at) < CACHE_TTL:
+    if (
+        coverage
+        and coverage[0] == HISTORY_PERIOD
+        and fetched_at
+        and now - datetime.fromisoformat(fetched_at) < CACHE_TTL
+    ):
         return False
     if attempted_at and now - datetime.fromisoformat(attempted_at) < RETRY_AFTER:
         return False  # a recent attempt failed; don't hammer Yahoo
@@ -102,6 +118,11 @@ def _refresh(ticker: str) -> None:
             conn.execute("DELETE FROM prices WHERE ticker = ?", (ticker,))
             conn.executemany("INSERT INTO prices (ticker, date, close) VALUES (?, ?, ?)", rows)
             conn.execute(
+                "INSERT INTO cache_metadata (ticker, history_period) VALUES (?, ?) "
+                "ON CONFLICT(ticker) DO UPDATE SET history_period = excluded.history_period",
+                (ticker, HISTORY_PERIOD),
+            )
+            conn.execute(
                 "INSERT INTO fetch_log (ticker, fetched_at, attempted_at) VALUES (?, ?, ?) "
                 "ON CONFLICT(ticker) DO UPDATE SET "
                 "fetched_at = excluded.fetched_at, attempted_at = excluded.attempted_at",
@@ -129,6 +150,23 @@ def _load(ticker: str) -> pd.Series:
         index=pd.to_datetime([date for date, _ in rows]),
         name=ticker,
     )
+
+
+def cached_prices(ticker: str):
+    # Exposed cached observations without initiating network I/O, allowing the
+    # interactive forecast to respond while a background refresh was in progress.
+    try:
+        return _load(ticker)
+    except RuntimeError:
+        return pd.Series(dtype=float)
+
+
+def cache_timestamp(ticker: str):
+    with closing(_connect()) as conn:
+        row = conn.execute(
+            "SELECT fetched_at FROM fetch_log WHERE ticker = ?", (ticker,)
+        ).fetchone()
+    return row[0] if row else None
 
 
 def get_prices(ticker: str) -> pd.Series:

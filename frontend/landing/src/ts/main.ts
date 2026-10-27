@@ -98,7 +98,7 @@ const samples: Record<
   // the dashboard, and browser scenario edits were never read into these cards.
   '1': {
     worth: -27000,
-    surplus: 2733.33,
+    surplus: 1816.664,
     debt: 30000,
     income: 4583.33,
     checking: 1800,
@@ -109,7 +109,7 @@ const samples: Record<
   },
   '2': {
     worth: 95200,
-    surplus: 6200,
+    surplus: 3950,
     debt: 14000,
     income: 11250,
     checking: 6200,
@@ -120,7 +120,7 @@ const samples: Record<
   },
   '3': {
     worth: 139500,
-    surplus: 5966.67,
+    surplus: 4333.336,
     debt: 0,
     income: 8166.67,
     checking: 2500,
@@ -138,7 +138,7 @@ const usd = (n: number) =>
   }).format(n);
 document.querySelectorAll<HTMLButtonElement>('[data-preview]').forEach((button) =>
   button.addEventListener('click', () => {
-    const id = button.dataset.preview ?? '1',
+    const id = button.dataset.preview ?? '2',
       sample = samples[id];
     if (!sample) return;
     document

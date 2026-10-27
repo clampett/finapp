@@ -282,7 +282,11 @@ export function Investing({ storageKey }: { storageKey: string }) {
                     <td>{quote ? dollars(quote.latest_price * shares) : '—'}</td>
                     <td
                       className={
-                        quote && quote.cagr !== null ? (quote.cagr >= 0 ? 'positive' : 'negative') : ''
+                        quote && quote.cagr !== null
+                          ? quote.cagr >= 0
+                            ? 'positive'
+                            : 'negative'
+                          : ''
                       }
                     >
                       {percent(quote?.cagr)}
@@ -300,7 +304,9 @@ export function Investing({ storageKey }: { storageKey: string }) {
                       <button
                         type="button"
                         className="button danger"
-                        onClick={() => setHoldings((current) => current.filter((h) => h.symbol !== sym))}
+                        onClick={() =>
+                          setHoldings((current) => current.filter((h) => h.symbol !== sym))
+                        }
                       >
                         Remove
                       </button>

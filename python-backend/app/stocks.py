@@ -10,7 +10,7 @@ import re
 from datetime import datetime, timedelta, timezone
 
 from app.market_data import get_ticker_stats
-from app.price_cache import NoPriceData, cached_tickers, get_prices
+from app.price_cache import NoPriceData, get_prices
 
 # Suggested in the Investing tab before anyone types a symbol.
 POPULAR_STOCKS = {
@@ -30,7 +30,7 @@ POPULAR_STOCKS = {
 }
 
 SYMBOL_PATTERN = re.compile(r"^[A-Z0-9][A-Z0-9.\-]{0,9}$")
-MAX_CACHED_TICKERS = 200  # distinct symbols kept in the cache
+# Enforced the shared cache limit transactionally in price_cache, including popular symbols.
 UNKNOWN_TTL = timedelta(hours=1)  # how long a symbol Yahoo does not know is remembered
 HISTORY_POINTS = 252  # about one year of trading days, for the chart
 MIN_STATS_POINTS = 252  # under a year of prices is too short to annualize
@@ -63,22 +63,29 @@ def lookup_stock(raw_symbol: str) -> dict:
     symbol = normalize_symbol(raw_symbol)
     now = datetime.now(timezone.utc)
 
+    # Removed expired negative entries and bounded retained failures as well as valid quotes.
+    for key, expiry in list(_unknown_until.items()):
+        if expiry <= now:
+            _unknown_until.pop(key, None)
+
     expires = _unknown_until.get(symbol)
     if expires and expires > now:
         raise SymbolNotFound(f"No price data found for '{symbol}'.")
 
-    cached = cached_tickers()
-    if symbol not in cached and symbol not in POPULAR_STOCKS and len(cached) >= MAX_CACHED_TICKERS:
-        raise TooManySymbols("Too many different symbols have been looked up. Try again later.")
-
     try:
-        prices = get_prices(symbol)
+        prices = get_prices(symbol, require_currency=True)
     except NoPriceData:
+        if len(_unknown_until) >= 200:
+            _unknown_until.pop(next(iter(_unknown_until)), None)
         _unknown_until[symbol] = now + UNKNOWN_TTL
         raise SymbolNotFound(f"No price data found for '{symbol}'.")
 
-    if len(prices) >= MIN_STATS_POINTS:
-        stats = get_ticker_stats(symbol)
+    # Required an elapsed calendar year as well as sufficient observations before annualizing.
+    enough_history = (
+        len(prices) >= MIN_STATS_POINTS and (prices.index[-1] - prices.index[0]).days >= 365
+    )
+    if enough_history:
+        stats = get_ticker_stats(symbol, prices=prices)
     else:  # a recent listing: show the price, but don't annualize a few weeks
         stats = {"cagr": None, "expected_annual_return": None, "annual_volatility": None}
 
@@ -86,6 +93,9 @@ def lookup_stock(raw_symbol: str) -> dict:
     return {
         "symbol": symbol,
         "name": POPULAR_STOCKS.get(symbol),
+        "currency": prices.attrs["currency"],
+        "stats_start_date": stats.get("start_date"),
+        "stats_end_date": stats.get("end_date"),
         "latest_price": round(float(prices.iloc[-1]), 2),
         "latest_date": prices.index[-1].date().isoformat(),
         **{key: stats[key] for key in ("cagr", "expected_annual_return", "annual_volatility")},

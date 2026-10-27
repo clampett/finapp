@@ -1,5 +1,7 @@
 import sys
-from datetime import datetime, timezone
+from concurrent.futures import ThreadPoolExecutor
+from contextlib import nullcontext
+from datetime import datetime, timedelta, timezone
 from types import SimpleNamespace
 
 import pandas as pd
@@ -26,6 +28,7 @@ def market(tmp_path, monkeypatch):
         "fail": False,
         "empty": False,
         "periods": 2610,
+        "currency": "USD",
         "now": datetime(2026, 10, 24, tzinfo=timezone.utc),
     }
 
@@ -35,7 +38,9 @@ def market(tmp_path, monkeypatch):
             raise ConnectionError("yahoo is down")
         if state["empty"]:
             return pd.Series(dtype=float)
-        return make_prices(periods=state["periods"])
+        prices = make_prices(periods=state["periods"])
+        prices.attrs["currency"] = state["currency"]
+        return prices
 
     monkeypatch.setattr(price_cache, "_download", fake_download)
     monkeypatch.setattr(price_cache, "_now", lambda: state["now"])
@@ -99,14 +104,17 @@ def test_an_outage_is_not_reported_as_not_found(market):
         stocks.lookup_stock("AAPL")
 
 
-def test_a_full_cache_blocks_new_symbols_but_not_popular_ones(market, monkeypatch):
-    monkeypatch.setattr(stocks, "MAX_CACHED_TICKERS", 2)
+def test_a_full_cache_evicts_the_oldest_quote_instead_of_blocking(market, monkeypatch):
+    monkeypatch.setattr(price_cache, "MAX_CACHED_TICKERS", 2)
     stocks.lookup_stock("AAA")
+    market["now"] += timedelta(seconds=1)
     stocks.lookup_stock("BBB")
-    with pytest.raises(stocks.TooManySymbols):
-        stocks.lookup_stock("CCC")
     assert stocks.lookup_stock("AAA")["symbol"] == "AAA"  # already cached
+    market["now"] += timedelta(seconds=1)
+    assert stocks.lookup_stock("CCC")["symbol"] == "CCC"
+    assert price_cache.cached_tickers() == {"BBB", "CCC"}
     assert stocks.lookup_stock("AAPL")["symbol"] == "AAPL"  # popular
+    assert len(price_cache.cached_tickers()) == 2
 
 
 def test_endpoint_status_codes(market):
@@ -127,6 +135,9 @@ def test_popular_stocks_endpoint_lists_the_suggestions():
 
 def test_download_returns_nothing_for_unknown_symbols(monkeypatch):
     class FakeTicker:
+        def get_history_metadata(self):
+            return {"currency": "USD"}
+
         def __init__(self, symbol):
             pass
 
@@ -139,6 +150,9 @@ def test_download_returns_nothing_for_unknown_symbols(monkeypatch):
 
 def test_download_drops_missing_prices(monkeypatch):
     class FakeTicker:
+        def get_history_metadata(self):
+            return {"currency": "USD"}
+
         def __init__(self, symbol):
             pass
 
@@ -148,3 +162,72 @@ def test_download_drops_missing_prices(monkeypatch):
 
     monkeypatch.setitem(sys.modules, "yfinance", SimpleNamespace(Ticker=FakeTicker))
     assert list(price_cache._download("AAPL")) == [1.0, 3.0]
+
+
+def test_foreign_currency_is_rejected_including_cached_requests(market):
+    market["currency"] = "GBp"
+    assert status_of(stocks_router.stock, "VOD.L") == 400
+    assert status_of(stocks_router.stock, "VOD.L") == 400
+    assert market["calls"] == 1
+
+
+def test_unverified_currency_is_not_assumed_to_be_usd(market):
+    market["currency"] = None
+    assert status_of(stocks_router.stock, "AAPL") == 503
+    assert "AAPL" not in price_cache.cached_tickers()
+
+
+def test_legacy_cached_prices_are_refreshed_to_verify_currency(market):
+    market["currency"] = None
+    price_cache.get_prices("AAA")
+    market["currency"] = "USD"
+    market["now"] += timedelta(seconds=1)
+    result = stocks.lookup_stock("AAA")
+    assert result["currency"] == "USD"
+    assert market["calls"] == 2
+
+
+def test_shorter_history_reports_its_actual_statistics_period(market):
+    market["periods"] = 520
+    result = stocks.lookup_stock("NEWCO")
+    prices = make_prices(periods=520)
+    assert result["stats_start_date"] == prices.index[0].date().isoformat()
+    assert result["stats_end_date"] == result["latest_date"]
+    assert result["cagr"] is not None
+
+
+def test_less_than_a_calendar_year_does_not_get_annualized(market):
+    market["periods"] = 252
+    result = stocks.lookup_stock("NEWCO")
+    assert result["cagr"] is None
+    assert result["stats_start_date"] is None
+
+
+def test_eviction_uses_last_access_and_preserves_simulation_benchmarks(market, monkeypatch):
+    monkeypatch.setattr(price_cache, "MAX_CACHED_TICKERS", 3)
+    for symbol in ("SPY", "AAA", "BBB"):
+        stocks.lookup_stock(symbol)
+        market["now"] += timedelta(seconds=1)
+    stocks.lookup_stock("AAA")
+    market["now"] += timedelta(seconds=1)
+    stocks.lookup_stock("CCC")
+    assert price_cache.cached_tickers() == {"SPY", "AAA", "CCC"}
+
+
+def test_eviction_is_atomic_without_the_process_local_lock(market, monkeypatch):
+    monkeypatch.setattr(price_cache, "MAX_CACHED_TICKERS", 3)
+    # Bypassed the thread lock to exercise independent-worker SQLite transactions.
+    monkeypatch.setattr(price_cache, "_refresh_lock", nullcontext())
+    with ThreadPoolExecutor(max_workers=8) as executor:
+        results = list(executor.map(stocks.lookup_stock, [f"STK{i}" for i in range(8)]))
+    assert len(results) == 8
+    assert len(price_cache.cached_tickers()) == 3
+
+
+def test_cached_currency_survives_an_outage(market):
+    stocks.lookup_stock("AAPL")
+    market["now"] += timedelta(hours=25)
+    market["fail"] = True
+    result = stocks.lookup_stock("AAPL")
+    assert result["currency"] == "USD"
+    assert result["latest_price"] > 0

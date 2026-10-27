@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { memo, useEffect, useRef, useState } from 'react';
 import type { FormEvent } from 'react';
 import {
   CartesianGrid,
@@ -21,6 +21,9 @@ interface Quote {
   name: string | null;
   latest_price: number;
   latest_date: string;
+  currency: 'USD';
+  stats_start_date: string | null;
+  stats_end_date: string | null;
   cagr: number | null;
   expected_annual_return: number | null;
   annual_volatility: number | null;
@@ -55,14 +58,22 @@ function loadHoldings(storageKey: string): Holding[] {
   }
 }
 
-async function fetchQuote(symbol: string): Promise<Quote> {
-  const response = await fetch(`${API_BASE}/market/stocks/${encodeURIComponent(symbol)}`);
+async function fetchQuote(symbol: string, signal?: AbortSignal): Promise<Quote> {
+  const response = await fetch(`${API_BASE}/market/stocks/${encodeURIComponent(symbol)}`, {
+    signal,
+  });
   const body = await response.json().catch(() => null);
   if (!response.ok) {
     throw new Error(
       typeof body?.detail === 'string'
         ? body.detail
         : `Could not load ${symbol} (${response.status}).`,
+    );
+  }
+  // Rejected unverified currencies, including responses from an outdated backend.
+  if (body?.currency !== 'USD') {
+    throw new Error(
+      'This stock needs a verified USD quote. Update the Python backend and try again.',
     );
   }
   return body as Quote;
@@ -91,9 +102,13 @@ export function Investing({ storageKey }: { storageKey: string }) {
   const [suggestions, setSuggestions] = useState<Suggestion[]>([]);
   const [symbol, setSymbol] = useState('');
   const [message, setMessage] = useState('');
-  const [busy, setBusy] = useState(false);
+  const [pending, setPending] = useState<string[]>([]);
   const [selected, setSelected] = useState<string | null>(null);
   const startup = useRef(holdings);
+  // Reserved symbols immediately so rapid clicks could not add duplicates or exceed the limit.
+  const reserved = useRef(new Set(holdings.map((holding) => holding.symbol)));
+  const requests = useRef(new Map<string, AbortController>());
+  const selectionIntent = useRef(0);
 
   useEffect(() => {
     try {
@@ -106,16 +121,30 @@ export function Investing({ storageKey }: { storageKey: string }) {
   useEffect(() => {
     // Prices are not saved with the holdings, so reload them for each saved stock.
     for (const { symbol: sym } of startup.current) {
+      const controller = new AbortController();
+      requests.current.set(sym, controller);
       setQuotes((current) => ({ ...current, [sym]: 'loading' }));
-      fetchQuote(sym)
-        .then((quote) => setQuotes((current) => ({ ...current, [sym]: quote })))
-        .catch((err) =>
+      fetchQuote(sym, controller.signal)
+        .then((quote) => {
+          if (!controller.signal.aborted) setQuotes((current) => ({ ...current, [sym]: quote }));
+        })
+        .catch((err) => {
+          if (controller.signal.aborted) return;
           setQuotes((current) => ({
             ...current,
             [sym]: { error: err instanceof Error ? err.message : `Could not load ${sym}.` },
-          })),
-        );
+          }));
+        })
+        .finally(() => {
+          if (requests.current.get(sym) === controller) requests.current.delete(sym);
+        });
     }
+    const activeRequests = requests.current;
+    // Cancelled outstanding quotes when leaving the tab, preventing stale results from returning.
+    return () => {
+      for (const controller of activeRequests.values()) controller.abort();
+      activeRequests.clear();
+    };
   }, []);
 
   useEffect(() => {
@@ -132,26 +161,39 @@ export function Investing({ storageKey }: { storageKey: string }) {
   async function addSymbol(raw: string) {
     const sym = raw.trim().toUpperCase();
     if (!sym) return;
-    if (holdings.some((h) => h.symbol === sym)) {
-      setMessage(`${sym} is already in your holdings.`);
+    if (requests.current.has(sym)) return;
+    if (reserved.current.has(sym)) {
+      setMessage(`${sym} is already in your holdings or is being loaded.`);
       return;
     }
-    if (holdings.length >= MAX_HOLDINGS) {
+    if (reserved.current.size >= MAX_HOLDINGS) {
       setMessage(`You can track up to ${MAX_HOLDINGS} stocks.`);
       return;
     }
-    setBusy(true);
+    reserved.current.add(sym);
+    const controller = new AbortController();
+    requests.current.set(sym, controller);
+    const intent = ++selectionIntent.current;
+    setPending((current) => [...current, sym]);
     setMessage('');
+    setSymbol('');
     try {
-      const quote = await fetchQuote(sym);
+      // Reused an already loaded quote when a removed stock was added again during this visit.
+      const savedQuote = quotes[sym];
+      const quote = isQuote(savedQuote) ? savedQuote : await fetchQuote(sym, controller.signal);
+      if (controller.signal.aborted) return;
       setQuotes((current) => ({ ...current, [sym]: quote }));
       setHoldings((current) => [...current, { symbol: sym, shares: 1 }]);
-      setSelected(sym);
-      setSymbol('');
+      // Preserved a newer chart choice if this request finished after another user action.
+      if (intent === selectionIntent.current) setSelected(sym);
     } catch (err) {
+      reserved.current.delete(sym);
+      if (controller.signal.aborted) return;
       setMessage(err instanceof Error ? err.message : `Could not add ${sym}.`);
     } finally {
-      setBusy(false);
+      if (requests.current.get(sym) === controller) requests.current.delete(sym);
+      if (!controller.signal.aborted)
+        setPending((current) => current.filter((item) => item !== sym));
     }
   }
 
@@ -180,14 +222,14 @@ export function Investing({ storageKey }: { storageKey: string }) {
   const chartQuote = isQuote(activeState) ? activeState : null;
   const available = suggestions.filter((s) => !holdings.some((h) => h.symbol === s.symbol));
 
-
   return (
     <section className="investing" aria-label="Stock holdings">
       <div>
         <div className="eyebrow">STOCKS</div>
         <h3>Your stock holdings</h3>
         <p className="investing-intro">
-          Search a ticker symbol, enter your shares, and see its price, value, and history.
+          Search a USD-priced ticker symbol, enter your shares, and see its price, value, and
+          history.
         </p>
       </div>
       <form
@@ -204,10 +246,18 @@ export function Investing({ storageKey }: { storageKey: string }) {
           maxLength={10}
           onChange={(event) => setSymbol(event.target.value)}
         />
-        <button className="button primary" type="submit" disabled={busy || !symbol.trim()}>
-          {busy ? 'Adding…' : 'Add stock'}
+        <button className="button primary" type="submit" disabled={!symbol.trim()}>
+          Add stock
         </button>
       </form>
+      <div className="stock-load-status" role="status" aria-live="polite">
+        {pending.length > 0 && (
+          <>
+            <span className="stock-loading-spinner" aria-hidden="true" />
+            Loading {pending.join(', ')}… You can keep browsing.
+          </>
+        )}
+      </div>
       {message && (
         <p className="negative" role="alert">
           {message}
@@ -223,10 +273,16 @@ export function Investing({ storageKey }: { storageKey: string }) {
                 type="button"
                 className="button quiet stock-chip"
                 title={s.name}
-                disabled={busy}
+                aria-busy={pending.includes(s.symbol)}
+                aria-disabled={pending.includes(s.symbol)}
                 onClick={() => void addSymbol(s.symbol)}
               >
-                + {s.symbol}
+                {pending.includes(s.symbol) ? (
+                  <span className="stock-loading-spinner" aria-hidden="true" />
+                ) : (
+                  '+'
+                )}{' '}
+                {s.symbol}
               </button>
             ))}
           </div>
@@ -234,7 +290,7 @@ export function Investing({ storageKey }: { storageKey: string }) {
       )}
       <div className="metric-grid">
         <div className="metric-card">
-          <span>Total stock value</span>
+          <span>Total stock value (USD)</span>
           <strong>{dollars(total)}</strong>
           <small>
             {holdings.length} {holdings.length === 1 ? 'stock' : 'stocks'}
@@ -254,8 +310,8 @@ export function Investing({ storageKey }: { storageKey: string }) {
                 <th>Shares</th>
                 <th>Price</th>
                 <th>Value</th>
-                <th>10-yr return</th>
-                <th>Volatility</th>
+                <th>Annualized return</th>
+                <th>Annualized volatility</th>
                 <th />
               </tr>
             </thead>
@@ -293,6 +349,11 @@ export function Investing({ storageKey }: { storageKey: string }) {
                       }
                     >
                       {percent(quote?.cagr)}
+                      {quote?.stats_start_date && quote.stats_end_date && (
+                        <small className="muted" style={{ display: 'block' }}>
+                          {quote.stats_start_date} to {quote.stats_end_date}
+                        </small>
+                      )}
                     </td>
                     <td>{percent(quote?.annual_volatility)}</td>
                     <td>
@@ -300,16 +361,22 @@ export function Investing({ storageKey }: { storageKey: string }) {
                         type="button"
                         className={`button ${sym === activeSymbol ? 'primary' : 'quiet'}`}
                         aria-pressed={sym === activeSymbol}
-                        onClick={() => setSelected(sym)}
+                        onClick={() => {
+                          selectionIntent.current++;
+                          setSelected(sym);
+                        }}
                       >
                         Chart
                       </button>{' '}
                       <button
                         type="button"
                         className="button danger"
-                        onClick={() =>
-                          setHoldings((current) => current.filter((h) => h.symbol !== sym))
-                        }
+                        onClick={() => {
+                          reserved.current.delete(sym);
+                          requests.current.get(sym)?.abort();
+                          requests.current.delete(sym);
+                          setHoldings((current) => current.filter((h) => h.symbol !== sym));
+                        }}
                       >
                         Remove
                       </button>
@@ -321,72 +388,85 @@ export function Investing({ storageKey }: { storageKey: string }) {
           </table>
         </div>
       )}
-      {chartQuote && (
-        <div>
-          <h4>
-            {chartQuote.symbol} · last year of prices{' '}
-            <small className="muted">as of {chartQuote.latest_date}</small>
-          </h4>
-          <div
-            className="investing-chart"
-            role="img"
-            aria-label={`${chartQuote.symbol} price history`}
-          >
-            <ResponsiveContainer width="100%" height="100%">
-              <LineChart
-                accessibilityLayer={false}
-                data={chartQuote.history}
-                margin={{ top: 10, right: 28, bottom: 10, left: 2 }}
-              >
-                <CartesianGrid strokeDasharray="3 7" stroke="#29364a" vertical={false} />
-                <XAxis
-                  dataKey="date"
-                  ticks={monthTicks(chartQuote.history)}
-                  tickFormatter={monthLabel}
-                  tick={{ fill: '#91a3bd', fontSize: 11 }}
-                  minTickGap={16}
-                  axisLine={false}
-                  tickLine={false}
-                />
-                <YAxis
-                  domain={['auto', 'auto']}
-                  tickFormatter={(value: number) => money(value)}
-                  width={70}
-                  tick={{ fill: '#91a3bd', fontSize: 11 }}
-                  axisLine={false}
-                  tickLine={false}
-                />
-                <Tooltip
-                  content={({ active, payload }) => {
-                    if (!active || !payload?.length) return null;
-                    const point = payload[0]?.payload as { date: string; close: number };
-                    return (
-                      <div className="chart-tooltip">
-                        <strong>{point.date}</strong>
-                        <div>
-                          <span>Close</span>
-                          <b>{dollars(point.close)}</b>
-                        </div>
-                      </div>
-                    );
-                  }}
-                />
-                <Line
-                  type="monotone"
-                  dataKey="close"
-                  stroke={colors.INVESTMENT}
-                  strokeWidth={2}
-                  dot={false}
-                />
-              </LineChart>
-            </ResponsiveContainer>
-          </div>
-        </div>
-      )}
+      {chartQuote && <StockPriceChart quote={chartQuote} />}
       <p className="investing-note">
         Prices come from Yahoo Finance and refresh about once a day. Past performance does not
-        predict future results. Holdings are saved in this browser only.
+        predict future results. Only verified USD-priced securities are supported; no currency
+        conversion is performed. Annualized return is compounded yearly growth over the dates shown,
+        using up to ten years of history. Volatility measures annualized daily price variation over
+        that same period. Both require at least one year of history. Charts use adjusted closing
+        prices, which account for splits and dividends. Holdings are saved in this browser only.
       </p>
     </section>
   );
 }
+
+// Isolated the chart from form edits and loading updates so an unchanged quote was not redrawn.
+const StockPriceChart = memo(function StockPriceChart({ quote: chartQuote }: { quote: Quote }) {
+  // Matched the line color to the net price change across the displayed history.
+  const chartHistory = chartQuote.history;
+  const chartChange =
+    chartHistory.length > 1
+      ? chartHistory[chartHistory.length - 1].close - chartHistory[0].close
+      : 0;
+  const chartColor = chartChange > 0 ? colors.INCOME : chartChange < 0 ? colors.DEBT : '#91a3bd';
+  return (
+    <div>
+      <h4>
+        {chartQuote.symbol} · recent adjusted prices (USD){' '}
+        <small className="muted">as of {chartQuote.latest_date}</small>
+      </h4>
+      <div className="investing-chart" role="img" aria-label={`${chartQuote.symbol} price history`}>
+        <ResponsiveContainer width="100%" height="100%">
+          <LineChart
+            accessibilityLayer={false}
+            data={chartQuote.history}
+            margin={{ top: 10, right: 28, bottom: 10, left: 2 }}
+          >
+            <CartesianGrid strokeDasharray="3 7" stroke="#29364a" vertical={false} />
+            <XAxis
+              dataKey="date"
+              ticks={monthTicks(chartQuote.history)}
+              tickFormatter={monthLabel}
+              tick={{ fill: '#91a3bd', fontSize: 11 }}
+              minTickGap={16}
+              axisLine={false}
+              tickLine={false}
+            />
+            <YAxis
+              domain={['auto', 'auto']}
+              tickFormatter={(value: number) => money(value)}
+              width={70}
+              tick={{ fill: '#91a3bd', fontSize: 11 }}
+              axisLine={false}
+              tickLine={false}
+            />
+            <Tooltip
+              content={({ active, payload }) => {
+                if (!active || !payload?.length) return null;
+                const point = payload[0]?.payload as { date: string; close: number };
+                return (
+                  <div className="chart-tooltip">
+                    <strong>{point.date}</strong>
+                    <div>
+                      <span>Close</span>
+                      <b>{dollars(point.close)}</b>
+                    </div>
+                  </div>
+                );
+              }}
+            />
+            <Line
+              type="monotone"
+              dataKey="close"
+              stroke={chartColor}
+              strokeWidth={2}
+              dot={false}
+              isAnimationActive={false}
+            />
+          </LineChart>
+        </ResponsiveContainer>
+      </div>
+    </div>
+  );
+});

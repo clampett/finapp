@@ -2758,6 +2758,38 @@ input[type='checkbox'] {
   flex-wrap: wrap;
   gap: 8px;
 }
+.stock-load-status {
+  min-height: 1.4em;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: #91a3bd;
+  font-size: 13px;
+}
+.stock-loading-spinner {
+  display: inline-block;
+  width: 12px;
+  height: 12px;
+  flex-shrink: 0;
+  border: 2px solid #344056;
+  border-top-color: #6ed9b5;
+  border-radius: 50%;
+  animation: stock-loading-spin 0.8s linear infinite;
+}
+.button.stock-chip[aria-busy='true'] {
+  cursor: progress;
+  border-color: #51607a;
+}
+@keyframes stock-loading-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .stock-loading-spinner {
+    animation: none;
+  }
+}
 .button.stock-chip {
   min-height: 28px;
   padding: 4px 11px;

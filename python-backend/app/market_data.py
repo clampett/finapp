@@ -10,10 +10,12 @@ from app.price_cache import get_prices
 # calibration in market_model.py reused the full-history cache without a ten-year cut.
 
 
-def get_ticker_stats(ticker: str, years: int = 10) -> dict:
+def get_ticker_stats(ticker: str, years: int = 10, prices: pd.Series | None = None) -> dict:
     """Trailing return and volatility for one ticker, from cached prices."""
     ticker = ticker.upper()
-    prices = get_prices(ticker)
+    # Reused the lookup snapshot when supplied, keeping the price and statistics consistent.
+    if prices is None:
+        prices = get_prices(ticker)
 
     cutoff = prices.index[-1] - pd.DateOffset(years=years)
     prices = prices[prices.index >= cutoff]

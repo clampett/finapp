@@ -1,5 +1,7 @@
 from fastapi import APIRouter, HTTPException
 
+from app.price_cache import UnsupportedCurrency
+
 from app.stocks import (
     POPULAR_STOCKS,
     InvalidSymbol,
@@ -21,6 +23,8 @@ def stock(symbol: str):
     try:
         return lookup_stock(symbol)
     except InvalidSymbol as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    except UnsupportedCurrency as e:
         raise HTTPException(status_code=400, detail=str(e))
     except SymbolNotFound as e:
         raise HTTPException(status_code=404, detail=str(e))

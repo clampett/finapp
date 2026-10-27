@@ -36,6 +36,7 @@ type QuoteState = Quote | { error: string } | 'loading';
 
 const STORAGE_KEY = 'finapp.holdings.v1';
 const MAX_HOLDINGS = 25;
+const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
 
 function loadHoldings(): Holding[] {
   try {
@@ -76,6 +77,14 @@ const errorOf = (state: QuoteState | undefined) =>
 
 const percent = (value: number | null | undefined) =>
   value === null || value === undefined ? '—' : `${(value * 100).toFixed(1)}%`;
+
+// One tick per month, so the same month label never repeats along the axis.
+const monthTicks = (history: { date: string }[]) =>
+  history
+    .filter((point, i) => i === 0 || point.date.slice(0, 7) !== history[i - 1].date.slice(0, 7))
+    .map((point) => point.date);
+
+const monthLabel = (date: string) => `${MONTHS[Number(date.slice(5, 7)) - 1]} ’${date.slice(2, 4)}`;
 
 export function Investing() {
   const [holdings, setHoldings] = useState<Holding[]>(loadHoldings);
@@ -172,12 +181,16 @@ export function Investing() {
   const chartQuote = isQuote(activeState) ? activeState : null;
 
   return (
-    <section aria-label="Stock holdings">
-      <div className="eyebrow">STOCKS</div>
-      <h3>Your stock holdings</h3>
-      <p>Search a ticker symbol, enter your shares, and see its price, value, and history.</p>
+    <section className="investing" aria-label="Stock holdings">
+      <div>
+        <div className="eyebrow">STOCKS</div>
+        <h3>Your stock holdings</h3>
+        <p className="investing-intro">
+          Search a ticker symbol, enter your shares, and see its price, value, and history.
+        </p>
+      </div>
       <form
-        className="button-row"
+        className="button-row investing-form"
         onSubmit={(event: FormEvent) => {
           event.preventDefault();
           void addSymbol(symbol);
@@ -185,7 +198,7 @@ export function Investing() {
       >
         <input
           aria-label="Ticker symbol"
-          placeholder="Ticker symbol, for example AAPL"
+          placeholder="Ticker symbol (for example AAPL)"
           value={symbol}
           maxLength={10}
           onChange={(event) => setSymbol(event.target.value)}
@@ -200,14 +213,14 @@ export function Investing() {
         </p>
       )}
       {suggestions.length > 0 && (
-        <div className="button-row">
+        <div className="stock-chips">
           {suggestions
             .filter((s) => !holdings.some((h) => h.symbol === s.symbol))
             .map((s) => (
               <button
                 key={s.symbol}
                 type="button"
-                className="button quiet"
+                className="button quiet stock-chip"
                 title={s.name}
                 disabled={busy}
                 onClick={() => void addSymbol(s.symbol)}
@@ -270,11 +283,7 @@ export function Investing() {
                     <td>{quote ? dollars(quote.latest_price * shares) : '—'}</td>
                     <td
                       className={
-                        quote && quote.cagr !== null
-                          ? quote.cagr >= 0
-                            ? 'positive'
-                            : 'negative'
-                          : ''
+                        quote && quote.cagr !== null ? (quote.cagr >= 0 ? 'positive' : 'negative') : ''
                       }
                     >
                       {percent(quote?.cagr)}
@@ -283,7 +292,8 @@ export function Investing() {
                     <td>
                       <button
                         type="button"
-                        className="button quiet"
+                        className={`button ${sym === activeSymbol ? 'primary' : 'quiet'}`}
+                        aria-pressed={sym === activeSymbol}
                         onClick={() => setSelected(sym)}
                       >
                         Chart
@@ -291,9 +301,7 @@ export function Investing() {
                       <button
                         type="button"
                         className="button danger"
-                        onClick={() =>
-                          setHoldings((current) => current.filter((h) => h.symbol !== sym))
-                        }
+                        onClick={() => setHoldings((current) => current.filter((h) => h.symbol !== sym))}
                       >
                         Remove
                       </button>
@@ -306,23 +314,29 @@ export function Investing() {
         </div>
       )}
       {chartQuote && (
-        <>
+        <div>
           <h4>
             {chartQuote.symbol} · last year of prices{' '}
             <small className="muted">as of {chartQuote.latest_date}</small>
           </h4>
-          <div style={{ height: 260 }} role="img" aria-label={`${chartQuote.symbol} price history`}>
+          <div
+            className="investing-chart"
+            role="img"
+            aria-label={`${chartQuote.symbol} price history`}
+          >
             <ResponsiveContainer width="100%" height="100%">
               <LineChart
+                accessibilityLayer={false}
                 data={chartQuote.history}
-                margin={{ top: 10, right: 20, bottom: 10, left: 2 }}
+                margin={{ top: 10, right: 28, bottom: 10, left: 2 }}
               >
                 <CartesianGrid strokeDasharray="3 7" stroke="#29364a" vertical={false} />
                 <XAxis
                   dataKey="date"
-                  tickFormatter={(value: string) => value.slice(0, 7)}
+                  ticks={monthTicks(chartQuote.history)}
+                  tickFormatter={monthLabel}
                   tick={{ fill: '#91a3bd', fontSize: 11 }}
-                  minTickGap={40}
+                  minTickGap={16}
                   axisLine={false}
                   tickLine={false}
                 />
@@ -359,9 +373,9 @@ export function Investing() {
               </LineChart>
             </ResponsiveContainer>
           </div>
-        </>
+        </div>
       )}
-      <p className="muted">
+      <p className="investing-note">
         Prices come from Yahoo Finance and refresh about once a day. Past performance does not
         predict future results. Holdings are saved in this browser only.
       </p>

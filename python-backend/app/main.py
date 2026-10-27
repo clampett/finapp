@@ -27,3 +27,4 @@ app.add_middleware(
 
 # Register the simulate router
 app.include_router(simulate.router)
+app.include_router(stocks.router)

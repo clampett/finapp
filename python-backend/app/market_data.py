@@ -10,9 +10,9 @@ from app.price_cache import get_prices
 # calibration in market_model.py reused the full-history cache without a ten-year cut.
 
 
-def get_market_stats(asset_class: str = DEFAULT_ASSET_CLASS, years: int = 10) -> dict:
-    """Trailing return and volatility for an asset class, from cached prices."""
-    ticker = ticker_for(asset_class)
+def get_ticker_stats(ticker: str, years: int = 10) -> dict:
+    """Trailing return and volatility for one ticker, from cached prices."""
+    ticker = ticker.upper()
     prices = get_prices(ticker)
 
     cutoff = prices.index[-1] - pd.DateOffset(years=years)
@@ -33,7 +33,6 @@ def get_market_stats(asset_class: str = DEFAULT_ASSET_CLASS, years: int = 10) ->
     expected_return = daily_returns.mean() * 252
 
     return {
-        "asset_class": asset_class.upper(),
         "ticker": ticker,
         "start_date": prices.index[0].date().isoformat(),
         "end_date": prices.index[-1].date().isoformat(),
@@ -41,3 +40,9 @@ def get_market_stats(asset_class: str = DEFAULT_ASSET_CLASS, years: int = 10) ->
         "expected_annual_return": round(float(expected_return), 4),
         "annual_volatility": round(float(volatility), 4),
     }
+
+
+def get_market_stats(asset_class: str = DEFAULT_ASSET_CLASS, years: int = 10) -> dict:
+    """Trailing return and volatility for an asset class, from cached prices."""
+    stats = get_ticker_stats(ticker_for(asset_class), years)
+    return {"asset_class": asset_class.upper(), **stats}

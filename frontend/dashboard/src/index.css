@@ -2710,3 +2710,72 @@ input[type='checkbox'] {
     padding: 17px;
   }
 }
+
+/* Investing tab: stock holdings */
+.investing {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  margin-bottom: 24px;
+}
+.investing h3,
+.investing h4,
+.investing p {
+  margin: 0;
+}
+.investing h3 {
+  font-size: 17px;
+  font-weight: 600;
+  letter-spacing: -0.2px;
+}
+.investing h4 {
+  font-size: 13px;
+  font-weight: 600;
+}
+.investing p {
+  font-size: 12px;
+  color: #8998b0;
+}
+.investing p.negative {
+  color: #fb8296;
+}
+.investing .investing-intro {
+  margin-top: 6px;
+}
+.investing .investing-note {
+  font-size: 11px;
+  color: #73839a;
+}
+.investing .eyebrow {
+  margin-bottom: 8px;
+}
+.investing-form input {
+  width: 260px;
+  max-width: 100%;
+}
+.stock-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.button.stock-chip {
+  min-height: 28px;
+  padding: 4px 11px;
+  border-radius: 999px;
+  border-color: #344056;
+}
+.button.stock-chip:hover:not(:disabled) {
+  border-color: #51607a;
+  color: #e5ecf7;
+}
+.investing .metric-grid {
+  grid-template-columns: repeat(auto-fit, minmax(200px, 260px));
+  margin-bottom: 0;
+}
+.investing .account-table-wrap {
+  min-height: 0;
+}
+.investing-chart {
+  height: 260px;
+  margin-top: 10px;
+}

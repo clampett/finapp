@@ -55,6 +55,8 @@ public class SecurityConfig {
                         "/api/v1/graph/3"
                     )
                     .permitAll()
+                    .requestMatchers(HttpMethod.GET, "/api/v1/market/**")
+                    .permitAll()
                     // The UI edits browser drafts. The old bulk-save endpoint
                     // has no ownership checks and must not be exposed publicly.
                     .requestMatchers(HttpMethod.POST, "/api/v1/graph")

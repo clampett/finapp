@@ -9,7 +9,7 @@ import com.finapp.javabackend.model.entity.UserSession;
 import com.finapp.javabackend.repository.AuthTokenRepository;
 import com.finapp.javabackend.repository.UserRepository;
 import com.finapp.javabackend.repository.UserSessionRepository;
-import com.finapp.javabackend.services.EmailService;
+import com.finapp.javabackend.service.EmailService;
 import jakarta.servlet.http.HttpServletRequest;
 import java.nio.charset.StandardCharsets;
 import java.time.LocalDateTime;

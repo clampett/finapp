@@ -7,7 +7,7 @@ import com.finapp.javabackend.dto.AuthRequest;
 import com.finapp.javabackend.model.entity.AuthToken;
 import com.finapp.javabackend.model.entity.User;
 import com.finapp.javabackend.repository.*;
-import com.finapp.javabackend.services.EmailService;
+import com.finapp.javabackend.service.EmailService;
 import java.time.LocalDateTime;
 import java.util.Map;
 import java.util.Optional;

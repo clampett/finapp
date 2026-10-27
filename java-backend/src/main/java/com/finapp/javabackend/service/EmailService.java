@@ -1,4 +1,4 @@
-package com.finapp.javabackend.services;
+package com.finapp.javabackend.service;
 
 import java.security.SecureRandom;
 import java.util.Locale;

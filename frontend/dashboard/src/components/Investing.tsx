@@ -270,7 +270,11 @@ export function Investing() {
                     <td>{quote ? dollars(quote.latest_price * shares) : '—'}</td>
                     <td
                       className={
-                        quote && quote.cagr !== null ? (quote.cagr >= 0 ? 'positive' : 'negative') : ''
+                        quote && quote.cagr !== null
+                          ? quote.cagr >= 0
+                            ? 'positive'
+                            : 'negative'
+                          : ''
                       }
                     >
                       {percent(quote?.cagr)}
@@ -287,7 +291,9 @@ export function Investing() {
                       <button
                         type="button"
                         className="button danger"
-                        onClick={() => setHoldings((current) => current.filter((h) => h.symbol !== sym))}
+                        onClick={() =>
+                          setHoldings((current) => current.filter((h) => h.symbol !== sym))
+                        }
                       >
                         Remove
                       </button>
@@ -307,7 +313,10 @@ export function Investing() {
           </h4>
           <div style={{ height: 260 }} role="img" aria-label={`${chartQuote.symbol} price history`}>
             <ResponsiveContainer width="100%" height="100%">
-              <LineChart data={chartQuote.history} margin={{ top: 10, right: 20, bottom: 10, left: 2 }}>
+              <LineChart
+                data={chartQuote.history}
+                margin={{ top: 10, right: 20, bottom: 10, left: 2 }}
+              >
                 <CartesianGrid strokeDasharray="3 7" stroke="#29364a" vertical={false} />
                 <XAxis
                   dataKey="date"

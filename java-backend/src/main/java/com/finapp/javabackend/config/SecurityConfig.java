@@ -55,6 +55,13 @@ public class SecurityConfig {
                         "/api/v1/graph/3"
                     )
                     .permitAll()
+                    // Limited anonymous market access to the two public quote routes.
+                    .requestMatchers(
+                        HttpMethod.GET,
+                        "/api/v1/market/stocks",
+                        "/api/v1/market/stocks/{symbol}"
+                    )
+                    .permitAll()
                     // The UI edits browser drafts. The old bulk-save endpoint
                     // has no ownership checks and must not be exposed publicly.
                     .requestMatchers(HttpMethod.POST, "/api/v1/graph")

@@ -15,6 +15,7 @@ import type { CanvasTool } from './graph-workspace';
 import { historyShortcut } from './ui-platform';
 import { BudgetControls } from './components/BudgetControls';
 import { DashboardTab } from './DashboardTab';
+import { Investing } from './components/Investing';
 import { clearSession, sessionHeaders } from './session';
 import { lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type { FormEvent } from 'react';
@@ -588,6 +589,12 @@ export function ArchetypeGraph({
         <>
           <div className="scenario-layout">
             <div className="scenario-main">
+              {view === 'investing' && (
+                <Investing
+                  key={`${demo}:${userId}`}
+                  storageKey={`finapp-holdings-v1:${demo ? 'demo' : 'user'}:${userId}`}
+                />
+              )}
               {view === 'overview' ? (
                 <DashboardTab graph={live} />
               ) : view === 'graph' ? (

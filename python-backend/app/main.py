@@ -1,6 +1,6 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from app.routers import simulate
+from app.routers import simulate, stocks
 from contextlib import asynccontextmanager
 from app.market_model import warm_market
 

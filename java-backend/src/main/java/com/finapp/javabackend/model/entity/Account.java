@@ -27,7 +27,7 @@ public class Account {
 
     @Enumerated(EnumType.STRING)
     @JdbcTypeCode(SqlTypes.NAMED_ENUM)
-    @Column(nullable = false)
+    @Column(name = "type", columnDefinition = "account_type", nullable = false)
     private AccountType type = AccountType.checking;
 
     @Column(name = "opening_balance", nullable = false, precision = 14, scale = 2)

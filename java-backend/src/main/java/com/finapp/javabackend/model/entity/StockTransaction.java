@@ -30,7 +30,7 @@ public class StockTransaction {
 
     @Enumerated(EnumType.STRING)
     @JdbcTypeCode(SqlTypes.NAMED_ENUM)
-    @Column(nullable = false)
+    @Column(name = "type", columnDefinition = "stock_txn_type", nullable = false)
     private StockTxnType type;
 
     @Column(precision = 18, scale = 6)

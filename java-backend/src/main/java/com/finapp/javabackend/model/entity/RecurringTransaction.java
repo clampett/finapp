@@ -33,7 +33,7 @@ public class RecurringTransaction {
 
     @Enumerated(EnumType.STRING)
     @JdbcTypeCode(SqlTypes.NAMED_ENUM)
-    @Column(nullable = false)
+    @Column(name = "kind", columnDefinition = "transaction_kind", nullable = false)
     private TransactionKind kind;
 
     @Column(nullable = false)
@@ -44,7 +44,7 @@ public class RecurringTransaction {
 
     @Enumerated(EnumType.STRING)
     @JdbcTypeCode(SqlTypes.NAMED_ENUM)
-    @Column(nullable = false)
+    @Column(name = "frequency", columnDefinition = "recurrence_frequency", nullable = false)
     private RecurrenceFrequency frequency;
 
     @Column(name = "interval_count", nullable = false)

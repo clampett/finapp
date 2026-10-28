@@ -35,7 +35,7 @@ public class Stock {
 
     @Enumerated(EnumType.STRING)
     @JdbcTypeCode(SqlTypes.NAMED_ENUM)
-    @Column(name = "dividend_frequency")
+    @Column(name = "dividend_frequency", columnDefinition = "dividend_frequency")
     private DividendFrequency dividendFrequency;
 
     @Column(name = "dividend_per_share", precision = 14, scale = 6)

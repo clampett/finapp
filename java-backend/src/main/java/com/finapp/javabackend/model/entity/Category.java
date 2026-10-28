@@ -26,7 +26,7 @@ public class Category {
 
     @Enumerated(EnumType.STRING)
     @JdbcTypeCode(SqlTypes.NAMED_ENUM)
-    @Column(nullable = false)
+    @Column(name = "kind", columnDefinition = "transaction_kind", nullable = false)
     private TransactionKind kind;
 
     @ManyToOne(fetch = FetchType.LAZY)

@@ -3,6 +3,7 @@ import { Canvas } from './components/Canvas';
 import { CanvasToolbar } from './components/CanvasToolbar';
 import { CanvasIcon } from './components/CanvasIcon';
 import { ConnectionEditor } from './components/ConnectionEditor';
+import { BudgetingTab } from './BudgetingTab';
 import {
   newHistory,
   placeNewNode,
@@ -520,9 +521,11 @@ export function ArchetypeGraph({
               ? 'Node Graph'
               : view === 'overview'
                 ? 'Your financial snapshot'
-                : view === 'budgeting'
+                : view === 'cashflow'
                   ? 'Monthly cash flow'
-                  : 'Savings & investments'}
+                  : view === 'budgeting'
+                    ? 'Budgeting & transactions'
+                    : 'Savings & investments'}
           </h2>
           <p>
             {live.nodes.length} nodes · {live.edges.length} connections{' '}
@@ -597,6 +600,8 @@ export function ArchetypeGraph({
               )}
               {view === 'overview' ? (
                 <DashboardTab graph={live} />
+              ) : view === 'budgeting' ? (
+                <BudgetingTab graph={live} />
               ) : view === 'graph' ? (
                 <Canvas
                   toolbar={toolbar}
@@ -637,7 +642,7 @@ export function ArchetypeGraph({
                       <tr>
                         <th>Account</th>
                         <th>Type</th>
-                        <th>{view === 'budgeting' ? 'Monthly flow / Balance' : 'Balance'}</th>
+                        <th>{view === 'cashflow' ? 'Monthly flow / Balance' : 'Balance'}</th>
                         <th>APR</th>
                         <th />
                       </tr>

@@ -9,13 +9,15 @@ import com.finapp.javabackend.model.entity.UserSession;
 import com.finapp.javabackend.repository.AuthTokenRepository;
 import com.finapp.javabackend.repository.UserRepository;
 import com.finapp.javabackend.repository.UserSessionRepository;
-import com.finapp.javabackend.services.EmailService;
+import com.finapp.javabackend.service.EmailService;
 import jakarta.servlet.http.HttpServletRequest;
 import java.nio.charset.StandardCharsets;
 import java.time.LocalDateTime;
 import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
+import com.finapp.javabackend.service.StockService;
+import java.util.concurrent.CompletableFuture;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpHeaders;
@@ -48,6 +50,9 @@ public class AuthController {
 
     @Autowired
     private AuthTokenRepository authTokenRepository;
+
+    @Autowired(required = false)
+    private StockService stockService;
 
     @PostMapping("/register")
     @Transactional
@@ -280,6 +285,17 @@ public class AuthController {
             .path("/")
             .sameSite("Strict")
             .build();
+
+        // 6. Update user's stock prices asynchronously upon login
+        if (stockService != null) {
+            final Long uid = user.getId();
+            CompletableFuture.runAsync(() -> {
+                try {
+                    stockService.updateAllStockPricesForUser(uid);
+                } catch (Exception ignored) {
+                }
+            });
+        }
 
         return ResponseEntity.ok()
             .header(HttpHeaders.SET_COOKIE, cookie.toString())

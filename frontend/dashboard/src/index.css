@@ -2780,6 +2780,16 @@ input[type='checkbox'] {
   cursor: progress;
   border-color: #51607a;
 }
+.budgeting-async-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  min-width: 120px;
+}
+.budgeting-async-button[aria-busy='true'] {
+  cursor: progress;
+}
 @keyframes stock-loading-spin {
   to {
     transform: rotate(360deg);

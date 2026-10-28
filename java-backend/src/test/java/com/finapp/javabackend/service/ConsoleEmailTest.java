@@ -3,7 +3,7 @@ package com.finapp.javabackend.service;
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.*;
 
-import com.finapp.javabackend.services.EmailService;
+import com.finapp.javabackend.service.EmailService;
 import java.io.ByteArrayOutputStream;
 import java.io.PrintStream;
 import org.junit.jupiter.api.Test;

@@ -3,9 +3,9 @@ const assert = require('node:assert/strict');
 const fs = require('node:fs');
 const vm = require('node:vm');
 const path = require('node:path');
-const { transformSync, buildSync } = require('./landing/node_modules/esbuild');
+const { transformSync, buildSync } = require('../landing/node_modules/esbuild/lib/main');
 const code = transformSync(
-  fs.readFileSync(path.join(__dirname, 'dashboard/src/finance.ts'), 'utf8'),
+  fs.readFileSync(path.join(__dirname, '../dashboard/src/finance.ts'), 'utf8'),
   {
     loader: 'ts',
     format: 'cjs',
@@ -18,7 +18,7 @@ const finance = runtime.module.exports;
 const workspaceRuntime = { module: { exports: {} } };
 vm.runInNewContext(
   buildSync({
-    entryPoints: [path.join(__dirname, 'dashboard/src/graph-workspace.ts')],
+    entryPoints: [path.join(__dirname, '../dashboard/src/graph-workspace.ts')],
     bundle: true,
     write: false,
     platform: 'node',
@@ -31,7 +31,7 @@ const workspace = workspaceRuntime.module.exports;
 const platformRuntime = { module: { exports: {} } };
 vm.runInNewContext(
   buildSync({
-    entryPoints: [path.join(__dirname, 'dashboard/src/ui-platform.ts')],
+    entryPoints: [path.join(__dirname, '../dashboard/src/ui-platform.ts')],
     bundle: true,
     write: false,
     platform: 'node',
@@ -41,7 +41,10 @@ vm.runInNewContext(
 );
 const platform = platformRuntime.module.exports;
 const sql = fs.readFileSync(
-  path.join(__dirname, '../java-backend/src/main/resources/db/migration/V2__Seed_archetypes.sql'),
+  path.join(
+    __dirname,
+    '../../java-backend/src/main/resources/db/migration/V2__Seed_archetypes.sql',
+  ),
   'utf8',
 );
 function demo(profile) {

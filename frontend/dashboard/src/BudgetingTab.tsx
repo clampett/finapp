@@ -324,12 +324,16 @@ export function BudgetingTab({ graph }: BudgetingTabProps) {
   // Derived account options from both backend accounts and graph nodes
   const availableAccounts: string[] = Array.from(
     new Set([
-      ...dbAccounts.map((a) => a.name),
-      ...(graph?.nodes?.filter((n) => ['CHECKING', 'SAVINGS', 'BROKERAGE'].includes(n.nodeType)).map((n) => n.name) ?? []),
+      ...dbAccounts.map((a) => (a.name.trim().toLowerCase() === 'checking account' ? 'Checking' : a.name)),
+      ...(graph?.nodes
+        ?.filter((n) => ['CHECKING', 'SAVINGS', 'BROKERAGE'].includes(n.nodeType))
+        .map((n) => (n.name.trim().toLowerCase() === 'checking account' ? 'Checking' : n.name)) ?? []),
       'Checking',
       'Savings',
     ]),
-  ).filter(Boolean);
+  )
+    .filter(Boolean)
+    .filter((acc) => acc.trim().toLowerCase() !== 'checking account');
 
   // --- Transaction Handlers ---
   const handleOpenAddTransaction = () => {
@@ -342,6 +346,10 @@ export function BudgetingTab({ graph }: BudgetingTabProps) {
     setEditingTransId(t.id ?? null);
     setTransDraft({
       ...t,
+      accountName:
+        t.accountName && t.accountName.trim().toLowerCase() === 'checking account'
+          ? 'Checking'
+          : t.accountName,
       transactionDate: t.transactionDate || t.date || new Date().toISOString().split('T')[0],
     });
     setShowTransForm(true);
@@ -1027,7 +1035,11 @@ export function BudgetingTab({ graph }: BudgetingTabProps) {
                         </span>
                       </td>
                       <td style={{ padding: '10px 12px', fontWeight: 500 }}>{t.description}</td>
-                      <td style={{ padding: '10px 12px', color: '#93c5fd' }}>{t.accountName || '—'}</td>
+                      <td style={{ padding: '10px 12px', color: '#93c5fd' }}>
+                        {t.accountName && t.accountName.trim().toLowerCase() === 'checking account'
+                          ? 'Checking'
+                          : (t.accountName || '—')}
+                      </td>
                       <td style={{ padding: '10px 12px', color: '#d1d5db' }}>{t.categoryName || '—'}</td>
                       <td
                         style={{

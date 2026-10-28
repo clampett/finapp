@@ -8,6 +8,26 @@ const PORT = process.env.PORT || 8080;
 // Render terminates TLS in front of this single public gateway.
 if (process.env.RENDER === 'true') app.set('trust proxy', 1);
 
+// Accepts only strict local paths for redirects:
+// - must be a string starting with exactly one "/"
+// - no protocol-relative "//" prefix
+// - no "://" in the path portion (the query string may contain URLs)
+// - no backslashes
+// - no control characters (CR, LF, tab, etc.)
+function isSafeLocalRedirectTarget(target) {
+  if (typeof target !== 'string' || target.length === 0) return false;
+  if (target[0] !== '/') return false;
+  if (target.startsWith('//')) return false;
+  if (target.includes('\\')) return false;
+  if (/[\u0000-\u001F\u007F]/.test(target)) return false;
+
+  // Only check the path portion (before any "?" or "#") for "://"
+  const pathPortion = target.split(/[?#]/, 1)[0];
+  if (pathPortion.includes('://')) return false;
+
+  return true;
+}
+
 app.use(
   '/api',
   rateLimit({ windowMs: 60 * 1000, limit: 120, standardHeaders: 'draft-7', legacyHeaders: false }),
@@ -45,8 +65,26 @@ app.use((req, res, next) => {
     return res.status(400).send('Invalid redirect path');
   }
 
-  const query = req.url.slice(req.path.length); // preserve ?query=string
-  res.redirect(301, clean + query);
+  // Rebuild query string from parsed query parameters instead of slicing raw URL
+  const queryParams = new URLSearchParams();
+  for (const [key, value] of Object.entries(req.query || {})) {
+    if (Array.isArray(value)) {
+      for (const v of value) {
+        if (typeof v === 'string') queryParams.append(key, v);
+      }
+    } else if (typeof value === 'string') {
+      queryParams.append(key, value);
+    }
+  }
+  const query = queryParams.toString();
+
+  // Final validation on the full computed redirect target
+  const redirectTarget = query ? `${clean}?${query}` : clean;
+  if (!isSafeLocalRedirectTarget(redirectTarget)) {
+    return res.status(400).send('Invalid redirect path');
+  }
+
+  res.redirect(301, redirectTarget);
 });
 
 // Static landing page at /

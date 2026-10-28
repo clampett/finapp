@@ -59,5 +59,4 @@ backups/
 *.dump
 *.backup
 .neon
-
 .agents/teamwork

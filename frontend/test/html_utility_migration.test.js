@@ -63,7 +63,7 @@ test('F3-T1-2 (Coverage): index.html eliminates preview component BEM classes', 
 
 test('F3-T1-3 (Coverage): index.html uses Tailwind layout utilities (flex, grid, max-w, mx-auto)', () => {
   const html = readPage('index.html');
-  assert.match(html, /\bmax-w-\[?1240px\]?|\bmax-w-7xl\b/, 'Missing max-width container utility on main/sections');
+  assert.match(html, /\bmax-w-\[?1240px\]?|\bmax-w-7xl\b|\bmax-w-310\b/, 'Missing max-width container utility on main/sections');
   assert.match(html, /\bmx-auto\b/, 'Missing mx-auto centering utility');
   assert.match(html, /\bflex\b/, 'Missing flexbox utility');
   assert.match(html, /\bgrid\b/, 'Missing grid utility');

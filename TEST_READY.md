@@ -17,10 +17,10 @@ The test infrastructure is located under `/mnt/shared/files/documents/Class/Soft
 |:---|:---|:---:|:---:|:---:|:---:|:---:|:---:|
 | `frontend/test/css_migration.test.js` | F1 (Landing @theme), F2 (style.css gutting), F7 (Dashboard @theme), F8 (index.css gutting) | 20 | 20 | 6 | 2 | **48** | **48/48 PASS** (100%) |
 | `frontend/test/html_utility_migration.test.js` | F3 (index.html), F4 (Auth pages), F5 (404.html), F14 (Interactive hooks & parity) | 20 | 20 | 4 | 2 | **46** | **46/46 PASS** (100%) |
-| `frontend/test/dashboard_utility_migration.test.js` | F9 (App shell & Nav), F10 (Canvas & D3), F11 (Modals & Labs), F14 (Dynamic states) | 20 | 20 | 4 | 2 | **46** | **36/46 PASS** (Worker M2 completing remaining TSX files) |
+| `frontend/test/dashboard_utility_migration.test.js` | F9 (App shell & Nav), F10 (Canvas & D3), F11 (Modals & Labs), F14 (Dynamic states) | 20 | 20 | 4 | 2 | **46** | **46/46 PASS** (100%) |
 | `frontend/test/build_verification.test.js` | F6 (Landing build), F12 (Dashboard build), F13 (Regression & deps), F14 (Artifact parity) | 15 | 15 | 2 | 4 | **36** | **36/36 PASS** (100%) |
 | `frontend/test/*.test.js` (Existing) | Baseline finance, budgeting, session, and proxy logic | - | - | - | - | **34** | **34/34 PASS** (100%) |
-| **Total Automated Tests** | | | | | | **210** | **200/210 PASS** (95.2%) |
+| **Total Automated Tests** | | | | | | **210** | **210/210 PASS** (100%) |
 
 ---
 

@@ -336,7 +336,7 @@ export function SimulationModal({
   const comparison = forecast?.debt_summary?.[strategy === 'avalanche' ? 'snowball' : 'avalanche'];
   return (
     <div
-      className="fixed inset-0 z-100 bg-[#04070dbd] backdrop-blur-md flex items-center justify-center p-[clamp(12px,3vw,40px)] max-[760px]:p-2"
+      className="fixed inset-0 z-50 bg-[#04070dbd] backdrop-blur-md flex items-center justify-center p-[clamp(12px,3vw,40px)] max-[760px]:p-2"
       onMouseDown={(e) => {
         if (e.target === e.currentTarget) onClose();
       }}

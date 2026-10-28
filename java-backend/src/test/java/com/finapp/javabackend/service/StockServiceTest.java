@@ -2,6 +2,7 @@ package com.finapp.javabackend.service;
 
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.argThat;
 import static org.mockito.Mockito.*;
 
 import com.finapp.javabackend.dto.CreateStockRequest;
@@ -78,6 +79,40 @@ class StockServiceTest {
         assertEquals("Apple Inc.", dto.companyName());
         assertTrue(dto.paysDividend());
         verify(stockTransactionRepository).save(any(StockTransaction.class));
+    }
+
+    @Test
+    void createStock_withPurchasePriceAndCurrentPrice_setsBothCorrectly() {
+        when(stockRepository.existsByUserIdAndTicker(3L, "NVDA")).thenReturn(false);
+        when(userRepository.findById(3L)).thenReturn(Optional.of(user));
+        when(stockRepository.save(any(Stock.class))).thenAnswer(i -> {
+            Stock s = i.getArgument(0);
+            s.setId(20L);
+            return s;
+        });
+
+        CreateStockRequest req = new CreateStockRequest(
+            "NVDA",
+            "NVIDIA Corporation",
+            "NASDAQ",
+            false,
+            null,
+            null,
+            new BigDecimal("130.00"), // current last price
+            new BigDecimal("5"),
+            3L,
+            new BigDecimal("100.00")  // price at purchase
+        );
+
+        StockDTO dto = stockService.createStock(3L, req);
+
+        assertNotNull(dto);
+        assertEquals(new BigDecimal("130.00"), dto.lastPrice());
+        verify(stockTransactionRepository).save(argThat(txn -> 
+            txn.getPricePerShare().compareTo(new BigDecimal("100.00")) == 0 &&
+            txn.getTotalAmount().compareTo(new BigDecimal("500.00")) == 0 &&
+            txn.getQuantity().compareTo(new BigDecimal("5")) == 0
+        ));
     }
 
     @Test

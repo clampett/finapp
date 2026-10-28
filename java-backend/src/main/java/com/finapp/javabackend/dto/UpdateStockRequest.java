@@ -11,6 +11,20 @@ public record UpdateStockRequest(
     DividendFrequency dividendFrequency,
     BigDecimal dividendPerShare,
     BigDecimal lastPrice,
-    BigDecimal sharesOwned
-) {}
+    BigDecimal sharesOwned,
+    BigDecimal purchasePrice
+) {
+    public UpdateStockRequest(
+        String ticker,
+        String companyName,
+        String exchange,
+        Boolean paysDividend,
+        DividendFrequency dividendFrequency,
+        BigDecimal dividendPerShare,
+        BigDecimal lastPrice,
+        BigDecimal sharesOwned
+    ) {
+        this(ticker, companyName, exchange, paysDividend, dividendFrequency, dividendPerShare, lastPrice, sharesOwned, null);
+    }
+}
 

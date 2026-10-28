@@ -1,8 +1,8 @@
 import { useEffect, useState } from 'react';
 import { ArchetypeGraph } from './graphs';
 import type { View } from './finance';
-import { demoProfile } from './finance';
-import { endSession } from './session';
+import { demoProfile, API_BASE } from './finance';
+import { endSession, sessionHeaders } from './session';
 // Defined navigation labels in one place so the sidebar and breadcrumb were
 // derived from the same selected view rather than separate UI state.
 const views: {
@@ -28,6 +28,13 @@ export default function App() {
   const [search, setSearch] = useState('');
   useEffect(() => {
     if (!demo && !userId) location.replace('/login');
+    if (!demo && userId) {
+      fetch(`${API_BASE}/stocks/refresh-prices`, {
+        method: 'POST',
+        headers: sessionHeaders(),
+        credentials: 'include',
+      }).catch(() => {});
+    }
   }, [demo, userId]);
   if (!demo && !userId) return null;
   return (

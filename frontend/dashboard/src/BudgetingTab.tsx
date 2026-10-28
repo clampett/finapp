@@ -37,6 +37,7 @@ export interface Stock {
   paysDividend?: boolean;
   dividendFrequency?: string | null;
   dividendPerShare?: number | null;
+  purchasePrice?: number;
   lastPrice: number;
   sharesOwned?: number;
 }
@@ -92,6 +93,7 @@ const initialTransaction = (): Transaction => ({
 const initialStock: Stock = {
   ticker: '',
   sharesOwned: 0,
+  purchasePrice: 0,
   lastPrice: 0,
   companyName: '',
   paysDividend: false,
@@ -134,6 +136,115 @@ export function BudgetingTab({ graph }: BudgetingTabProps) {
   const [stockDraft, setStockDraft] = useState<Stock>(initialStock);
   const [showStockForm, setShowStockForm] = useState(false);
   const [editingStockId, setEditingStockId] = useState<number | null>(null);
+  const [currentPrices, setCurrentPrices] = useState<Record<string, number>>({});
+  const [quotePrice, setQuotePrice] = useState<number | null>(null);
+  const [fetchingQuote, setFetchingQuote] = useState(false);
+
+  // Debounce-fetch live market quote when typing ticker in stock form
+  useEffect(() => {
+    if (!showStockForm) return;
+    const sym = stockDraft.ticker.trim().toUpperCase();
+    if (!sym || sym.length < 1) {
+      const timer = setTimeout(() => {
+        setQuotePrice(null);
+        setFetchingQuote(false);
+      }, 0);
+      return () => clearTimeout(timer);
+    }
+
+    const controller = new AbortController();
+    setFetchingQuote(true);
+
+    const timer = setTimeout(async () => {
+      try {
+        const res = await fetch(`${API_BASE}/market/stocks/${encodeURIComponent(sym)}`, {
+          signal: controller.signal,
+          headers: sessionHeaders(),
+          credentials: 'include',
+        });
+        if (res.ok) {
+          const data = await res.json();
+          if (data && typeof data.latest_price === 'number') {
+            setQuotePrice(data.latest_price);
+            setCurrentPrices((prev) => ({ ...prev, [sym]: data.latest_price }));
+            if (data.name) {
+              setStockDraft((prev) => ({
+                ...prev,
+                companyName: prev.companyName ? prev.companyName : data.name,
+              }));
+            }
+          } else {
+            setQuotePrice(null);
+          }
+        } else {
+          setQuotePrice(null);
+        }
+      } catch (err: unknown) {
+        if ((err as Error)?.name !== 'AbortError') {
+          setQuotePrice(null);
+        }
+      } finally {
+        setFetchingQuote(false);
+      }
+    }, 350);
+
+    return () => {
+      clearTimeout(timer);
+      controller.abort();
+    };
+  }, [stockDraft.ticker, showStockForm]);
+
+  // Refresh current market prices for all tracked stocks
+  const refreshCurrentPrices = useCallback(async (stockList: Stock[]) => {
+    const tickers = Array.from(new Set(stockList.map((s) => s.ticker.trim().toUpperCase()))).filter(Boolean);
+    if (tickers.length === 0) return;
+
+    const results = await Promise.allSettled(
+      tickers.map(async (ticker) => {
+        const res = await fetch(`${API_BASE}/market/stocks/${encodeURIComponent(ticker)}`, {
+          headers: sessionHeaders(),
+          credentials: 'include',
+        });
+        if (!res.ok) throw new Error('Not found');
+        const data = await res.json();
+        if (data && typeof data.latest_price === 'number') {
+          return { ticker, price: data.latest_price };
+        }
+        throw new Error('Invalid price data');
+      })
+    );
+
+    const priceMap: Record<string, number> = {};
+    results.forEach((r) => {
+      if (r.status === 'fulfilled' && r.value) {
+        priceMap[r.value.ticker] = r.value.price;
+      }
+    });
+
+    if (Object.keys(priceMap).length > 0) {
+      setCurrentPrices((prev) => ({ ...prev, ...priceMap }));
+
+      // Keep database last_price synced if stale
+      stockList.forEach((s) => {
+        const sym = s.ticker.trim().toUpperCase();
+        const livePrice = priceMap[sym];
+        if (livePrice !== undefined && s.id && Number(s.lastPrice) !== livePrice) {
+          fetch(`${API_BASE}/stocks/${s.id}`, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json', ...sessionHeaders() },
+            credentials: 'include',
+            body: JSON.stringify({
+              ticker: s.ticker,
+              companyName: s.companyName,
+              exchange: s.exchange,
+              lastPrice: livePrice,
+              sharesOwned: s.sharesOwned,
+            }),
+          }).catch(() => {});
+        }
+      });
+    }
+  }, []);
 
   // Stock Buy/Sell trade modal
   const [tradeModal, setTradeModal] = useState<{
@@ -181,7 +292,10 @@ export function BudgetingTab({ graph }: BudgetingTabProps) {
       }
       if (stockRes.status === 'fulfilled' && stockRes.value.ok) {
         const json = await stockRes.value.json();
-        if (json.data) setStocks(json.data);
+        if (json.data) {
+          setStocks(json.data);
+          refreshCurrentPrices(json.data);
+        }
       }
       if (posRes.status === 'fulfilled' && posRes.value.ok) {
         const json = await posRes.value.json();
@@ -201,7 +315,7 @@ export function BudgetingTab({ graph }: BudgetingTabProps) {
     } finally {
       setLoading(false);
     }
-  }, [userId]);
+  }, [userId, refreshCurrentPrices]);
 
   useEffect(() => {
     loadData();
@@ -305,33 +419,73 @@ export function BudgetingTab({ graph }: BudgetingTabProps) {
   const handleOpenAddStock = () => {
     setEditingStockId(null);
     setStockDraft(initialStock);
+    setQuotePrice(null);
     setShowStockForm(true);
   };
 
   const handleEditStock = (s: Stock) => {
+    const pos = positions.find((p) => p.stockId === s.id);
+    const sym = s.ticker?.toUpperCase() || '';
+    const livePrice = currentPrices[sym] ?? pos?.lastPrice ?? s.lastPrice;
+    const purchasePrice =
+      pos?.avgCostPerShare != null && Number(pos.avgCostPerShare) > 0
+        ? Number(pos.avgCostPerShare)
+        : Number(s.purchasePrice ?? s.lastPrice ?? 0);
+
     setEditingStockId(s.id ?? null);
     setStockDraft({
       ...s,
-      sharesOwned: positions.find((p) => p.stockId === s.id)?.sharesOwned ?? s.sharesOwned ?? 0,
+      purchasePrice,
+      sharesOwned: pos ? pos.sharesOwned : (s.sharesOwned ?? 0),
     });
+    setQuotePrice(livePrice);
     setShowStockForm(true);
   };
 
   const handleSaveStock = async (e?: FormEvent): Promise<void> => {
     if (e) e.preventDefault();
-    if (!stockDraft.ticker.trim()) {
+    const ticker = stockDraft.ticker.trim().toUpperCase();
+    if (!ticker) {
       setStatusMessage({ type: 'error', text: 'Ticker symbol is required.' });
       return;
     }
 
     try {
+      // 1. Fetch current price through java-backend -> python-backend
+      let currentPrice: number | null = quotePrice;
+      let companyName = stockDraft.companyName?.trim() || null;
+
+      if (currentPrice == null) {
+        try {
+          const res = await fetch(`${API_BASE}/market/stocks/${encodeURIComponent(ticker)}`, {
+            headers: sessionHeaders(),
+            credentials: 'include',
+          });
+          if (res.ok) {
+            const data = await res.json();
+            if (data && typeof data.latest_price === 'number') {
+              currentPrice = data.latest_price;
+              if (!companyName && data.name) {
+                companyName = data.name;
+              }
+            }
+          }
+        } catch {
+          // If market quote is unavailable, will fallback to purchase price
+        }
+      }
+
+      const purchasePrice = Number(stockDraft.purchasePrice ?? stockDraft.lastPrice) || 0;
+      const finalLastPrice = currentPrice != null && currentPrice > 0 ? currentPrice : purchasePrice;
+
       const endpoint = editingStockId ? `${API_BASE}/stocks/${editingStockId}` : `${API_BASE}/stocks`;
       const payload = {
         userId,
-        ticker: stockDraft.ticker.trim().toUpperCase(),
-        companyName: stockDraft.companyName?.trim() || null,
+        ticker,
+        companyName,
         exchange: stockDraft.exchange?.trim() || null,
-        lastPrice: Number(stockDraft.lastPrice) || 0,
+        purchasePrice,
+        lastPrice: finalLastPrice,
         sharesOwned: Number(stockDraft.sharesOwned) || 0,
         paysDividend: Boolean(stockDraft.paysDividend),
         dividendFrequency: stockDraft.paysDividend ? stockDraft.dividendFrequency : null,
@@ -350,13 +504,23 @@ export function BudgetingTab({ graph }: BudgetingTabProps) {
         throw new Error(errJson.message || 'Failed to save stock');
       }
 
+      if (finalLastPrice > 0) {
+        setCurrentPrices((prev) => ({
+          ...prev,
+          [ticker]: finalLastPrice,
+        }));
+      }
+
       setStatusMessage({
         type: 'success',
-        text: editingStockId ? 'Stock updated successfully.' : 'Stock added to portfolio.',
+        text: editingStockId
+          ? 'Stock updated successfully.'
+          : `Stock ${ticker} added. Current price: ${dollars(finalLastPrice)}.`,
       });
       setShowStockForm(false);
       setEditingStockId(null);
       setStockDraft(initialStock);
+      setQuotePrice(null);
       loadData();
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : 'Error saving stock';
@@ -388,13 +552,15 @@ export function BudgetingTab({ graph }: BudgetingTabProps) {
   // Trade Modal
   const handleOpenTrade = (s: Stock | StockPosition, type: 'buy' | 'sell') => {
     const sId = 'stockId' in s ? s.stockId : s.id!;
+    const sym = s.ticker?.toUpperCase() || '';
+    const livePrice = currentPrices[sym] ?? s.lastPrice ?? 0;
     setTradeModal({
       open: true,
       stockId: sId,
       ticker: s.ticker,
       type,
       quantity: 1,
-      price: s.lastPrice || 0,
+      price: livePrice,
       accountName: availableAccounts[0] || 'Brokerage',
       notes: '',
     });
@@ -544,7 +710,29 @@ export function BudgetingTab({ graph }: BudgetingTabProps) {
 
   const netCashFlow = totalIncome - totalExpense;
 
-  const totalPortfolioValue = positions.reduce((sum, p) => sum + Number(p.marketValue || 0), 0);
+  const totalPurchasedValue = positions.length > 0
+    ? positions.reduce((sum, p) => sum + Number(p.costBasis || 0), 0)
+    : stocks.reduce((sum, s) => {
+        const shares = Number(s.sharesOwned || 0);
+        const purchasePrice = Number(s.purchasePrice ?? s.lastPrice ?? 0);
+        return sum + (shares * purchasePrice);
+      }, 0);
+
+  const totalPortfolioValue = positions.length > 0
+    ? positions.reduce((sum, p) => {
+        const sym = p.ticker?.toUpperCase() || '';
+        const currentPrice = currentPrices[sym] !== undefined
+          ? currentPrices[sym]
+          : Number(p.lastPrice || 0);
+        return sum + (Number(p.sharesOwned || 0) * Number(currentPrice));
+      }, 0)
+    : stocks.reduce((sum, s) => {
+        const sym = s.ticker?.toUpperCase() || '';
+        const currentPrice = currentPrices[sym] !== undefined
+          ? currentPrices[sym]
+          : Number(s.lastPrice || 0);
+        return sum + (Number(s.sharesOwned || 0) * Number(currentPrice));
+      }, 0);
 
   return (
     <div className="dashboard-tab" style={{ padding: '1rem', maxWidth: '1200px', margin: '0 auto' }}>
@@ -617,6 +805,11 @@ export function BudgetingTab({ graph }: BudgetingTabProps) {
           <div style={{ fontSize: '1.5rem', fontWeight: 600, color: '#38bdf8', marginTop: '4px' }}>
             {dollars(totalPortfolioValue)}
           </div>
+          {totalPurchasedValue > 0 && (
+            <div style={{ fontSize: '12px', marginTop: '4px', color: totalPortfolioValue >= totalPurchasedValue ? '#4ade80' : '#f87171' }}>
+              {totalPortfolioValue >= totalPurchasedValue ? '+' : ''}{dollars(totalPortfolioValue - totalPurchasedValue)} ({(((totalPortfolioValue - totalPurchasedValue) / totalPurchasedValue) * 100).toFixed(2)}%)
+            </div>
+          )}
         </div>
       </div>
 
@@ -881,7 +1074,16 @@ export function BudgetingTab({ graph }: BudgetingTabProps) {
         <section aria-labelledby="stocks-section-heading">
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
             <div>
-              <h3 id="stocks-section-heading" style={{ margin: 0 }}>Stock Holdings & Valuations</h3>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '12px', flexWrap: 'wrap' }}>
+                <h3 id="stocks-section-heading" style={{ margin: 0, display: 'inline-flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+                  <span>Stock Holdings & Valuations</span>
+                  {stocks.length > 0 && (
+                    <span style={{ fontSize: '14px', fontWeight: 500, color: '#8f9db3', display: 'inline-flex', gap: '6px', alignItems: 'center' }}>
+                      (Purchased Price: <strong style={{ color: '#cbd5e1' }}>{dollars(totalPurchasedValue)}</strong> | Current Price: <strong style={{ color: totalPortfolioValue >= totalPurchasedValue ? '#4ade80' : '#f87171' }}>{dollars(totalPortfolioValue)}</strong>)
+                    </span>
+                  )}
+                </h3>
+              </div>
               <p className="muted small" style={{ margin: '2px 0 0 0' }}>Track shares, cost basis, market prices, and buy/sell operations.</p>
             </div>
             <button
@@ -913,6 +1115,43 @@ export function BudgetingTab({ graph }: BudgetingTabProps) {
                 </label>
 
                 <label style={{ display: 'flex', flexDirection: 'column', gap: '4px', fontSize: '13px' }}>
+                  Price at Purchase ($)
+                  <NumberField
+                    min="0"
+                    step="0.01"
+                    required
+                    value={String(stockDraft.purchasePrice ?? stockDraft.lastPrice ?? '')}
+                    onChange={(e) => setStockDraft((prev) => ({ ...prev, purchasePrice: Number(e.target.value) }))}
+                    style={{ padding: '8px', borderRadius: '4px', background: '#0f141e', border: '1px solid #283347', color: 'white' }}
+                  />
+                </label>
+
+                <label style={{ display: 'flex', flexDirection: 'column', gap: '4px', fontSize: '13px' }}>
+                  Shares Owned
+                  <NumberField
+                    min="0"
+                    step="0.0001"
+                    required
+                    value={String(stockDraft.sharesOwned ?? 0)}
+                    onChange={(e) => setStockDraft((prev) => ({ ...prev, sharesOwned: Number(e.target.value) }))}
+                    style={{ padding: '8px', borderRadius: '4px', background: '#0f141e', border: '1px solid #283347', color: 'white' }}
+                  />
+                </label>
+
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', fontSize: '13px' }}>
+                  <span style={{ color: '#8f9db3' }}>Current Price ($)</span>
+                  <div style={{ padding: '8px 12px', borderRadius: '4px', background: '#0f141e', border: '1px solid #283347', minHeight: '38px', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    {fetchingQuote ? (
+                      <span style={{ color: '#93c5fd', fontSize: '12px' }}>Fetching current price...</span>
+                    ) : quotePrice != null ? (
+                      <span style={{ color: '#4ade80', fontWeight: 600 }}>{dollars(quotePrice)}</span>
+                    ) : (
+                      <span style={{ color: '#64748b', fontSize: '12px' }}>Auto-fetched from market</span>
+                    )}
+                  </div>
+                </div>
+
+                <label style={{ display: 'flex', flexDirection: 'column', gap: '4px', fontSize: '13px' }}>
                   Company Name (optional)
                   <input
                     type="text"
@@ -922,31 +1161,6 @@ export function BudgetingTab({ graph }: BudgetingTabProps) {
                     style={{ padding: '8px', borderRadius: '4px', background: '#0f141e', border: '1px solid #283347', color: 'white' }}
                   />
                 </label>
-
-                <label style={{ display: 'flex', flexDirection: 'column', gap: '4px', fontSize: '13px' }}>
-                  Last Price ($)
-                  <NumberField
-                    min="0"
-                    step="0.01"
-                    required
-                    value={String(stockDraft.lastPrice)}
-                    onChange={(e) => setStockDraft((prev) => ({ ...prev, lastPrice: Number(e.target.value) }))}
-                    style={{ padding: '8px', borderRadius: '4px', background: '#0f141e', border: '1px solid #283347', color: 'white' }}
-                  />
-                </label>
-
-                {!editingStockId && (
-                  <label style={{ display: 'flex', flexDirection: 'column', gap: '4px', fontSize: '13px' }}>
-                    Initial Shares Owned
-                    <NumberField
-                      min="0"
-                      step="0.0001"
-                      value={String(stockDraft.sharesOwned || 0)}
-                      onChange={(e) => setStockDraft((prev) => ({ ...prev, sharesOwned: Number(e.target.value) }))}
-                      style={{ padding: '8px', borderRadius: '4px', background: '#0f141e', border: '1px solid #283347', color: 'white' }}
-                    />
-                  </label>
-                )}
 
                 <div style={{ display: 'flex', alignItems: 'center', gap: '8px', gridColumn: '1 / -1', marginTop: '0.25rem' }}>
                   <input
@@ -1110,7 +1324,8 @@ export function BudgetingTab({ graph }: BudgetingTabProps) {
                     <th style={{ padding: '12px' }}>Ticker</th>
                     <th style={{ padding: '12px' }}>Company</th>
                     <th style={{ padding: '12px', textAlign: 'right' }}>Shares Owned</th>
-                    <th style={{ padding: '12px', textAlign: 'right' }}>Last Price</th>
+                    <th style={{ padding: '12px', textAlign: 'right' }}>Purchased Price</th>
+                    <th style={{ padding: '12px', textAlign: 'right' }}>Current Price</th>
                     <th style={{ padding: '12px', textAlign: 'right' }}>Market Value</th>
                     <th style={{ padding: '12px', textAlign: 'right' }}>Cost Basis</th>
                     <th style={{ padding: '12px', textAlign: 'right' }}>Dividends</th>
@@ -1120,9 +1335,17 @@ export function BudgetingTab({ graph }: BudgetingTabProps) {
                 <tbody>
                   {stocks.map((stock) => {
                     const pos = positions.find((p) => p.stockId === stock.id);
-                    const shares = pos ? pos.sharesOwned : stock.sharesOwned || 0;
-                    const marketVal = pos ? pos.marketValue : shares * stock.lastPrice;
-                    const costBasis = pos ? pos.costBasis : 0;
+                    const shares = pos ? Number(pos.sharesOwned || 0) : Number(stock.sharesOwned || 0);
+                    const sym = stock.ticker?.toUpperCase() || '';
+                    const currentPrice = currentPrices[sym] !== undefined
+                      ? currentPrices[sym]
+                      : (pos?.lastPrice ?? stock.lastPrice ?? 0);
+                    const purchasedPrice =
+                      pos?.avgCostPerShare != null && Number(pos.avgCostPerShare) > 0
+                        ? Number(pos.avgCostPerShare)
+                        : Number(stock.purchasePrice ?? stock.lastPrice ?? 0);
+                    const marketVal = shares * currentPrice;
+                    const costBasis = pos?.costBasis ? Number(pos.costBasis) : shares * purchasedPrice;
                     const totalDiv = pos ? pos.totalDividends : 0;
 
                     return (
@@ -1130,7 +1353,10 @@ export function BudgetingTab({ graph }: BudgetingTabProps) {
                         <td style={{ padding: '10px 12px', fontWeight: 700, color: '#38bdf8' }}>{stock.ticker}</td>
                         <td style={{ padding: '10px 12px', color: '#cbd5e1' }}>{stock.companyName || '—'}</td>
                         <td style={{ padding: '10px 12px', textAlign: 'right', fontWeight: 600 }}>{Number(shares).toFixed(4).replace(/\.?0+$/, '')}</td>
-                        <td style={{ padding: '10px 12px', textAlign: 'right' }}>{dollars(stock.lastPrice)}</td>
+                        <td style={{ padding: '10px 12px', textAlign: 'right' }}>{dollars(purchasedPrice)}</td>
+                        <td style={{ padding: '10px 12px', textAlign: 'right', fontWeight: 600, color: currentPrice >= purchasedPrice ? '#4ade80' : '#f87171' }}>
+                          {dollars(currentPrice)}
+                        </td>
                         <td style={{ padding: '10px 12px', textAlign: 'right', fontWeight: 600, color: '#4ade80' }}>
                           {dollars(marketVal)}
                         </td>

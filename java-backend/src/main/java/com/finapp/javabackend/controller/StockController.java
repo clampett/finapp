@@ -87,5 +87,12 @@ public class StockController {
         stockService.deleteStock(userId, id);
         return ResponseEntity.ok(ApiResponse.success(null, "Stock deleted successfully"));
     }
+
+    @PostMapping("/refresh-prices")
+    public ResponseEntity<ApiResponse<Void>> refreshPrices(Authentication authentication) {
+        Long userId = getUserId(authentication);
+        stockService.updateAllStockPricesForUser(userId);
+        return ResponseEntity.ok(ApiResponse.success(null, "Stock prices refreshed successfully"));
+    }
 }
 

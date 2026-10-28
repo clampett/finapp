@@ -12,5 +12,6 @@ public interface StockService {
     StockDTO createStock(Long userId, CreateStockRequest request);
     StockDTO updateStock(Long userId, Long stockId, UpdateStockRequest request);
     void deleteStock(Long userId, Long stockId);
+    void updateAllStockPricesForUser(Long userId);
 }
 

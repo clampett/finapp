@@ -12,6 +12,21 @@ public record CreateStockRequest(
     BigDecimal dividendPerShare,
     BigDecimal lastPrice,
     BigDecimal sharesOwned,
-    Long userId
-) {}
+    Long userId,
+    BigDecimal purchasePrice
+) {
+    public CreateStockRequest(
+        String ticker,
+        String companyName,
+        String exchange,
+        Boolean paysDividend,
+        DividendFrequency dividendFrequency,
+        BigDecimal dividendPerShare,
+        BigDecimal lastPrice,
+        BigDecimal sharesOwned,
+        Long userId
+    ) {
+        this(ticker, companyName, exchange, paysDividend, dividendFrequency, dividendPerShare, lastPrice, sharesOwned, userId, null);
+    }
+}
 

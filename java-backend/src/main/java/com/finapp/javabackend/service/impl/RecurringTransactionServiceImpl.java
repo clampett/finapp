@@ -48,7 +48,9 @@ public class RecurringTransactionServiceImpl implements RecurringTransactionServ
     @Override
     @Transactional(readOnly = true)
     public List<RecurringTransactionDTO> getRecurringTransactions(Long userId) {
-        return recurringRepository.findByUserId(userId).stream()
+        return recurringRepository
+            .findByUserId(userId)
+            .stream()
             .map(EntityDtoMapper::toDto)
             .toList();
     }
@@ -56,40 +58,68 @@ public class RecurringTransactionServiceImpl implements RecurringTransactionServ
     @Override
     @Transactional(readOnly = true)
     public RecurringTransactionDTO getRecurringTransaction(Long userId, Long id) {
-        RecurringTransaction recurring = recurringRepository.findByIdAndUserId(id, userId)
-            .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Recurring transaction template not found"));
+        RecurringTransaction recurring = recurringRepository
+            .findByIdAndUserId(id, userId)
+            .orElseThrow(() ->
+                new ResponseStatusException(
+                    HttpStatus.NOT_FOUND,
+                    "Recurring transaction template not found"
+                )
+            );
         return EntityDtoMapper.toDto(recurring);
     }
 
     @Override
-    public RecurringTransactionDTO createRecurringTransaction(Long userId, CreateRecurringTransactionRequest request) {
+    public RecurringTransactionDTO createRecurringTransaction(
+        Long userId,
+        CreateRecurringTransactionRequest request
+    ) {
         if (request == null) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Request cannot be empty");
         }
         if (request.kind() == null) {
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Kind (income/expense) is required");
+            throw new ResponseStatusException(
+                HttpStatus.BAD_REQUEST,
+                "Kind (income/expense) is required"
+            );
         }
         if (request.frequency() == null) {
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Recurrence frequency is required");
+            throw new ResponseStatusException(
+                HttpStatus.BAD_REQUEST,
+                "Recurrence frequency is required"
+            );
         }
         if (request.amount() == null || request.amount().compareTo(BigDecimal.ZERO) <= 0) {
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Amount must be strictly greater than 0");
+            throw new ResponseStatusException(
+                HttpStatus.BAD_REQUEST,
+                "Amount must be strictly greater than 0"
+            );
         }
         if (request.description() == null || request.description().trim().isEmpty()) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Description is required");
         }
 
-        User user = userRepository.findById(userId)
+        User user = userRepository
+            .findById(userId)
             .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "User not found"));
 
         LocalDate startDate = request.effectiveStartDate();
         LocalDate endDate = request.endDate();
         if (endDate != null && endDate.isBefore(startDate)) {
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "End date cannot be before start date");
+            throw new ResponseStatusException(
+                HttpStatus.BAD_REQUEST,
+                "End date cannot be before start date"
+            );
         }
 
         Account account = resolveAccount(userId, user, request.accountId(), request.accountName());
-        Category category = resolveCategory(userId, user, request.categoryId(), request.categoryName(), request.kind());
+        Category category = resolveCategory(
+            userId,
+            user,
+            request.categoryId(),
+            request.categoryName(),
+            request.kind()
+        );
 
         RecurringTransaction recurring = new RecurringTransaction();
         recurring.setUser(user);
@@ -112,16 +142,29 @@ public class RecurringTransactionServiceImpl implements RecurringTransactionServ
     }
 
     @Override
-    public RecurringTransactionDTO updateRecurringTransaction(Long userId, Long id, UpdateRecurringTransactionRequest request) {
-        RecurringTransaction recurring = recurringRepository.findByIdAndUserId(id, userId)
-            .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Recurring transaction template not found"));
+    public RecurringTransactionDTO updateRecurringTransaction(
+        Long userId,
+        Long id,
+        UpdateRecurringTransactionRequest request
+    ) {
+        RecurringTransaction recurring = recurringRepository
+            .findByIdAndUserId(id, userId)
+            .orElseThrow(() ->
+                new ResponseStatusException(
+                    HttpStatus.NOT_FOUND,
+                    "Recurring transaction template not found"
+                )
+            );
 
         if (request.kind() != null) {
             recurring.setKind(request.kind());
         }
         if (request.amount() != null) {
             if (request.amount().compareTo(BigDecimal.ZERO) <= 0) {
-                throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Amount must be greater than 0");
+                throw new ResponseStatusException(
+                    HttpStatus.BAD_REQUEST,
+                    "Amount must be greater than 0"
+                );
             }
             recurring.setAmount(request.amount());
         }
@@ -138,8 +181,14 @@ public class RecurringTransactionServiceImpl implements RecurringTransactionServ
             recurring.setStartDate(request.startDate());
         }
         if (request.endDate() != null) {
-            if (recurring.getStartDate() != null && request.endDate().isBefore(recurring.getStartDate())) {
-                throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "End date cannot be before start date");
+            if (
+                recurring.getStartDate() != null &&
+                request.endDate().isBefore(recurring.getStartDate())
+            ) {
+                throw new ResponseStatusException(
+                    HttpStatus.BAD_REQUEST,
+                    "End date cannot be before start date"
+                );
             }
             recurring.setEndDate(request.endDate());
         }
@@ -153,11 +202,32 @@ public class RecurringTransactionServiceImpl implements RecurringTransactionServ
             recurring.setNotes(request.notes());
         }
 
-        if (request.accountId() != null || (request.accountName() != null && !request.accountName().trim().isEmpty())) {
-            recurring.setAccount(resolveAccount(userId, recurring.getUser(), request.accountId(), request.accountName()));
+        if (request.accountId() != null || request.accountName() != null) {
+            recurring.setAccount(
+                resolveAccount(
+                    userId,
+                    recurring.getUser(),
+                    request.accountId(),
+                    request.accountName()
+                )
+            );
         }
-        if (request.categoryId() != null || (request.categoryName() != null && !request.categoryName().trim().isEmpty())) {
-            recurring.setCategory(resolveCategory(userId, recurring.getUser(), request.categoryId(), request.categoryName(), recurring.getKind()));
+        if (request.categoryId() != null || request.categoryName() != null) {
+            recurring.setCategory(
+                resolveCategory(
+                    userId,
+                    recurring.getUser(),
+                    request.categoryId(),
+                    request.categoryName(),
+                    recurring.getKind()
+                )
+            );
+        } else if (
+            recurring.getCategory() != null &&
+            recurring.getCategory().getKind() != recurring.getKind()
+        ) {
+            // Cleared the old category when the recurring rule changed its income/expense kind.
+            recurring.setCategory(null);
         }
 
         recurring.setUpdatedAt(OffsetDateTime.now());
@@ -166,15 +236,25 @@ public class RecurringTransactionServiceImpl implements RecurringTransactionServ
 
     @Override
     public void deleteRecurringTransaction(Long userId, Long id) {
-        RecurringTransaction recurring = recurringRepository.findByIdAndUserId(id, userId)
-            .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Recurring transaction template not found"));
+        RecurringTransaction recurring = recurringRepository
+            .findByIdAndUserId(id, userId)
+            .orElseThrow(() ->
+                new ResponseStatusException(
+                    HttpStatus.NOT_FOUND,
+                    "Recurring transaction template not found"
+                )
+            );
         recurringRepository.delete(recurring);
     }
 
     @Override
     public List<TransactionDTO> generateDueTransactions(Long userId, LocalDate throughDate) {
         LocalDate target = throughDate != null ? throughDate : LocalDate.now();
-        List<RecurringTransaction> dueList = recurringRepository.findByUserIdAndIsActiveTrueAndNextDueDateLessThanEqual(userId, target);
+        List<RecurringTransaction> dueList =
+            recurringRepository.findByUserIdAndIsActiveTrueAndNextDueDateLessThanEqual(
+                userId,
+                target
+            );
         List<TransactionDTO> generated = new ArrayList<>();
 
         for (RecurringTransaction recurring : dueList) {
@@ -185,20 +265,34 @@ public class RecurringTransactionServiceImpl implements RecurringTransactionServ
     }
 
     @Override
-    public List<TransactionDTO> generateForRecurringTransaction(Long userId, Long recurringId, LocalDate throughDate) {
-        RecurringTransaction recurring = recurringRepository.findByIdAndUserId(recurringId, userId)
-            .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Recurring transaction template not found"));
+    public List<TransactionDTO> generateForRecurringTransaction(
+        Long userId,
+        Long recurringId,
+        LocalDate throughDate
+    ) {
+        RecurringTransaction recurring = recurringRepository
+            .findByIdAndUserId(recurringId, userId)
+            .orElseThrow(() ->
+                new ResponseStatusException(
+                    HttpStatus.NOT_FOUND,
+                    "Recurring transaction template not found"
+                )
+            );
         LocalDate target = throughDate != null ? throughDate : LocalDate.now();
         return processOccurrences(recurring, target);
     }
 
-    private List<TransactionDTO> processOccurrences(RecurringTransaction recurring, LocalDate target) {
+    private List<TransactionDTO> processOccurrences(
+        RecurringTransaction recurring,
+        LocalDate target
+    ) {
         List<TransactionDTO> result = new ArrayList<>();
 
-        while (Boolean.TRUE.equals(recurring.getIsActive()) &&
-               recurring.getNextDueDate() != null &&
-               !recurring.getNextDueDate().isAfter(target)) {
-
+        while (
+            Boolean.TRUE.equals(recurring.getIsActive()) &&
+            recurring.getNextDueDate() != null &&
+            !recurring.getNextDueDate().isAfter(target)
+        ) {
             LocalDate occurrenceDate = recurring.getNextDueDate();
 
             if (recurring.getEndDate() != null && occurrenceDate.isAfter(recurring.getEndDate())) {
@@ -207,7 +301,12 @@ public class RecurringTransactionServiceImpl implements RecurringTransactionServ
             }
 
             // Check if occurrence already exists to prevent duplicate
-            if (!transactionRepository.existsByRecurringTransactionIdAndTransactionDate(recurring.getId(), occurrenceDate)) {
+            if (
+                !transactionRepository.existsByRecurringTransactionIdAndTransactionDate(
+                    recurring.getId(),
+                    occurrenceDate
+                )
+            ) {
                 Transaction txn = new Transaction();
                 txn.setUser(recurring.getUser());
                 txn.setAccount(recurring.getAccount());
@@ -225,7 +324,11 @@ public class RecurringTransactionServiceImpl implements RecurringTransactionServ
                 result.add(EntityDtoMapper.toDto(saved));
             }
 
-            LocalDate nextDue = calculateNextDate(occurrenceDate, recurring.getFrequency(), recurring.getIntervalCount());
+            LocalDate nextDue = calculateNextDate(
+                occurrenceDate,
+                recurring.getFrequency(),
+                recurring.getIntervalCount()
+            );
             recurring.setNextDueDate(nextDue);
 
             if (recurring.getEndDate() != null && nextDue.isAfter(recurring.getEndDate())) {
@@ -238,7 +341,11 @@ public class RecurringTransactionServiceImpl implements RecurringTransactionServ
         return result;
     }
 
-    public static LocalDate calculateNextDate(LocalDate current, RecurrenceFrequency frequency, int intervalCount) {
+    public static LocalDate calculateNextDate(
+        LocalDate current,
+        RecurrenceFrequency frequency,
+        int intervalCount
+    ) {
         int count = Math.max(1, intervalCount);
         return switch (frequency) {
             case daily -> current.plusDays(count);
@@ -252,8 +359,14 @@ public class RecurringTransactionServiceImpl implements RecurringTransactionServ
 
     private Account resolveAccount(Long userId, User user, Long accountId, String accountName) {
         if (accountId != null) {
-            return accountRepository.findByIdAndUserId(accountId, userId)
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.BAD_REQUEST, "Account not found for user"));
+            return accountRepository
+                .findByIdAndUserId(accountId, userId)
+                .orElseThrow(() ->
+                    new ResponseStatusException(
+                        HttpStatus.BAD_REQUEST,
+                        "Account not found for user"
+                    )
+                );
         }
         if (accountName != null && !accountName.trim().isEmpty()) {
             String name = accountName.trim();
@@ -272,27 +385,43 @@ public class RecurringTransactionServiceImpl implements RecurringTransactionServ
         return null;
     }
 
-    private Category resolveCategory(Long userId, User user, Long categoryId, String categoryName, TransactionKind kind) {
+    private Category resolveCategory(
+        Long userId,
+        User user,
+        Long categoryId,
+        String categoryName,
+        TransactionKind kind
+    ) {
         if (categoryId != null) {
-            Category cat = categoryRepository.findByIdAndUserId(categoryId, userId)
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.BAD_REQUEST, "Category not found for user"));
+            Category cat = categoryRepository
+                .findByIdAndUserId(categoryId, userId)
+                .orElseThrow(() ->
+                    new ResponseStatusException(
+                        HttpStatus.BAD_REQUEST,
+                        "Category not found for user"
+                    )
+                );
             if (cat.getKind() != kind) {
-                throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Category kind does not match recurring transaction kind");
+                throw new ResponseStatusException(
+                    HttpStatus.BAD_REQUEST,
+                    "Category kind does not match recurring transaction kind"
+                );
             }
             return cat;
         }
         if (categoryName != null && !categoryName.trim().isEmpty()) {
             String name = categoryName.trim();
-            return categoryRepository.findByUserIdAndKindAndName(userId, kind, name).orElseGet(() -> {
-                Category cat = new Category();
-                cat.setUser(user);
-                cat.setName(name);
-                cat.setKind(kind);
-                cat.setCreatedAt(OffsetDateTime.now());
-                return categoryRepository.save(cat);
-            });
+            return categoryRepository
+                .findByUserIdAndKindAndName(userId, kind, name)
+                .orElseGet(() -> {
+                    Category cat = new Category();
+                    cat.setUser(user);
+                    cat.setName(name);
+                    cat.setKind(kind);
+                    cat.setCreatedAt(OffsetDateTime.now());
+                    return categoryRepository.save(cat);
+                });
         }
         return null;
     }
 }
-

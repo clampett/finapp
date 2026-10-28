@@ -48,7 +48,14 @@ public class StockServiceImpl implements StockService {
         StockTransactionRepository stockTransactionRepository,
         UserRepository userRepository
     ) {
-        this(stockRepository, stockTransactionRepository, userRepository, null, "http://localhost:5000", new ObjectMapper());
+        this(
+            stockRepository,
+            stockTransactionRepository,
+            userRepository,
+            null,
+            "http://localhost:5000",
+            new ObjectMapper()
+        );
     }
 
     @Autowired
@@ -63,9 +70,13 @@ public class StockServiceImpl implements StockService {
         this.stockRepository = stockRepository;
         this.stockTransactionRepository = stockTransactionRepository;
         this.userRepository = userRepository;
-        this.restTemplate = builder != null
-            ? builder.setConnectTimeout(Duration.ofSeconds(3)).setReadTimeout(Duration.ofSeconds(12)).build()
-            : null;
+        this.restTemplate =
+            builder != null
+                ? builder
+                      .setConnectTimeout(Duration.ofSeconds(3))
+                      .setReadTimeout(Duration.ofSeconds(12))
+                      .build()
+                : null;
         this.pythonBaseUrl = pythonServiceUrl.replaceAll("/+$", "");
         this.objectMapper = objectMapper != null ? objectMapper : new ObjectMapper();
     }
@@ -73,16 +84,17 @@ public class StockServiceImpl implements StockService {
     @Override
     @Transactional(readOnly = true)
     public List<StockDTO> getStocks(Long userId) {
-        return stockRepository.findByUserId(userId).stream()
-            .map(EntityDtoMapper::toDto)
-            .toList();
+        return stockRepository.findByUserId(userId).stream().map(EntityDtoMapper::toDto).toList();
     }
 
     @Override
     @Transactional(readOnly = true)
     public StockDTO getStock(Long userId, Long stockId) {
-        Stock stock = stockRepository.findByIdAndUserId(stockId, userId)
-            .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Stock not found"));
+        Stock stock = stockRepository
+            .findByIdAndUserId(stockId, userId)
+            .orElseThrow(() ->
+                new ResponseStatusException(HttpStatus.NOT_FOUND, "Stock not found")
+            );
         return EntityDtoMapper.toDto(stock);
     }
 
@@ -92,8 +104,14 @@ public class StockServiceImpl implements StockService {
         if (ticker == null) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Ticker cannot be null");
         }
-        Stock stock = stockRepository.findByUserIdAndTicker(userId, ticker.trim().toUpperCase())
-            .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Stock with ticker " + ticker + " not found"));
+        Stock stock = stockRepository
+            .findByUserIdAndTicker(userId, ticker.trim().toUpperCase())
+            .orElseThrow(() ->
+                new ResponseStatusException(
+                    HttpStatus.NOT_FOUND,
+                    "Stock with ticker " + ticker + " not found"
+                )
+            );
         return EntityDtoMapper.toDto(stock);
     }
 
@@ -104,10 +122,14 @@ public class StockServiceImpl implements StockService {
         }
         String ticker = request.ticker().trim().toUpperCase();
         if (stockRepository.existsByUserIdAndTicker(userId, ticker)) {
-            throw new ResponseStatusException(HttpStatus.CONFLICT, "Stock with ticker " + ticker + " already exists for this user");
+            throw new ResponseStatusException(
+                HttpStatus.CONFLICT,
+                "Stock with ticker " + ticker + " already exists for this user"
+            );
         }
 
-        User user = userRepository.findById(userId)
+        User user = userRepository
+            .findById(userId)
             .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "User not found"));
 
         Stock stock = new Stock();
@@ -126,16 +148,25 @@ public class StockServiceImpl implements StockService {
             stock.setDividendPerShare(null);
         }
 
-        BigDecimal buyPrice = request.purchasePrice() != null
-            ? request.purchasePrice()
-            : (request.lastPrice() != null ? request.lastPrice() : BigDecimal.ZERO);
+        BigDecimal buyPrice =
+            request.purchasePrice() != null
+                ? request.purchasePrice()
+                : request.lastPrice() != null
+                  ? request.lastPrice()
+                  : BigDecimal.ZERO;
         if (buyPrice.compareTo(BigDecimal.ZERO) < 0) {
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Stock purchase price must be >= 0");
+            throw new ResponseStatusException(
+                HttpStatus.BAD_REQUEST,
+                "Stock purchase price must be >= 0"
+            );
         }
 
         BigDecimal marketPrice = request.lastPrice() != null ? request.lastPrice() : buyPrice;
         if (marketPrice.compareTo(BigDecimal.ZERO) < 0) {
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Stock last price must be >= 0");
+            throw new ResponseStatusException(
+                HttpStatus.BAD_REQUEST,
+                "Stock last price must be >= 0"
+            );
         }
         stock.setLastPrice(marketPrice);
         stock.setLastPriceAt(OffsetDateTime.now());
@@ -166,13 +197,22 @@ public class StockServiceImpl implements StockService {
 
     @Override
     public StockDTO updateStock(Long userId, Long stockId, UpdateStockRequest request) {
-        Stock stock = stockRepository.findByIdAndUserId(stockId, userId)
-            .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Stock not found"));
+        Stock stock = stockRepository
+            .findByIdAndUserId(stockId, userId)
+            .orElseThrow(() ->
+                new ResponseStatusException(HttpStatus.NOT_FOUND, "Stock not found")
+            );
 
         if (request.ticker() != null && !request.ticker().trim().isEmpty()) {
             String ticker = request.ticker().trim().toUpperCase();
-            if (!ticker.equals(stock.getTicker()) && stockRepository.existsByUserIdAndTicker(userId, ticker)) {
-                throw new ResponseStatusException(HttpStatus.CONFLICT, "Stock with ticker " + ticker + " already exists for this user");
+            if (
+                !ticker.equals(stock.getTicker()) &&
+                stockRepository.existsByUserIdAndTicker(userId, ticker)
+            ) {
+                throw new ResponseStatusException(
+                    HttpStatus.CONFLICT,
+                    "Stock with ticker " + ticker + " already exists for this user"
+                );
             }
             stock.setTicker(ticker);
         }
@@ -199,48 +239,28 @@ public class StockServiceImpl implements StockService {
             }
             if (request.dividendPerShare() != null) {
                 if (request.dividendPerShare().compareTo(BigDecimal.ZERO) < 0) {
-                    throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Dividend per share must be >= 0");
+                    throw new ResponseStatusException(
+                        HttpStatus.BAD_REQUEST,
+                        "Dividend per share must be >= 0"
+                    );
                 }
                 stock.setDividendPerShare(request.dividendPerShare());
             }
         }
 
-        if (request.purchasePrice() != null) {
-            if (request.purchasePrice().compareTo(BigDecimal.ZERO) < 0) {
-                throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Stock purchase price must be >= 0");
-            }
-            List<StockTransaction> txns = stockTransactionRepository.findByUserIdAndStockId(userId, stockId);
-            for (StockTransaction t : txns) {
-                if (t.getType() == StockTxnType.buy && "Initial position".equals(t.getNotes())) {
-                    t.setPricePerShare(request.purchasePrice());
-                    if (t.getQuantity() != null) {
-                        t.setTotalAmount(t.getQuantity().multiply(request.purchasePrice()));
-                    }
-                    t.setUpdatedAt(OffsetDateTime.now());
-                    stockTransactionRepository.save(t);
-                    break;
-                }
-            }
+        // Rejected position rewrites so editing details could not alter historical purchases.
+        if (request.purchasePrice() != null || request.sharesOwned() != null) {
+            throw new ResponseStatusException(
+                HttpStatus.BAD_REQUEST,
+                "Use stock transactions to change holdings; stock detail edits cannot rewrite purchases."
+            );
         }
-
-        if (request.sharesOwned() != null && request.sharesOwned().compareTo(BigDecimal.ZERO) >= 0) {
-            List<StockTransaction> txns = stockTransactionRepository.findByUserIdAndStockId(userId, stockId);
-            for (StockTransaction t : txns) {
-                if (t.getType() == StockTxnType.buy && "Initial position".equals(t.getNotes())) {
-                    t.setQuantity(request.sharesOwned());
-                    if (t.getPricePerShare() != null) {
-                        t.setTotalAmount(request.sharesOwned().multiply(t.getPricePerShare()));
-                    }
-                    t.setUpdatedAt(OffsetDateTime.now());
-                    stockTransactionRepository.save(t);
-                    break;
-                }
-            }
-        }
-
         if (request.lastPrice() != null) {
             if (request.lastPrice().compareTo(BigDecimal.ZERO) < 0) {
-                throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Stock last price must be >= 0");
+                throw new ResponseStatusException(
+                    HttpStatus.BAD_REQUEST,
+                    "Stock last price must be >= 0"
+                );
             }
             stock.setLastPrice(request.lastPrice());
             stock.setLastPriceAt(OffsetDateTime.now());
@@ -252,8 +272,11 @@ public class StockServiceImpl implements StockService {
 
     @Override
     public void deleteStock(Long userId, Long stockId) {
-        Stock stock = stockRepository.findByIdAndUserId(stockId, userId)
-            .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Stock not found"));
+        Stock stock = stockRepository
+            .findByIdAndUserId(stockId, userId)
+            .orElseThrow(() ->
+                new ResponseStatusException(HttpStatus.NOT_FOUND, "Stock not found")
+            );
         stockRepository.delete(stock);
     }
 
@@ -267,7 +290,10 @@ public class StockServiceImpl implements StockService {
             try {
                 String ticker = stock.getTicker();
                 if (ticker == null || ticker.trim().isEmpty()) continue;
-                String encoded = UriUtils.encodePathSegment(ticker.trim().toUpperCase(), StandardCharsets.UTF_8);
+                String encoded = UriUtils.encodePathSegment(
+                    ticker.trim().toUpperCase(),
+                    StandardCharsets.UTF_8
+                );
                 URI uri = URI.create(pythonBaseUrl + "/api/stocks/" + encoded);
                 ResponseEntity<String> response = restTemplate.getForEntity(uri, String.class);
                 if (response.getStatusCode().is2xxSuccessful() && response.getBody() != null) {
@@ -286,4 +312,3 @@ public class StockServiceImpl implements StockService {
         }
     }
 }
-

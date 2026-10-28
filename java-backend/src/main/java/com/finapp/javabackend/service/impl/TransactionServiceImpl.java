@@ -53,14 +53,28 @@ public class TransactionServiceImpl implements TransactionService {
     ) {
         List<Transaction> list;
         if (startDate != null && endDate != null) {
-            list = transactionRepository.findByUserIdAndTransactionDateBetweenOrderByTransactionDateDesc(userId, startDate, endDate);
+            list =
+                transactionRepository.findByUserIdAndTransactionDateBetweenOrderByTransactionDateDesc(
+                    userId,
+                    startDate,
+                    endDate
+                );
         } else {
             list = transactionRepository.findByUserIdOrderByTransactionDateDesc(userId);
         }
 
-        return list.stream()
-            .filter(t -> accountId == null || (t.getAccount() != null && t.getAccount().getId().equals(accountId)))
-            .filter(t -> categoryId == null || (t.getCategory() != null && t.getCategory().getId().equals(categoryId)))
+        return list
+            .stream()
+            .filter(
+                t ->
+                    accountId == null ||
+                    (t.getAccount() != null && t.getAccount().getId().equals(accountId))
+            )
+            .filter(
+                t ->
+                    categoryId == null ||
+                    (t.getCategory() != null && t.getCategory().getId().equals(categoryId))
+            )
             .map(EntityDtoMapper::toDto)
             .toList();
     }
@@ -68,36 +82,64 @@ public class TransactionServiceImpl implements TransactionService {
     @Override
     @Transactional(readOnly = true)
     public TransactionDTO getTransaction(Long userId, Long transactionId) {
-        Transaction transaction = transactionRepository.findByIdAndUserId(transactionId, userId)
-            .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Transaction not found"));
+        Transaction transaction = transactionRepository
+            .findByIdAndUserId(transactionId, userId)
+            .orElseThrow(() ->
+                new ResponseStatusException(HttpStatus.NOT_FOUND, "Transaction not found")
+            );
         return EntityDtoMapper.toDto(transaction);
     }
 
     @Override
     public TransactionDTO createTransaction(Long userId, CreateTransactionRequest request) {
         if (request == null) {
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Transaction request cannot be empty");
+            throw new ResponseStatusException(
+                HttpStatus.BAD_REQUEST,
+                "Transaction request cannot be empty"
+            );
         }
         if (request.kind() == null) {
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Transaction kind is required (income/expense)");
+            throw new ResponseStatusException(
+                HttpStatus.BAD_REQUEST,
+                "Transaction kind is required (income/expense)"
+            );
         }
         if (request.amount() == null || request.amount().compareTo(BigDecimal.ZERO) <= 0) {
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Transaction amount must be strictly greater than 0");
+            throw new ResponseStatusException(
+                HttpStatus.BAD_REQUEST,
+                "Transaction amount must be strictly greater than 0"
+            );
         }
         if (request.description() == null || request.description().trim().isEmpty()) {
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Transaction description is required");
+            throw new ResponseStatusException(
+                HttpStatus.BAD_REQUEST,
+                "Transaction description is required"
+            );
         }
 
-        User user = userRepository.findById(userId)
+        User user = userRepository
+            .findById(userId)
             .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "User not found"));
 
         Account account = resolveAccount(userId, user, request.accountId(), request.accountName());
-        Category category = resolveCategory(userId, user, request.categoryId(), request.categoryName(), request.kind());
+        Category category = resolveCategory(
+            userId,
+            user,
+            request.categoryId(),
+            request.categoryName(),
+            request.kind()
+        );
 
         RecurringTransaction recurring = null;
         if (request.recurringTransactionId() != null) {
-            recurring = recurringTransactionRepository.findByIdAndUserId(request.recurringTransactionId(), userId)
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.BAD_REQUEST, "Recurring transaction template not found"));
+            recurring = recurringTransactionRepository
+                .findByIdAndUserId(request.recurringTransactionId(), userId)
+                .orElseThrow(() ->
+                    new ResponseStatusException(
+                        HttpStatus.BAD_REQUEST,
+                        "Recurring transaction template not found"
+                    )
+                );
         }
 
         Transaction transaction = new Transaction();
@@ -117,16 +159,26 @@ public class TransactionServiceImpl implements TransactionService {
     }
 
     @Override
-    public TransactionDTO updateTransaction(Long userId, Long transactionId, UpdateTransactionRequest request) {
-        Transaction transaction = transactionRepository.findByIdAndUserId(transactionId, userId)
-            .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Transaction not found"));
+    public TransactionDTO updateTransaction(
+        Long userId,
+        Long transactionId,
+        UpdateTransactionRequest request
+    ) {
+        Transaction transaction = transactionRepository
+            .findByIdAndUserId(transactionId, userId)
+            .orElseThrow(() ->
+                new ResponseStatusException(HttpStatus.NOT_FOUND, "Transaction not found")
+            );
 
         if (request.kind() != null) {
             transaction.setKind(request.kind());
         }
         if (request.amount() != null) {
             if (request.amount().compareTo(BigDecimal.ZERO) <= 0) {
-                throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Transaction amount must be greater than 0");
+                throw new ResponseStatusException(
+                    HttpStatus.BAD_REQUEST,
+                    "Transaction amount must be greater than 0"
+                );
             }
             transaction.setAmount(request.amount());
         }
@@ -140,17 +192,44 @@ public class TransactionServiceImpl implements TransactionService {
             transaction.setNotes(request.notes());
         }
 
-        if (request.accountId() != null || (request.accountName() != null && !request.accountName().trim().isEmpty())) {
-            transaction.setAccount(resolveAccount(userId, transaction.getUser(), request.accountId(), request.accountName()));
+        if (request.accountId() != null || request.accountName() != null) {
+            transaction.setAccount(
+                resolveAccount(
+                    userId,
+                    transaction.getUser(),
+                    request.accountId(),
+                    request.accountName()
+                )
+            );
         }
 
-        if (request.categoryId() != null || (request.categoryName() != null && !request.categoryName().trim().isEmpty())) {
-            transaction.setCategory(resolveCategory(userId, transaction.getUser(), request.categoryId(), request.categoryName(), transaction.getKind()));
+        if (request.categoryId() != null || request.categoryName() != null) {
+            transaction.setCategory(
+                resolveCategory(
+                    userId,
+                    transaction.getUser(),
+                    request.categoryId(),
+                    request.categoryName(),
+                    transaction.getKind()
+                )
+            );
+        } else if (
+            transaction.getCategory() != null &&
+            transaction.getCategory().getKind() != transaction.getKind()
+        ) {
+            // Cleared the old category when the transaction kind was changed without a replacement.
+            transaction.setCategory(null);
         }
 
         if (request.recurringTransactionId() != null) {
-            RecurringTransaction recurring = recurringTransactionRepository.findByIdAndUserId(request.recurringTransactionId(), userId)
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.BAD_REQUEST, "Recurring transaction template not found"));
+            RecurringTransaction recurring = recurringTransactionRepository
+                .findByIdAndUserId(request.recurringTransactionId(), userId)
+                .orElseThrow(() ->
+                    new ResponseStatusException(
+                        HttpStatus.BAD_REQUEST,
+                        "Recurring transaction template not found"
+                    )
+                );
             transaction.setRecurringTransaction(recurring);
         }
 
@@ -160,15 +239,24 @@ public class TransactionServiceImpl implements TransactionService {
 
     @Override
     public void deleteTransaction(Long userId, Long transactionId) {
-        Transaction transaction = transactionRepository.findByIdAndUserId(transactionId, userId)
-            .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Transaction not found"));
+        Transaction transaction = transactionRepository
+            .findByIdAndUserId(transactionId, userId)
+            .orElseThrow(() ->
+                new ResponseStatusException(HttpStatus.NOT_FOUND, "Transaction not found")
+            );
         transactionRepository.delete(transaction);
     }
 
     private Account resolveAccount(Long userId, User user, Long accountId, String accountName) {
         if (accountId != null) {
-            return accountRepository.findByIdAndUserId(accountId, userId)
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.BAD_REQUEST, "Account not found for user"));
+            return accountRepository
+                .findByIdAndUserId(accountId, userId)
+                .orElseThrow(() ->
+                    new ResponseStatusException(
+                        HttpStatus.BAD_REQUEST,
+                        "Account not found for user"
+                    )
+                );
         }
         if (accountName != null && !accountName.trim().isEmpty()) {
             String name = accountName.trim();
@@ -187,27 +275,43 @@ public class TransactionServiceImpl implements TransactionService {
         return null;
     }
 
-    private Category resolveCategory(Long userId, User user, Long categoryId, String categoryName, TransactionKind kind) {
+    private Category resolveCategory(
+        Long userId,
+        User user,
+        Long categoryId,
+        String categoryName,
+        TransactionKind kind
+    ) {
         if (categoryId != null) {
-            Category cat = categoryRepository.findByIdAndUserId(categoryId, userId)
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.BAD_REQUEST, "Category not found for user"));
+            Category cat = categoryRepository
+                .findByIdAndUserId(categoryId, userId)
+                .orElseThrow(() ->
+                    new ResponseStatusException(
+                        HttpStatus.BAD_REQUEST,
+                        "Category not found for user"
+                    )
+                );
             if (cat.getKind() != kind) {
-                throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Category kind does not match transaction kind");
+                throw new ResponseStatusException(
+                    HttpStatus.BAD_REQUEST,
+                    "Category kind does not match transaction kind"
+                );
             }
             return cat;
         }
         if (categoryName != null && !categoryName.trim().isEmpty()) {
             String name = categoryName.trim();
-            return categoryRepository.findByUserIdAndKindAndName(userId, kind, name).orElseGet(() -> {
-                Category cat = new Category();
-                cat.setUser(user);
-                cat.setName(name);
-                cat.setKind(kind);
-                cat.setCreatedAt(OffsetDateTime.now());
-                return categoryRepository.save(cat);
-            });
+            return categoryRepository
+                .findByUserIdAndKindAndName(userId, kind, name)
+                .orElseGet(() -> {
+                    Category cat = new Category();
+                    cat.setUser(user);
+                    cat.setName(name);
+                    cat.setKind(kind);
+                    cat.setCreatedAt(OffsetDateTime.now());
+                    return categoryRepository.save(cat);
+                });
         }
         return null;
     }
 }
-

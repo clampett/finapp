@@ -104,12 +104,23 @@ class TransactionServiceTest {
     @Test
     void createTransaction_invalidAmount_throwsBadRequest() {
         CreateTransactionRequest req = new CreateTransactionRequest(
-            null, "Checking", null, null, null,
-            TransactionKind.expense, "Groceries",
-            new BigDecimal("0.00"), null, null, null, 5L
+            null,
+            "Checking",
+            null,
+            null,
+            null,
+            TransactionKind.expense,
+            "Groceries",
+            new BigDecimal("0.00"),
+            null,
+            null,
+            null,
+            5L
         );
 
-        assertThrows(ResponseStatusException.class, () -> transactionService.createTransaction(5L, req));
+        assertThrows(ResponseStatusException.class, () ->
+            transactionService.createTransaction(5L, req)
+        );
     }
 
     @Test
@@ -122,7 +133,9 @@ class TransactionServiceTest {
         t.setAmount(new BigDecimal("3000.00"));
         t.setTransactionDate(LocalDate.of(2026, 10, 15));
 
-        when(transactionRepository.findByUserIdOrderByTransactionDateDesc(5L)).thenReturn(List.of(t));
+        when(transactionRepository.findByUserIdOrderByTransactionDateDesc(5L)).thenReturn(
+            List.of(t)
+        );
 
         List<TransactionDTO> list = transactionService.getTransactions(5L, null, null, null, null);
         assertEquals(1, list.size());
@@ -138,5 +151,70 @@ class TransactionServiceTest {
         transactionService.deleteTransaction(5L, 1L);
         verify(transactionRepository).delete(t);
     }
-}
 
+    @Test
+    void updateTransactionUsesTheNewAccountId() {
+        Transaction transaction = new Transaction();
+        transaction.setId(1L);
+        transaction.setUser(user);
+        transaction.setKind(TransactionKind.expense);
+        Account savings = new Account();
+        savings.setId(2L);
+        savings.setName("Savings");
+        when(transactionRepository.findByIdAndUserId(1L, 5L)).thenReturn(Optional.of(transaction));
+        when(accountRepository.findByIdAndUserId(2L, 5L)).thenReturn(Optional.of(savings));
+        when(transactionRepository.save(any())).thenAnswer(i -> i.getArgument(0));
+        var result = transactionService.updateTransaction(
+            5L,
+            1L,
+            new UpdateTransactionRequest(
+                2L,
+                "Savings",
+                null,
+                null,
+                null,
+                null,
+                null,
+                null,
+                null,
+                null,
+                null
+            )
+        );
+        assertEquals(2L, result.accountId());
+        assertEquals("Savings", result.accountName());
+    }
+
+    @Test
+    void changingKindCanClearThePreviousCategory() {
+        Transaction transaction = new Transaction();
+        transaction.setId(1L);
+        transaction.setUser(user);
+        transaction.setKind(TransactionKind.expense);
+        Category rent = new Category();
+        rent.setKind(TransactionKind.expense);
+        transaction.setCategory(rent);
+        when(transactionRepository.findByIdAndUserId(1L, 5L)).thenReturn(Optional.of(transaction));
+        when(transactionRepository.save(any())).thenAnswer(i -> i.getArgument(0));
+        var result = transactionService.updateTransaction(
+            5L,
+            1L,
+            new UpdateTransactionRequest(
+                null,
+                null,
+                null,
+                "",
+                null,
+                TransactionKind.income,
+                null,
+                null,
+                null,
+                null,
+                null
+            )
+        );
+        assertEquals(TransactionKind.income, result.kind());
+        assertNull(result.categoryId());
+        assertNull(transaction.getCategory());
+    }
+}

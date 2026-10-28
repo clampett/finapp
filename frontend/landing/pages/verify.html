@@ -1,0 +1,66 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="theme-color" content="#0c1018" />
+    <title>Verify your email — FinApp</title>
+    <link rel="stylesheet" href="/assets/styles.css" />
+    <link rel="icon" type="image/svg+xml" href="/static/finapp-circle.svg" />
+    <script>
+      try {
+        document.documentElement.dataset.theme =
+          localStorage.getItem('user-theme') === 'light' ? 'light' : 'dark';
+      } catch {}
+    </script>
+  </head>
+  <body class="auth-page">
+    <a class="skip-link" href="#main">Skip to content</a>
+    <header class="site-container auth-header">
+      <a class="site-brand" href="/"><span class="brand-circle" aria-hidden="true"></span>FinApp</a
+      ><a href="/">← Back to home</a>
+    </header>
+    <main id="main" class="auth-main">
+      <section class="auth-card auth-single" aria-labelledby="verify-title">
+        <div class="site-eyebrow">ONE MORE STEP</div>
+        <h1 id="verify-title">Verify your email.</h1>
+        <p class="auth-description">
+          Enter the six-digit code printed in the terminal running start.ps1, under [SPRING]. Codes
+          expire after 15 minutes. If you closed this page, sign in to resume verification.
+        </p>
+        <form id="verify-form" class="auth-form">
+          <div>
+            <label for="verification-code">Verification code</label
+            ><input
+              id="verification-code"
+              class="verification-code"
+              type="text"
+              inputmode="numeric"
+              autocomplete="one-time-code"
+              pattern="[0-9]{6}"
+              minlength="6"
+              maxlength="6"
+              placeholder="000000"
+              required
+              aria-describedby="code-hint"
+            />
+            <p id="code-hint" class="input-hint">You can paste all six digits at once.</p>
+          </div>
+          <p id="verify-error" class="form-message" role="alert"></p>
+          <p id="verify-status" class="form-message form-success" role="status"></p>
+          <button id="verify_button" type="submit" class="site-button primary">
+            Verify account ↗
+          </button>
+        </form>
+        <button id="resend-code" type="button" class="site-button secondary">
+          Print a new code in the terminal
+        </button>
+        <p class="auth-switch"><a href="/login">Back to sign in</a></p>
+      </section>
+    </main>
+    <footer class="auth-footer">
+      FinApp · Educational financial modeling · Scenario edits stay in this browser
+    </footer>
+    <script src="/assets/verify.js" defer></script>
+  </body>
+</html>

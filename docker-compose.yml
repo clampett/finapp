@@ -1,10 +1,12 @@
 services:
   frontend:
-    build: 
+    build:
       context: ./frontend
       dockerfile: Dockerfile
     ports:
       - "8080:8080"
+    environment:
+      - FINAPP_API_UPSTREAM=http://backend:8081
     depends_on:
       - backend
     networks:
@@ -17,40 +19,50 @@ services:
     ports:
       - "8081:8081"
     environment:
-      - SPRING_PROFILES_ACTIVE=docker
+      - SPRING_PROFILES_ACTIVE=local
+      - FINAPP_MAIL_MODE=console
+      - FINAPP_SESSION_SECURE=false
+      - PYTHON_SERVICE_URL=http://python-backend:5000
       # This allows the Docker backend to find the Docker database
       - SPRING_DATASOURCE_URL=jdbc:postgresql://db:5432/finapp
+      - SPRING_DATASOURCE_USERNAME=postgres
+      - SPRING_DATASOURCE_PASSWORD=postgres
     depends_on:
       - db
     networks:
       - finapp-network
-    
+
   python-backend:
     build:
       context: ./python-backend
     ports:
       - "5000:5000"
     environment:
-      - ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY}
+      - ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY:-}
+      - PRICE_CACHE_DB=/data/price_cache.db
+    volumes:
+      - market_cache:/data
     networks:
       - finapp-network
 
   db:
     image: postgres:15-alpine
     ports:
-      - "5432:5432"
+      - "127.0.0.1:5432:5432"
     environment:
       - POSTGRES_USER=postgres
       - POSTGRES_PASSWORD=postgres
       - POSTGRES_DB=finapp
     volumes:
       - postgres_data:/var/lib/postgresql/data
-      - ./database/init.sql:/docker-entrypoint-initdb.d/init.sql
     networks:
       - finapp-network
 
 volumes:
+  market_cache:
   postgres_data:
+    external: true
+    name: ${FINAPP_POSTGRES_VOLUME:-finapp_postgres_data}
 
 networks:
   finapp-network:

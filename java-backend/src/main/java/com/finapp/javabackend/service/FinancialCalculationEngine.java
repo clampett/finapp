@@ -1,10 +1,10 @@
 package com.finapp.javabackend.service;
 
-import org.springframework.stereotype.Component;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.util.HashMap;
 import java.util.Map;
+import org.springframework.stereotype.Component;
 
 @Component
 public class FinancialCalculationEngine {
@@ -17,24 +17,37 @@ public class FinancialCalculationEngine {
         return grossSalary.multiply(new BigDecimal("0.22")).setScale(2, RoundingMode.HALF_UP);
     }
 
-    public Map<String, Object> calculateDebtAmortization(BigDecimal balance, BigDecimal apr, BigDecimal monthlyPayment) {
+    public Map<String, Object> calculateDebtAmortization(
+        BigDecimal balance,
+        BigDecimal apr,
+        BigDecimal monthlyPayment
+    ) {
         Map<String, Object> result = new HashMap<>();
 
-        if (balance == null || apr == null || monthlyPayment == null || monthlyPayment.compareTo(BigDecimal.ZERO) <= 0) {
+        if (
+            balance == null ||
+            apr == null ||
+            monthlyPayment == null ||
+            monthlyPayment.compareTo(BigDecimal.ZERO) <= 0
+        ) {
             result.put("monthsToPayoff", -1);
             result.put("totalInterestPaid", BigDecimal.ZERO);
             return result;
         }
 
-        BigDecimal monthlyRate = apr.divide(new BigDecimal("100"), 8, RoundingMode.HALF_UP)
-                .divide(new BigDecimal("12"), 8, RoundingMode.HALF_UP);
+        BigDecimal monthlyRate = apr
+            .divide(new BigDecimal("100"), 8, RoundingMode.HALF_UP)
+            .divide(new BigDecimal("12"), 8, RoundingMode.HALF_UP);
 
         BigDecimal currentBalance = balance;
         BigDecimal totalInterest = BigDecimal.ZERO;
         int months = 0;
 
-        while (currentBalance.compareTo(BigDecimal.ZERO) > 0 && months < 600) { // Limit to 50 years max safety bound
-            BigDecimal monthlyInterest = currentBalance.multiply(monthlyRate).setScale(2, RoundingMode.HALF_UP);
+        while (currentBalance.compareTo(BigDecimal.ZERO) > 0 && months < 600) {
+            // Limit to 50 years max safety bound
+            BigDecimal monthlyInterest = currentBalance
+                .multiply(monthlyRate)
+                .setScale(2, RoundingMode.HALF_UP);
 
             if (monthlyPayment.compareTo(monthlyInterest) <= 0) {
                 // Payment is too low to cover interest (infinite loop prevention)

@@ -240,14 +240,14 @@ export function Investing({ storageKey }: { storageKey: string }) {
         }}
       >
         <input
-          className="w-[260px] max-w-full text-xs min-w-0 border border-border rounded-lg bg-[#101722] text-[#edf2fa] px-[11px] py-[10px]"
+          className="w-65 max-w-full text-xs min-w-0 border border-border rounded-lg bg-[#101722] text-[#edf2fa] px-2.75 py-2.5"
           aria-label="Ticker symbol"
           placeholder="Ticker symbol (for example AAPL)"
           value={symbol}
           maxLength={10}
           onChange={(event) => setSymbol(event.target.value)}
         />
-        <button className="inline-flex items-center justify-center gap-[7px] whitespace-nowrap rounded-[7px] px-[13px] py-[9px] text-[11px] font-medium min-h-[34px] cursor-pointer bg-primary text-primary-fg border border-primary hover:bg-[#cbbafa] disabled:opacity-40 disabled:cursor-not-allowed" type="submit" disabled={!symbol.trim()}>
+        <button className="inline-flex items-center justify-center gap-1.75 whitespace-nowrap rounded-[7px] px-3.25 py-2.25 text-[11px] font-medium min-h-8.5 cursor-pointer bg-primary text-primary-fg border border-primary hover:bg-[#cbbafa] disabled:opacity-40 disabled:cursor-not-allowed" type="submit" disabled={!symbol.trim()}>
           Add stock
         </button>
       </form>
@@ -272,7 +272,7 @@ export function Investing({ storageKey }: { storageKey: string }) {
               <button
                 key={s.symbol}
                 type="button"
-                className="inline-flex items-center justify-center gap-1.5 whitespace-nowrap min-h-[28px] px-[11px] py-1 rounded-full border border-[#344056] hover:not-disabled:border-[#51607a] hover:not-disabled:text-[#e5ecf7] text-[11px] font-medium text-[#a4b2c9] bg-transparent cursor-pointer aria-busy:cursor-progress aria-busy:border-[#51607a]"
+                className="inline-flex items-center justify-center gap-1.5 whitespace-nowrap min-h-7 px-2.75 py-1 rounded-full border border-[#344056] hover:not-disabled:border-[#51607a] hover:not-disabled:text-[#e5ecf7] text-[11px] font-medium text-[#a4b2c9] bg-transparent cursor-pointer aria-busy:cursor-progress aria-busy:border-[#51607a]"
                 title={s.name}
                 aria-busy={pending.includes(s.symbol)}
                 aria-disabled={pending.includes(s.symbol)}
@@ -299,7 +299,7 @@ export function Investing({ storageKey }: { storageKey: string }) {
         </div>
       </div>
       {holdings.length === 0 ? (
-        <div className="py-[70px] px-6 text-center text-[#8d9fba]">
+        <div className="py-17.5 px-6 text-center text-[#8d9fba]">
           No stocks yet. Type a ticker symbol above or pick a suggestion.
         </div>
       ) : (
@@ -334,7 +334,7 @@ export function Investing({ storageKey }: { storageKey: string }) {
                         step="any"
                         aria-label={`Shares of ${sym}`}
                         defaultValue={shares}
-                        className="text-xs min-w-0 border border-border rounded-lg bg-[#101722] text-[#edf2fa] px-[11px] py-[6px]"
+                        className="text-xs min-w-0 border border-border rounded-lg bg-[#101722] text-[#edf2fa] px-2.75 py-1.5"
                         style={{ width: '5.5rem' }}
                         onChange={(event) => setShares(sym, event.target.value)}
                       />
@@ -361,7 +361,7 @@ export function Investing({ storageKey }: { storageKey: string }) {
                     <td className="p-[13px_20px] border-t border-[#263147] text-text max-[760px]:p-[11px_14px]">
                       <button
                         type="button"
-                        className={`inline-flex items-center justify-center gap-[7px] whitespace-nowrap rounded-[7px] px-[13px] py-[9px] text-[11px] font-medium min-h-[34px] cursor-pointer ${sym === activeSymbol ? 'bg-primary text-primary-fg border border-primary' : 'bg-transparent border border-transparent text-[#a4b2c9] hover:bg-[#232f43] hover:text-text'}`}
+                        className={`inline-flex items-center justify-center gap-1.75 whitespace-nowrap rounded-[7px] px-3.25 py-2.25 text-[11px] font-medium min-h-8.5 cursor-pointer ${sym === activeSymbol ? 'bg-primary text-primary-fg border border-primary' : 'bg-transparent border border-transparent text-[#a4b2c9] hover:bg-[#232f43] hover:text-text'}`}
                         aria-pressed={sym === activeSymbol}
                         onClick={() => {
                           selectionIntent.current++;
@@ -372,7 +372,7 @@ export function Investing({ storageKey }: { storageKey: string }) {
                       </button>{' '}
                       <button
                         type="button"
-                        className="inline-flex items-center justify-center gap-[7px] whitespace-nowrap rounded-[7px] px-[13px] py-[9px] text-[11px] font-medium min-h-[34px] cursor-pointer text-coral border border-[#633246] bg-[#2b1b28] hover:bg-[#3d2034]"
+                        className="inline-flex items-center justify-center gap-1.75 whitespace-nowrap rounded-[7px] px-3.25 py-2.25 text-[11px] font-medium min-h-8.5 cursor-pointer text-coral border border-[#633246] bg-[#2b1b28] hover:bg-[#3d2034]"
                         onClick={() => {
                           reserved.current.delete(sym);
                           requests.current.get(sym)?.abort();
@@ -418,7 +418,7 @@ const StockPriceChart = memo(function StockPriceChart({ quote: chartQuote }: { q
         {chartQuote.symbol} · recent adjusted prices (USD){' '}
         <small className="text-[#8b9ab1]">as of {chartQuote.latest_date}</small>
       </h4>
-      <div className="h-[260px] mt-2.5" role="img" aria-label={`${chartQuote.symbol} price history`}>
+      <div className="h-65 mt-2.5" role="img" aria-label={`${chartQuote.symbol} price history`}>
         <ResponsiveContainer width="100%" height="100%">
           <LineChart
             accessibilityLayer={false}
@@ -448,9 +448,9 @@ const StockPriceChart = memo(function StockPriceChart({ quote: chartQuote }: { q
                 if (!active || !payload?.length) return null;
                 const point = payload[0]?.payload as { date: string; close: number };
                 return (
-                  <div className="p-[13px_15px] bg-[#1c2638] border border-[#47536d] rounded-[9px] shadow-[0_10px_30px_#0005] min-w-[200px] text-[11px]">
+                  <div className="p-[13px_15px] bg-[#1c2638] border border-[#47536d] rounded-[9px] shadow-[0_10px_30px_#0005] min-w-50 text-[11px]">
                     <strong className="block text-[11px] text-[#d9e3f3] mb-3">{point.date}</strong>
-                    <div className="flex justify-between gap-[22px] mt-2.5">
+                    <div className="flex justify-between gap-5.5 mt-2.5">
                       <span>Close</span>
                       <b className="font-semibold text-text">{dollars(point.close)}</b>
                     </div>

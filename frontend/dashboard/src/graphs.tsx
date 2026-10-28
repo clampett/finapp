@@ -373,7 +373,7 @@ export function ArchetypeGraph({
     <>
       {showArchive && (
         <section className="border border-[#33445b] rounded-xl bg-[#121d2c] p-5 mb-5">
-          <div className="flex items-center justify-between gap-3 mb-2 [&_h3]:text-base [&_h3]:font-semibold [&_h3]:text-text [&_h3]:m-0">
+          <div className="flex items-center justify-between gap-3 mb-2 [&_h3]:text-base [&_h3]:font-semibold [&_h3]:m-0">
             <h3>Recently removed nodes</h3>
             <button
               className="inline-flex items-center justify-center border border-[#303c54] bg-[#1a2538] hover:bg-[#25354e] text-[#d6e2f5] rounded-[7px] w-8 h-8 shrink-0 cursor-pointer transition-colors focus-visible:outline-2 focus-visible:outline-[#a78bfa] focus-visible:outline-offset-2"
@@ -396,7 +396,7 @@ export function ArchetypeGraph({
                   {node.name} · {typeLabel(node.nodeType)}
                 </span>
                 <button
-                  className="inline-flex items-center justify-center gap-[7px] whitespace-nowrap rounded-[7px] px-3 py-1.5 text-xs font-medium cursor-pointer bg-[#20293a] text-text border border-[#37445c] hover:bg-[#28354c] transition-colors"
+                  className="inline-flex items-center justify-center gap-1.75 whitespace-nowrap rounded-[7px] px-3 py-1.5 text-xs font-medium cursor-pointer bg-[#20293a] text-text border border-[#37445c] hover:bg-[#28354c] transition-colors"
                   onClick={() =>
                     update({
                       ...graph,
@@ -480,9 +480,9 @@ export function ArchetypeGraph({
     </>
   );
   return (
-    <div className={`px-8 pb-[18px] max-[1100px]:px-[22px] max-[1100px]:pb-[18px] max-[760px]:px-4 max-[760px]:pb-4 2xl:px-11 fullscreen:bg-[#0c1018] fullscreen:w-full fullscreen:h-full fullscreen:overflow-auto fullscreen:p-6 max-[650px]:fullscreen:p-3 node-workspace${compact ? ' compact-nodes' : ''}`}>
+    <div className="px-8 pb-4.5 max-[1100px]:px-5.5 max-[1100px]:pb-4.5 max-[760px]:px-4 max-[760px]:pb-4 2xl:px-11 fullscreen:bg-[#0c1018] fullscreen:w-full fullscreen:h-full fullscreen:overflow-auto fullscreen:p-6 max-[650px]:fullscreen:p-3">
       {view !== 'overview' && (
-        <div className="grid grid-cols-4 max-[1100px]:grid-cols-2 max-[600px]:grid-cols-1 gap-3.5 mb-7 metric-grid">
+        <div className="grid grid-cols-4 max-[1100px]:grid-cols-2 max-[600px]:grid-cols-1 gap-3.5 mb-7">
           {[
             [
               'Net worth',
@@ -506,7 +506,7 @@ export function ArchetypeGraph({
               t.surplus < 0 ? 'negative text-coral' : 'positive text-mint',
             ],
           ].map(([label, value, hint, tone]) => (
-            <div className="rounded-xl p-[18px_20px] max-[1100px]:p-[15px_13px] border border-border bg-gradient-to-b from-[#161c28] to-[#111722] flex flex-col gap-2" key={label}>
+            <div className="rounded-xl p-[18px_20px] max-[1100px]:p-[15px_13px] border border-border bg-linear-to-b from-[#161c28] to-[#111722] flex flex-col gap-2" key={label}>
               <span className="text-xs text-muted font-normal">{label}</span>
               <strong className={`text-[clamp(20px,2vw,28px)] tracking-[-0.7px] font-semibold tabular-nums ${tone}`}>{value}</strong>
               <small className="text-[11px] text-subtle leading-tight mt-auto">{hint}</small>
@@ -514,7 +514,7 @@ export function ArchetypeGraph({
           ))}
         </div>
       )}
-      <div className="flex items-center justify-between gap-[18px] flex-wrap mb-5">
+      <div className="flex items-center justify-between gap-4.5 flex-wrap mb-5">
         <div>
           <h2 className="text-[clamp(18px,2vw,24px)] font-semibold tracking-[-0.5px] text-text m-0">
             {view === 'graph'
@@ -560,7 +560,7 @@ export function ArchetypeGraph({
         <div className="p-[12px_16px] text-xs rounded-lg mb-3.5 flex gap-3.5 items-center justify-between leading-[1.6] bg-[#331d2b] text-[#fda4af] border border-[#743247]" role="alert">
           {error}
           <button
-            className="inline-flex items-center justify-center gap-[7px] whitespace-nowrap rounded-[7px] px-3.5 py-[7px] text-[11px] font-medium cursor-pointer bg-[#20293a] text-text border border-[#37445c] hover:bg-[#28354c] transition-colors"
+            className="inline-flex items-center justify-center gap-1.75 whitespace-nowrap rounded-[7px] px-3.5 py-1.75 text-[11px] font-medium cursor-pointer bg-[#20293a] text-text border border-[#37445c] hover:bg-[#28354c] transition-colors"
             onClick={() => {
               setLoaded(false);
               setError('');
@@ -585,7 +585,7 @@ export function ArchetypeGraph({
         </div>
       )}
       {!loaded ? (
-        <div className="py-[70px] px-6 text-center text-[#8d9fba] text-xs" role="status">
+        <div className="py-17.5 px-6 text-center text-[#8d9fba] text-xs" role="status">
           Loading your node graph…
         </div>
       ) : (
@@ -636,7 +636,7 @@ export function ArchetypeGraph({
                   }}
                 />
               ) : (
-                <div className="border border-[#2a3549] rounded-[11px] bg-[#121a27] overflow-auto min-h-[350px]">
+                <div className="border border-[#2a3549] rounded-[11px] bg-[#121a27] overflow-auto min-h-87.5">
                   <table className="w-full border-collapse text-left text-xs whitespace-nowrap">
                     <thead>
                       <tr>
@@ -663,7 +663,7 @@ export function ArchetypeGraph({
                           </td>
                           <td className="p-[13px_20px] border-t border-[#263147]">{n.interestRateApr}%</td>
                           <td className="p-[13px_20px] border-t border-[#263147]">
-                            <button className="inline-flex items-center justify-center gap-[7px] whitespace-nowrap rounded-[7px] px-3 py-1.5 text-[11px] font-medium cursor-pointer bg-transparent text-[#97a7c2] border border-transparent hover:bg-[#1a2536] hover:text-text transition-colors" onClick={() => setSelected(n)}>
+                            <button className="inline-flex items-center justify-center gap-1.75 whitespace-nowrap rounded-[7px] px-3 py-1.5 text-[11px] font-medium cursor-pointer bg-transparent text-[#97a7c2] border border-transparent hover:bg-[#1a2536] hover:text-text transition-colors" onClick={() => setSelected(n)}>
                               Edit ↗
                             </button>
                           </td>
@@ -672,17 +672,17 @@ export function ArchetypeGraph({
                     </tbody>
                   </table>
                   {!filtered.length && (
-                    <div className="py-[70px] px-6 text-center text-[#8d9fba] text-xs">
+                    <div className="py-17.5 px-6 text-center text-[#8d9fba] text-xs">
                       No matching nodes. Add a node or adjust your search.
                     </div>
                   )}
                 </div>
               )}
-              <div className="border border-[#30384e] rounded-[11px] bg-gradient-to-r from-[#1a1b2c] to-[#151b29] mt-[15px] p-[21px_22px] flex flex-col items-stretch gap-[18px]">
+              <div className="border border-[#30384e] rounded-[11px] bg-linear-to-r from-[#1a1b2c] to-[#151b29] mt-3.75 p-[21px_22px] flex flex-col items-stretch gap-4.5">
                 <div>
-                  <div className="text-[8px] text-[#b5a4e3] mb-[7px] font-semibold tracking-wider">LOOK AHEAD</div>
+                  <div className="text-[8px] text-[#b5a4e3] mb-1.75 font-semibold tracking-wider">LOOK AHEAD</div>
                   <h3 className="text-sm font-semibold text-text m-0">What could your next chapter look like?</h3>
-                  <p className="text-[11px] text-[#8c9cb4] mt-[5px] mb-0">Explore a range of outcomes from your current scenario.</p>
+                  <p className="text-[11px] text-[#8c9cb4] mt-1.25 mb-0">Explore a range of outcomes from your current scenario.</p>
                 </div>
                 <section className="p-4 border border-[#30465a] rounded-xl bg-[#101c29]">
                   <label className="flex items-center max-[650px]:items-stretch max-[650px]:flex-col gap-3.5 text-xs text-[#b9c5d9]">
@@ -702,7 +702,7 @@ export function ArchetypeGraph({
                   </strong>
                   {!!selectionIds.length && (
                     <button
-                      className="mt-2.5 inline-flex items-center justify-center gap-[7px] whitespace-nowrap rounded-[7px] px-3 py-1.5 text-[11px] font-medium cursor-pointer bg-transparent text-[#97a7c2] border border-[#30465a] hover:bg-[#1a2536] hover:text-text transition-colors"
+                      className="mt-2.5 inline-flex items-center justify-center gap-1.75 whitespace-nowrap rounded-[7px] px-3 py-1.5 text-[11px] font-medium cursor-pointer bg-transparent text-[#97a7c2] border border-[#30465a] hover:bg-[#1a2536] hover:text-text transition-colors"
                       onClick={() => {
                         setScope('selected');
                         setScopeIds(selectionIds);
@@ -719,9 +719,9 @@ export function ArchetypeGraph({
                         income, expenses, balances, and internal connections are modeled. An
                         isolated account has no household income or bills unless you include them.
                       </p>
-                      <div className="flex flex-wrap gap-2 mt-3 max-h-[220px] overflow-auto">
+                      <div className="flex flex-wrap gap-2 mt-3 max-h-55 overflow-auto">
                         {live.nodes.map((node) => (
-                          <label key={node.id} className="flex items-center gap-[7px] border border-[#2a3f56] px-[11px] py-2 rounded-full text-xs bg-[#182738] cursor-pointer text-text">
+                          <label key={node.id} className="flex items-center gap-1.75 border border-[#2a3f56] px-2.75 py-2 rounded-full text-xs bg-[#182738] cursor-pointer text-text">
                             <input
                               type="checkbox"
                               className="accent-brand w-3.5 h-3.5"
@@ -743,21 +743,21 @@ export function ArchetypeGraph({
                 </section>
                 <div className="flex flex-wrap gap-2.5">
                   <button
-                    className="inline-flex items-center justify-center gap-[7px] whitespace-nowrap rounded-[7px] px-3.5 py-[9px] text-[11px] font-medium min-h-[34px] cursor-pointer text-[#d2c4ff] border border-[#51496e] bg-[#30283f] hover:bg-[#3d3350] transition-colors disabled:opacity-45 disabled:cursor-not-allowed"
+                    className="inline-flex items-center justify-center gap-1.75 whitespace-nowrap rounded-[7px] px-3.5 py-2.25 text-[11px] font-medium min-h-8.5 cursor-pointer text-[#d2c4ff] border border-[#51496e] bg-[#30283f] hover:bg-[#3d3350] transition-colors disabled:opacity-45 disabled:cursor-not-allowed"
                     disabled={!simulationGraph.nodes.length}
                     onClick={() => setSimType('monte_carlo')}
                   >
                     Monte Carlo Simulation ↗
                   </button>
                   <button
-                    className="inline-flex items-center justify-center gap-[7px] whitespace-nowrap rounded-[7px] px-3.5 py-[9px] text-[11px] font-medium min-h-[34px] cursor-pointer bg-[#20293a] text-text border border-[#37445c] hover:bg-[#28354c] transition-colors disabled:opacity-45 disabled:cursor-not-allowed"
+                    className="inline-flex items-center justify-center gap-1.75 whitespace-nowrap rounded-[7px] px-3.5 py-2.25 text-[11px] font-medium min-h-8.5 cursor-pointer bg-[#20293a] text-text border border-[#37445c] hover:bg-[#28354c] transition-colors disabled:opacity-45 disabled:cursor-not-allowed"
                     disabled={!simulationGraph.nodes.length}
                     onClick={() => setSimType('markov')}
                   >
                     Markov Regime Simulation ↗
                   </button>
                   <button
-                    className="inline-flex items-center justify-center gap-[7px] whitespace-nowrap rounded-[7px] px-3.5 py-[9px] text-[11px] font-medium min-h-[34px] cursor-pointer bg-[#20293a] text-text border border-[#37445c] hover:bg-[#28354c] transition-colors disabled:opacity-45 disabled:cursor-not-allowed"
+                    className="inline-flex items-center justify-center gap-1.75 whitespace-nowrap rounded-[7px] px-3.5 py-2.25 text-[11px] font-medium min-h-8.5 cursor-pointer bg-[#20293a] text-text border border-[#37445c] hover:bg-[#28354c] transition-colors disabled:opacity-45 disabled:cursor-not-allowed"
                     disabled={
                       !simulationGraph.nodes.some(
                         (n) => n.nodeType === 'DEBT' && n.amountOrBalance > 0,
@@ -784,14 +784,14 @@ export function ArchetypeGraph({
               <span>{connections ? '−' : '+'}</span>
             </button>
             {connections && (
-              <div className="px-[19px] pb-[18px]">
+              <div className="px-4.75 pb-4.5">
                 <p className="text-[#8b9ab1] text-[11px] my-2 leading-[1.6]">
                   Incoming debt routes set payments unless the node has an override. Expense routes
                   from income/checking set monthly costs; percentages use starting take-home income.
                   Simulations fund fixed saving/investment routes first, then percentage routes,
                   then your extra-investment allocation.
                 </p>
-                <div className="my-3 max-h-[240px] overflow-auto">
+                <div className="my-3 max-h-60 overflow-auto">
                   {live.edges.map((edge) => (
                     <div key={edge.id} className="grid grid-cols-[minmax(120px,1fr)_auto_auto_auto] max-[650px]:grid-cols-[1fr_auto] items-center gap-3 border-b border-[#263047] py-2.5 text-[11px] text-text">
                       <span className="truncate">
@@ -851,7 +851,7 @@ export function ArchetypeGraph({
                     Amount
                     <input name="amount" type="number" min={0} max={1e9} step="0.01" required />
                   </label>
-                  <button className="inline-flex items-center justify-center gap-[7px] whitespace-nowrap rounded-[7px] px-3.5 py-[7px] text-[11px] font-medium min-h-[34px] cursor-pointer bg-[#20293a] text-text border border-[#37445c] hover:bg-[#28354c] transition-colors disabled:opacity-45 disabled:cursor-not-allowed" disabled={live.nodes.length < 2}>
+                  <button className="inline-flex items-center justify-center gap-1.75 whitespace-nowrap rounded-[7px] px-3.5 py-1.75 text-[11px] font-medium min-h-8.5 cursor-pointer bg-[#20293a] text-text border border-[#37445c] hover:bg-[#28354c] transition-colors disabled:opacity-45 disabled:cursor-not-allowed" disabled={live.nodes.length < 2}>
                     + Connect
                   </button>
                 </form>
@@ -869,8 +869,8 @@ export function ArchetypeGraph({
       {simType && (
         <Suspense
           fallback={
-            <div className="fixed inset-0 z-[100] bg-[#04070dbd] backdrop-blur-md flex items-center justify-center p-[clamp(12px,3vw,40px)]">
-              <div className="py-[70px] px-6 text-center text-[#8d9fba] text-xs" role="status">
+            <div className="fixed inset-0 z-100 bg-[#04070dbd] backdrop-blur-md flex items-center justify-center p-[clamp(12px,3vw,40px)]">
+              <div className="py-17.5 px-6 text-center text-[#8d9fba] text-xs" role="status">
                 Opening scenario lab…
               </div>
             </div>

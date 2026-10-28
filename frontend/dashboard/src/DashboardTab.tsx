@@ -14,7 +14,7 @@ export function DashboardTab({ graph }: DashboardTabProps) {
     <div>
       <h2 className="text-lg font-semibold tracking-[-0.35px] text-text m-0 mb-4">Financial Overview</h2>
 
-      <div className="grid grid-cols-4 gap-3.5 mb-7 max-[760px]:grid-cols-2 max-[760px]:gap-2.5 max-[760px]:mb-[23px]">
+      <div className="grid grid-cols-4 gap-3.5 mb-7 max-[760px]:grid-cols-2 max-[760px]:gap-2.5 max-[760px]:mb-5.75">
         <div className="p-[18px_19px] bg-surface border border-[#283145] rounded-[11px] flex flex-col gap-2.5 max-[760px]:p-3.5">
           <span className="text-[11px] text-[#9cacbf]">Net Worth</span>
           <strong className={`text-[clamp(20px,2vw,28px)] tracking-[-0.7px] font-semibold ${t.netWorth < 0 ? 'negative text-coral' : 'text-text'}`}>{money(t.netWorth)}</strong>
@@ -41,7 +41,7 @@ export function DashboardTab({ graph }: DashboardTabProps) {
       </div>
       <Suspense
         fallback={
-          <div className="min-h-[460px] grid place-items-center my-6 border border-[#2d4055] rounded-[18px] text-[#8ca8bf] bg-[#111b29]" role="status">
+          <div className="min-h-115 grid place-items-center my-6 border border-[#2d4055] rounded-[18px] text-[#8ca8bf] bg-[#111b29]" role="status">
             Loading your financial picture…
           </div>
         }

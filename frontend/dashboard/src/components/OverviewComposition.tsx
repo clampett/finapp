@@ -15,9 +15,9 @@ export default function OverviewComposition({ graph }: { graph: GraphData }) {
         <div>
           <div className="text-[9px] text-[#a9b7ce] tracking-[1.7px] font-semibold mb-2.5">YOUR MONEY AT A GLANCE</div>
           <h3 id="composition-title" className="mt-2 text-[23px] tracking-[-0.5px] font-semibold text-text m-0">Your financial picture</h3>
-          <p className="mt-[7px] text-[#91a6bf] text-xs m-0">Explore your monthly plan, assets, and debts separately.</p>
+          <p className="mt-1.75 text-[#91a6bf] text-xs m-0">Explore your monthly plan, assets, and debts separately.</p>
         </div>
-        <div className="flex p-1 gap-[3px] bg-[#0d1622] border border-[#2e4157] rounded-[10px]" aria-label="Financial breakdown">
+        <div className="flex p-1 gap-0.75 bg-[#0d1622] border border-[#2e4157] rounded-[10px]" aria-label="Financial breakdown">
           {(['budget', 'assets', 'debt'] as const).map((value) => (
             <button
               key={value}
@@ -33,9 +33,9 @@ export default function OverviewComposition({ graph }: { graph: GraphData }) {
           ))}
         </div>
       </header>
-      <div className="grid grid-cols-[minmax(240px,0.9fr)_minmax(270px,1.1fr)] items-center gap-[30px] py-6 max-md:grid-cols-1 max-md:gap-[5px]">
+      <div className="grid grid-cols-[minmax(240px,0.9fr)_minmax(270px,1.1fr)] items-center gap-7.5 py-6 max-md:grid-cols-1 max-md:gap-1.25">
         <div
-          className="relative h-[320px] min-w-0 max-md:h-[290px]"
+          className="relative h-80 min-w-0 max-md:h-72.5"
           role="img"
           aria-label={`${labels[mode]}: ${dollars(breakdown.total)}. ${breakdown.items.map((item) => `${item.label}: ${dollars(item.value)}`).join('. ')}`}
         >
@@ -68,7 +68,7 @@ export default function OverviewComposition({ graph }: { graph: GraphData }) {
                     if (!visible || !payload?.length) return null;
                     const item = payload[0].payload as { label: string; value: number };
                     return (
-                      <div className="p-[13px_15px] bg-[#1c2638] border border-[#47536d] rounded-[9px] shadow-[0_10px_30px_#0005] min-w-[200px] text-[11px]">
+                      <div className="p-[13px_15px] bg-[#1c2638] border border-[#47536d] rounded-[9px] shadow-[0_10px_30px_#0005] min-w-50 text-[11px]">
                         <strong className="block text-[11px] text-[#d9e3f3] mb-3">{item.label}</strong>
                         <p className="m-0 text-text">
                           {dollars(item.value)} ·{' '}
@@ -81,16 +81,16 @@ export default function OverviewComposition({ graph }: { graph: GraphData }) {
               </PieChart>
             </ResponsiveContainer>
           ) : (
-            <div className="w-[230px] h-[230px] border-[24px] border-[#233247] rounded-full absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2" />
+            <div className="w-57.5 h-57.5 border-24 border-[#233247] rounded-full absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2" />
           )}
-          <div className="absolute inset-0 flex flex-col items-center justify-center gap-[7px] pointer-events-none">
-            <span className="text-xs text-[#9db1c9] max-w-[140px] text-center">{hovered?.label ?? labels[mode]}</span>
+          <div className="absolute inset-0 flex flex-col items-center justify-center gap-1.75 pointer-events-none">
+            <span className="text-xs text-[#9db1c9] max-w-35 text-center">{hovered?.label ?? labels[mode]}</span>
             <strong className="text-[clamp(26px,3vw,38px)] tracking-[-1px] font-semibold text-text">{money(hovered?.value ?? breakdown.total, true)}</strong>
             <small className="text-[10px] text-[#69839e]">{mode === 'budget' ? 'per month' : 'current balance'}</small>
           </div>
         </div>
         <div className="min-w-0">
-          <div className="max-h-[275px] overflow-y-auto">
+          <div className="max-h-68.75 overflow-y-auto">
             {breakdown.items.map((item, index) => (
               <div
                 key={item.label + index}
@@ -116,7 +116,7 @@ export default function OverviewComposition({ graph }: { graph: GraphData }) {
               </p>
             )}
           </div>
-          <div className="flex justify-between gap-[15px] mt-3 p-[16px_9px] border-t border-[#304359] text-[13px]">
+          <div className="flex justify-between gap-3.75 mt-3 p-[16px_9px] border-t border-[#304359] text-[13px]">
             <span>{labels[mode]}</span>
             <strong className="font-semibold text-text">{dollars(breakdown.total)}</strong>
           </div>
@@ -136,7 +136,7 @@ export default function OverviewComposition({ graph }: { graph: GraphData }) {
           )}
         </div>
       </div>
-      <footer className="border-t border-[#293b50] pt-[18px] flex justify-between flex-wrap gap-3 text-[11px] text-[#7e98b2]">
+      <footer className="border-t border-[#293b50] pt-4.5 flex justify-between flex-wrap gap-3 text-[11px] text-[#7e98b2]">
         <span>
           Net worth{' '}
           <strong className={`ml-2.5 text-sm font-semibold ${t.netWorth < 0 ? 'negative text-coral' : 'positive text-mint'}`}>

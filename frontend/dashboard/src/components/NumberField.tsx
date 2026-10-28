@@ -9,7 +9,7 @@ export function NumberField(props: InputHTMLAttributes<HTMLInputElement>) {
     <input
       {...props}
       type="number"
-      className={`min-w-0 border border-border rounded-lg bg-[#101722] text-[#edf2fa] px-[11px] py-[10px] ${props.className ?? ''}`.trim()}
+      className={`min-w-0 border border-border rounded-lg bg-[#101722] text-[#edf2fa] px-2.75 py-2.5 ${props.className ?? ''}`.trim()}
       value={editing ?? props.value ?? ''}
       onFocus={(event) => {
         setEditing(String(props.value ?? ''));

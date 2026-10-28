@@ -685,20 +685,20 @@ export function Canvas({
   ]);
   return (
     <div
-      className={`canvas-host relative border border-[#2a3448] rounded-xl overflow-hidden h-[clamp(510px,62vh,760px)] min-h-[510px] isolate ${expanded ? 'fixed inset-0 w-screen h-dvh min-h-0 max-h-none border-0 rounded-none z-[1000]' : ''} fullscreen:w-screen fullscreen:h-dvh fullscreen:min-h-0 fullscreen:max-h-none fullscreen:border-0 fullscreen:rounded-none tool-${tool}${connecting ? ' connect-mode' : ''}`}
+      className={`canvas-host relative border border-[#2a3448] rounded-xl overflow-hidden h-[clamp(510px,62vh,760px)] min-h-127.5 isolate ${expanded ? 'fixed inset-0 w-screen h-dvh min-h-0 max-h-none border-0 rounded-none z-1000' : ''} fullscreen:w-screen fullscreen:h-dvh fullscreen:min-h-0 fullscreen:max-h-none fullscreen:border-0 fullscreen:rounded-none tool-${tool}${connecting ? ' connect-mode' : ''}`}
       ref={host}
       tabIndex={0}
       onPointerDown={(event) => {
         if (!(
           event.target instanceof Element &&
-          event.target.closest('input,textarea,select,button,summary,.canvas-editor-panel')
+          event.target.closest('input,textarea,select,button,summary,[data-editor-panel]')
         ))
           host.current?.focus({ preventScroll: true });
       }}
     >
       <div className="absolute top-3.5 left-3.5 z-12 max-xs:max-w-[calc(100%-77px)] max-xs:left-2.5">{toolbar}</div>
       <button
-        className="w-[44px] h-[44px] absolute top-3.5 right-3.5 z-12 bg-[#152031ed] border border-[#34485c] rounded-xl shadow-[0_8px_25px_#0004] grid place-items-center cursor-pointer text-[#a8bbd2] hover:bg-[#2b3d52] hover:text-[#f0f7ff] max-xs:right-2.5 max-xs:w-[29px] max-xs:h-[32px]"
+        className="w-11 h-11 absolute top-3.5 right-3.5 z-12 bg-[#152031ed] border border-[#34485c] rounded-xl shadow-[0_8px_25px_#0004] grid place-items-center cursor-pointer text-[#a8bbd2] hover:bg-[#2b3d52] hover:text-[#f0f7ff] max-xs:right-2.5 max-xs:w-7.25 max-xs:h-8"
         aria-label={canvasFullscreen ? 'Exit canvas fullscreen' : 'Enter canvas fullscreen'}
         title={canvasFullscreen ? 'Exit fullscreen · Esc' : 'Fullscreen canvas'}
         onClick={async () => {
@@ -714,7 +714,7 @@ export function Canvas({
       >
         <CanvasIcon name={canvasFullscreen ? 'collapse' : 'expand'} />
       </button>
-      <div className="absolute top-[74px] left-5 max-xs:top-[105px] text-[8px] text-[#7d95b0] flex items-center gap-1.5 pointer-events-none z-10">
+      <div className="absolute top-18.5 left-5 max-xs:top-26.25 text-[8px] text-[#7d95b0] flex items-center gap-1.5 pointer-events-none z-10">
         <span className="inline-block w-1.5 h-1.5 rounded-full bg-[#73d9af] align-middle mr-1" />{' '}
         {connecting
           ? 'CONNECT MODE'
@@ -742,27 +742,27 @@ export function Canvas({
           </span>
         </div>
       )}
-      {panel && <div className="canvas-editor-panel absolute top-3.5 right-[68px] max-w-[calc(100%-28px)] w-[380px] max-h-[calc(100%-28px)] z-15 overflow-y-auto border border-[#3a4f68] rounded-[14px] bg-[#131e2ef5] backdrop-blur-[18px] shadow-[0_14px_45px_#0008] max-xs:top-[68px] max-xs:right-2.5 max-xs:left-2.5 max-xs:w-[calc(100%-20px)] max-xs:max-w-[calc(100%-20px)]">{panel}</div>}
+      {panel && <div data-editor-panel="true" className="absolute top-3.5 right-17 max-w-[calc(100%-28px)] w-95 max-h-[calc(100%-28px)] z-15 overflow-y-auto border border-[#3a4f68] rounded-[14px] bg-[#131e2ef5] backdrop-blur-[18px] shadow-[0_14px_45px_#0008] max-xs:top-17 max-xs:right-2.5 max-xs:left-2.5 max-xs:w-[calc(100%-20px)] max-xs:max-w-[calc(100%-20px)]">{panel}</div>}
       {feedback && (
-        <div className="absolute bottom-[65px] left-5 right-5 text-xs text-[#f8cd91] pointer-events-none" role="status">
+        <div className="absolute bottom-16.25 left-5 right-5 text-xs text-[#f8cd91] pointer-events-none" role="status">
           {feedback}
         </div>
       )}
       {!graph.nodes.length && (
-        <div className="absolute inset-0 flex flex-col justify-center items-center pointer-events-none p-[50px] text-center gap-2">
+        <div className="absolute inset-0 flex flex-col justify-center items-center pointer-events-none p-12.5 text-center gap-2">
           <h3 className="text-[15px] font-semibold text-text m-0">Start with your first node</h3>
           <p className="text-[#7b8ea8] text-xs m-0">Add nodes for income, accounts, debts, and expenses to build your scenario.</p>
         </div>
       )}
       <div className="absolute right-4 bottom-4 flex bg-[#172030] border border-[#354056] rounded-[7px] overflow-hidden">
-        <button className="border-0 border-r border-[#354056] bg-transparent px-[11px] py-[7px] text-[16px] text-[#a8bbd2] hover:bg-[#2a3750] cursor-pointer grid place-items-center" aria-label="Zoom in" title="Zoom in" onClick={() => zoomRef.current(1.25)}>
+        <button className="border-0 border-r border-[#354056] bg-transparent px-2.75 py-1.75 text-[16px] text-[#a8bbd2] hover:bg-[#2a3750] cursor-pointer grid place-items-center" aria-label="Zoom in" title="Zoom in" onClick={() => zoomRef.current(1.25)}>
           <CanvasIcon name="plus" />
         </button>
-        <button className="border-0 border-r border-[#354056] bg-transparent px-[11px] py-[7px] text-[16px] text-[#a8bbd2] hover:bg-[#2a3750] cursor-pointer grid place-items-center" aria-label="Zoom out" title="Zoom out" onClick={() => zoomRef.current(0.8)}>
+        <button className="border-0 border-r border-[#354056] bg-transparent px-2.75 py-1.75 text-[16px] text-[#a8bbd2] hover:bg-[#2a3750] cursor-pointer grid place-items-center" aria-label="Zoom out" title="Zoom out" onClick={() => zoomRef.current(0.8)}>
           <CanvasIcon name="minus" />
         </button>
         <button
-          className="border-0 bg-transparent px-[11px] py-[7px] text-[11px] text-[#a8bbd2] hover:bg-[#2a3750] cursor-pointer grid place-items-center"
+          className="border-0 bg-transparent px-2.75 py-1.75 text-[11px] text-[#a8bbd2] hover:bg-[#2a3750] cursor-pointer grid place-items-center"
           aria-label="Fit canvas to nodes"
           title="Fit to nodes"
           onClick={() => fitRef.current()}

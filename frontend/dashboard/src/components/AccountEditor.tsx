@@ -38,13 +38,13 @@ export function AccountEditor({
     onSave({ ...draft, name: draft.name.trim() });
   };
   return (
-    <aside className="w-[285px] border border-[#334055] rounded-[11px] p-[19px] bg-[#151d2b] shrink-0 max-md:w-full">
+    <aside className="w-71.25 border border-[#334055] rounded-[11px] p-4.75 bg-[#151d2b] shrink-0 max-md:w-full">
       <div className="flex items-center justify-between gap-4">
         <div>
-          <div className="text-[9px] text-[#a9b7ce] tracking-[1.7px] font-semibold mb-2.5 max-md:mb-[5px]">NODE DETAILS</div>
+          <div className="text-[9px] text-[#a9b7ce] tracking-[1.7px] font-semibold mb-2.5 max-md:mb-1.25">NODE DETAILS</div>
           <h3 className="text-[15px] font-semibold text-text m-0">{graph.nodes.some((n) => n.id === node.id) ? 'Edit node' : 'New node'}</h3>
         </div>
-        <button className="p-0 leading-none bg-[#1d2737] hover:bg-[#263346] border border-[#334057] rounded-[7px] grid place-items-center w-[30px] h-[30px] text-[20px] text-[#a5b5cd] hover:text-white shrink-0 cursor-pointer" aria-label="Close node editor" onClick={onClose}>
+        <button className="p-0 leading-none bg-[#1d2737] hover:bg-[#263346] border border-[#334057] rounded-[7px] grid place-items-center w-7.5 h-7.5 text-[20px] text-[#a5b5cd] hover:text-white shrink-0 cursor-pointer" aria-label="Close node editor" onClick={onClose}>
           <svg
             className="block"
             width="16"
@@ -61,21 +61,21 @@ export function AccountEditor({
           </svg>
         </button>
       </div>
-      <form onSubmit={submit} className="flex flex-col gap-[15px] mt-[22px] max-md:grid max-md:grid-cols-2">
-        <label className="flex flex-col gap-[7px] text-[11px] text-[#a9b6cc]">
+      <form onSubmit={submit} className="flex flex-col gap-3.75 mt-5.5 max-md:grid max-md:grid-cols-2">
+        <label className="flex flex-col gap-1.75 text-[11px] text-[#a9b6cc]">
           Name
           <input
-            className="w-full text-xs min-w-0 border border-border rounded-lg bg-[#101722] text-[#edf2fa] px-[11px] py-[10px]"
+            className="w-full text-xs min-w-0 border border-border rounded-lg bg-[#101722] text-[#edf2fa] px-2.75 py-2.5"
             required
             maxLength={100}
             value={draft.name}
             onChange={(e) => setDraft({ ...draft, name: e.target.value })}
           />
         </label>
-        <label className="flex flex-col gap-[7px] text-[11px] text-[#a9b6cc]">
+        <label className="flex flex-col gap-1.75 text-[11px] text-[#a9b6cc]">
           Node type
           <select
-            className="w-full text-xs min-w-0 border border-border rounded-lg bg-[#101722] text-[#edf2fa] px-[11px] py-[10px] cursor-pointer"
+            className="w-full text-xs min-w-0 border border-border rounded-lg bg-[#101722] text-[#edf2fa] px-2.75 py-2.5 cursor-pointer"
             value={draft.nodeType}
             onChange={(e) =>
               setDraft({ ...draft, nodeType: e.target.value as GraphNode['nodeType'] })
@@ -86,7 +86,7 @@ export function AccountEditor({
             ))}
           </select>
         </label>
-        <label className="flex flex-col gap-[7px] text-[11px] text-[#a9b6cc]">
+        <label className="flex flex-col gap-1.75 text-[11px] text-[#a9b6cc]">
           {['INCOME', 'EXPENSE'].includes(draft.nodeType)
             ? 'Monthly amount ($)'
             : 'Current balance ($)'}
@@ -110,7 +110,7 @@ export function AccountEditor({
             {expenseRoutes.map((edge) => (
               <button
                 type="button"
-                className="inline-flex items-center justify-center gap-[7px] whitespace-nowrap border border-[#344056] rounded-[7px] px-[13px] py-[9px] bg-[#182131] hover:bg-[#232f43] hover:border-[#65738c] text-[11px] font-medium min-h-[34px] cursor-pointer text-text"
+                className="inline-flex items-center justify-center gap-1.75 whitespace-nowrap border border-[#344056] rounded-[7px] px-3.25 py-2.25 bg-[#182131] hover:bg-[#232f43] hover:border-[#65738c] text-[11px] font-medium min-h-8.5 cursor-pointer text-text"
                 key={edge.id}
                 onClick={() => onEditRoute(edge.id)}
               >
@@ -120,7 +120,7 @@ export function AccountEditor({
           </div>
         )}
         {!['INCOME', 'EXPENSE'].includes(draft.nodeType) && (
-          <label className="flex flex-col gap-[7px] text-[11px] text-[#a9b6cc]">
+          <label className="flex flex-col gap-1.75 text-[11px] text-[#a9b6cc]">
             {draft.nodeType === 'INVESTMENT'
               ? 'Reference return (%; model uses market settings)'
               : 'Annual cash yield / loan APR (%)'}
@@ -136,7 +136,7 @@ export function AccountEditor({
           </label>
         )}
         {draft.nodeType === 'DEBT' && (
-          <label className="flex flex-col gap-[7px] text-[11px] text-[#a9b6cc]">
+          <label className="flex flex-col gap-1.75 text-[11px] text-[#a9b6cc]">
             Monthly payment override ($)
             <NumberField
               type="number"
@@ -162,11 +162,11 @@ export function AccountEditor({
           Income follows the scenario’s gross/net setting. Expenses are monthly flows; other nodes
           hold balances.
         </p>
-        <button className="inline-flex items-center justify-center gap-[7px] whitespace-nowrap rounded-[7px] px-[13px] py-[9px] text-[11px] font-medium min-h-[34px] cursor-pointer bg-primary text-primary-fg border border-primary hover:bg-[#cbbafa] disabled:opacity-40 disabled:cursor-not-allowed" disabled={!draft.name.trim()}>
+        <button className="inline-flex items-center justify-center gap-1.75 whitespace-nowrap rounded-[7px] px-3.25 py-2.25 text-[11px] font-medium min-h-8.5 cursor-pointer bg-primary text-primary-fg border border-primary hover:bg-[#cbbafa] disabled:opacity-40 disabled:cursor-not-allowed" disabled={!draft.name.trim()}>
           Apply to scenario
         </button>
         {graph.nodes.some((n) => n.id === node.id) && (
-          <button type="button" className="inline-flex items-center justify-center gap-[7px] whitespace-nowrap rounded-[7px] px-[13px] py-[9px] text-[11px] font-medium min-h-[34px] cursor-pointer text-coral border border-[#633246] bg-[#2b1b28] hover:bg-[#3d2034]" onClick={onDelete}>
+          <button type="button" className="inline-flex items-center justify-center gap-1.75 whitespace-nowrap rounded-[7px] px-3.25 py-2.25 text-[11px] font-medium min-h-8.5 cursor-pointer text-coral border border-[#633246] bg-[#2b1b28] hover:bg-[#3d2034]" onClick={onDelete}>
             Remove node
           </button>
         )}

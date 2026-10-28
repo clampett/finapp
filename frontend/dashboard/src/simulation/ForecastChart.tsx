@@ -64,12 +64,12 @@ export const ForecastChart = memo(function ForecastChart({
       : 1;
   return (
     <div className="h-full flex flex-col">
-      <div className="flex gap-[13px] flex-wrap items-center my-[7px_15px]">
-        <div className="inline-flex border border-[#334459] rounded-[7px] p-[3px] bg-[#101824]" aria-label="Chart time range">
-          <button className={`border-0 rounded-[4px] text-[10px] bg-transparent p-[7px_10px] cursor-pointer transition-colors ${!early ? 'selected bg-[#29443e] text-[#c4f1df] font-medium' : 'text-[#8ea4bd] hover:text-[#edf2fa]'}`} onClick={() => setEarly(false)}>
+      <div className="flex gap-3.25 flex-wrap items-center my-[7px_15px]">
+        <div className="inline-flex border border-[#334459] rounded-[7px] p-0.75 bg-[#101824]" aria-label="Chart time range">
+          <button className={`border-0 rounded-sm text-[10px] bg-transparent p-[7px_10px] cursor-pointer transition-colors ${!early ? 'selected bg-[#29443e] text-[#c4f1df] font-medium' : 'text-[#8ea4bd] hover:text-[#edf2fa]'}`} onClick={() => setEarly(false)}>
             Full horizon
           </button>
-          <button className={`border-0 rounded-[4px] text-[10px] bg-transparent p-[7px_10px] cursor-pointer transition-colors ${early ? 'selected bg-[#29443e] text-[#c4f1df] font-medium' : 'text-[#8ea4bd] hover:text-[#edf2fa]'}`} onClick={() => setEarly(true)}>
+          <button className={`border-0 rounded-sm text-[10px] bg-transparent p-[7px_10px] cursor-pointer transition-colors ${early ? 'selected bg-[#29443e] text-[#c4f1df] font-medium' : 'text-[#8ea4bd] hover:text-[#edf2fa]'}`} onClick={() => setEarly(true)}>
             First 5 years
           </button>
         </div>
@@ -97,7 +97,7 @@ export const ForecastChart = memo(function ForecastChart({
         </label>
       </div>
       <div
-        className="flex-1 min-h-[260px] w-full"
+        className="flex-1 min-h-65 w-full"
         role="img"
         aria-label="Monte Carlo net worth forecast with negative balances below the zero line"
       >
@@ -165,13 +165,13 @@ export const ForecastChart = memo(function ForecastChart({
                 if (!active || !payload?.length) return null;
                 const point = payload[0]?.payload as ForecastPoint;
                 return (
-                  <div className="p-[13px_15px] bg-[#1c2638] border border-[#47536d] rounded-[9px] shadow-[0_10px_30px_#0005] min-w-[230px] text-[11px]">
+                  <div className="p-[13px_15px] bg-[#1c2638] border border-[#47536d] rounded-[9px] shadow-[0_10px_30px_#0005] min-w-57.5 text-[11px]">
                     <strong className="block text-[11px] text-[#d9e3f3] mb-3">
                       Year {point.year}{' '}
                       <small className="text-[9px] text-[#8095ae] font-normal ml-2.5">{realDollars ? 'today’s dollars' : 'nominal dollars'}</small>
                     </strong>
                     {(['p90', 'p50', 'p10'] as const).map((key, i) => (
-                      <div key={key} className="flex justify-between gap-[22px] mt-2.5">
+                      <div key={key} className="flex justify-between gap-5.5 mt-2.5">
                         <span>
                           {['Upper outcome · P90', 'Median · P50', 'Lower outcome · P10'][i]}
                         </span>
@@ -179,7 +179,7 @@ export const ForecastChart = memo(function ForecastChart({
                       </div>
                     ))}
                     {reference && (
-                      <div className="border-t border-[#344357] pt-[9px] mt-2.5 flex justify-between gap-[22px]">
+                      <div className="border-t border-[#344357] pt-2.25 mt-2.5 flex justify-between gap-5.5">
                         <span>Cashflow reference</span>
                         <b className="font-semibold text-text">{dollars(point.reference)}</b>
                       </div>
@@ -252,7 +252,7 @@ export const ForecastChart = memo(function ForecastChart({
       </div>
       <div className="flex justify-between flex-wrap gap-2 text-[#839ab3] text-[9px] p-[9px_8px_2px]">
         <span>
-          <i className="inline-block w-[15px] h-[7px] mr-[7px] bg-[#8a7eb445] border border-[#9480c07a] rounded-[2px] align-middle" /> Middle 80% of simulated outcomes
+          <i className="inline-block w-3.75 h-1.75 mr-1.75 bg-[#8a7eb445] border border-[#9480c07a] rounded-xs align-middle" /> Middle 80% of simulated outcomes
         </span>
         <span>
           {compressed ? 'Compressed distances · signs retained' : 'Linear dollar scale'} ·{' '}

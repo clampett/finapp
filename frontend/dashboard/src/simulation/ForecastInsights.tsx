@@ -71,27 +71,27 @@ export const ForecastInsights = memo(function ForecastInsights({
   return (
     <div>
       {summary && (
-        <div className="grid grid-cols-3 gap-3 mb-[19px] max-[500px]:grid-cols-1">
-          <article className="border border-[#2e3b50] rounded-[10px] p-[17px] bg-[#131d2b]">
+        <div className="grid grid-cols-3 gap-3 mb-4.75 max-[500px]:grid-cols-1">
+          <article className="border border-[#2e3b50] rounded-[10px] p-4.25 bg-[#131d2b]">
             <span className="block text-[#9aafc6] text-[10px] leading-relaxed">Paths ending with positive net worth</span>
             <strong className="block text-[clamp(17px,1.8vw,25px)] font-medium text-[#d6e9e2] my-[10px_7px]">
               {(summary.probability_positive * 100).toFixed(1)}
-              <small className="text-[13px] text-[#94b8aa] ml-[3px]">%</small>
+              <small className="text-[13px] text-[#94b8aa] ml-0.75">%</small>
             </strong>
             <p className="text-[#778fa9] text-[9px] leading-[1.7] m-0">Share of 1,000 paths at the selected horizon.</p>
           </article>
-          <article className="border border-[#2e3b50] rounded-[10px] p-[17px] bg-[#131d2b]">
+          <article className="border border-[#2e3b50] rounded-[10px] p-4.25 bg-[#131d2b]">
             <span className="block text-[#9aafc6] text-[10px] leading-relaxed">Paths reaching {money(summary.target, true)}</span>
             <strong className="block text-[clamp(17px,1.8vw,25px)] font-medium text-[#d6e9e2] my-[10px_7px]">
               {(summary.probability_target * 100).toFixed(1)}
-              <small className="text-[13px] text-[#94b8aa] ml-[3px]">%</small>
+              <small className="text-[13px] text-[#94b8aa] ml-0.75">%</small>
             </strong>
             <p className="text-[#778fa9] text-[9px] leading-[1.7] m-0">
               Measured in {realDollars ? 'today’s purchasing power' : 'nominal dollars'}; not a
               guarantee.
             </p>
           </article>
-          <article className="border border-[#2e3b50] rounded-[10px] p-[17px] bg-[#131d2b]">
+          <article className="border border-[#2e3b50] rounded-[10px] p-4.25 bg-[#131d2b]">
             <span className="block text-[#9aafc6] text-[10px] leading-relaxed">Median net worth above zero</span>
             <strong className="block text-[clamp(17px,1.8vw,25px)] font-medium text-[#d6e9e2] my-[10px_7px]">
               {summary.first_positive_median_year === null
@@ -106,19 +106,19 @@ export const ForecastInsights = memo(function ForecastInsights({
       )}
       {bins.length > 0 && (
         <section className="bg-[#121c2a] border border-[#2e4056] rounded-xl p-5">
-          <div className="flex items-start justify-between gap-[15px]">
+          <div className="flex items-start justify-between gap-3.75">
             <div>
               <div className="text-[#86c7b5] text-[8px] tracking-[1.7px] font-semibold mb-2">AT THE FINISH LINE</div>
-              <h3 className="text-[15px] my-[7px] font-medium text-text">Different paths. Different outcomes.</h3>
+              <h3 className="text-[15px] my-1.75 font-medium text-text">Different paths. Different outcomes.</h3>
               <p className="text-[#889eb8] text-[10px] leading-relaxed m-0">
                 Distribution of net worth after {final?.year} years ·{' '}
                 {realDollars ? 'today’s dollars' : 'nominal dollars'}
               </p>
             </div>
-            <span className="text-[9px] text-[#a6c9c0] bg-[#203933] px-[9px] py-1.5 rounded-full whitespace-nowrap">1,000 paths</span>
+            <span className="text-[9px] text-[#a6c9c0] bg-[#203933] px-2.25 py-1.5 rounded-full whitespace-nowrap">1,000 paths</span>
           </div>
           <div
-            className="h-[190px] my-[12px_8px]"
+            className="h-47.5 my-[12px_8px]"
             role="img"
             aria-label="Histogram of final simulated net worth"
           >
@@ -147,7 +147,7 @@ export const ForecastInsights = memo(function ForecastInsights({
                       share: number;
                     };
                     return (
-                      <div className="p-[13px_15px] bg-[#1c2638] border border-[#47536d] rounded-[9px] shadow-[0_10px_30px_#0005] min-w-[200px] text-[11px]">
+                      <div className="p-[13px_15px] bg-[#1c2638] border border-[#47536d] rounded-[9px] shadow-[0_10px_30px_#0005] min-w-50 text-[11px]">
                         <strong className="block text-[11px] text-[#d9e3f3] mb-3">
                           {money(bin.lower)} to {money(bin.upper)}
                         </strong>
@@ -170,7 +170,7 @@ export const ForecastInsights = memo(function ForecastInsights({
             {(['p10', 'p50', 'p90'] as const).map((key, i) => (
               <span key={key} className="text-[#88a0ba] text-[9px]">
                 {['P10 · lower', 'P50 · median', 'P90 · upper'][i]}
-                <b className={`block text-base font-medium mt-[7px] ${(final?.[key] ?? 0) < 0 ? 'negative text-coral' : 'text-[#d5dfef]'}`}>
+                <b className={`block text-base font-medium mt-1.75 ${(final?.[key] ?? 0) < 0 ? 'negative text-coral' : 'text-[#d5dfef]'}`}>
                   {money(final?.[key] ?? 0, true)}
                 </b>
               </span>
@@ -178,20 +178,20 @@ export const ForecastInsights = memo(function ForecastInsights({
           </div>
         </section>
       )}
-      <details className="mt-[18px] border border-[#2b3c50] rounded-[10px] overflow-hidden bg-[#111a26]">
+      <details className="mt-4.5 border border-[#2b3c50] rounded-[10px] overflow-hidden bg-[#111a26]">
         <summary className="flex justify-between p-[15px_18px] text-xs cursor-pointer select-none [&::-webkit-details-marker]:hidden">
           Check the math year by year <span className="text-[#7790ac] text-[10px]">Budget, debt & forecast</span>
         </summary>
-        <div className="flex gap-[15px] items-center justify-between p-[15px_18px] border-t border-[#29384c] max-[500px]:flex-col max-[500px]:items-stretch">
+        <div className="flex gap-3.75 items-center justify-between p-[15px_18px] border-t border-[#29384c] max-[500px]:flex-col max-[500px]:items-stretch">
           <p className="text-[10px] leading-[1.7] text-[#899fb8] m-0">
             Cash flows and loan balances below are nominal. Forecast values use the chart’s selected
             dollar basis.
           </p>
-          <button className="inline-flex items-center justify-center gap-[7px] whitespace-nowrap border border-[#344056] rounded-[7px] px-[13px] py-[9px] bg-[#182131] hover:bg-[#232f43] hover:border-[#65738c] text-[11px] font-medium min-h-[34px] cursor-pointer text-text" onClick={csv}>
+          <button className="inline-flex items-center justify-center gap-1.75 whitespace-nowrap border border-[#344056] rounded-[7px] px-3.25 py-2.25 bg-[#182131] hover:bg-[#232f43] hover:border-[#65738c] text-[11px] font-medium min-h-8.5 cursor-pointer text-text" onClick={csv}>
             Export audit CSV ↓
           </button>
         </div>
-        <div className="max-h-[360px] overflow-auto">
+        <div className="max-h-90 overflow-auto">
           <table className="w-full border-collapse text-[10px] whitespace-nowrap">
             <thead>
               <tr>

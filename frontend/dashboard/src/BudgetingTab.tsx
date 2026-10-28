@@ -798,7 +798,7 @@ export function BudgetingTab({ graph }: BudgetingTabProps) {
 
   return (
     <div
-      className="w-full max-w-[1200px] mx-auto p-4"
+      className="w-full max-w-300 mx-auto p-4"
     >
       {/* Header and Summary Cards */}
       <div
@@ -1012,7 +1012,7 @@ export function BudgetingTab({ graph }: BudgetingTabProps) {
           disabled={!userId}
           aria-busy={refreshing}
           aria-disabled={refreshing || !userId}
-          className="inline-flex items-center justify-center gap-2 min-w-[120px] aria-busy:cursor-progress whitespace-nowrap rounded-[7px] font-medium cursor-pointer bg-transparent text-[#97a7c2] hover:bg-[#1a2536] hover:text-text transition-colors disabled:opacity-45 disabled:cursor-not-allowed"
+          className="inline-flex items-center justify-center gap-2 min-w-30 aria-busy:cursor-progress whitespace-nowrap rounded-[7px] font-medium cursor-pointer bg-transparent text-[#97a7c2] hover:bg-[#1a2536] hover:text-text transition-colors disabled:opacity-45 disabled:cursor-not-allowed"
           style={{ marginLeft: 'auto', padding: '6px 12px', fontSize: '12px' }}
         >
           {refreshing ? (
@@ -1053,7 +1053,7 @@ export function BudgetingTab({ graph }: BudgetingTabProps) {
             </div>
             <button
               type="button"
-              className="inline-flex items-center justify-center gap-[7px] whitespace-nowrap rounded-[7px] px-3.5 py-[9px] text-[11px] font-medium min-h-[34px] cursor-pointer bg-primary text-primary-fg hover:bg-[#cbbcfc] transition-colors disabled:opacity-45 disabled:cursor-not-allowed"
+              className="inline-flex items-center justify-center gap-1.75 whitespace-nowrap rounded-[7px] px-3.5 py-2.25 text-[11px] font-medium min-h-8.5 cursor-pointer bg-primary text-primary-fg hover:bg-[#cbbcfc] transition-colors disabled:opacity-45 disabled:cursor-not-allowed"
               onClick={handleOpenAddTransaction}
               disabled={!userId}
             >
@@ -1252,12 +1252,12 @@ export function BudgetingTab({ graph }: BudgetingTabProps) {
                     marginTop: '0.5rem',
                   }}
                 >
-                  <button type="submit" className="inline-flex items-center justify-center gap-[7px] whitespace-nowrap rounded-[7px] px-3.5 py-[9px] text-[11px] font-medium min-h-[34px] cursor-pointer bg-primary text-primary-fg hover:bg-[#cbbcfc] transition-colors">
+                  <button type="submit" className="inline-flex items-center justify-center gap-1.75 whitespace-nowrap rounded-[7px] px-3.5 py-2.25 text-[11px] font-medium min-h-8.5 cursor-pointer bg-primary text-primary-fg hover:bg-[#cbbcfc] transition-colors">
                     {editingTransId ? 'Save Changes' : 'Record Transaction'}
                   </button>
                   <button
                     type="button"
-                    className="inline-flex items-center justify-center gap-[7px] whitespace-nowrap rounded-[7px] px-[13px] py-[9px] text-[11px] font-medium min-h-[34px] cursor-pointer bg-transparent text-[#97a7c2] border border-transparent hover:bg-[#1a2536] hover:text-text transition-colors"
+                    className="inline-flex items-center justify-center gap-1.75 whitespace-nowrap rounded-[7px] px-3.25y-[9px] text-[11px] font-medium min-h-8.5 cursor-pointer bg-transparent text-[#97a7c2] border border-transparent hover:bg-[#1a2536] hover:text-text transition-colors"
                     onClick={() => {
                       setShowTransForm(false);
                       setEditingTransId(null);
@@ -1268,7 +1268,7 @@ export function BudgetingTab({ graph }: BudgetingTabProps) {
                   {editingTransId && (
                     <button
                       type="button"
-                      className="inline-flex items-center justify-center gap-[7px] whitespace-nowrap rounded-[7px] px-[13px] py-[9px] text-[11px] font-medium min-h-[34px] cursor-pointer text-coral border border-[#633246] bg-[#2b1b28] hover:bg-[#3d2034] transition-colors"
+                      className="inline-flex items-center justify-center gap-1.75 whitespace-nowrap rounded-[7px] px-3.25 py-2.25 text-[11px] font-medium min-h-8.5 cursor-pointer text-coral border border-[#633246] bg-[#2b1b28] hover:bg-[#3d2034] transition-colors"
                       style={{ marginLeft: 'auto' }}
                       onClick={() => handleDeleteTransaction(editingTransId)}
                     >
@@ -1467,7 +1467,7 @@ export function BudgetingTab({ graph }: BudgetingTabProps) {
             </div>
             <button
               type="button"
-              className="inline-flex items-center justify-center gap-[7px] whitespace-nowrap rounded-[7px] px-3.5 py-[9px] text-[11px] font-medium min-h-[34px] cursor-pointer bg-primary text-primary-fg hover:bg-[#cbbcfc] transition-colors disabled:opacity-45 disabled:cursor-not-allowed"
+              className="inline-flex items-center justify-center gap-1.75 whitespace-nowrap rounded-[7px] px-3.5 py-2.25 text-[11px] font-medium min-h-8.5 cursor-pointer bg-primary text-primary-fg hover:bg-[#cbbcfc] transition-colors disabled:opacity-45 disabled:cursor-not-allowed"
               onClick={handleOpenAddStock}
               disabled={!userId}
             >
@@ -1721,12 +1721,12 @@ export function BudgetingTab({ graph }: BudgetingTabProps) {
                     marginTop: '0.5rem',
                   }}
                 >
-                  <button type="submit" className="inline-flex items-center justify-center gap-[7px] whitespace-nowrap rounded-[7px] px-3.5 py-[9px] text-[11px] font-medium min-h-[34px] cursor-pointer bg-primary text-primary-fg hover:bg-[#cbbcfc] transition-colors">
+                  <button type="submit" className="inline-flex items-center justify-center gap-1.75 whitespace-nowrap rounded-[7px] px-3.5 py-2.25 text-[11px] font-medium min-h-8.5 cursor-pointer bg-primary text-primary-fg hover:bg-[#cbbcfc] transition-colors">
                     {editingStockId ? 'Save Changes' : 'Add Stock'}
                   </button>
                   <button
                     type="button"
-                    className="inline-flex items-center justify-center gap-[7px] whitespace-nowrap rounded-[7px] px-[13px] py-[9px] text-[11px] font-medium min-h-[34px] cursor-pointer bg-transparent text-[#97a7c2] border border-transparent hover:bg-[#1a2536] hover:text-text transition-colors"
+                    className="inline-flex items-center justify-center gap-1.75 whitespace-nowrap rounded-[7px] px-3.25 py-2.25 text-[11px] font-medium min-h-8.5 cursor-pointer bg-transparent text-[#97a7c2] border border-transparent hover:bg-[#1a2536] hover:text-text transition-colors"
                     onClick={() => {
                       setShowStockForm(false);
                       setEditingStockId(null);
@@ -1737,7 +1737,7 @@ export function BudgetingTab({ graph }: BudgetingTabProps) {
                   {editingStockId && (
                     <button
                       type="button"
-                      className="inline-flex items-center justify-center gap-[7px] whitespace-nowrap rounded-[7px] px-[13px] py-[9px] text-[11px] font-medium min-h-[34px] cursor-pointer text-coral border border-[#633246] bg-[#2b1b28] hover:bg-[#3d2034] transition-colors"
+                      className="inline-flex items-center justify-center gap-1.75 whitespace-nowrap rounded-[7px] px-3.25 py-2.25 text-[11px] font-medium min-h-8.5 cursor-pointer text-coral border border-[#633246] bg-[#2b1b28] hover:bg-[#3d2034] transition-colors"
                       style={{ marginLeft: 'auto' }}
                       onClick={() => handleDeleteStock(editingStockId)}
                     >
@@ -1869,12 +1869,12 @@ export function BudgetingTab({ graph }: BudgetingTabProps) {
                 </div>
 
                 <div style={{ display: 'flex', gap: '0.5rem', gridColumn: '1 / -1' }}>
-                  <button type="submit" className="inline-flex items-center justify-center gap-[7px] whitespace-nowrap rounded-[7px] px-3.5 py-[9px] text-[11px] font-medium min-h-[34px] cursor-pointer bg-primary text-primary-fg hover:bg-[#cbbcfc] transition-colors">
+                  <button type="submit" className="inline-flex items-center justify-center gap-1.75 whitespace-nowrap rounded-[7px] px-3.5 py-2.25 text-[11px] font-medium min-h-8.5 cursor-pointer bg-primary text-primary-fg hover:bg-[#cbbcfc] transition-colors">
                     Execute {tradeModal.type.toUpperCase()}
                   </button>
                   <button
                     type="button"
-                    className="inline-flex items-center justify-center gap-[7px] whitespace-nowrap rounded-[7px] px-[13px] py-[9px] text-[11px] font-medium min-h-[34px] cursor-pointer bg-transparent text-[#97a7c2] border border-transparent hover:bg-[#1a2536] hover:text-text transition-colors"
+                    className="inline-flex items-center justify-center gap-1.75 whitespace-nowrap rounded-[7px] px-3.25 py-2.25 text-[11px] font-medium min-h-8.5 cursor-pointer bg-transparent text-[#97a7c2] border border-transparent hover:bg-[#1a2536] hover:text-text transition-colors"
                     onClick={() => setTradeModal((prev) => ({ ...prev, open: false }))}
                   >
                     Cancel
@@ -2081,7 +2081,7 @@ export function BudgetingTab({ graph }: BudgetingTabProps) {
             <div style={{ display: 'flex', gap: '0.5rem' }}>
               <button
                 type="button"
-                className="inline-flex items-center justify-center gap-2 min-w-[120px] aria-busy:cursor-progress whitespace-nowrap rounded-[7px] font-medium cursor-pointer bg-transparent text-[#97a7c2] hover:bg-[#1a2536] hover:text-text transition-colors disabled:opacity-45 disabled:cursor-not-allowed"
+                className="inline-flex items-center justify-center gap-2 min-w-30 aria-busy:cursor-progress whitespace-nowrap rounded-[7px] font-medium cursor-pointer bg-transparent text-[#97a7c2] hover:bg-[#1a2536] hover:text-text transition-colors disabled:opacity-45 disabled:cursor-not-allowed"
                 onClick={handleGenerateDueOccurrences}
                 disabled={!userId}
                 aria-busy={generating}
@@ -2098,7 +2098,7 @@ export function BudgetingTab({ graph }: BudgetingTabProps) {
               </button>
               <button
                 type="button"
-                className="inline-flex items-center justify-center gap-[7px] whitespace-nowrap rounded-[7px] px-3.5 py-[9px] text-[11px] font-medium min-h-[34px] cursor-pointer bg-primary text-primary-fg hover:bg-[#cbbcfc] transition-colors disabled:opacity-45 disabled:cursor-not-allowed"
+                className="inline-flex items-center justify-center gap-1.75 whitespace-nowrap rounded-[7px] px-3.5 py-2.25 text-[11px] font-medium min-h-8.5 cursor-pointer bg-primary text-primary-fg hover:bg-[#cbbcfc] transition-colors disabled:opacity-45 disabled:cursor-not-allowed"
                 onClick={handleOpenAddRecurring}
                 disabled={!userId}
               >
@@ -2319,12 +2319,12 @@ export function BudgetingTab({ graph }: BudgetingTabProps) {
                     marginTop: '0.5rem',
                   }}
                 >
-                  <button type="submit" className="inline-flex items-center justify-center gap-[7px] whitespace-nowrap rounded-[7px] px-3.5 py-[9px] text-[11px] font-medium min-h-[34px] cursor-pointer bg-primary text-primary-fg hover:bg-[#cbbcfc] transition-colors">
+                  <button type="submit" className="inline-flex items-center justify-center gap-1.75 whitespace-nowrap rounded-[7px] px-3.5 py-2.25 text-[11px] font-medium min-h-8.5 cursor-pointer bg-primary text-primary-fg hover:bg-[#cbbcfc] transition-colors">
                     {editingRecurId ? 'Save Changes' : 'Create Recurring Rule'}
                   </button>
                   <button
                     type="button"
-                    className="inline-flex items-center justify-center gap-[7px] whitespace-nowrap rounded-[7px] px-[13px] py-[9px] text-[11px] font-medium min-h-[34px] cursor-pointer bg-transparent text-[#97a7c2] border border-transparent hover:bg-[#1a2536] hover:text-text transition-colors"
+                    className="inline-flex items-center justify-center gap-1.75 whitespace-nowrap rounded-[7px] px-3.25 py-2.25 text-[11px] font-medium min-h-8.5 cursor-pointer bg-transparent text-[#97a7c2] border border-transparent hover:bg-[#1a2536] hover:text-text transition-colors"
                     onClick={() => {
                       setShowRecurForm(false);
                       setEditingRecurId(null);
@@ -2335,7 +2335,7 @@ export function BudgetingTab({ graph }: BudgetingTabProps) {
                   {editingRecurId && (
                     <button
                       type="button"
-                      className="inline-flex items-center justify-center gap-[7px] whitespace-nowrap rounded-[7px] px-[13px] py-[9px] text-[11px] font-medium min-h-[34px] cursor-pointer text-coral border border-[#633246] bg-[#2b1b28] hover:bg-[#3d2034] transition-colors"
+                      className="inline-flex items-center justify-center gap-1.75 whitespace-nowrap rounded-[7px] px-3.25 py-2.25 text-[11px] font-medium min-h-8.5 cursor-pointer text-coral border border-[#633246] bg-[#2b1b28] hover:bg-[#3d2034] transition-colors"
                       style={{ marginLeft: 'auto' }}
                       onClick={() => handleDeleteRecurring(editingRecurId)}
                     >

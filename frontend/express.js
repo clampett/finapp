@@ -1,5 +1,6 @@
 const express = require('express');
 const path = require('path');
+const fs = require('fs');
 const rateLimit = require('express-rate-limit');
 const { createApiProxy } = require('./api-proxy');
 
@@ -54,14 +55,11 @@ app.use((req, res, next) => {
   if (clean.endsWith('/index')) clean = clean.slice(0, -'index'.length);
   if (clean === '') clean = '/';
 
-  // Sanitize the redirect URL to prevent open redirect vulnerabilities
-  if (!clean.startsWith('/')) {
-    // If the path doesn't start with '/', it's likely malicious
-    return res.status(400).send('Invalid redirect path');
-  }
-
-  // Additional validation: check for protocol or other malicious patterns in clean path
-  if (clean.includes('://') || clean.includes('\\') || clean.includes('../')) {
+  // Validate and allowlist redirect destinations to known local landing files only.
+  const relativeRoute = clean === '/' ? '/index' : clean;
+  const landingFileCandidate = path.resolve(landingDir, `.${relativeRoute}.html`);
+  const landingBase = path.resolve(landingDir) + path.sep;
+  if (!landingFileCandidate.startsWith(landingBase) || !fs.existsSync(landingFileCandidate)) {
     return res.status(400).send('Invalid redirect path');
   }
 

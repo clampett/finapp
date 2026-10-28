@@ -3,7 +3,7 @@ const assert = require('node:assert/strict');
 const vm = require('node:vm');
 const fs = require('node:fs');
 const path = require('node:path');
-const { transformSync } = require('./landing/node_modules/esbuild');
+const { transformSync } = require('../landing/node_modules/esbuild/lib/main');
 const source = transformSync(
   fs.readFileSync(path.join(__dirname, 'dashboard/src/session.ts'), 'utf8'),
   { loader: 'ts', format: 'cjs' },

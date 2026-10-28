@@ -2,7 +2,7 @@ const test = require('node:test');
 const assert = require('node:assert/strict');
 const http = require('node:http');
 const express = require('express');
-const { createApiProxy } = require('./api-proxy');
+const { createApiProxy } = require('../api-proxy');
 
 const listen = (server) =>
   new Promise((resolve) =>

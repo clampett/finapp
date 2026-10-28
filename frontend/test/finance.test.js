@@ -3,7 +3,7 @@ const assert = require('node:assert/strict');
 const fs = require('node:fs');
 const vm = require('node:vm');
 const path = require('node:path');
-const { transformSync, buildSync } = require('./landing/node_modules/esbuild');
+const { transformSync, buildSync } = require('../landing/node_modules/esbuild/lib/main');
 const code = transformSync(
   fs.readFileSync(path.join(__dirname, 'dashboard/src/finance.ts'), 'utf8'),
   {

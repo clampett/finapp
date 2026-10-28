@@ -65,10 +65,21 @@ app.use((req, res, next) => {
     return res.status(400).send('Invalid redirect path');
   }
 
-  const query = req.url.slice(req.path.length); // preserve ?query=string
+  // Rebuild query string from parsed query parameters instead of slicing raw URL
+  const queryParams = new URLSearchParams();
+  for (const [key, value] of Object.entries(req.query || {})) {
+    if (Array.isArray(value)) {
+      for (const v of value) {
+        if (typeof v === 'string') queryParams.append(key, v);
+      }
+    } else if (typeof value === 'string') {
+      queryParams.append(key, value);
+    }
+  }
+  const query = queryParams.toString();
 
   // Final validation on the full computed redirect target
-  const redirectTarget = clean + query;
+  const redirectTarget = query ? `${clean}?${query}` : clean;
   if (!isSafeLocalRedirectTarget(redirectTarget)) {
     return res.status(400).send('Invalid redirect path');
   }

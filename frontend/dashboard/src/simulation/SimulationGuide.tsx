@@ -4,8 +4,8 @@ import type { SimulationType } from '../finance';
 // calculated scenarios from promises and made the zero-investing case explicit.
 export function SimulationGuide({ mode }: { mode: SimulationType }) {
   return (
-    <section className="simulation-guide" aria-labelledby="simulation-guide-title">
-      <div className="eyebrow">UNDERSTAND YOUR RESULTS</div>
+    <section className="mt-7 p-[clamp(20px,3vw,34px)] border border-[#2b3d51] rounded-[18px] bg-[#121e2b] text-[#afc0d2] leading-[1.8] text-sm [overflow-wrap:anywhere] [&_h3]:text-[#edf5ff] [&_h3]:text-[23px] [&_h3]:my-[10px_18px] [&_h3]:font-semibold [&_h4]:text-[#b4e8d4] [&_h4]:text-base [&_h4]:my-[26px_10px] [&_h4]:font-semibold [&_p]:m-0 [&_p]:mb-4 [&_p]:max-w-[85ch] [&_dt]:text-[#e1eafa] [&_dt]:font-semibold [&_dt]:mt-[17px] [&_dd]:my-[5px_16px] [&_dd]:ml-0 [&_dd]:max-w-[85ch]" aria-labelledby="simulation-guide-title">
+      <div className="text-[9px] text-[#a9b7ce] tracking-[1.7px] font-semibold mb-2.5">UNDERSTAND YOUR RESULTS</div>
       <h3 id="simulation-guide-title">
         {mode === 'monte_carlo'
           ? 'How the Monte Carlo Simulation works'

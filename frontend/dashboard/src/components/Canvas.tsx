@@ -685,7 +685,7 @@ export function Canvas({
   ]);
   return (
     <div
-      className={`canvas-host canvas-editor tool-${tool}${expanded ? ' canvas-expanded' : ''}${connecting ? ' connect-mode' : ''}`}
+      className={`canvas-host relative border border-[#2a3448] rounded-xl overflow-hidden h-[clamp(510px,62vh,760px)] min-h-[510px] isolate ${expanded ? 'fixed inset-0 w-screen h-dvh min-h-0 max-h-none border-0 rounded-none z-[1000]' : ''} fullscreen:w-screen fullscreen:h-dvh fullscreen:min-h-0 fullscreen:max-h-none fullscreen:border-0 fullscreen:rounded-none tool-${tool}${connecting ? ' connect-mode' : ''}`}
       ref={host}
       tabIndex={0}
       onPointerDown={(event) => {
@@ -696,9 +696,9 @@ export function Canvas({
           host.current?.focus({ preventScroll: true });
       }}
     >
-      <div className="canvas-toolbar-slot">{toolbar}</div>
+      <div className="absolute top-3.5 left-3.5 z-12 max-xs:max-w-[calc(100%-77px)] max-xs:left-2.5">{toolbar}</div>
       <button
-        className="canvas-tool canvas-fullscreen"
+        className="w-[44px] h-[44px] absolute top-3.5 right-3.5 z-12 bg-[#152031ed] border border-[#34485c] rounded-xl shadow-[0_8px_25px_#0004] grid place-items-center cursor-pointer text-[#a8bbd2] hover:bg-[#2b3d52] hover:text-[#f0f7ff] max-xs:right-2.5 max-xs:w-[29px] max-xs:h-[32px]"
         aria-label={canvasFullscreen ? 'Exit canvas fullscreen' : 'Enter canvas fullscreen'}
         title={canvasFullscreen ? 'Exit fullscreen · Esc' : 'Fullscreen canvas'}
         onClick={async () => {
@@ -714,8 +714,8 @@ export function Canvas({
       >
         <CanvasIcon name={canvasFullscreen ? 'collapse' : 'expand'} />
       </button>
-      <div className="canvas-caption">
-        <span className="status-dot" />{' '}
+      <div className="absolute top-[74px] left-5 max-xs:top-[105px] text-[8px] text-[#7d95b0] flex items-center gap-1.5 pointer-events-none z-10">
+        <span className="inline-block w-1.5 h-1.5 rounded-full bg-[#73d9af] align-middle mr-1" />{' '}
         {connecting
           ? 'CONNECT MODE'
           : tool === 'pan'
@@ -723,7 +723,7 @@ export function Canvas({
             : tool === 'box'
               ? 'BOX SELECT'
               : 'SELECT MODE'}{' '}
-        <span>
+        <span className="text-[#687e98] text-[10px] max-xs:hidden">
           {connecting
             ? 'Choose a source, then a destination · or drag a handle'
             : tool === 'pan'
@@ -733,35 +733,36 @@ export function Canvas({
                 : 'Click to select · Shift-click for multiple · Delete to remove'}
         </span>
       </div>
-      <svg ref={ref} aria-label="Financial account connections" className="financial-canvas" />
+      <svg ref={ref} aria-label="Financial account connections" className="financial-canvas w-full h-full block" />
       {(selectionIds.length > 0 || edgeSelectionIds.length > 0) && (
-        <div className="canvas-selection-status" role="status">
+        <div className="absolute bottom-16 left-5 px-3 py-2 border border-[#386051] rounded-lg text-[#a2ead4] bg-[#132c29ed] text-[11px] pointer-events-none" role="status">
           {selectionIds.length} nodes · {edgeSelectionIds.length} lines selected{' '}
-          <span>
+          <span className="ml-3.5 text-[#91a7bd] max-md:hidden">
             {shortcuts.remove} to remove · {shortcuts.undo} to restore
           </span>
         </div>
       )}
-      {panel && <div className="canvas-editor-panel">{panel}</div>}
+      {panel && <div className="canvas-editor-panel absolute top-3.5 right-[68px] max-w-[calc(100%-28px)] w-[380px] max-h-[calc(100%-28px)] z-15 overflow-y-auto border border-[#3a4f68] rounded-[14px] bg-[#131e2ef5] backdrop-blur-[18px] shadow-[0_14px_45px_#0008] max-xs:top-[68px] max-xs:right-2.5 max-xs:left-2.5 max-xs:w-[calc(100%-20px)] max-xs:max-w-[calc(100%-20px)]">{panel}</div>}
       {feedback && (
-        <div className="canvas-feedback" role="status">
+        <div className="absolute bottom-[65px] left-5 right-5 text-xs text-[#f8cd91] pointer-events-none" role="status">
           {feedback}
         </div>
       )}
       {!graph.nodes.length && (
-        <div className="canvas-empty">
-          <h3>Start with your first node</h3>
-          <p>Add nodes for income, accounts, debts, and expenses to build your scenario.</p>
+        <div className="absolute inset-0 flex flex-col justify-center items-center pointer-events-none p-[50px] text-center gap-2">
+          <h3 className="text-[15px] font-semibold text-text m-0">Start with your first node</h3>
+          <p className="text-[#7b8ea8] text-xs m-0">Add nodes for income, accounts, debts, and expenses to build your scenario.</p>
         </div>
       )}
-      <div className="canvas-controls">
-        <button aria-label="Zoom in" title="Zoom in" onClick={() => zoomRef.current(1.25)}>
+      <div className="absolute right-4 bottom-4 flex bg-[#172030] border border-[#354056] rounded-[7px] overflow-hidden">
+        <button className="border-0 border-r border-[#354056] bg-transparent px-[11px] py-[7px] text-[16px] text-[#a8bbd2] hover:bg-[#2a3750] cursor-pointer grid place-items-center" aria-label="Zoom in" title="Zoom in" onClick={() => zoomRef.current(1.25)}>
           <CanvasIcon name="plus" />
         </button>
-        <button aria-label="Zoom out" title="Zoom out" onClick={() => zoomRef.current(0.8)}>
+        <button className="border-0 border-r border-[#354056] bg-transparent px-[11px] py-[7px] text-[16px] text-[#a8bbd2] hover:bg-[#2a3750] cursor-pointer grid place-items-center" aria-label="Zoom out" title="Zoom out" onClick={() => zoomRef.current(0.8)}>
           <CanvasIcon name="minus" />
         </button>
         <button
+          className="border-0 bg-transparent px-[11px] py-[7px] text-[11px] text-[#a8bbd2] hover:bg-[#2a3750] cursor-pointer grid place-items-center"
           aria-label="Fit canvas to nodes"
           title="Fit to nodes"
           onClick={() => fitRef.current()}
@@ -769,10 +770,10 @@ export function Canvas({
           <CanvasIcon name="fit" />
         </button>
       </div>
-      <div className="canvas-legend">
+      <div className="absolute left-5 bottom-5 flex gap-3 flex-wrap pointer-events-none max-md:gap-2 max-md:left-3.5 max-md:bottom-14">
         {types.map((t) => (
-          <span key={t}>
-            <i style={{ background: colors[t] }} />
+          <span key={t} className="inline-flex gap-1.5 items-center text-[9px] text-[#96a7bf] max-md:text-[8px]">
+            <i className="w-1.5 h-1.5 rounded-full inline-block" style={{ background: colors[t] }} />
             {typeLabel(t)}
           </span>
         ))}

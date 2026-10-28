@@ -63,30 +63,32 @@ export const ForecastChart = memo(function ForecastChart({
       ? 0
       : 1;
   return (
-    <div className="forecast-plot">
-      <div className="forecast-tools">
-        <div className="segmented-control" aria-label="Chart time range">
-          <button className={!early ? 'selected' : ''} onClick={() => setEarly(false)}>
+    <div className="h-full flex flex-col">
+      <div className="flex gap-[13px] flex-wrap items-center my-[7px_15px]">
+        <div className="inline-flex border border-[#334459] rounded-[7px] p-[3px] bg-[#101824]" aria-label="Chart time range">
+          <button className={`border-0 rounded-[4px] text-[10px] bg-transparent p-[7px_10px] cursor-pointer transition-colors ${!early ? 'selected bg-[#29443e] text-[#c4f1df] font-medium' : 'text-[#8ea4bd] hover:text-[#edf2fa]'}`} onClick={() => setEarly(false)}>
             Full horizon
           </button>
-          <button className={early ? 'selected' : ''} onClick={() => setEarly(true)}>
+          <button className={`border-0 rounded-[4px] text-[10px] bg-transparent p-[7px_10px] cursor-pointer transition-colors ${early ? 'selected bg-[#29443e] text-[#c4f1df] font-medium' : 'text-[#8ea4bd] hover:text-[#edf2fa]'}`} onClick={() => setEarly(true)}>
             First 5 years
           </button>
         </div>
-        <label>
-          <input type="checkbox" checked={samples} onChange={(e) => setSamples(e.target.checked)} />{' '}
+        <label className="inline-flex gap-1.5 items-center text-[10px] text-[#a6b7ce] cursor-pointer">
+          <input className="accent-[#8bd8ba] w-3 h-3 cursor-pointer" type="checkbox" checked={samples} onChange={(e) => setSamples(e.target.checked)} />{' '}
           Sample paths
         </label>
-        <label>
+        <label className="inline-flex gap-1.5 items-center text-[10px] text-[#a6b7ce] cursor-pointer">
           <input
+            className="accent-[#8bd8ba] w-3 h-3 cursor-pointer"
             type="checkbox"
             checked={reference}
             onChange={(e) => setReference(e.target.checked)}
           />{' '}
           Cashflow reference
         </label>
-        <label title="Compresses large balances while keeping negative values and zero">
+        <label className="inline-flex gap-1.5 items-center text-[10px] text-[#a6b7ce] cursor-pointer" title="Compresses large balances while keeping negative values and zero">
           <input
+            className="accent-[#8bd8ba] w-3 h-3 cursor-pointer"
             type="checkbox"
             checked={compressed}
             onChange={(e) => setCompressed(e.target.checked)}
@@ -95,7 +97,7 @@ export const ForecastChart = memo(function ForecastChart({
         </label>
       </div>
       <div
-        className="forecast-chart-surface"
+        className="flex-1 min-h-[260px] w-full"
         role="img"
         aria-label="Monte Carlo net worth forecast with negative balances below the zero line"
       >
@@ -163,26 +165,26 @@ export const ForecastChart = memo(function ForecastChart({
                 if (!active || !payload?.length) return null;
                 const point = payload[0]?.payload as ForecastPoint;
                 return (
-                  <div className="chart-tooltip forecast-tooltip">
-                    <strong>
+                  <div className="p-[13px_15px] bg-[#1c2638] border border-[#47536d] rounded-[9px] shadow-[0_10px_30px_#0005] min-w-[230px] text-[11px]">
+                    <strong className="block text-[11px] text-[#d9e3f3] mb-3">
                       Year {point.year}{' '}
-                      <small>{realDollars ? 'today’s dollars' : 'nominal dollars'}</small>
+                      <small className="text-[9px] text-[#8095ae] font-normal ml-2.5">{realDollars ? 'today’s dollars' : 'nominal dollars'}</small>
                     </strong>
                     {(['p90', 'p50', 'p10'] as const).map((key, i) => (
-                      <div key={key}>
+                      <div key={key} className="flex justify-between gap-[22px] mt-2.5">
                         <span>
                           {['Upper outcome · P90', 'Median · P50', 'Lower outcome · P10'][i]}
                         </span>
-                        <b className={point[key] < 0 ? 'negative' : ''}>{dollars(point[key])}</b>
+                        <b className={`font-semibold ${point[key] < 0 ? 'negative text-coral' : 'text-text'}`}>{dollars(point[key])}</b>
                       </div>
                     ))}
                     {reference && (
-                      <div className="tooltip-reference">
+                      <div className="border-t border-[#344357] pt-[9px] mt-2.5 flex justify-between gap-[22px]">
                         <span>Cashflow reference</span>
-                        <b>{dollars(point.reference)}</b>
+                        <b className="font-semibold text-text">{dollars(point.reference)}</b>
                       </div>
                     )}
-                    {point.p50 < 0 && <p>Median liabilities still exceed assets.</p>}
+                    {point.p50 < 0 && <p className="mt-2 text-[#e6a6b2] text-[10px] m-0">Median liabilities still exceed assets.</p>}
                   </div>
                 );
               }}
@@ -248,9 +250,9 @@ export const ForecastChart = memo(function ForecastChart({
           </ComposedChart>
         </ResponsiveContainer>
       </div>
-      <div className="forecast-plot-note">
+      <div className="flex justify-between flex-wrap gap-2 text-[#839ab3] text-[9px] p-[9px_8px_2px]">
         <span>
-          <i className="legend-band" /> Middle 80% of simulated outcomes
+          <i className="inline-block w-[15px] h-[7px] mr-[7px] bg-[#8a7eb445] border border-[#9480c07a] rounded-[2px] align-middle" /> Middle 80% of simulated outcomes
         </span>
         <span>
           {compressed ? 'Compressed distances · signs retained' : 'Linear dollar scale'} ·{' '}

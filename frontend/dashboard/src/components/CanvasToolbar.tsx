@@ -43,10 +43,13 @@ export function CanvasToolbar({
   tool: CanvasTool;
   onToolChange: (tool: CanvasTool) => void;
 }) {
+  const toolBtnClass = "w-[34px] h-[34px] max-xs:w-[29px] max-xs:h-[32px] min-h-0 p-0 grid place-items-center border-0 rounded-[7px] bg-transparent text-[#a8bbd2] cursor-pointer leading-none transition-colors duration-150 hover:not-disabled:bg-[#2b3d52] hover:not-disabled:text-[#f0f7ff] aria-pressed:bg-[#29443f] aria-pressed:text-[#89e5c8] disabled:opacity-30 disabled:cursor-default focus-visible:outline-2 focus-visible:outline-[#9be5d0] focus-visible:outline-offset-2";
+  const toolAccentBtnClass = "w-[34px] h-[34px] max-xs:w-[29px] max-xs:h-[32px] min-h-0 p-0 grid place-items-center border-0 rounded-[7px] bg-[#b6a3ef] text-[#1a1530] hover:not-disabled:bg-[#d0c1fb] hover:not-disabled:text-[#171024] cursor-pointer leading-none transition-colors duration-150 disabled:opacity-30 disabled:cursor-default focus-visible:outline-2 focus-visible:outline-[#9be5d0] focus-visible:outline-offset-2";
+
   return (
-    <div className="canvas-tool-dock" role="toolbar" aria-label="Node canvas tools">
+    <div className="flex items-center gap-[3px] p-[5px] bg-[#152031ed] border border-[#34485c] rounded-xl shadow-[0_8px_25px_#0005,inset_0_1px_#ffffff06] backdrop-blur-[18px] max-xs:flex-wrap max-xs:gap-[1px]" role="toolbar" aria-label="Node canvas tools">
       <button
-        className="canvas-tool"
+        className={toolBtnClass}
         aria-label="Undo last graph edit"
         title={`Undo · ${shortcuts.undo}`}
         disabled={!canUndo}
@@ -55,7 +58,7 @@ export function CanvasToolbar({
         <CanvasIcon name="undo" />
       </button>
       <button
-        className="canvas-tool"
+        className={toolBtnClass}
         aria-label="Redo graph edit"
         title={`Redo · ${shortcuts.redo}`}
         disabled={!canRedo}
@@ -63,11 +66,11 @@ export function CanvasToolbar({
       >
         <CanvasIcon name="redo" />
       </button>
-      <span className="canvas-tool-divider" />
+      <span className="w-[1px] h-[19px] mx-1 bg-[#35445a]" />
       {canvasAvailable && (
         <>
           <button
-            className="canvas-tool"
+            className={toolBtnClass}
             aria-label="Select and move nodes"
             title="Select and move"
             aria-pressed={tool === 'select'}
@@ -76,7 +79,7 @@ export function CanvasToolbar({
             <CanvasIcon name="cursor" />
           </button>
           <button
-            className="canvas-tool"
+            className={toolBtnClass}
             aria-label="Pan canvas"
             title="Pan canvas · hand tool"
             aria-pressed={tool === 'pan'}
@@ -85,7 +88,7 @@ export function CanvasToolbar({
             <CanvasIcon name="pan" />
           </button>
           <button
-            className="canvas-tool"
+            className={toolBtnClass}
             aria-label="Box select nodes"
             title="Box select · drag around nodes, then drag the selection"
             aria-pressed={tool === 'box'}
@@ -94,7 +97,7 @@ export function CanvasToolbar({
             <CanvasIcon name="box" />
           </button>
           <button
-            className="canvas-tool"
+            className={toolBtnClass}
             aria-label="Connect nodes"
             title="Connect · drag a node's right handle, or click source then destination"
             aria-pressed={connecting}
@@ -105,18 +108,18 @@ export function CanvasToolbar({
         </>
       )}
       <button
-        className="canvas-tool canvas-tool-accent"
+        className={toolAccentBtnClass}
         aria-label="Add node"
         title="Add node"
         onClick={onAdd}
       >
         <CanvasIcon name="add" />
       </button>
-      <span className="canvas-tool-divider" />
+      <span className="w-[1px] h-[19px] mx-1 bg-[#35445a]" />
       {canvasAvailable && (
         <>
           <button
-            className="canvas-tool"
+            className={toolBtnClass}
             aria-label="Auto arrange nodes"
             title="Auto arrange"
             onClick={onArrange}
@@ -124,7 +127,7 @@ export function CanvasToolbar({
             <CanvasIcon name="layout" />
           </button>
           <button
-            className="canvas-tool"
+            className={toolBtnClass}
             aria-label="Toggle compact nodes"
             title={compact ? 'Roomy nodes' : 'Compact nodes'}
             aria-pressed={compact}
@@ -134,27 +137,27 @@ export function CanvasToolbar({
           </button>
         </>
       )}
-      <details className="canvas-more-menu">
-        <summary className="canvas-tool" aria-label="More canvas actions" title="More actions">
+      <details className="relative group">
+        <summary className="w-[34px] h-[34px] max-xs:w-[29px] max-xs:h-[32px] min-h-0 p-0 grid place-items-center border-0 rounded-[7px] bg-transparent text-[#a8bbd2] cursor-pointer leading-none transition-colors duration-150 hover:bg-[#2b3d52] hover:text-[#f0f7ff] group-open:bg-[#2b3d52] group-open:text-[#f0f7ff] list-none select-none [&::-webkit-details-marker]:hidden" aria-label="More canvas actions" title="More actions">
           <CanvasIcon name="more" />
         </summary>
         <div
-          className="canvas-menu-items"
+          className="absolute top-[calc(100%+12px)] right-[-5px] w-[220px] p-1.5 border border-[#3c4d65] rounded-xl bg-[#172334] shadow-[0_18px_50px_#0009] z-20"
           onClick={(event) => event.currentTarget.closest('details')?.removeAttribute('open')}
         >
-          <button aria-label="Restore removed nodes" onClick={onRestore}>
+          <button className="flex items-center gap-3 p-[11px_12px] border-0 rounded-[7px] w-full bg-transparent text-left text-xs text-[#d3dfec] hover:bg-[#2b3c51] cursor-pointer focus-visible:outline-2 focus-visible:outline-[#9be5d0] focus-visible:outline-offset-2" aria-label="Restore removed nodes" onClick={onRestore}>
             <CanvasIcon name="restore" />
-            Restore nodes <span>{removed}</span>
+            Restore nodes <span className="ml-auto text-[#8de3c8]">{removed}</span>
           </button>
-          <button aria-label="Import scenario" onClick={onImport}>
+          <button className="flex items-center gap-3 p-[11px_12px] border-0 rounded-[7px] w-full bg-transparent text-left text-xs text-[#d3dfec] hover:bg-[#2b3c51] cursor-pointer focus-visible:outline-2 focus-visible:outline-[#9be5d0] focus-visible:outline-offset-2" aria-label="Import scenario" onClick={onImport}>
             <CanvasIcon name="import" />
             Import scenario
           </button>
-          <button aria-label="Export scenario" onClick={onExport}>
+          <button className="flex items-center gap-3 p-[11px_12px] border-0 rounded-[7px] w-full bg-transparent text-left text-xs text-[#d3dfec] hover:bg-[#2b3c51] cursor-pointer focus-visible:outline-2 focus-visible:outline-[#9be5d0] focus-visible:outline-offset-2" aria-label="Export scenario" onClick={onExport}>
             <CanvasIcon name="export" />
             Export scenario
           </button>
-          <button aria-label="Reset scenario" onClick={onReset} disabled={!canReset}>
+          <button className="flex items-center gap-3 p-[11px_12px] border-0 rounded-[7px] w-full bg-transparent text-left text-xs text-[#d3dfec] hover:bg-[#2b3c51] cursor-pointer focus-visible:outline-2 focus-visible:outline-[#9be5d0] focus-visible:outline-offset-2 disabled:opacity-30 disabled:cursor-not-allowed" aria-label="Reset scenario" onClick={onReset} disabled={!canReset}>
             <CanvasIcon name="reset" />
             Reset scenario
           </button>

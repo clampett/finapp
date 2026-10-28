@@ -12,7 +12,8 @@ const views: {
 }[] = [
   { id: 'overview', label: 'Overview', icon: '◫' },
   { id: 'graph', label: 'Node Graph', icon: '⌘' },
-  { id: 'budgeting', label: 'Cash flow', icon: '⇄' },
+  { id: 'cashflow', label: 'Cash flow', icon: '⇄' },
+  { id: 'budgeting', label: 'Budgeting', icon: '▤' },
   { id: 'investing', label: 'Investments', icon: '↗' },
 ];
 export default function App() {

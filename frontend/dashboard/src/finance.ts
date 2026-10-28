@@ -1,7 +1,7 @@
 export const API_BASE = import.meta.env.VITE_API_URL || '/api/v1';
 export type NodeType = 'INCOME' | 'CHECKING' | 'SAVINGS' | 'INVESTMENT' | 'DEBT' | 'EXPENSE';
 export type SimulationType = 'monte_carlo' | 'markov' | 'debt';
-export type View = 'overview' | 'graph' | 'budgeting' | 'investing';
+export type View = 'overview' | 'graph' | 'cashflow' | 'budgeting' | 'investing';
 export function demoProfile(value: string | null): 1 | 2 | 3 {
   const profile = Number(value);
   return profile === 1 || profile === 2 || profile === 3 ? profile : 2;

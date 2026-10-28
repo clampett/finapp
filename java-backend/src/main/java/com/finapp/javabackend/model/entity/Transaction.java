@@ -2,6 +2,8 @@ package com.finapp.javabackend.model.entity;
 
 import com.finapp.javabackend.model.enums.TransactionKind;
 import jakarta.persistence.*;
+import org.hibernate.annotations.JdbcTypeCode;
+import org.hibernate.type.SqlTypes;
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.OffsetDateTime;
@@ -31,6 +33,7 @@ public class Transaction {
     private RecurringTransaction recurringTransaction;
 
     @Enumerated(EnumType.STRING)
+    @JdbcTypeCode(SqlTypes.NAMED_ENUM)
     @Column(nullable = false)
     private TransactionKind kind;
 

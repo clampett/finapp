@@ -4,9 +4,11 @@ import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.Id;
 import jakarta.persistence.Table;
+import org.hibernate.annotations.Immutable;
 import java.math.BigDecimal;
 
 @Entity
+@Immutable
 @Table(name = "stock_positions")
 public class StockPosition {
 

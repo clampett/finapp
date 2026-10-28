@@ -2,6 +2,8 @@ package com.finapp.javabackend.model.entity;
 
 import com.finapp.javabackend.model.enums.TransactionKind;
 import jakarta.persistence.*;
+import org.hibernate.annotations.JdbcTypeCode;
+import org.hibernate.type.SqlTypes;
 import java.time.OffsetDateTime;
 
 @Entity
@@ -23,6 +25,7 @@ public class Category {
     private String name;
 
     @Enumerated(EnumType.STRING)
+    @JdbcTypeCode(SqlTypes.NAMED_ENUM)
     @Column(nullable = false)
     private TransactionKind kind;
 

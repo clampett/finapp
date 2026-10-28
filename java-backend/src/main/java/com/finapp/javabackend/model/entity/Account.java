@@ -2,6 +2,8 @@ package com.finapp.javabackend.model.entity;
 
 import com.finapp.javabackend.model.enums.AccountType;
 import jakarta.persistence.*;
+import org.hibernate.annotations.JdbcTypeCode;
+import org.hibernate.type.SqlTypes;
 import java.math.BigDecimal;
 import java.time.OffsetDateTime;
 
@@ -24,6 +26,7 @@ public class Account {
     private String name;
 
     @Enumerated(EnumType.STRING)
+    @JdbcTypeCode(SqlTypes.NAMED_ENUM)
     @Column(nullable = false)
     private AccountType type = AccountType.checking;
 

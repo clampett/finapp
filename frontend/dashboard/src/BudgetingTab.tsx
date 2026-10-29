@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import type { FormEvent } from 'react';
 import type { GraphData } from './finance';
-import { API_BASE, dollars } from './finance';
+import { API_BASE, dollars, debtPayment, expenseAmount, colors } from './finance';
 import { sessionHeaders } from './session';
 import { NumberField } from './components/NumberField';
 import { changeAccount, changeCategory, changeKind } from './budgeting-drafts';
@@ -12,12 +12,25 @@ import {
   addStockUnified,
   removeStockUnified,
   updateSharesUnified,
+  saveStoredPortfolioValue,
 } from './portfolio';
+import {
+  getScenarioSalary,
+  getScenarioDebts,
+  getScenarioBudgetComparison,
+  createSalaryRecurringTemplates,
+  createDebtRecurringTemplates,
+  syncScenarioTransactionToGraph,
+  syncGraphNodesToRecurring,
+  syncRecurringToGraphNode,
+  syncRecurringDeletionToGraph,
+} from './budgeting-bridge';
 
 interface BudgetingTabProps {
   graph: GraphData;
   userId?: number;
   demo?: boolean;
+  onUpdateGraph?: (next: GraphData) => void;
 }
 
 export type TransactionKind = 'income' | 'expense';
@@ -124,16 +137,21 @@ const initialRecurring = (): RecurringTransaction => ({
   notes: '',
 });
 
-export function BudgetingTab({ graph, userId: propUserId, demo }: BudgetingTabProps) {
+export function BudgetingTab({
+  graph,
+  userId: propUserId,
+  demo,
+  onUpdateGraph,
+}: BudgetingTabProps) {
   const sessionUserId =
     Number(sessionStorage.getItem('finapp_user_id') || localStorage.getItem('finapp_user_id')) || 0;
   const userId = propUserId || sessionUserId;
   const isDemo = Boolean(demo || !sessionUserId);
 
   // Active view section
-  const [activeSubTab, setActiveSubTab] = useState<'transactions' | 'stocks' | 'recurring'>(
-    'transactions',
-  );
+  const [activeSubTab, setActiveSubTab] = useState<
+    'transactions' | 'recurring' | 'stocks'
+  >('transactions');
 
   // Data states
   const [transactions, setTransactions] = useState<Transaction[]>([]);
@@ -331,86 +349,87 @@ export function BudgetingTab({ graph, userId: propUserId, demo }: BudgetingTabPr
             }
           } catch {}
 
-          if (demoTxns.length === 0 && graph?.nodes?.length) {
-            const now = new Date().toISOString().split('T')[0];
-            const sampleTxns: Transaction[] = [];
-            const sampleRecur: RecurringTransaction[] = [];
-            let nextId = 1;
+          // Ensure the Transaction tab only holds single, non-recurring transactions
+          demoTxns = demoTxns.filter((t) => {
+            const desc = (t.description || '').toLowerCase();
+            const notes = (t.notes || '').toLowerCase();
+            return (
+              !desc.includes('paycheck') &&
+              !desc.includes('salary') &&
+              !notes.includes('monthly salary') &&
+              !notes.includes('from scenario') &&
+              !notes.includes('living expense from scenario') &&
+              !notes.includes('monthly payment (')
+            );
+          });
 
-            for (const node of graph.nodes) {
-              if (node.archived) continue;
-              if (node.nodeType === 'INCOME') {
-                sampleTxns.push({
-                  id: nextId++,
-                  kind: 'income',
-                  accountName: 'Checking',
-                  description: `${node.name} Paycheck`,
-                  amount: Number(node.amountOrBalance),
-                  transactionDate: now,
-                  notes: 'Monthly salary from scenario',
-                });
-                sampleRecur.push({
-                  id: nextId++,
-                  kind: 'income',
-                  accountName: 'Checking',
-                  description: `${node.name} Paycheck`,
-                  amount: Number(node.amountOrBalance),
-                  frequency: 'monthly',
-                  intervalCount: 1,
-                  startDate: now,
-                  nextDueDate: now,
-                  isActive: true,
-                  notes: 'Auto-linked from income node',
-                });
-              } else if (node.nodeType === 'EXPENSE') {
-                sampleTxns.push({
-                  id: nextId++,
-                  kind: 'expense',
-                  accountName: 'Checking',
-                  description: node.name,
-                  amount: Number(node.amountOrBalance),
-                  transactionDate: now,
-                  notes: 'Living expense from scenario',
-                });
-                sampleRecur.push({
-                  id: nextId++,
-                  kind: 'expense',
-                  accountName: 'Checking',
-                  description: node.name,
-                  amount: Number(node.amountOrBalance),
-                  frequency: 'monthly',
-                  intervalCount: 1,
-                  startDate: now,
-                  nextDueDate: now,
-                  isActive: true,
-                });
-              } else if (node.nodeType === 'DEBT') {
-                const pmt = Math.round(Number(node.minPayment ?? node.amountOrBalance * 0.02));
-                if (pmt > 0) {
-                  sampleTxns.push({
-                    id: nextId++,
-                    kind: 'expense',
-                    accountName: 'Checking',
-                    description: `${node.name} Payment`,
-                    amount: pmt,
-                    transactionDate: now,
-                    notes: `Monthly payment (${node.interestRateApr}% APR)`,
-                  });
-                }
-              }
-            }
-            demoTxns = sampleTxns;
-            demoRecur = sampleRecur;
-            try {
-              localStorage.setItem(
-                budgetStorageKey,
-                JSON.stringify({ transactions: demoTxns, recurring: demoRecur }),
-              );
-            } catch {}
+          // Single, non-recurring sample transactions (e.g. grocery trip, coffee, dining out)
+          if (demoTxns.length === 0) {
+            const now = new Date().toISOString().split('T')[0];
+            demoTxns = [
+              {
+                id: 1,
+                kind: 'expense',
+                accountName: 'Checking',
+                categoryName: 'Groceries',
+                description: 'Grocery Trip - Trader Joe’s',
+                amount: 112.5,
+                transactionDate: now,
+                notes: 'Weekly groceries',
+              },
+              {
+                id: 2,
+                kind: 'expense',
+                accountName: 'Checking',
+                categoryName: 'Food & Dining',
+                description: 'Coffee Shop',
+                amount: 6.75,
+                transactionDate: now,
+                notes: 'Morning coffee',
+              },
+              {
+                id: 3,
+                kind: 'expense',
+                accountName: 'Checking',
+                categoryName: 'Transportation',
+                description: 'Gas Station',
+                amount: 45.0,
+                transactionDate: now,
+                notes: 'Fuel',
+              },
+              {
+                id: 4,
+                kind: 'expense',
+                accountName: 'Checking',
+                categoryName: 'Food & Dining',
+                description: 'Dinner with Friends',
+                amount: 68.2,
+                transactionDate: now,
+                notes: 'Weekend dining out',
+              },
+              {
+                id: 5,
+                kind: 'expense',
+                accountName: 'Checking',
+                categoryName: 'Household',
+                description: 'Target Home Supplies',
+                amount: 38.45,
+                transactionDate: now,
+                notes: 'Cleaning supplies',
+              },
+            ];
           }
 
+          const syncedDemoRecur = syncGraphNodesToRecurring(graph, demoRecur).updatedRecurring;
+          try {
+            localStorage.setItem(
+              budgetStorageKey,
+              JSON.stringify({ transactions: demoTxns, recurring: syncedDemoRecur }),
+            );
+          } catch {}
+
           setTransactions(demoTxns);
-          setRecurringList(demoRecur);
+          setRecurringList(syncedDemoRecur);
           if (includePrices) await refreshCurrentPrices(loadedStocks, controller.signal);
           return true;
         } finally {
@@ -449,7 +468,10 @@ export function BudgetingTab({ graph, userId: propUserId, demo }: BudgetingTabPr
             setStocks(data);
           }),
           read<StockPosition[]>('positions', setPositions),
-          read<RecurringTransaction[]>('recurring-transactions', setRecurringList),
+          read<RecurringTransaction[]>('recurring-transactions', (data) => {
+            const synced = syncGraphNodesToRecurring(graph, data).updatedRecurring;
+            setRecurringList(synced);
+          }),
           read<AccountOption[]>('accounts', setDbAccounts),
         ]);
         if (controller.signal.aborted) return false;
@@ -497,6 +519,24 @@ export function BudgetingTab({ graph, userId: propUserId, demo }: BudgetingTabPr
     return () => window.removeEventListener(PORTFOLIO_UPDATED_EVENT, handlePortfolioUpdate);
   }, [loadData]);
 
+  // Automatically synchronize active graph flow nodes (Income, Expense, Debt) into recurring transactions
+  useEffect(() => {
+    if (!graph?.nodes?.length) return;
+    setRecurringList((prevList) => {
+      const { updatedRecurring, hasChanges } = syncGraphNodesToRecurring(graph, prevList);
+      if (!hasChanges) return prevList;
+      if (isDemo) {
+        const budgetStorageKey = `finapp-budget-v1:demo:${userId || 1}`;
+        try {
+          const saved = JSON.parse(localStorage.getItem(budgetStorageKey) || '{}');
+          saved.recurring = updatedRecurring;
+          localStorage.setItem(budgetStorageKey, JSON.stringify(saved));
+        } catch {}
+      }
+      return updatedRecurring;
+    });
+  }, [graph, isDemo, userId]);
+
   // Derived account options from both backend accounts and graph nodes
   const availableAccounts: string[] = Array.from(
     new Set([
@@ -504,7 +544,10 @@ export function BudgetingTab({ graph, userId: propUserId, demo }: BudgetingTabPr
         a.name.trim().toLowerCase() === 'checking account' ? 'Checking' : a.name,
       ),
       ...(graph?.nodes
-        ?.filter((n) => ['CHECKING', 'SAVINGS', 'BROKERAGE'].includes(n.nodeType))
+        ?.filter(
+          (n) =>
+            ['CHECKING', 'SAVINGS', 'BROKERAGE', 'DEBT'].includes(n.nodeType) && !n.archived,
+        )
         .map((n) => (n.name.trim().toLowerCase() === 'checking account' ? 'Checking' : n.name)) ??
         []),
       'Checking',
@@ -545,6 +588,21 @@ export function BudgetingTab({ graph, userId: propUserId, demo }: BudgetingTabPr
       return;
     }
 
+    let syncStatusMsg = '';
+    if (onUpdateGraph) {
+      const syncResult = syncScenarioTransactionToGraph(graph, transDraft);
+      if (syncResult) {
+        onUpdateGraph(syncResult.updatedGraph);
+        if (syncResult.isNew) {
+          syncStatusMsg = ` Created ${syncResult.matchedNode.name} node and connected cash flow (${dollars(syncResult.newBalance)}/mo).`;
+        } else if (syncResult.matchedNode.nodeType === 'DEBT') {
+          syncStatusMsg = ` Paid down ${syncResult.matchedNode.name} to ${dollars(syncResult.newBalance)}.`;
+        } else {
+          syncStatusMsg = ` Updated ${syncResult.matchedNode.name} flow to ${dollars(syncResult.newBalance)}/mo.`;
+        }
+      }
+    }
+
     if (isDemo) {
       const budgetStorageKey = `finapp-budget-v1:demo:${userId || 1}`;
       let updated: Transaction[];
@@ -577,7 +635,7 @@ export function BudgetingTab({ graph, userId: propUserId, demo }: BudgetingTabPr
       } catch {}
       setStatusMessage({
         type: 'success',
-        text: editingTransId ? 'Transaction updated successfully.' : 'Transaction recorded.',
+        text: (editingTransId ? 'Transaction updated successfully.' : 'Transaction recorded.') + syncStatusMsg,
       });
       setShowTransForm(false);
       setEditingTransId(null);
@@ -609,7 +667,7 @@ export function BudgetingTab({ graph, userId: propUserId, demo }: BudgetingTabPr
 
       setStatusMessage({
         type: 'success',
-        text: editingTransId ? 'Transaction updated successfully.' : 'Transaction recorded.',
+        text: (editingTransId ? 'Transaction updated successfully.' : 'Transaction recorded.') + syncStatusMsg,
       });
       setShowTransForm(false);
       setEditingTransId(null);
@@ -623,6 +681,19 @@ export function BudgetingTab({ graph, userId: propUserId, demo }: BudgetingTabPr
 
   const handleDeleteTransaction = async (id: number): Promise<void> => {
     if (!window.confirm('Delete this transaction?')) return;
+    const transToDelete = transactions.find((t) => t.id === id);
+    if (transToDelete && onUpdateGraph && graph) {
+      const reverseTxn = {
+        kind: transToDelete.kind === 'income' ? 'expense' : 'income',
+        accountName: transToDelete.accountName || 'Checking',
+        amount: transToDelete.amount,
+      };
+      const reverseSync = syncScenarioTransactionToGraph(graph, reverseTxn);
+      if (reverseSync) {
+        onUpdateGraph(reverseSync.updatedGraph);
+      }
+    }
+
     if (isDemo) {
       const budgetStorageKey = `finapp-budget-v1:demo:${userId || 1}`;
       const updated = transactions.filter((t) => t.id !== id);
@@ -966,16 +1037,29 @@ export function BudgetingTab({ graph, userId: propUserId, demo }: BudgetingTabPr
       return;
     }
 
+    // Automatically synchronize to graph scenario node
+    let activeRecurDraft = { ...recurDraft };
+    if (onUpdateGraph && graph) {
+      const graphSync = syncRecurringToGraphNode(graph, activeRecurDraft);
+      onUpdateGraph(graphSync.updatedGraph);
+      if (
+        graphSync.affectedNode &&
+        !activeRecurDraft.notes?.includes(`[node-id:${graphSync.affectedNode.id}]`)
+      ) {
+        activeRecurDraft.notes = `${activeRecurDraft.notes || ''} [node-id:${graphSync.affectedNode.id}]`.trim();
+      }
+    }
+
     if (isDemo) {
       const budgetStorageKey = `finapp-budget-v1:demo:${userId || 1}`;
       let updated: RecurringTransaction[];
       if (editingRecurId) {
         updated = recurringList.map((r) =>
-          r.id === editingRecurId ? { ...recurDraft, id: editingRecurId } : r,
+          r.id === editingRecurId ? { ...activeRecurDraft, id: editingRecurId } : r,
         );
       } else {
         const newId = Math.max(0, ...recurringList.map((r) => r.id || 0)) + 1;
-        updated = [{ ...recurDraft, id: newId }, ...recurringList];
+        updated = [{ ...activeRecurDraft, id: newId }, ...recurringList];
       }
       setRecurringList(updated);
       try {
@@ -1002,7 +1086,7 @@ export function BudgetingTab({ graph, userId: propUserId, demo }: BudgetingTabPr
         method: editingRecurId ? 'PUT' : 'POST',
         headers: { 'Content-Type': 'application/json', ...sessionHeaders() },
         credentials: 'include',
-        body: JSON.stringify({ ...recurDraft, userId }),
+        body: JSON.stringify({ ...activeRecurDraft, userId }),
       });
 
       if (!res.ok) {
@@ -1026,6 +1110,14 @@ export function BudgetingTab({ graph, userId: propUserId, demo }: BudgetingTabPr
 
   const handleDeleteRecurring = async (id: number): Promise<void> => {
     if (!window.confirm('Delete this recurring rule?')) return;
+    const itemToDelete = recurringList.find((r) => r.id === id);
+    if (itemToDelete && onUpdateGraph && graph) {
+      const graphSync = syncRecurringDeletionToGraph(graph, itemToDelete);
+      if (graphSync) {
+        onUpdateGraph(graphSync.updatedGraph);
+      }
+    }
+
     if (isDemo) {
       const budgetStorageKey = `finapp-budget-v1:demo:${userId || 1}`;
       const updated = recurringList.filter((r) => r.id !== id);
@@ -1088,6 +1180,106 @@ export function BudgetingTab({ graph, userId: propUserId, demo }: BudgetingTabPr
     }
   };
 
+  const handleImportScenarioSalary = async (): Promise<void> => {
+    const newTemplates = createSalaryRecurringTemplates(graph, recurringList);
+    if (newTemplates.length === 0) {
+      setStatusMessage({
+        type: 'info',
+        text: 'All scenario income sources are already in your recurring templates.',
+      });
+      return;
+    }
+
+    if (isDemo) {
+      const budgetStorageKey = `finapp-budget-v1:demo:${userId || 1}`;
+      let nextId = Math.max(0, ...recurringList.map((r) => r.id || 0)) + 1;
+      const created = newTemplates.map((t) => ({ ...t, id: nextId++ } as RecurringTransaction));
+      const updated = [...created, ...recurringList];
+      setRecurringList(updated);
+      try {
+        const saved = JSON.parse(localStorage.getItem(budgetStorageKey) || '{}');
+        saved.recurring = updated;
+        localStorage.setItem(budgetStorageKey, JSON.stringify(saved));
+      } catch {}
+      setStatusMessage({
+        type: 'success',
+        text: `Imported ${created.length} salary template(s) into recurring transactions.`,
+      });
+      return;
+    }
+
+    let count = 0;
+    try {
+      for (const t of newTemplates) {
+        const res = await fetch(`${API_BASE}/recurring-transactions`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', ...sessionHeaders() },
+          credentials: 'include',
+          body: JSON.stringify({ ...t, userId }),
+        });
+        if (res.ok) count++;
+      }
+      setStatusMessage({
+        type: 'success',
+        text: `Imported ${count} salary template(s) into recurring transactions.`,
+      });
+      loadData();
+    } catch {
+      setStatusMessage({ type: 'error', text: 'Failed to import scenario salary.' });
+    }
+  };
+
+  const handleImportScenarioDebts = async (): Promise<void> => {
+    const newTemplates = createDebtRecurringTemplates(graph, recurringList);
+    if (newTemplates.length === 0) {
+      setStatusMessage({
+        type: 'info',
+        text: 'All scenario debt obligations are already in your recurring templates or have $0 payments.',
+      });
+      return;
+    }
+
+    if (isDemo) {
+      const budgetStorageKey = `finapp-budget-v1:demo:${userId || 1}`;
+      let nextId = Math.max(0, ...recurringList.map((r) => r.id || 0)) + 1;
+      const created = newTemplates.map((t) => ({ ...t, id: nextId++ } as RecurringTransaction));
+      const updated = [...created, ...recurringList];
+      setRecurringList(updated);
+      try {
+        const saved = JSON.parse(localStorage.getItem(budgetStorageKey) || '{}');
+        saved.recurring = updated;
+        localStorage.setItem(budgetStorageKey, JSON.stringify(saved));
+      } catch {}
+      setStatusMessage({
+        type: 'success',
+        text: `Imported ${created.length} debt payment template(s) into recurring transactions.`,
+      });
+      return;
+    }
+
+    let count = 0;
+    try {
+      for (const t of newTemplates) {
+        const res = await fetch(`${API_BASE}/recurring-transactions`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', ...sessionHeaders() },
+          credentials: 'include',
+          body: JSON.stringify({ ...t, userId }),
+        });
+        if (res.ok) count++;
+      }
+      setStatusMessage({
+        type: 'success',
+        text: `Imported ${count} debt obligation template(s) into recurring transactions.`,
+      });
+      loadData();
+    } catch {
+      setStatusMessage({ type: 'error', text: 'Failed to import scenario debt payments.' });
+    }
+  };
+
+  const activeNodes = graph?.nodes?.filter((n) => !n.archived) || [];
+
   // Calculations for summary banner
   const totalIncome = transactions
     .filter((t) => t.kind === 'income')
@@ -1098,6 +1290,26 @@ export function BudgetingTab({ graph, userId: propUserId, demo }: BudgetingTabPr
     .reduce((sum, t) => sum + Number(t.amount || 0), 0);
 
   const netCashFlow = totalIncome - totalExpense;
+
+  const scenarioSalary = getScenarioSalary(graph);
+  const scenarioDebts = getScenarioDebts(graph);
+  const budgetComparison = getScenarioBudgetComparison(graph, totalIncome, totalExpense);
+
+  const matchedDebtNode = graph?.nodes?.find(
+    (n) =>
+      n.nodeType === 'DEBT' &&
+      !n.archived &&
+      (n.name.trim().toLowerCase() === (transDraft.accountName || '').trim().toLowerCase() ||
+        (transDraft.description || '').trim().toLowerCase().includes(n.name.trim().toLowerCase())),
+  );
+
+  const matchedRecurDebtNode = graph?.nodes?.find(
+    (n) =>
+      n.nodeType === 'DEBT' &&
+      !n.archived &&
+      (n.name.trim().toLowerCase() === (recurDraft.accountName || '').trim().toLowerCase() ||
+        (recurDraft.description || '').trim().toLowerCase().includes(n.name.trim().toLowerCase())),
+  );
 
   const totalPurchasedValue =
     positions.length > 0
@@ -1122,6 +1334,15 @@ export function BudgetingTab({ graph, userId: propUserId, demo }: BudgetingTabPr
             currentPrices[sym] !== undefined ? currentPrices[sym] : Number(s.lastPrice || 0);
           return sum + Number(s.sharesOwned || 0) * Number(currentPrice);
         }, 0);
+
+  useEffect(() => {
+    const storageKey = `finapp-holdings-v1:${isDemo ? 'demo' : 'user'}:${userId || 1}`;
+    if (totalPortfolioValue >= 0) {
+      if (saveStoredPortfolioValue(storageKey, totalPortfolioValue)) {
+        notifyPortfolioUpdated();
+      }
+    }
+  }, [totalPortfolioValue, isDemo, userId]);
 
   return (
     <div
@@ -1219,7 +1440,7 @@ export function BudgetingTab({ graph, userId: propUserId, demo }: BudgetingTabPr
           display: 'grid',
           gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))',
           gap: '1rem',
-          marginBottom: '1.5rem',
+          marginBottom: '1rem',
         }}
       >
         <div
@@ -1236,6 +1457,22 @@ export function BudgetingTab({ graph, userId: propUserId, demo }: BudgetingTabPr
           <div style={{ fontSize: '1.5rem', fontWeight: 600, color: '#4ade80', marginTop: '4px' }}>
             {dollars(totalIncome)}
           </div>
+          <div style={{ fontSize: '11px', color: '#8f9db3', marginTop: '4px' }}>
+            Scenario Salary:{' '}
+            <strong style={{ color: '#cbd5e1' }}>{dollars(scenarioSalary.totalMonthly)}/mo</strong>
+            {scenarioSalary.totalMonthly > 0 && (
+              <span
+                style={{
+                  marginLeft: '6px',
+                  color: totalIncome >= scenarioSalary.totalMonthly ? '#4ade80' : '#f59e0b',
+                }}
+              >
+                {totalIncome >= scenarioSalary.totalMonthly
+                  ? '✓ Target Met'
+                  : `${dollars(scenarioSalary.totalMonthly - totalIncome)} remaining`}
+              </span>
+            )}
+          </div>
         </div>
 
         <div
@@ -1251,6 +1488,17 @@ export function BudgetingTab({ graph, userId: propUserId, demo }: BudgetingTabPr
           </span>
           <div style={{ fontSize: '1.5rem', fontWeight: 600, color: '#f87171', marginTop: '4px' }}>
             {dollars(totalExpense)}
+          </div>
+          <div style={{ fontSize: '11px', color: '#8f9db3', marginTop: '4px' }}>
+            Commitments:{' '}
+            <strong style={{ color: '#cbd5e1' }}>
+              {dollars(budgetComparison.plannedTotalCommitments)}/mo
+            </strong>
+            {scenarioDebts.totalMonthlyPayment > 0 && (
+              <span style={{ marginLeft: '4px', color: '#fda4af' }}>
+                ({dollars(scenarioDebts.totalMonthlyPayment)} debt)
+              </span>
+            )}
           </div>
         </div>
 
@@ -1274,6 +1522,10 @@ export function BudgetingTab({ graph, userId: propUserId, demo }: BudgetingTabPr
             }}
           >
             {netCashFlow >= 0 ? `+${dollars(netCashFlow)}` : `-${dollars(Math.abs(netCashFlow))}`}
+          </div>
+          <div style={{ fontSize: '11px', color: '#8f9db3', marginTop: '4px' }}>
+            Scenario Surplus Target:{' '}
+            <strong style={{ color: '#cbd5e1' }}>{dollars(budgetComparison.plannedSurplus)}/mo</strong>
           </div>
         </div>
 
@@ -1310,6 +1562,159 @@ export function BudgetingTab({ graph, userId: propUserId, demo }: BudgetingTabPr
         </div>
       </div>
 
+      {/* Scenario & Budget Alignment Card */}
+      <div
+        style={{
+          background: '#161d2b',
+          border: '1px solid #283347',
+          borderRadius: '8px',
+          padding: '1rem',
+          marginBottom: '1.5rem',
+          display: 'flex',
+          flexWrap: 'wrap',
+          justifyContent: 'space-between',
+          alignItems: 'center',
+          gap: '1rem',
+        }}
+      >
+        <div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <span style={{ fontSize: '14px', fontWeight: 600, color: '#f1f5f9' }}>
+              🔗 Scenario & Budget Alignment
+            </span>
+            <span
+              style={{
+                fontSize: '11px',
+                padding: '2px 8px',
+                borderRadius: '12px',
+                background: '#1e2838',
+                color: '#93c5fd',
+                border: '1px solid #2563eb',
+              }}
+            >
+              {scenarioSalary.nodes.length} Income • {scenarioDebts.nodes.length} Debt Accounts
+            </span>
+          </div>
+          <div style={{ fontSize: '12px', color: '#8f9db3', marginTop: '6px', lineHeight: 1.5 }}>
+            Scenario Monthly Salary:{' '}
+            <strong style={{ color: '#4ade80' }}>
+              {dollars(scenarioSalary.totalMonthly)}/mo
+            </strong>
+            {' • '}Debt Commitments:{' '}
+            <strong style={{ color: '#fb7185' }}>
+              {dollars(scenarioDebts.totalMonthlyPayment)}/mo
+            </strong>{' '}
+            across {scenarioDebts.nodes.length} loans ({dollars(scenarioDebts.totalBalance)} total balance)
+            {scenarioDebts.nodes.length > 0 && (
+              <span style={{ color: '#94a3b8', marginLeft: '6px' }}>
+                ({scenarioDebts.nodes.map((n) => `${n.name}: ${dollars(n.monthlyPayment)}/mo`).join(', ')})
+              </span>
+            )}
+          </div>
+
+          {/* Active Nodes Display Chips */}
+          {activeNodes.length > 0 && (
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px', marginTop: '10px' }}>
+              <span style={{ fontSize: '11px', color: '#64748b', alignSelf: 'center', marginRight: '4px' }}>
+                Scenario Nodes:
+              </span>
+              {activeNodes.map((n) => {
+                const isIncome = n.nodeType === 'INCOME';
+                const isExpense = n.nodeType === 'EXPENSE';
+                const isDebt = n.nodeType === 'DEBT';
+                const amount = isExpense
+                  ? expenseAmount(n, graph)
+                  : isDebt
+                    ? debtPayment(n, graph)
+                    : n.amountOrBalance;
+
+                return (
+                  <button
+                    type="button"
+                    key={n.id}
+                    onClick={() => setActiveSubTab('recurring')}
+                    style={{
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: '5px',
+                      padding: '3px 8px',
+                      borderRadius: '12px',
+                      fontSize: '11px',
+                      background: '#121824',
+                      border: '1px solid #283347',
+                      color: '#cbd5e1',
+                      cursor: 'pointer',
+                    }}
+                    title={`View recurring rule for ${n.name} in Recurring tab`}
+                  >
+                    <span
+                      style={{
+                        width: '6px',
+                        height: '6px',
+                        borderRadius: '50%',
+                        backgroundColor: colors[n.nodeType] || '#8b9ab1',
+                      }}
+                    />
+                    <span>{n.name}</span>
+                    <strong
+                      style={{
+                        color: isIncome
+                          ? '#4ade80'
+                          : isExpense || isDebt
+                            ? '#fb7185'
+                            : '#38bdf8',
+                      }}
+                    >
+                      {dollars(amount)}
+                      {isIncome || isExpense ? '/mo' : ''}
+                    </strong>
+                  </button>
+                );
+              })}
+            </div>
+          )}
+        </div>
+
+        <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.5rem' }}>
+          {scenarioSalary.nodes.length > 0 && (
+            <button
+              type="button"
+              onClick={handleImportScenarioSalary}
+              style={{
+                padding: '6px 12px',
+                fontSize: '12px',
+                borderRadius: '6px',
+                border: '1px solid #22c55e',
+                background: 'rgba(34, 197, 94, 0.12)',
+                color: '#86efac',
+                cursor: 'pointer',
+                fontWeight: 500,
+              }}
+            >
+              📥 Import Scenario Salary
+            </button>
+          )}
+          {scenarioDebts.nodes.length > 0 && (
+            <button
+              type="button"
+              onClick={handleImportScenarioDebts}
+              style={{
+                padding: '6px 12px',
+                fontSize: '12px',
+                borderRadius: '6px',
+                border: '1px solid #f43f5e',
+                background: 'rgba(244, 63, 94, 0.12)',
+                color: '#fda4af',
+                cursor: 'pointer',
+                fontWeight: 500,
+              }}
+            >
+              📥 Import Scenario Debt Service
+            </button>
+          )}
+        </div>
+      </div>
+
       {/* Navigation Sub-Tabs */}
       <div
         style={{
@@ -1318,6 +1723,7 @@ export function BudgetingTab({ graph, userId: propUserId, demo }: BudgetingTabPr
           borderBottom: '1px solid #283347',
           paddingBottom: '0.5rem',
           marginBottom: '1.5rem',
+          flexWrap: 'wrap',
         }}
       >
         <button
@@ -1330,19 +1736,19 @@ export function BudgetingTab({ graph, userId: propUserId, demo }: BudgetingTabPr
         </button>
         <button
           type="button"
-          onClick={() => setActiveSubTab('stocks')}
-          className={`inline-flex items-center justify-center gap-1.5 whitespace-nowrap rounded-[7px] font-medium cursor-pointer transition-colors ${activeSubTab === 'stocks' ? 'bg-primary text-primary-fg' : 'bg-transparent text-[#97a7c2] hover:bg-[#1a2536] hover:text-text'}`}
-          style={{ padding: '6px 16px', fontSize: '14px' }}
-        >
-          Stocks & Positions ({stocks.length})
-        </button>
-        <button
-          type="button"
           onClick={() => setActiveSubTab('recurring')}
           className={`inline-flex items-center justify-center gap-1.5 whitespace-nowrap rounded-[7px] font-medium cursor-pointer transition-colors ${activeSubTab === 'recurring' ? 'bg-primary text-primary-fg' : 'bg-transparent text-[#97a7c2] hover:bg-[#1a2536] hover:text-text'}`}
           style={{ padding: '6px 16px', fontSize: '14px' }}
         >
           Recurring Transactions ({recurringList.length})
+        </button>
+        <button
+          type="button"
+          onClick={() => setActiveSubTab('stocks')}
+          className={`inline-flex items-center justify-center gap-1.5 whitespace-nowrap rounded-[7px] font-medium cursor-pointer transition-colors ${activeSubTab === 'stocks' ? 'bg-primary text-primary-fg' : 'bg-transparent text-[#97a7c2] hover:bg-[#1a2536] hover:text-text'}`}
+          style={{ padding: '6px 16px', fontSize: '14px' }}
+        >
+          Stocks & Positions ({stocks.length})
         </button>
         <button
           type="button"
@@ -1395,7 +1801,7 @@ export function BudgetingTab({ graph, userId: propUserId, demo }: BudgetingTabPr
               type="button"
               className="inline-flex items-center justify-center gap-1.75 whitespace-nowrap rounded-[7px] px-3.5 py-2.25 text-[11px] font-medium min-h-8.5 cursor-pointer bg-primary text-primary-fg hover:bg-[#cbbcfc] transition-colors disabled:opacity-45 disabled:cursor-not-allowed"
               onClick={handleOpenAddTransaction}
-              disabled={!userId}
+              disabled={!userId && !isDemo}
             >
               + Add Transaction
             </button>
@@ -1584,6 +1990,28 @@ export function BudgetingTab({ graph, userId: propUserId, demo }: BudgetingTabPr
                   />
                 </label>
 
+                {matchedDebtNode && transDraft.kind === 'expense' && (
+                  <div
+                    style={{
+                      gridColumn: '1 / -1',
+                      padding: '10px 14px',
+                      borderRadius: '6px',
+                      background: 'rgba(244, 63, 94, 0.12)',
+                      border: '1px solid #f43f5e',
+                      color: '#fecdd3',
+                      fontSize: '12px',
+                    }}
+                  >
+                    💳 <strong>Linked Scenario Debt Account:</strong> {matchedDebtNode.name}
+                    <div style={{ marginTop: '2px', color: '#fda4af' }}>
+                      Current Balance: <strong>{dollars(matchedDebtNode.amountOrBalance)}</strong> • Interest:{' '}
+                      <strong>{matchedDebtNode.interestRateApr}% APR</strong> • Minimum Monthly Payment:{' '}
+                      <strong>{dollars(debtPayment(matchedDebtNode, graph))}</strong>.
+                      Logging this expense will automatically pay down this debt balance and increase your net worth.
+                    </div>
+                  </div>
+                )}
+
                 <div
                   style={{
                     display: 'flex',
@@ -1632,10 +2060,16 @@ export function BudgetingTab({ graph, userId: propUserId, demo }: BudgetingTabPr
                 color: '#8f9db3',
               }}
             >
-              No transactions recorded yet. Click <strong>+ Add Transaction</strong> to record
-              income or expenses.
+              <p style={{ margin: '0 0 0.5rem 0', fontSize: '15px', color: '#f1f5f9' }}>
+                No single transactions recorded yet.
+              </p>
+              <p style={{ margin: 0, fontSize: '13px', color: '#8b9ab1' }}>
+                Click <strong>+ Add Transaction</strong> above to log single, non-recurring expenses (such as grocery trips, dining, and retail). Recurring salary and bills are managed in the <strong>Recurring Transactions</strong> tab.
+              </p>
             </div>
           ) : (
+
+
             <div
               style={{
                 overflowX: 'auto',
@@ -1748,8 +2182,12 @@ export function BudgetingTab({ graph, userId: propUserId, demo }: BudgetingTabPr
               </table>
             </div>
           )}
+
+
         </section>
       )}
+
+
 
       {/* ===================== SECTION 2: STOCKS & POSITIONS ===================== */}
       {activeSubTab === 'stocks' && (
@@ -2436,11 +2874,31 @@ export function BudgetingTab({ graph, userId: propUserId, demo }: BudgetingTabPr
                   '⚡ Generate Due Occurrences'
                 )}
               </button>
+              {scenarioSalary.nodes.length > 0 && (
+                <button
+                  type="button"
+                  className="inline-flex items-center justify-center gap-1 whitespace-nowrap rounded-[7px] px-3 py-2 text-[11px] font-medium min-h-8.5 cursor-pointer bg-transparent text-[#86efac] border border-[#22c55e]/40 hover:bg-[#22c55e]/10 transition-colors"
+                  onClick={handleImportScenarioSalary}
+                  title="Import scenario salary node as monthly recurring income"
+                >
+                  📥 Import Salary ({dollars(scenarioSalary.totalMonthly)})
+                </button>
+              )}
+              {scenarioDebts.nodes.length > 0 && (
+                <button
+                  type="button"
+                  className="inline-flex items-center justify-center gap-1 whitespace-nowrap rounded-[7px] px-3 py-2 text-[11px] font-medium min-h-8.5 cursor-pointer bg-transparent text-[#fda4af] border border-[#f43f5e]/40 hover:bg-[#f43f5e]/10 transition-colors"
+                  onClick={handleImportScenarioDebts}
+                  title="Import scenario debt payments as monthly recurring obligations"
+                >
+                  📥 Import Debts ({dollars(scenarioDebts.totalMonthlyPayment)})
+                </button>
+              )}
               <button
                 type="button"
                 className="inline-flex items-center justify-center gap-1.75 whitespace-nowrap rounded-[7px] px-3.5 py-2.25 text-[11px] font-medium min-h-8.5 cursor-pointer bg-primary text-primary-fg hover:bg-[#cbbcfc] transition-colors disabled:opacity-45 disabled:cursor-not-allowed"
                 onClick={handleOpenAddRecurring}
-                disabled={!userId}
+                disabled={!userId && !isDemo}
               >
                 + Add Recurring Transaction
               </button>
@@ -2650,6 +3108,27 @@ export function BudgetingTab({ graph, userId: propUserId, demo }: BudgetingTabPr
                     }}
                   />
                 </label>
+
+                {matchedRecurDebtNode && recurDraft.kind === 'expense' && (
+                  <div
+                    style={{
+                      gridColumn: '1 / -1',
+                      padding: '10px 14px',
+                      borderRadius: '6px',
+                      background: 'rgba(244, 63, 94, 0.12)',
+                      border: '1px solid #f43f5e',
+                      color: '#fecdd3',
+                      fontSize: '12px',
+                    }}
+                  >
+                    💳 <strong>Linked Scenario Debt Account:</strong> {matchedRecurDebtNode.name}
+                    <div style={{ marginTop: '2px', color: '#fda4af' }}>
+                      Current Balance: <strong>{dollars(matchedRecurDebtNode.amountOrBalance)}</strong> • Interest:{' '}
+                      <strong>{matchedRecurDebtNode.interestRateApr}% APR</strong> • Minimum Monthly Payment:{' '}
+                      <strong>{dollars(debtPayment(matchedRecurDebtNode, graph))}</strong>.
+                    </div>
+                  </div>
+                )}
 
                 <div
                   style={{

@@ -2,11 +2,17 @@ import { useState } from 'react';
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip } from 'recharts';
 import { dollars, money, overviewBreakdown, totals } from '../finance';
 import type { GraphData, OverviewMode } from '../finance';
-export default function OverviewComposition({ graph }: { graph: GraphData }) {
-  const t = totals(graph);
+export default function OverviewComposition({
+  graph,
+  portfolioValue = 0,
+}: {
+  graph: GraphData;
+  portfolioValue?: number;
+}) {
+  const t = totals(graph, portfolioValue);
   const [mode, setMode] = useState<OverviewMode>('budget');
   const [active, setActive] = useState<number | null>(null);
-  const breakdown = overviewBreakdown(graph, mode);
+  const breakdown = overviewBreakdown(graph, mode, portfolioValue);
   const hovered = active === null ? null : breakdown.items[active];
   const labels = { budget: 'Monthly allocation', assets: 'Total assets', debt: 'Outstanding debt' };
   return (

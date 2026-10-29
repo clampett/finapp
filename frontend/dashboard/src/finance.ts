@@ -162,7 +162,7 @@ export function debtPayment(node: GraphNode, graph: GraphData): number {
       : node.amountOrBalance * 0.02,
   );
 }
-export function totals(graph: GraphData) {
+export function totals(graph: GraphData, portfolioValue = 0) {
   graph = activeGraph(graph);
   // Kept monthly flows separate from point-in-time balances. Loan minimums were
   // deducted once from surplus, while total debt reduced net worth separately.
@@ -175,7 +175,9 @@ export function totals(graph: GraphData) {
       .filter((node) => node.nodeType === 'EXPENSE')
       .reduce((sum, node) => sum + expenseAmount(node, graph), 0),
     debt = sum(['DEBT']);
-  const assets = sum(['CHECKING', 'SAVINGS', 'INVESTMENT']);
+  const nodeInvestments = sum(['INVESTMENT']);
+  const totalInvestments = nodeInvestments + (portfolioValue > 0 ? portfolioValue : 0);
+  const assets = sum(['CHECKING', 'SAVINGS']) + totalInvestments;
   const payments = graph.nodes
     .filter((n) => n.nodeType === 'DEBT')
     .reduce((s, n) => s + debtPayment(n, graph), 0);
@@ -195,14 +197,21 @@ export function totals(graph: GraphData) {
     taxes,
     takeHome,
     surplus,
+    portfolioValue,
+    nodeInvestments,
+    totalInvestments,
     ...allocations(graph, surplus),
   };
 }
 // Validate database responses and imported drafts before rendering or calculating.
 export type OverviewMode = 'assets' | 'budget' | 'debt';
-export function overviewBreakdown(graph: GraphData, mode: OverviewMode) {
+export function overviewBreakdown(graph: GraphData, mode: OverviewMode, portfolioValue = 0) {
   graph = activeGraph(graph);
-  const t = totals(graph);
+  const t = totals(graph, portfolioValue);
+  const nodeInvestments = graph.nodes
+    .filter((node) => node.nodeType === 'INVESTMENT')
+    .reduce((sum, node) => sum + node.amountOrBalance, 0);
+  const totalInvestments = nodeInvestments + (portfolioValue > 0 ? portfolioValue : 0);
   // Kept balance-sheet amounts separate from monthly flows; never encoded a
   // liability or shortfall as a negative pie wedge or counted transfers twice.
   const items =
@@ -223,10 +232,9 @@ export function overviewBreakdown(graph: GraphData, mode: OverviewMode) {
             color: '#22d3ee',
           },
           {
-            label: 'Investments',
-            value: graph.nodes
-              .filter((node) => node.nodeType === 'INVESTMENT')
-              .reduce((sum, node) => sum + node.amountOrBalance, 0),
+            label:
+              portfolioValue > 0 && nodeInvestments > 0 ? 'Investments & Stocks' : 'Investments',
+            value: totalInvestments,
             color: '#a78bfa',
           },
         ]

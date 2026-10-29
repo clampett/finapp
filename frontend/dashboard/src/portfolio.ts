@@ -85,9 +85,37 @@ export function parseLocalHoldings(storageKey: string, maxHoldings = 25): Holdin
 export function saveLocalHoldings(storageKey: string, holdings: Holding[]) {
   try {
     localStorage.setItem(storageKey, JSON.stringify(holdings));
+    const total = holdings.reduce((sum, h) => sum + (h.shares || 0) * (h.lastPrice || 0), 0);
+    localStorage.setItem('finapp-portfolio-val:' + storageKey, String(total));
   } catch {
     /* Ignore private browsing quota errors */
   }
+}
+
+export function getStoredPortfolioValue(storageKey: string): number {
+  try {
+    const rawVal = localStorage.getItem('finapp-portfolio-val:' + storageKey);
+    if (rawVal !== null && !isNaN(Number(rawVal))) {
+      return Number(rawVal);
+    }
+    const holdings = parseLocalHoldings(storageKey);
+    return holdings.reduce((sum, h) => sum + (h.shares || 0) * (h.lastPrice || 0), 0);
+  } catch {
+    return 0;
+  }
+}
+
+export function saveStoredPortfolioValue(storageKey: string, value: number): boolean {
+  try {
+    const prev = getStoredPortfolioValue(storageKey);
+    if (Math.abs(prev - value) > 0.001) {
+      localStorage.setItem('finapp-portfolio-val:' + storageKey, String(value));
+      return true;
+    }
+  } catch {
+    /* Ignore private browsing quota errors */
+  }
+  return false;
 }
 
 export function holdingsToSynthetic(

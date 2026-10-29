@@ -18,6 +18,7 @@ import { BudgetControls } from './components/BudgetControls';
 import { DashboardTab } from './DashboardTab';
 import { Investing } from './components/Investing';
 import { clearSession, sessionHeaders } from './session';
+import { PORTFOLIO_UPDATED_EVENT, getStoredPortfolioValue } from './portfolio';
 import { lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type { FormEvent } from 'react';
 import {
@@ -49,6 +50,19 @@ export function ArchetypeGraph({
   search: string;
 }) {
   const storageKey = `finapp-scenario-v2:${demo ? 'demo' : 'user'}:${userId}`;
+  const holdingsKey = `finapp-holdings-v1:${demo ? 'demo' : 'user'}:${userId}`;
+  const [portfolioValue, setPortfolioValue] = useState<number>(() =>
+    getStoredPortfolioValue(holdingsKey),
+  );
+
+  useEffect(() => {
+    const handlePortfolioChange = () => {
+      setPortfolioValue(getStoredPortfolioValue(holdingsKey));
+    };
+    handlePortfolioChange();
+    window.addEventListener(PORTFOLIO_UPDATED_EVENT, handlePortfolioChange);
+    return () => window.removeEventListener(PORTFOLIO_UPDATED_EVENT, handlePortfolioChange);
+  }, [holdingsKey]);
   // Partitioned browser drafts by demo/user and profile ID so editing one
   // example never overwrote a different account's local scenario.
   const [history, setHistory] = useState(() => newHistory({ nodes: [], edges: [] }));
@@ -198,7 +212,7 @@ export function ArchetypeGraph({
     window.addEventListener('keydown', keydown);
     return () => window.removeEventListener('keydown', keydown);
   }, [travel, simType, view, selectionIds, edgeSelectionIds]);
-  const t = totals(graph);
+  const t = totals(graph, portfolioValue);
   const filtered = live.nodes.filter(
     (n) =>
       n.name.toLowerCase().includes(search.toLowerCase()) &&
@@ -601,9 +615,9 @@ export function ArchetypeGraph({
                 />
               )}
               {view === 'overview' ? (
-                <DashboardTab graph={live} />
+                <DashboardTab graph={live} portfolioValue={portfolioValue} />
               ) : view === 'budgeting' ? (
-                <BudgetingTab graph={live} userId={userId} demo={demo} />
+                <BudgetingTab graph={live} userId={userId} demo={demo} onUpdateGraph={update} />
               ) : view === 'graph' ? (
                 <Canvas
                   toolbar={toolbar}
@@ -884,6 +898,7 @@ export function ArchetypeGraph({
             scopeLabel={`${scope === 'all' ? 'All active nodes' : scope === 'connected' ? 'Connected selection' : 'Selected nodes only'} · ${simulationGraph.nodes.length} nodes · ${simulationGraph.edges.length} connections`}
             simulationType={simType}
             onClose={closeSimulation}
+            portfolioValue={portfolioValue}
           />
         </Suspense>
       )}

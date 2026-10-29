@@ -126,12 +126,14 @@ export function SimulationModal({
   onClose,
   onAssumptionsChange,
   scopeLabel,
+  portfolioValue = 0,
 }: {
   graphData: GraphData;
   simulationType: SimulationType;
   onClose: () => void;
   onAssumptionsChange: (settings: ScenarioAssumptions) => void;
   scopeLabel?: string;
+  portfolioValue?: number;
 }) {
   const [forecast, setForecast] = useState<SimulationResult | null>(null);
   const [strategy, setStrategy] = useState<'avalanche' | 'snowball'>('avalanche');
@@ -151,7 +153,7 @@ export function SimulationModal({
   const [borrowingApr, setBorrowingApr] = useState(12);
   const [target, setTarget] = useState(500000);
   const settings = assumptionsFor(graphData);
-  const currentBudget = totals(graphData);
+  const currentBudget = totals(graphData, portfolioValue);
   // Paused only new investment transfers in this experiment; retained existing
   // assets, cash-saving routes, and the saved node graph for later use.
   const scenarioEdges = useMemo(
@@ -243,14 +245,30 @@ export function SimulationModal({
           annual_return: annualReturn / 100,
           annual_volatility: annualVolatility / 100,
           target,
-          nodes: graphData.nodes.map((n) => ({
-            id: n.id,
-            name: n.name,
-            type: n.nodeType,
-            balance: n.amountOrBalance,
-            apr: n.interestRateApr,
-            ...(n.minPayment != null ? { min_payment: n.minPayment } : {}),
-          })),
+          nodes: [
+            ...graphData.nodes.map((n) => ({
+              id: n.id,
+              name: n.name,
+              type: n.nodeType,
+              balance:
+                n.nodeType === 'INVESTMENT' && portfolioValue > 0
+                  ? n.amountOrBalance + portfolioValue
+                  : n.amountOrBalance,
+              apr: n.interestRateApr,
+              ...(n.minPayment != null ? { min_payment: n.minPayment } : {}),
+            })),
+            ...(portfolioValue > 0 && !graphData.nodes.some((n) => n.nodeType === 'INVESTMENT')
+              ? [
+                  {
+                    id: 'portfolio-holdings',
+                    name: 'Stock Portfolio',
+                    type: 'INVESTMENT' as const,
+                    balance: portfolioValue,
+                    apr: 7,
+                  },
+                ]
+              : []),
+          ],
           edges: scenarioEdges.map((e) => ({
             source: e.sourceNodeId,
             target: e.targetNodeId,
@@ -321,6 +339,7 @@ export function SimulationModal({
     fee,
     borrowingApr,
     target,
+    portfolioValue,
   ]);
   // Prepared the P10-P90 envelope from year-specific quantiles; these bounds
   // represented a distribution, not one continuous bull or bear market path.

@@ -5,10 +5,11 @@ const OverviewComposition = lazy(() => import('./components/OverviewComposition'
 
 interface DashboardTabProps {
   graph: GraphData;
+  portfolioValue?: number;
 }
 
-export function DashboardTab({ graph }: DashboardTabProps) {
-  const t = totals(graph);
+export function DashboardTab({ graph, portfolioValue = 0 }: DashboardTabProps) {
+  const t = totals(graph, portfolioValue);
 
   return (
     <div>
@@ -46,7 +47,7 @@ export function DashboardTab({ graph }: DashboardTabProps) {
           </div>
         }
       >
-        <OverviewComposition graph={graph} />
+        <OverviewComposition graph={graph} portfolioValue={portfolioValue} />
       </Suspense>
     </div>
   );

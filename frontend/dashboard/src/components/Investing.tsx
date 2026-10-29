@@ -17,6 +17,8 @@ import {
   parseLocalHoldings,
   removeStockUnified,
   updateSharesUnified,
+  saveStoredPortfolioValue,
+  notifyPortfolioUpdated,
 } from '../portfolio';
 import type { Holding } from '../portfolio';
 
@@ -270,6 +272,14 @@ export function Investing({
     (sum, { shares, state }) => sum + (isQuote(state) ? state.latest_price * shares : 0),
     0,
   );
+
+  useEffect(() => {
+    if (total >= 0) {
+      if (saveStoredPortfolioValue(storageKey, total)) {
+        notifyPortfolioUpdated();
+      }
+    }
+  }, [total, storageKey]);
   const activeSymbol =
     selected && holdings.some((h) => h.symbol === selected)
       ? selected

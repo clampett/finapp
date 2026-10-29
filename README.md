@@ -1,96 +1,291 @@
-# SOFTWARE ENGINEERING PROJECT TEAM 1 (Version 2.1.0 10/14/2026)
+# SOFTWARE ENGINEERING PROJECT TEAM 1 (Version 2.1.0 10/28/2026)
 # FinApp: Investing Strategy Simulator, Budget Tracker, Cash-flow Engine
 
-A visual, interactive personal finance dashboard that maps your finances as an interconnected web using nodes. Trace where your income flows, manage finances, and model long-term financial trajectories in a real-time, responsive workspace.
+A visual, interactive personal finance dashboard that maps your finances as an interconnected web using nodes. Trace where your income flows, organize accounts and debts, build financial scenarios, and explore possible future outcomes.
 
 ---
 
 ## What It Does
 
-Traditional finance platforms limit analysis to static ledger tables or backward-looking categorization charts. **FinApp** models personal finances as a dynamic, directed graph network:
-- **Interactive Visual Canvas:** Render cash flows across nodes representing income streams, checking/savings reserves, debt instruments, and investment vehicles.
-- **Dynamic Graph Grid:** Infinite-canvas background grid built with D3.js that pans and zooms relative to user actions, adapting automatically to different screen resolutions.
-- **Pre-Loaded Archetypes:** Load pre-configured financial profiles (e.g., *Recent Grad with Loans*, *Mid-Career Family*, *FIRE Strategist*) seeded directly from PostgreSQL.
-- **Monte Carlo Simulation:** Compare 1,000 paths over an adjustable horizon with free cached market history, explicit forward-return assumptions, and an auditable gross-to-net monthly budget.
-- **Parametric Simulation Controls:** Adjust the dynamic savings rate slider ($0/mo to 100% of net surplus) and toggle real-time purchasing power discounting via an integrated 2.5% inflation rate model.
+**FinApp** models personal finances as a directed graph network, with dedicated views for understanding and adjusting your scenario:
+
+- **Financial Overview:** View net worth, estimated take-home income, monthly commitments, and available surplus, alongside visual breakdowns of your monthly budget, assets, and debts.
+- **Interactive Node Graph:** Add, edit, move, and connect nodes representing income, checking, savings, investments, debts, and expenses. Use search, selection tools, zoom, automatic arrangement, and fit-to-view controls.
+- **Cash Flow & Budgeting:** Review monthly income, expenses, debt payments, and savings allocations. Choose gross or take-home income and adjust the effective tax estimate.
+- **Investments:** Explore investment accounts and stock holdings with market-price lookup. Market data depends on provider availability and is not guaranteed to be real-time.
+- **Pre-Loaded Archetypes:** Explore *Recent Grad with Loans*, *Mid-Career Family*, and *FIRE Strategist* demo scenarios.
+- **Monte Carlo Simulation:** Compare 1,000 simulated paths over an adjustable horizon using cached historical market data and explicit return assumptions.
+- **Market Regime Simulation:** Explore outcomes using modeled bull and bear market conditions.
+- **Debt Payoff Comparison:** Compare avalanche and snowball strategies, including payment budgets, interest accrued, and remaining balances.
+- **Scenario Import & Export:** Save browser drafts and exchange scenarios through JSON files.
+- **Account Registration & Verification:** Register locally and verify your account using the six-digit code printed in the startup terminal.
 
 ---
 
 ## Architecture Overview
 
-FinApp operates as a distributed multi-service architecture:
+FinApp operates as a distributed multi-service application:
 
 | Component | Technology | Role / Responsibility | Port |
 | :--- | :--- | :--- | :--- |
-| **Frontend Client** | React 18, Vite, TypeScript, D3.js, Recharts, Tailwind CSS | Interactive node graph canvas, simulation modal, and dashboard UI | `8080` (Express wrapper) |
-| **Landing & Auth** | Vanilla TypeScript, Tailwind CSS, Express | Static landing pages, login view, and authentication forms | `8080` |
-| **Application Core** | Java 17/21, Spring Boot 3.2.4, Spring Data JPA, Hibernate | Manages user entities, node topologies, and graph edge connections | `8081` |
-| **Simulation Service** | Python 3.12, FastAPI, NumPy, Pandas, Uvicorn | Computes Monte Carlo trajectory paths and serves historical market analytics | `5000` |
-| **Database** | PostgreSQL 15 | Relational persistence for user accounts, financial nodes, and directional edges | `5432` |
+| **Frontend Client** | React 19, Vite, TypeScript, D3.js, Recharts, Tailwind CSS | Financial overview, interactive node graph, budgeting, investments, and simulation panels | `8080` through Express |
+| **Landing & Auth** | Vanilla TypeScript, Tailwind CSS, Express | Landing pages, sign-in, registration, and verification | `8080` |
+| **Application Core** | Java 17/21, Spring Boot 3.2.4, Spring Data JPA, Hibernate, Flyway | Authentication, sessions, profile access, API routing, and database migrations | `8081` |
+| **Simulation Service** | Python 3.12, FastAPI, NumPy, Pandas, Uvicorn | Financial projections, debt calculations, and cached market data | `5000` |
+| **Database** | PostgreSQL 15 | Persistent user accounts, password hashes, sessions, and stored financial records | `5432` |
+
+The standard local startup runs PostgreSQL and Python in Docker, with Spring Boot and Express running on your computer.
 
 ---
 
 ## Prerequisites
 
-Ensure the following runtimes and tools are installed locally:
-1. **Docker Desktop** (Engine running with Compose v2 support)
-2. **Node.js** (v20+ recommended) & **npm**
-3. **Java Development Kit (JDK 17 or 21)**
-4. **PowerShell 7+** (Recommended for Windows environments)
+Install the following tools before starting:
+
+1. **Docker Desktop** with Docker Compose v2.
+2. **Node.js** `20.19+` within version 20, or `22.12+`, and **npm**.
+3. **Java Development Kit 17 or 21**.
+4. **Windows:** PowerShell; PowerShell 7 is recommended.
+5. **macOS:** Terminal with Bash and the `lsof` utility.
+
+Maven is provided through the repository's Maven wrapper. A separate Python installation is not required for the standard startup because Python runs in Docker.
+
+Keep ports `5000`, `5432`, `8080`, and `8081` available.
 
 ---
 
 ## Quickstart Guide
 
-Install Docker Desktop, Node/npm, and JDK 17 or 21. From the project root run:
+### Option 1: Automated Local Launch — Windows
+
+From the repository root in PowerShell:
 
 ```powershell
 .\start.ps1
 ```
 
-Open http://localhost:8080 and sign in with **testuser / test123**. No Render, Neon, cloud account, or `.env` is required. The script installs missing npm dependencies, builds both frontends, starts local PostgreSQL/Python containers, and runs local Java/Express. Spring Boot output appears live as `[SPRING]`. Press Ctrl+C in that terminal to stop the stack; data remains on disk.
+The script prepares missing npm dependencies, builds both frontends, starts PostgreSQL and Python containers, and launches Spring Boot and Express locally.
 
-The `local` Spring profile creates the test account with a BCrypt password hash and a sample Recent Grad node graph. It reuses existing matching accounts and preserves existing scenarios; it never replaces a different password. This fixture is only for local classroom development. Do not enable the `local` profile on a public server.
+Open:
 
-### Registration and verification
+http://localhost:8080
 
-Create an account normally, then copy the six-digit `CODE:` printed in the terminal running `start.ps1` into the verification page. Console delivery skips SMTP entirely. Codes expire in 15 minutes and belong to one account. Use **Print a new code in the terminal** to replace an expired code. If you closed verification, sign in with that account to resume it. The seeded test account is already verified.
+Sign in with the local development account:
 
-### Team workflow and data
+- **Username:** `testuser`
+- **Password:** `test123`
 
-- Each teammate pulls the same code and runs their own local stack. Everyone has the same test credentials, with a separate database on each computer.
-- Share feature changes through Git branches and pull requests. Share useful scenario data with the dashboard's JSON export/import; browser scenario edits do not currently write to PostgreSQL or sync across machines.
-- Keep schema changes in new Flyway migrations. Keep repeatable example data in development fixtures rather than making manual edits on one computer.
-- Registered accounts and password hashes persist in the local `finapp_postgres_data` external Docker volume. `docker compose down -v` does not delete this external volume, but explicitly deleting the volume or disk still loses data. Run `./backup-db.ps1 -DatabaseMode local` while the database is running for a private backup.
-- Old hosted `.env` datasource settings are ignored by `start.ps1` and the local Compose backend. Existing hosted services/data are not deleted or used by this workflow.
+Spring Boot logs and verification codes appear in the launch terminal with the `[SPRING]` prefix.
 
-### All-Docker alternative
+Press **Ctrl+C** in that terminal to stop the stack. The local database remains on disk.
+
+### Option 2: Automated Local Launch — macOS
+
+From the repository root in Terminal:
+
+```bash
+bash ./start.sh
+```
+
+The script prepares dependencies, starts the Docker services, builds the frontend, and launches Spring Boot and Express.
+
+Open:
+
+http://localhost:8080
+
+Use the same local development credentials:
+
+- **Username:** `testuser`
+- **Password:** `test123`
+
+Logs appear in the terminal with `[SPRING]`, `[PY]`, and `[WEB]` prefixes. Press **Ctrl+C** to stop the stack.
+
+**macOS port conflicts:**
+
+- If port `5000` is occupied, check **System Settings → General → AirDrop & Handoff → AirPlay Receiver**.
+- If port `5432` is occupied, stop any separately installed PostgreSQL service before launching.
+- If Docker does not start automatically, open Docker Desktop, wait for its engine to become ready, and retry.
+
+### Option 3: All-Docker Launch
+
+On Windows:
 
 ```powershell
 .\start-docker.ps1
 ```
 
-This builds all services in Docker and displays their logs, including verification codes. Run `docker compose stop` to stop the containers. For manual Java work, use `./mvnw.cmd spring-boot:run '-Dspring-boot.run.profiles=local'` from `java-backend` after starting `db` and `python-backend`. The profile is required to seed the development account.
+On macOS, using the default database volume:
 
-### Access Points
-Landing Page & Authentication: http://localhost:8080
+```bash
+docker volume create finapp_postgres_data
+docker compose up --build
+```
 
-Interactive Dashboard: http://localhost:8080/dashboard/
+This builds and runs all application services inside Docker. Verification codes appear in the backend container logs.
 
-Java REST API Root: http://localhost:8081/api/v1
+Stop the containers with:
 
-Python Simulation API Docs: http://localhost:5000/docs
+```bash
+docker compose stop
+```
 
-### Development Workflow
-Branching Model: Feature development follows dev -> your_branch_name. Direct commits to main and dev are protected.
+---
 
-Cross-Service Testing: Ensure frontend TypeScript interfaces (GraphData, NodeDTO, EdgeDTO) remain strictly typed against Spring Boot entities and FastAPI Pydantic schemas.
+## Registration and Verification
 
-Code Reviews: All contributions require passing local builds (npm run build, ./mvnw test) and pull request approvals prior to merging.
+1. Open the registration page and create an account.
+2. Find the six-digit verification code in the terminal:
 
+   ```text
+   [SPRING] CODE: 123456
+   ```
 
-## Current scenario workspace
+3. Enter the code on the verification page.
+4. Sign in to open your workspace.
 
-See [the code and debugging guide](docs/code-guide.md) for the file map, request flow, Python calculation responsibilities, and formatting commands.
+Codes expire after **15 minutes** and are associated with the registered account.
 
-See [current implementation and model assumptions](docs/current-implementation.md) for scenario editing, local draft storage, debt payment rules, and verification commands.
+Use **Print a new code in the terminal** to request a replacement. If you close the verification page, sign in with the unverified account to resume verification.
+
+The seeded `testuser` account is already verified.
+
+Console delivery is enabled for local development and skips SMTP. No email provider credentials are required.
+
+For an all-Docker launch, view backend logs with:
+
+```bash
+docker compose logs -f backend
+```
+
+---
+
+## Team Workflow and Data
+
+Each teammate runs an independent local stack. No Render account, Neon account, hosted backend, or `.env` file is required for the standard workflow.
+
+- **Code:** Share changes through Git branches and pull requests.
+- **Accounts:** Registered users and password hashes are stored in each computer's PostgreSQL database.
+- **Scenario Drafts:** Node graph edits are saved in browser local storage, scoped to the user or demo profile.
+- **Sharing Scenarios:** Use JSON export/import to transfer scenarios between browsers or computers.
+- **Database Changes:** Add new Flyway migrations rather than editing migrations that have already been applied.
+
+The local Spring profile creates `testuser` with a BCrypt password hash and a starting scenario. It preserves existing matching accounts and scenarios rather than replacing a different password.
+
+This account and profile are intended for local classroom development. Do not enable the local development profile on a public server.
+
+### Database Persistence
+
+PostgreSQL data is stored in the external Docker volume:
+
+```text
+finapp_postgres_data
+```
+
+Stopping or recreating containers preserves this volume. `docker compose down -v` does not remove the external PostgreSQL volume, but explicitly deleting the volume or its underlying disk deletes its data.
+
+For a private local database backup on Windows, while PostgreSQL is running:
+
+```powershell
+.\backup-db.ps1 -DatabaseMode local
+```
+
+Database persistence and browser drafts are separate. A database backup does not back up browser-local scenario edits; export those scenarios as JSON.
+
+---
+
+## Simulation Behavior
+
+FinApp keeps income flows, account balances, investments, and debts separate when calculating projections.
+
+- Income can be entered as gross pay or take-home pay.
+- Gross pay uses an editable effective tax estimate; take-home pay is not taxed again.
+- Living expenses and contractual debt payments are deducted before allocating surplus.
+- Affordable planned savings and investment transfers are funded before additional investment allocations.
+- Unallocated surplus remains in checking.
+- Shortfalls draw from checking, savings, and investments before creating modeled borrowing.
+- Debt payments are counted once, and released payments become available after payoff.
+- Projections support editable return, growth, inflation, and fee assumptions.
+- Charts distinguish percentile outcomes, sampled paths, and a cashflow reference.
+- Debt remaining at the simulation horizon is reported as unpaid rather than assigned a misleading payoff date.
+
+Market history is cached and refreshed in the background. The simulation panel identifies its data source and model assumptions, including fallback assumptions when historical data is unavailable.
+
+These are educational scenarios, not guaranteed outcomes or personalized financial advice.
+
+---
+
+## Access Points
+
+| Service | URL |
+| :--- | :--- |
+| **Landing Page & Authentication** | http://localhost:8080 |
+| **Interactive Dashboard** | http://localhost:8080/dashboard/ |
+| **Java REST API Root** | http://localhost:8081/api/v1 |
+| **Python Simulation API Docs** | http://localhost:5000/docs |
+
+Public demo profiles can be explored without registering. Private workspaces require an authenticated session.
+
+---
+
+## Development Workflow
+
+**Branching Model:** Create feature branches from `dev` and submit pull requests back to `dev`. Follow repository protection rules for `dev` and `main`.
+
+**Cross-Service Contracts:** Keep frontend graph types, Java DTOs, and Python request models consistent when changing API payloads.
+
+**Code Reviews:** Review changes and complete the relevant builds and tests before merging.
+
+### Frontend Checks
+
+From the repository root:
+
+```bash
+npm run build --prefix ./frontend
+npm run lint --prefix ./frontend/dashboard
+node --test frontend/api-proxy.test.js
+node --test frontend/session.test.js
+```
+
+### Java Checks
+
+From `java-backend` on Windows:
+
+```powershell
+.\mvnw.cmd test
+```
+
+From `java-backend` on macOS:
+
+```bash
+sh ./mvnw test
+```
+
+### Python Checks
+
+For Python development and testing, use a separate Python environment and install the development requirements.
+
+From `python-backend`:
+
+```bash
+python -m pip install -r requirements-dev.txt
+python -m unittest tests.test_simulation -v
+python -m pytest tests/test_price_cache.py
+```
+
+---
+
+## Current Limits
+
+- Scenario graph edits remain browser-local and do not currently synchronize to PostgreSQL or another computer.
+- Market quotes and historical downloads depend on external provider availability.
+- Forecasts use explicit modeling assumptions and simplified effective taxes.
+- Full transaction routing through every connection, authenticated graph persistence, simulation history, AI advice, tax brackets, and retirement withdrawals remain separate integration work.
+- Password recovery remains unfinished.
+
+---
+
+## Project Documentation
+
+- [Code and Debugging Guide](docs/code-guide.md): File map, request flow, calculation responsibilities, and formatting commands.
+- [Current Implementation](docs/current-implementation.md): Scenario behavior, storage, authentication, and integration limits.
+- [Simulation Model](docs/simulation-model.md): Equations, assumptions, market data, and reference budgets.

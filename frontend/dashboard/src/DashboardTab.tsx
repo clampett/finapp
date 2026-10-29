@@ -1,13 +1,15 @@
 import type { GraphData } from './finance';
 import { money, totals } from './finance';
+import { FinancialGoals } from './components/FinancialGoals';
 import { lazy, Suspense } from 'react';
 const OverviewComposition = lazy(() => import('./components/OverviewComposition'));
 
 interface DashboardTabProps {
   graph: GraphData;
+  goalsStorageKey: string;
 }
 
-export function DashboardTab({ graph }: DashboardTabProps) {
+export function DashboardTab({ graph, goalsStorageKey }: DashboardTabProps) {
   const t = totals(graph);
 
   return (
@@ -48,6 +50,12 @@ export function DashboardTab({ graph }: DashboardTabProps) {
       >
         <OverviewComposition graph={graph} />
       </Suspense>
+
+      <FinancialGoals
+        netWorth={t.netWorth}
+        income={t.takeHome}
+        storageKey={goalsStorageKey}
+      />
     </div>
   );
 }

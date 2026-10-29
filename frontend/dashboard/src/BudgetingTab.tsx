@@ -5,9 +5,19 @@ import { API_BASE, dollars } from './finance';
 import { sessionHeaders } from './session';
 import { NumberField } from './components/NumberField';
 import { changeAccount, changeCategory, changeKind } from './budgeting-drafts';
+import {
+  PORTFOLIO_UPDATED_EVENT,
+  notifyPortfolioUpdated,
+  loadUnifiedHoldings,
+  addStockUnified,
+  removeStockUnified,
+  updateSharesUnified,
+} from './portfolio';
 
 interface BudgetingTabProps {
   graph: GraphData;
+  userId?: number;
+  demo?: boolean;
 }
 
 export type TransactionKind = 'income' | 'expense';
@@ -114,9 +124,11 @@ const initialRecurring = (): RecurringTransaction => ({
   notes: '',
 });
 
-export function BudgetingTab({ graph }: BudgetingTabProps) {
-  const userId =
+export function BudgetingTab({ graph, userId: propUserId, demo }: BudgetingTabProps) {
+  const sessionUserId =
     Number(sessionStorage.getItem('finapp_user_id') || localStorage.getItem('finapp_user_id')) || 0;
+  const userId = propUserId || sessionUserId;
+  const isDemo = Boolean(demo || !sessionUserId);
 
   // Active view section
   const [activeSubTab, setActiveSubTab] = useState<'transactions' | 'stocks' | 'recurring'>(
@@ -286,9 +298,129 @@ export function BudgetingTab({ graph }: BudgetingTabProps) {
   const [showRecurForm, setShowRecurForm] = useState(false);
   const [editingRecurId, setEditingRecurId] = useState<number | null>(null);
 
-  // Load all budgeting and stock data from API
+  // Load all budgeting and stock data from API or demo storage
   const loadData = useCallback(
     async (includePrices = false) => {
+      // Demo mode or unauthenticated fallback
+      if (isDemo) {
+        activeLoad.current?.abort();
+        const controller = new AbortController();
+        activeLoad.current = controller;
+        setRefreshing(true);
+        try {
+          const storageKey = `finapp-holdings-v1:demo:${userId || 1}`;
+          const budgetStorageKey = `finapp-budget-v1:demo:${userId || 1}`;
+          const { stocks: loadedStocks, positions: loadedPositions } = await loadUnifiedHoldings(
+            storageKey,
+            userId || 1,
+            true,
+            controller.signal,
+          );
+          if (controller.signal.aborted) return false;
+          setStocks(loadedStocks);
+          setPositions(loadedPositions);
+
+          let demoTxns: Transaction[] = [];
+          let demoRecur: RecurringTransaction[] = [];
+          try {
+            const saved = localStorage.getItem(budgetStorageKey);
+            if (saved) {
+              const parsed = JSON.parse(saved);
+              demoTxns = Array.isArray(parsed.transactions) ? parsed.transactions : [];
+              demoRecur = Array.isArray(parsed.recurring) ? parsed.recurring : [];
+            }
+          } catch {}
+
+          if (demoTxns.length === 0 && graph?.nodes?.length) {
+            const now = new Date().toISOString().split('T')[0];
+            const sampleTxns: Transaction[] = [];
+            const sampleRecur: RecurringTransaction[] = [];
+            let nextId = 1;
+
+            for (const node of graph.nodes) {
+              if (node.archived) continue;
+              if (node.nodeType === 'INCOME') {
+                sampleTxns.push({
+                  id: nextId++,
+                  kind: 'income',
+                  accountName: 'Checking',
+                  description: `${node.name} Paycheck`,
+                  amount: Number(node.amountOrBalance),
+                  transactionDate: now,
+                  notes: 'Monthly salary from scenario',
+                });
+                sampleRecur.push({
+                  id: nextId++,
+                  kind: 'income',
+                  accountName: 'Checking',
+                  description: `${node.name} Paycheck`,
+                  amount: Number(node.amountOrBalance),
+                  frequency: 'monthly',
+                  intervalCount: 1,
+                  startDate: now,
+                  nextDueDate: now,
+                  isActive: true,
+                  notes: 'Auto-linked from income node',
+                });
+              } else if (node.nodeType === 'EXPENSE') {
+                sampleTxns.push({
+                  id: nextId++,
+                  kind: 'expense',
+                  accountName: 'Checking',
+                  description: node.name,
+                  amount: Number(node.amountOrBalance),
+                  transactionDate: now,
+                  notes: 'Living expense from scenario',
+                });
+                sampleRecur.push({
+                  id: nextId++,
+                  kind: 'expense',
+                  accountName: 'Checking',
+                  description: node.name,
+                  amount: Number(node.amountOrBalance),
+                  frequency: 'monthly',
+                  intervalCount: 1,
+                  startDate: now,
+                  nextDueDate: now,
+                  isActive: true,
+                });
+              } else if (node.nodeType === 'DEBT') {
+                const pmt = Math.round(Number(node.minPayment ?? node.amountOrBalance * 0.02));
+                if (pmt > 0) {
+                  sampleTxns.push({
+                    id: nextId++,
+                    kind: 'expense',
+                    accountName: 'Checking',
+                    description: `${node.name} Payment`,
+                    amount: pmt,
+                    transactionDate: now,
+                    notes: `Monthly payment (${node.interestRateApr}% APR)`,
+                  });
+                }
+              }
+            }
+            demoTxns = sampleTxns;
+            demoRecur = sampleRecur;
+            try {
+              localStorage.setItem(
+                budgetStorageKey,
+                JSON.stringify({ transactions: demoTxns, recurring: demoRecur }),
+              );
+            } catch {}
+          }
+
+          setTransactions(demoTxns);
+          setRecurringList(demoRecur);
+          if (includePrices) await refreshCurrentPrices(loadedStocks, controller.signal);
+          return true;
+        } finally {
+          if (activeLoad.current === controller) {
+            activeLoad.current = null;
+            setRefreshing(false);
+          }
+        }
+      }
+
       if (!userId) return false;
       // Cancelled superseded reads so a late response could not replace newer budgeting data.
       activeLoad.current?.abort();
@@ -344,7 +476,7 @@ export function BudgetingTab({ graph }: BudgetingTabProps) {
         }
       }
     },
-    [userId, refreshCurrentPrices],
+    [userId, isDemo, graph, refreshCurrentPrices],
   );
 
   useEffect(() => {
@@ -355,6 +487,14 @@ export function BudgetingTab({ graph }: BudgetingTabProps) {
       activeGeneration.current?.abort();
       activeGeneration.current = null;
     };
+  }, [loadData]);
+
+  useEffect(() => {
+    const handlePortfolioUpdate = () => {
+      void loadData(false);
+    };
+    window.addEventListener(PORTFOLIO_UPDATED_EVENT, handlePortfolioUpdate);
+    return () => window.removeEventListener(PORTFOLIO_UPDATED_EVENT, handlePortfolioUpdate);
   }, [loadData]);
 
   // Derived account options from both backend accounts and graph nodes
@@ -405,6 +545,46 @@ export function BudgetingTab({ graph }: BudgetingTabProps) {
       return;
     }
 
+    if (isDemo) {
+      const budgetStorageKey = `finapp-budget-v1:demo:${userId || 1}`;
+      let updated: Transaction[];
+      if (editingTransId) {
+        updated = transactions.map((t) =>
+          t.id === editingTransId
+            ? {
+                ...transDraft,
+                id: editingTransId,
+                transactionDate: transDraft.transactionDate || transDraft.date,
+              }
+            : t,
+        );
+      } else {
+        const newId = Math.max(0, ...transactions.map((t) => t.id || 0)) + 1;
+        updated = [
+          {
+            ...transDraft,
+            id: newId,
+            transactionDate: transDraft.transactionDate || transDraft.date,
+          },
+          ...transactions,
+        ];
+      }
+      setTransactions(updated);
+      try {
+        const saved = JSON.parse(localStorage.getItem(budgetStorageKey) || '{}');
+        saved.transactions = updated;
+        localStorage.setItem(budgetStorageKey, JSON.stringify(saved));
+      } catch {}
+      setStatusMessage({
+        type: 'success',
+        text: editingTransId ? 'Transaction updated successfully.' : 'Transaction recorded.',
+      });
+      setShowTransForm(false);
+      setEditingTransId(null);
+      setTransDraft(initialTransaction());
+      return;
+    }
+
     try {
       const endpoint = editingTransId
         ? `${API_BASE}/transactions/${editingTransId}`
@@ -443,6 +623,23 @@ export function BudgetingTab({ graph }: BudgetingTabProps) {
 
   const handleDeleteTransaction = async (id: number): Promise<void> => {
     if (!window.confirm('Delete this transaction?')) return;
+    if (isDemo) {
+      const budgetStorageKey = `finapp-budget-v1:demo:${userId || 1}`;
+      const updated = transactions.filter((t) => t.id !== id);
+      setTransactions(updated);
+      try {
+        const saved = JSON.parse(localStorage.getItem(budgetStorageKey) || '{}');
+        saved.transactions = updated;
+        localStorage.setItem(budgetStorageKey, JSON.stringify(saved));
+      } catch {}
+      setStatusMessage({ type: 'success', text: 'Transaction deleted.' });
+      if (editingTransId === id) {
+        setShowTransForm(false);
+        setEditingTransId(null);
+      }
+      return;
+    }
+
     try {
       const res = await fetch(`${API_BASE}/transactions/${id}`, {
         method: 'DELETE',
@@ -494,6 +691,47 @@ export function BudgetingTab({ graph }: BudgetingTabProps) {
     const ticker = stockDraft.ticker.trim().toUpperCase();
     if (!ticker) {
       setStatusMessage({ type: 'error', text: 'Ticker symbol is required.' });
+      return;
+    }
+
+    if (isDemo) {
+      const storageKey = `finapp-holdings-v1:demo:${userId || 1}`;
+      let currentPrice: number | null = quotePrice;
+      let companyName = stockDraft.companyName?.trim() || null;
+      if (currentPrice == null) {
+        try {
+          const res = await fetch(`${API_BASE}/market/stocks/${encodeURIComponent(ticker)}`);
+          if (res.ok) {
+            const data = await res.json();
+            if (data && typeof data.latest_price === 'number') {
+              currentPrice = data.latest_price;
+              if (!companyName && data.name) companyName = data.name;
+            }
+          }
+        } catch {}
+      }
+      const finalPrice =
+        currentPrice || Number(stockDraft.purchasePrice || stockDraft.lastPrice) || 100;
+      await addStockUnified({
+        storageKey,
+        userId: userId || 1,
+        demo: true,
+        symbol: ticker,
+        companyName,
+        price: finalPrice,
+        shares: Number(stockDraft.sharesOwned || 1),
+      });
+      setStatusMessage({
+        type: 'success',
+        text: editingStockId
+          ? 'Stock updated successfully.'
+          : `Stock ${ticker} added. Current price: ${dollars(finalPrice)}.`,
+      });
+      setShowStockForm(false);
+      setEditingStockId(null);
+      setStockDraft(initialStock);
+      setQuotePrice(null);
+      void loadData();
       return;
     }
 
@@ -573,6 +811,7 @@ export function BudgetingTab({ graph }: BudgetingTabProps) {
       setEditingStockId(null);
       setStockDraft(initialStock);
       setQuotePrice(null);
+      notifyPortfolioUpdated();
       loadData();
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : 'Error saving stock';
@@ -582,6 +821,26 @@ export function BudgetingTab({ graph }: BudgetingTabProps) {
 
   const handleDeleteStock = async (id: number): Promise<void> => {
     if (!window.confirm('Delete this stock and associated history?')) return;
+    if (isDemo) {
+      const storageKey = `finapp-holdings-v1:demo:${userId || 1}`;
+      const stock = stocks.find((s) => s.id === id);
+      if (stock) {
+        await removeStockUnified({
+          storageKey,
+          userId: userId || 1,
+          demo: true,
+          symbol: stock.ticker,
+        });
+      }
+      setStatusMessage({ type: 'success', text: 'Stock deleted.' });
+      if (editingStockId === id) {
+        setShowStockForm(false);
+        setEditingStockId(null);
+      }
+      void loadData();
+      return;
+    }
+
     try {
       const res = await fetch(`${API_BASE}/stocks/${id}`, {
         method: 'DELETE',
@@ -594,6 +853,7 @@ export function BudgetingTab({ graph }: BudgetingTabProps) {
         setShowStockForm(false);
         setEditingStockId(null);
       }
+      notifyPortfolioUpdated();
       loadData();
     } catch (err) {
       console.error('Delete failed:', err);
@@ -622,6 +882,32 @@ export function BudgetingTab({ graph }: BudgetingTabProps) {
     e.preventDefault();
     if (!tradeModal.stockId || tradeModal.quantity <= 0) {
       setStatusMessage({ type: 'error', text: 'Valid quantity is required.' });
+      return;
+    }
+
+    if (isDemo) {
+      const storageKey = `finapp-holdings-v1:demo:${userId || 1}`;
+      const stock = stocks.find((s) => s.id === tradeModal.stockId);
+      const sym = stock?.ticker || tradeModal.ticker;
+      const currentPos = positions.find((p) => p.stockId === tradeModal.stockId);
+      const currentShares = currentPos?.sharesOwned ?? stock?.sharesOwned ?? 0;
+      const delta = tradeModal.type === 'buy' ? tradeModal.quantity : -tradeModal.quantity;
+      const newShares = Math.max(0, currentShares + delta);
+      await updateSharesUnified({
+        storageKey,
+        userId: userId || 1,
+        demo: true,
+        symbol: sym,
+        currentShares,
+        newShares,
+        price: tradeModal.price,
+      });
+      setStatusMessage({
+        type: 'success',
+        text: `Executed ${tradeModal.type.toUpperCase()} for ${tradeModal.quantity} shares of ${sym}.`,
+      });
+      setTradeModal((prev) => ({ ...prev, open: false }));
+      void loadData();
       return;
     }
 
@@ -654,6 +940,7 @@ export function BudgetingTab({ graph }: BudgetingTabProps) {
         text: `Executed ${tradeModal.type.toUpperCase()} for ${tradeModal.quantity} shares of ${tradeModal.ticker}.`,
       });
       setTradeModal((prev) => ({ ...prev, open: false }));
+      notifyPortfolioUpdated();
       loadData();
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : 'Error executing trade';
@@ -676,6 +963,33 @@ export function BudgetingTab({ graph }: BudgetingTabProps) {
     }
     if (recurDraft.amount <= 0) {
       setStatusMessage({ type: 'error', text: 'Amount must be greater than $0.' });
+      return;
+    }
+
+    if (isDemo) {
+      const budgetStorageKey = `finapp-budget-v1:demo:${userId || 1}`;
+      let updated: RecurringTransaction[];
+      if (editingRecurId) {
+        updated = recurringList.map((r) =>
+          r.id === editingRecurId ? { ...recurDraft, id: editingRecurId } : r,
+        );
+      } else {
+        const newId = Math.max(0, ...recurringList.map((r) => r.id || 0)) + 1;
+        updated = [{ ...recurDraft, id: newId }, ...recurringList];
+      }
+      setRecurringList(updated);
+      try {
+        const saved = JSON.parse(localStorage.getItem(budgetStorageKey) || '{}');
+        saved.recurring = updated;
+        localStorage.setItem(budgetStorageKey, JSON.stringify(saved));
+      } catch {}
+      setStatusMessage({
+        type: 'success',
+        text: editingRecurId ? 'Recurring rule updated.' : 'Recurring rule created.',
+      });
+      setShowRecurForm(false);
+      setEditingRecurId(null);
+      setRecurDraft(initialRecurring());
       return;
     }
 
@@ -712,6 +1026,19 @@ export function BudgetingTab({ graph }: BudgetingTabProps) {
 
   const handleDeleteRecurring = async (id: number): Promise<void> => {
     if (!window.confirm('Delete this recurring rule?')) return;
+    if (isDemo) {
+      const budgetStorageKey = `finapp-budget-v1:demo:${userId || 1}`;
+      const updated = recurringList.filter((r) => r.id !== id);
+      setRecurringList(updated);
+      try {
+        const saved = JSON.parse(localStorage.getItem(budgetStorageKey) || '{}');
+        saved.recurring = updated;
+        localStorage.setItem(budgetStorageKey, JSON.stringify(saved));
+      } catch {}
+      setStatusMessage({ type: 'success', text: 'Recurring rule deleted.' });
+      return;
+    }
+
     try {
       const res = await fetch(`${API_BASE}/recurring-transactions/${id}`, {
         method: 'DELETE',
@@ -815,7 +1142,20 @@ export function BudgetingTab({ graph }: BudgetingTabProps) {
             Track income, expenses, recurring payments, and stock investments in your database.
           </p>
         </div>
-        {!userId && (
+        {demo ? (
+          <div
+            style={{
+              padding: '6px 12px',
+              background: '#3b2f15',
+              border: '1px solid #705822',
+              borderRadius: '4px',
+              color: '#e8c67a',
+              fontSize: '13px',
+            }}
+          >
+            DEMO SCENARIO: Local edits stay in this browser session.
+          </div>
+        ) : !userId && (
           <div
             style={{
               padding: '6px 12px',

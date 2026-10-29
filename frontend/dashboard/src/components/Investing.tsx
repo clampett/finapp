@@ -10,11 +10,15 @@ import {
   YAxis,
 } from 'recharts';
 import { API_BASE, colors, dollars, money } from '../finance';
-
-interface Holding {
-  symbol: string;
-  shares: number;
-}
+import {
+  PORTFOLIO_UPDATED_EVENT,
+  addStockUnified,
+  loadUnifiedHoldings,
+  parseLocalHoldings,
+  removeStockUnified,
+  updateSharesUnified,
+} from '../portfolio';
+import type { Holding } from '../portfolio';
 
 interface Quote {
   symbol: string;
@@ -39,24 +43,6 @@ type QuoteState = Quote | { error: string } | 'loading';
 
 const MAX_HOLDINGS = 25;
 const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
-
-function loadHoldings(storageKey: string): Holding[] {
-  try {
-    const parsed: unknown = JSON.parse(localStorage.getItem(storageKey) ?? '[]');
-    if (!Array.isArray(parsed)) return [];
-    return parsed
-      .filter(
-        (item): item is Holding =>
-          typeof item?.symbol === 'string' &&
-          typeof item?.shares === 'number' &&
-          Number.isFinite(item.shares) &&
-          item.shares >= 0,
-      )
-      .slice(0, MAX_HOLDINGS);
-  } catch {
-    return [];
-  }
-}
 
 async function fetchQuote(symbol: string, signal?: AbortSignal): Promise<Quote> {
   const response = await fetch(`${API_BASE}/market/stocks/${encodeURIComponent(symbol)}`, {
@@ -96,56 +82,90 @@ const monthTicks = (history: { date: string }[]) =>
 
 const monthLabel = (date: string) => `${MONTHS[Number(date.slice(5, 7)) - 1]} ’${date.slice(2, 4)}`;
 
-export function Investing({ storageKey }: { storageKey: string }) {
-  const [holdings, setHoldings] = useState<Holding[]>(() => loadHoldings(storageKey));
+export function Investing({
+  storageKey,
+  userId,
+  demo,
+}: {
+  storageKey: string;
+  userId?: number;
+  demo?: boolean;
+}) {
+  const [holdings, setHoldings] = useState<Holding[]>(() => parseLocalHoldings(storageKey));
   const [quotes, setQuotes] = useState<Record<string, QuoteState>>({});
   const [suggestions, setSuggestions] = useState<Suggestion[]>([]);
   const [symbol, setSymbol] = useState('');
   const [message, setMessage] = useState('');
   const [pending, setPending] = useState<string[]>([]);
   const [selected, setSelected] = useState<string | null>(null);
-  const startup = useRef(holdings);
-  // Reserved symbols immediately so rapid clicks could not add duplicates or exceed the limit.
   const reserved = useRef(new Set(holdings.map((holding) => holding.symbol)));
   const requests = useRef(new Map<string, AbortController>());
   const selectionIntent = useRef(0);
 
+  // Initial unified portfolio load
   useEffect(() => {
-    try {
-      localStorage.setItem(storageKey, JSON.stringify(holdings));
-    } catch {
-      /* Private browsing can block storage; holdings just won't persist. */
-    }
-  }, [holdings, storageKey]);
+    const controller = new AbortController();
+    loadUnifiedHoldings(storageKey, userId, demo, controller.signal)
+      .then(({ holdings: unified }) => {
+        if (controller.signal.aborted) return;
+        setHoldings(unified);
+        unified.forEach((h) => reserved.current.add(h.symbol));
+        for (const { symbol: sym } of unified) {
+          if (!requests.current.has(sym)) {
+            const reqCtrl = new AbortController();
+            requests.current.set(sym, reqCtrl);
+            setQuotes((cur) => ({ ...cur, [sym]: 'loading' }));
+            fetchQuote(sym, reqCtrl.signal)
+              .then((quote) => {
+                if (!reqCtrl.signal.aborted) setQuotes((cur) => ({ ...cur, [sym]: quote }));
+              })
+              .catch((err) => {
+                if (!reqCtrl.signal.aborted)
+                  setQuotes((cur) => ({
+                    ...cur,
+                    [sym]: { error: err instanceof Error ? err.message : `Could not load ${sym}.` },
+                  }));
+              })
+              .finally(() => {
+                if (requests.current.get(sym) === reqCtrl) requests.current.delete(sym);
+              });
+          }
+        }
+      })
+      .catch(() => {});
 
+    return () => controller.abort();
+  }, [storageKey, userId, demo]);
+
+  // Synchronize when another tab updates stocks (e.g. Budgeting)
   useEffect(() => {
-    // Prices are not saved with the holdings, so reload them for each saved stock.
-    for (const { symbol: sym } of startup.current) {
-      const controller = new AbortController();
-      requests.current.set(sym, controller);
-      setQuotes((current) => ({ ...current, [sym]: 'loading' }));
-      fetchQuote(sym, controller.signal)
-        .then((quote) => {
-          if (!controller.signal.aborted) setQuotes((current) => ({ ...current, [sym]: quote }));
+    const handlePortfolioUpdated = () => {
+      loadUnifiedHoldings(storageKey, userId, demo)
+        .then(({ holdings: unified }) => {
+          setHoldings(unified);
+          unified.forEach((h) => reserved.current.add(h.symbol));
+          for (const { symbol: sym } of unified) {
+            if (!quotes[sym] && !requests.current.has(sym)) {
+              const reqCtrl = new AbortController();
+              requests.current.set(sym, reqCtrl);
+              setQuotes((cur) => ({ ...cur, [sym]: 'loading' }));
+              fetchQuote(sym, reqCtrl.signal)
+                .then((quote) => {
+                  if (!reqCtrl.signal.aborted) setQuotes((cur) => ({ ...cur, [sym]: quote }));
+                })
+                .catch(() => {})
+                .finally(() => {
+                  if (requests.current.get(sym) === reqCtrl) requests.current.delete(sym);
+                });
+            }
+          }
         })
-        .catch((err) => {
-          if (controller.signal.aborted) return;
-          setQuotes((current) => ({
-            ...current,
-            [sym]: { error: err instanceof Error ? err.message : `Could not load ${sym}.` },
-          }));
-        })
-        .finally(() => {
-          if (requests.current.get(sym) === controller) requests.current.delete(sym);
-        });
-    }
-    const activeRequests = requests.current;
-    // Cancelled outstanding quotes when leaving the tab, preventing stale results from returning.
-    return () => {
-      for (const controller of activeRequests.values()) controller.abort();
-      activeRequests.clear();
+        .catch(() => {});
     };
-  }, []);
+
+    window.addEventListener(PORTFOLIO_UPDATED_EVENT, handlePortfolioUpdated);
+    return () => window.removeEventListener(PORTFOLIO_UPDATED_EVENT, handlePortfolioUpdated);
+  }, [storageKey, userId, demo, quotes]);
 
   useEffect(() => {
     const controller = new AbortController();
@@ -178,13 +198,20 @@ export function Investing({ storageKey }: { storageKey: string }) {
     setMessage('');
     setSymbol('');
     try {
-      // Reused an already loaded quote when a removed stock was added again during this visit.
       const savedQuote = quotes[sym];
       const quote = isQuote(savedQuote) ? savedQuote : await fetchQuote(sym, controller.signal);
       if (controller.signal.aborted) return;
       setQuotes((current) => ({ ...current, [sym]: quote }));
-      setHoldings((current) => [...current, { symbol: sym, shares: 1 }]);
-      // Preserved a newer chart choice if this request finished after another user action.
+      const newHolding = await addStockUnified({
+        storageKey,
+        userId,
+        demo,
+        symbol: sym,
+        companyName: quote.name,
+        price: quote.latest_price,
+        shares: 1,
+      });
+      setHoldings((current) => [...current.filter((h) => h.symbol !== sym), newHolding]);
       if (intent === selectionIntent.current) setSelected(sym);
     } catch (err) {
       reserved.current.delete(sym);
@@ -199,11 +226,40 @@ export function Investing({ storageKey }: { storageKey: string }) {
 
   function setShares(sym: string, raw: string) {
     const value = Number(raw);
+    const newShares = Number.isFinite(value) && value >= 0 ? value : 0;
+    const currentHolding = holdings.find((h) => h.symbol === sym);
+    const currentShares = currentHolding?.shares ?? 0;
+    const quote = quotes[sym];
+    const price = isQuote(quote) ? quote.latest_price : currentHolding?.lastPrice ?? 100;
+
     setHoldings((current) =>
-      current.map((h) =>
-        h.symbol === sym ? { ...h, shares: Number.isFinite(value) && value >= 0 ? value : 0 } : h,
-      ),
+      current.map((h) => (h.symbol === sym ? { ...h, shares: newShares } : h)),
     );
+    void updateSharesUnified({
+      storageKey,
+      userId,
+      demo,
+      symbol: sym,
+      currentShares,
+      newShares,
+      price,
+      stockId: currentHolding?.stockId,
+    });
+  }
+
+  async function removeHolding(sym: string) {
+    reserved.current.delete(sym);
+    requests.current.get(sym)?.abort();
+    requests.current.delete(sym);
+    const target = holdings.find((h) => h.symbol === sym);
+    setHoldings((current) => current.filter((h) => h.symbol !== sym));
+    await removeStockUnified({
+      storageKey,
+      userId,
+      demo,
+      symbol: sym,
+      stockId: target?.stockId,
+    });
   }
 
   const rows = holdings.map((h) => ({
@@ -374,10 +430,7 @@ export function Investing({ storageKey }: { storageKey: string }) {
                         type="button"
                         className="inline-flex items-center justify-center gap-1.75 whitespace-nowrap rounded-[7px] px-3.25 py-2.25 text-[11px] font-medium min-h-8.5 cursor-pointer text-coral border border-[#633246] bg-[#2b1b28] hover:bg-[#3d2034]"
                         onClick={() => {
-                          reserved.current.delete(sym);
-                          requests.current.get(sym)?.abort();
-                          requests.current.delete(sym);
-                          setHoldings((current) => current.filter((h) => h.symbol !== sym));
+                          void removeHolding(sym);
                         }}
                       >
                         Remove

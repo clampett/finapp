@@ -596,12 +596,14 @@ export function ArchetypeGraph({
                 <Investing
                   key={`${demo}:${userId}`}
                   storageKey={`finapp-holdings-v1:${demo ? 'demo' : 'user'}:${userId}`}
+                  userId={userId}
+                  demo={demo}
                 />
               )}
               {view === 'overview' ? (
                 <DashboardTab graph={live} />
               ) : view === 'budgeting' ? (
-                <BudgetingTab graph={live} />
+                <BudgetingTab graph={live} userId={userId} demo={demo} />
               ) : view === 'graph' ? (
                 <Canvas
                   toolbar={toolbar}

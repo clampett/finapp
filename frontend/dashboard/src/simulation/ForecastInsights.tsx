@@ -69,56 +69,56 @@ export const ForecastInsights = memo(function ForecastInsights({
     setTimeout(() => URL.revokeObjectURL(url), 1000);
   };
   return (
-    <div className="forecast-insights">
+    <div>
       {summary && (
-        <div className="outcome-card-grid">
-          <article className="outcome-card">
-            <span>Paths ending with positive net worth</span>
-            <strong>
+        <div className="grid grid-cols-3 gap-3 mb-4.75 max-[500px]:grid-cols-1">
+          <article className="border border-[#2e3b50] rounded-[10px] p-4.25 bg-[#131d2b]">
+            <span className="block text-[#9aafc6] text-[10px] leading-relaxed">Paths ending with positive net worth</span>
+            <strong className="block text-[clamp(17px,1.8vw,25px)] font-medium text-[#d6e9e2] my-[10px_7px]">
               {(summary.probability_positive * 100).toFixed(1)}
-              <small>%</small>
+              <small className="text-[13px] text-[#94b8aa] ml-0.75">%</small>
             </strong>
-            <p>Share of 1,000 paths at the selected horizon.</p>
+            <p className="text-[#778fa9] text-[9px] leading-[1.7] m-0">Share of 1,000 paths at the selected horizon.</p>
           </article>
-          <article className="outcome-card">
-            <span>Paths reaching {money(summary.target, true)}</span>
-            <strong>
+          <article className="border border-[#2e3b50] rounded-[10px] p-4.25 bg-[#131d2b]">
+            <span className="block text-[#9aafc6] text-[10px] leading-relaxed">Paths reaching {money(summary.target, true)}</span>
+            <strong className="block text-[clamp(17px,1.8vw,25px)] font-medium text-[#d6e9e2] my-[10px_7px]">
               {(summary.probability_target * 100).toFixed(1)}
-              <small>%</small>
+              <small className="text-[13px] text-[#94b8aa] ml-0.75">%</small>
             </strong>
-            <p>
+            <p className="text-[#778fa9] text-[9px] leading-[1.7] m-0">
               Measured in {realDollars ? 'today’s purchasing power' : 'nominal dollars'}; not a
               guarantee.
             </p>
           </article>
-          <article className="outcome-card">
-            <span>Median net worth above zero</span>
-            <strong>
+          <article className="border border-[#2e3b50] rounded-[10px] p-4.25 bg-[#131d2b]">
+            <span className="block text-[#9aafc6] text-[10px] leading-relaxed">Median net worth above zero</span>
+            <strong className="block text-[clamp(17px,1.8vw,25px)] font-medium text-[#d6e9e2] my-[10px_7px]">
               {summary.first_positive_median_year === null
                 ? 'Not reached'
                 : summary.first_positive_median_year === 0
                   ? 'Already positive'
                   : `Year ${summary.first_positive_median_year}`}
             </strong>
-            <p>A yearly observation, not an exact payoff date.</p>
+            <p className="text-[#778fa9] text-[9px] leading-[1.7] m-0">A yearly observation, not an exact payoff date.</p>
           </article>
         </div>
       )}
       {bins.length > 0 && (
-        <section className="distribution-card">
-          <div className="distribution-heading">
+        <section className="bg-[#121c2a] border border-[#2e4056] rounded-xl p-5">
+          <div className="flex items-start justify-between gap-3.75">
             <div>
-              <div className="eyebrow">AT THE FINISH LINE</div>
-              <h3>Different paths. Different outcomes.</h3>
-              <p>
+              <div className="text-[#86c7b5] text-[8px] tracking-[1.7px] font-semibold mb-2">AT THE FINISH LINE</div>
+              <h3 className="text-[15px] my-1.75 font-medium text-text">Different paths. Different outcomes.</h3>
+              <p className="text-[#889eb8] text-[10px] leading-relaxed m-0">
                 Distribution of net worth after {final?.year} years ·{' '}
                 {realDollars ? 'today’s dollars' : 'nominal dollars'}
               </p>
             </div>
-            <span className="distribution-pill">1,000 paths</span>
+            <span className="text-[9px] text-[#a6c9c0] bg-[#203933] px-2.25 py-1.5 rounded-full whitespace-nowrap">1,000 paths</span>
           </div>
           <div
-            className="distribution-chart"
+            className="h-47.5 my-[12px_8px]"
             role="img"
             aria-label="Histogram of final simulated net worth"
           >
@@ -147,11 +147,11 @@ export const ForecastInsights = memo(function ForecastInsights({
                       share: number;
                     };
                     return (
-                      <div className="chart-tooltip">
-                        <strong>
+                      <div className="p-[13px_15px] bg-[#1c2638] border border-[#47536d] rounded-[9px] shadow-[0_10px_30px_#0005] min-w-50 text-[11px]">
+                        <strong className="block text-[11px] text-[#d9e3f3] mb-3">
                           {money(bin.lower)} to {money(bin.upper)}
                         </strong>
-                        <p>
+                        <p className="m-0 text-text">
                           {bin.count} paths · {(bin.share * 100).toFixed(1)}%
                         </p>
                       </div>
@@ -166,11 +166,11 @@ export const ForecastInsights = memo(function ForecastInsights({
               </BarChart>
             </ResponsiveContainer>
           </div>
-          <div className="distribution-markers">
+          <div className="grid grid-cols-3 gap-2.5 border-t border-[#293a50] pt-3.5">
             {(['p10', 'p50', 'p90'] as const).map((key, i) => (
-              <span key={key}>
+              <span key={key} className="text-[#88a0ba] text-[9px]">
                 {['P10 · lower', 'P50 · median', 'P90 · upper'][i]}
-                <b className={(final?.[key] ?? 0) < 0 ? 'negative' : ''}>
+                <b className={`block text-base font-medium mt-1.75 ${(final?.[key] ?? 0) < 0 ? 'negative text-coral' : 'text-[#d5dfef]'}`}>
                   {money(final?.[key] ?? 0, true)}
                 </b>
               </span>
@@ -178,45 +178,45 @@ export const ForecastInsights = memo(function ForecastInsights({
           </div>
         </section>
       )}
-      <details className="annual-audit">
-        <summary>
-          Check the math year by year <span>Budget, debt & forecast</span>
+      <details className="mt-4.5 border border-[#2b3c50] rounded-[10px] overflow-hidden bg-[#111a26]">
+        <summary className="flex justify-between p-[15px_18px] text-xs cursor-pointer select-none [&::-webkit-details-marker]:hidden">
+          Check the math year by year <span className="text-[#7790ac] text-[10px]">Budget, debt & forecast</span>
         </summary>
-        <div className="audit-toolbar">
-          <p>
+        <div className="flex gap-3.75 items-center justify-between p-[15px_18px] border-t border-[#29384c] max-[500px]:flex-col max-[500px]:items-stretch">
+          <p className="text-[10px] leading-[1.7] text-[#899fb8] m-0">
             Cash flows and loan balances below are nominal. Forecast values use the chart’s selected
             dollar basis.
           </p>
-          <button className="button" onClick={csv}>
+          <button className="inline-flex items-center justify-center gap-1.75 whitespace-nowrap border border-[#344056] rounded-[7px] px-3.25 py-2.25 bg-[#182131] hover:bg-[#232f43] hover:border-[#65738c] text-[11px] font-medium min-h-8.5 cursor-pointer text-text" onClick={csv}>
             Export audit CSV ↓
           </button>
         </div>
-        <div className="audit-table-scroll">
-          <table>
+        <div className="max-h-90 overflow-auto">
+          <table className="w-full border-collapse text-[10px] whitespace-nowrap">
             <thead>
               <tr>
-                <th>Year</th>
-                <th>Income</th>
-                <th>Tax estimate</th>
-                <th>Living costs</th>
-                <th>Loan payments</th>
-                <th>Loans remaining</th>
-                <th>Median net worth{realDollars ? ' (real)' : ''}</th>
+                <th className="text-right p-[11px_15px] border-b border-[#243246] tabular-nums text-[#9fb3cb] bg-[#1a2737] sticky top-0 z-1 font-medium first:text-left">Year</th>
+                <th className="text-right p-[11px_15px] border-b border-[#243246] tabular-nums text-[#9fb3cb] bg-[#1a2737] sticky top-0 z-1 font-medium first:text-left">Income</th>
+                <th className="text-right p-[11px_15px] border-b border-[#243246] tabular-nums text-[#9fb3cb] bg-[#1a2737] sticky top-0 z-1 font-medium first:text-left">Tax estimate</th>
+                <th className="text-right p-[11px_15px] border-b border-[#243246] tabular-nums text-[#9fb3cb] bg-[#1a2737] sticky top-0 z-1 font-medium first:text-left">Living costs</th>
+                <th className="text-right p-[11px_15px] border-b border-[#243246] tabular-nums text-[#9fb3cb] bg-[#1a2737] sticky top-0 z-1 font-medium first:text-left">Loan payments</th>
+                <th className="text-right p-[11px_15px] border-b border-[#243246] tabular-nums text-[#9fb3cb] bg-[#1a2737] sticky top-0 z-1 font-medium first:text-left">Loans remaining</th>
+                <th className="text-right p-[11px_15px] border-b border-[#243246] tabular-nums text-[#9fb3cb] bg-[#1a2737] sticky top-0 z-1 font-medium first:text-left">Median net worth{realDollars ? ' (real)' : ''}</th>
               </tr>
             </thead>
             <tbody>
               {(forecast.yearly_cashflow ?? []).map((row) => (
                 <tr key={row.year}>
-                  <td>{row.year}</td>
-                  <td>{dollars(row.income)}</td>
-                  <td>{dollars(row.taxes)}</td>
-                  <td>{dollars(row.expenses)}</td>
-                  <td>{dollars(row.debt_payments)}</td>
-                  <td>{dollars(row.debt_remaining)}</td>
+                  <td className="text-right p-[11px_15px] border-b border-[#243246] tabular-nums text-text first:text-left">{row.year}</td>
+                  <td className="text-right p-[11px_15px] border-b border-[#243246] tabular-nums text-text first:text-left">{dollars(row.income)}</td>
+                  <td className="text-right p-[11px_15px] border-b border-[#243246] tabular-nums text-text first:text-left">{dollars(row.taxes)}</td>
+                  <td className="text-right p-[11px_15px] border-b border-[#243246] tabular-nums text-text first:text-left">{dollars(row.expenses)}</td>
+                  <td className="text-right p-[11px_15px] border-b border-[#243246] tabular-nums text-text first:text-left">{dollars(row.debt_payments)}</td>
+                  <td className="text-right p-[11px_15px] border-b border-[#243246] tabular-nums text-text first:text-left">{dollars(row.debt_remaining)}</td>
                   <td
-                    className={
-                      (points.find((p) => p.year === row.year)?.p50 ?? 0) < 0 ? 'negative' : ''
-                    }
+                    className={`text-right p-[11px_15px] border-b border-[#243246] tabular-nums first:text-left ${
+                      (points.find((p) => p.year === row.year)?.p50 ?? 0) < 0 ? 'negative text-coral' : 'text-text'
+                    }`}
                   >
                     {dollars(points.find((p) => p.year === row.year)?.p50 ?? 0)}
                   </td>
@@ -226,7 +226,7 @@ export const ForecastInsights = memo(function ForecastInsights({
           </table>
         </div>
         {summary && (
-          <p className="audit-note">
+          <p className="text-[10px] leading-[1.7] text-[#899fb8] p-[14px_18px] m-0">
             Median cumulative investment contributions: {dollars(summary.median_contributions)}{' '}
             nominal. Contributions are transfers into investments, not total net worth or guaranteed
             growth.

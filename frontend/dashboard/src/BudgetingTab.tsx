@@ -798,8 +798,7 @@ export function BudgetingTab({ graph }: BudgetingTabProps) {
 
   return (
     <div
-      className="dashboard-tab"
-      style={{ padding: '1rem', maxWidth: '1200px', margin: '0 auto' }}
+      className="w-full max-w-300 mx-auto p-4"
     >
       {/* Header and Summary Cards */}
       <div
@@ -812,7 +811,7 @@ export function BudgetingTab({ graph }: BudgetingTabProps) {
       >
         <div>
           <h2 style={{ margin: 0 }}>Budgeting & Stock Portfolio</h2>
-          <p className="muted small" style={{ margin: '4px 0 0 0' }}>
+          <p className="text-[#8b9ab1] text-[11px] mt-1 mb-0">
             Track income, expenses, recurring payments, and stock investments in your database.
           </p>
         </div>
@@ -984,7 +983,7 @@ export function BudgetingTab({ graph }: BudgetingTabProps) {
         <button
           type="button"
           onClick={() => setActiveSubTab('transactions')}
-          className={`button ${activeSubTab === 'transactions' ? 'primary' : 'quiet'}`}
+          className={`inline-flex items-center justify-center gap-1.5 whitespace-nowrap rounded-[7px] font-medium cursor-pointer transition-colors ${activeSubTab === 'transactions' ? 'bg-primary text-primary-fg' : 'bg-transparent text-[#97a7c2] hover:bg-[#1a2536] hover:text-text'}`}
           style={{ padding: '6px 16px', fontSize: '14px' }}
         >
           Transactions ({transactions.length})
@@ -992,7 +991,7 @@ export function BudgetingTab({ graph }: BudgetingTabProps) {
         <button
           type="button"
           onClick={() => setActiveSubTab('stocks')}
-          className={`button ${activeSubTab === 'stocks' ? 'primary' : 'quiet'}`}
+          className={`inline-flex items-center justify-center gap-1.5 whitespace-nowrap rounded-[7px] font-medium cursor-pointer transition-colors ${activeSubTab === 'stocks' ? 'bg-primary text-primary-fg' : 'bg-transparent text-[#97a7c2] hover:bg-[#1a2536] hover:text-text'}`}
           style={{ padding: '6px 16px', fontSize: '14px' }}
         >
           Stocks & Positions ({stocks.length})
@@ -1000,7 +999,7 @@ export function BudgetingTab({ graph }: BudgetingTabProps) {
         <button
           type="button"
           onClick={() => setActiveSubTab('recurring')}
-          className={`button ${activeSubTab === 'recurring' ? 'primary' : 'quiet'}`}
+          className={`inline-flex items-center justify-center gap-1.5 whitespace-nowrap rounded-[7px] font-medium cursor-pointer transition-colors ${activeSubTab === 'recurring' ? 'bg-primary text-primary-fg' : 'bg-transparent text-[#97a7c2] hover:bg-[#1a2536] hover:text-text'}`}
           style={{ padding: '6px 16px', fontSize: '14px' }}
         >
           Recurring Rules ({recurringList.length})
@@ -1013,7 +1012,7 @@ export function BudgetingTab({ graph }: BudgetingTabProps) {
           disabled={!userId}
           aria-busy={refreshing}
           aria-disabled={refreshing || !userId}
-          className="button quiet budgeting-async-button"
+          className="inline-flex items-center justify-center gap-2 min-w-30 aria-busy:cursor-progress whitespace-nowrap rounded-[7px] font-medium cursor-pointer bg-transparent text-[#97a7c2] hover:bg-[#1a2536] hover:text-text transition-colors disabled:opacity-45 disabled:cursor-not-allowed"
           style={{ marginLeft: 'auto', padding: '6px 12px', fontSize: '12px' }}
         >
           {refreshing ? (
@@ -1025,7 +1024,7 @@ export function BudgetingTab({ graph }: BudgetingTabProps) {
           )}
         </button>
       </div>
-      <div className="stock-load-status" role="status" aria-live="polite">
+      <div className="min-h-[1.4em] flex items-center gap-2 text-[#91a3bd] text-[13px]" role="status" aria-live="polite">
         {generating
           ? 'Generating due occurrences. You can keep browsing.'
           : refreshing
@@ -1048,13 +1047,13 @@ export function BudgetingTab({ graph }: BudgetingTabProps) {
               <h3 id="transactions-section-heading" style={{ margin: 0 }}>
                 Recorded Transactions
               </h3>
-              <p className="muted small" style={{ margin: '2px 0 0 0' }}>
+              <p className="text-[#8b9ab1] text-[11px] mt-0.5 mb-0">
                 Income and expenses linked to your accounts.
               </p>
             </div>
             <button
               type="button"
-              className="button primary"
+              className="inline-flex items-center justify-center gap-1.75 whitespace-nowrap rounded-[7px] px-3.5 py-2.25 text-[11px] font-medium min-h-8.5 cursor-pointer bg-primary text-primary-fg hover:bg-[#cbbcfc] transition-colors disabled:opacity-45 disabled:cursor-not-allowed"
               onClick={handleOpenAddTransaction}
               disabled={!userId}
             >
@@ -1253,12 +1252,12 @@ export function BudgetingTab({ graph }: BudgetingTabProps) {
                     marginTop: '0.5rem',
                   }}
                 >
-                  <button type="submit" className="button primary">
+                  <button type="submit" className="inline-flex items-center justify-center gap-1.75 whitespace-nowrap rounded-[7px] px-3.5 py-2.25 text-[11px] font-medium min-h-8.5 cursor-pointer bg-primary text-primary-fg hover:bg-[#cbbcfc] transition-colors">
                     {editingTransId ? 'Save Changes' : 'Record Transaction'}
                   </button>
                   <button
                     type="button"
-                    className="button quiet"
+                    className="inline-flex items-center justify-center gap-1.75 whitespace-nowrap rounded-[7px] px-3.25 py-2.25 text-[11px] font-medium min-h-8.5 cursor-pointer bg-transparent text-[#97a7c2] border border-transparent hover:bg-[#1a2536] hover:text-text transition-colors"
                     onClick={() => {
                       setShowTransForm(false);
                       setEditingTransId(null);
@@ -1269,7 +1268,7 @@ export function BudgetingTab({ graph }: BudgetingTabProps) {
                   {editingTransId && (
                     <button
                       type="button"
-                      className="button danger"
+                      className="inline-flex items-center justify-center gap-1.75 whitespace-nowrap rounded-[7px] px-3.25 py-2.25 text-[11px] font-medium min-h-8.5 cursor-pointer text-coral border border-[#633246] bg-[#2b1b28] hover:bg-[#3d2034] transition-colors"
                       style={{ marginLeft: 'auto' }}
                       onClick={() => handleDeleteTransaction(editingTransId)}
                     >
@@ -1388,7 +1387,7 @@ export function BudgetingTab({ graph }: BudgetingTabProps) {
                       >
                         <button
                           type="button"
-                          className="button quiet"
+                          className="inline-flex items-center justify-center whitespace-nowrap rounded-[7px] font-medium cursor-pointer bg-transparent border border-transparent hover:bg-[#1a2536] text-[#97a7c2] hover:text-text transition-colors"
                           onClick={() => handleEditTransaction(t)}
                           style={{ padding: '4px 8px', fontSize: '11px', marginRight: '6px' }}
                         >
@@ -1396,7 +1395,7 @@ export function BudgetingTab({ graph }: BudgetingTabProps) {
                         </button>
                         <button
                           type="button"
-                          className="button quiet"
+                          className="inline-flex items-center justify-center whitespace-nowrap rounded-[7px] font-medium cursor-pointer bg-transparent border border-transparent hover:bg-[#1a2536] transition-colors"
                           style={{ color: '#f87171', padding: '4px 8px', fontSize: '11px' }}
                           onClick={() => t.id && handleDeleteTransaction(t.id)}
                         >
@@ -1462,13 +1461,13 @@ export function BudgetingTab({ graph }: BudgetingTabProps) {
                   )}
                 </h3>
               </div>
-              <p className="muted small" style={{ margin: '2px 0 0 0' }}>
+              <p className="text-[#8b9ab1] text-[11px] mt-0.5 mb-0">
                 Track shares, cost basis, market prices, and buy/sell operations.
               </p>
             </div>
             <button
               type="button"
-              className="button primary"
+              className="inline-flex items-center justify-center gap-1.75 whitespace-nowrap rounded-[7px] px-3.5 py-2.25 text-[11px] font-medium min-h-8.5 cursor-pointer bg-primary text-primary-fg hover:bg-[#cbbcfc] transition-colors disabled:opacity-45 disabled:cursor-not-allowed"
               onClick={handleOpenAddStock}
               disabled={!userId}
             >
@@ -1491,7 +1490,7 @@ export function BudgetingTab({ graph }: BudgetingTabProps) {
                 {editingStockId ? 'Edit Stock Details' : 'Add Stock To Portfolio'}
               </h4>
               {editingStockId && (
-                <p className="muted small">
+                <p className="text-[#8b9ab1] text-[11px]">
                   Current holdings are shown for reference. Use Buy or Sell to record position
                   changes; editing stock details preserves your purchase history.
                 </p>
@@ -1722,12 +1721,12 @@ export function BudgetingTab({ graph }: BudgetingTabProps) {
                     marginTop: '0.5rem',
                   }}
                 >
-                  <button type="submit" className="button primary">
+                  <button type="submit" className="inline-flex items-center justify-center gap-1.75 whitespace-nowrap rounded-[7px] px-3.5 py-2.25 text-[11px] font-medium min-h-8.5 cursor-pointer bg-primary text-primary-fg hover:bg-[#cbbcfc] transition-colors">
                     {editingStockId ? 'Save Changes' : 'Add Stock'}
                   </button>
                   <button
                     type="button"
-                    className="button quiet"
+                    className="inline-flex items-center justify-center gap-1.75 whitespace-nowrap rounded-[7px] px-3.25 py-2.25 text-[11px] font-medium min-h-8.5 cursor-pointer bg-transparent text-[#97a7c2] border border-transparent hover:bg-[#1a2536] hover:text-text transition-colors"
                     onClick={() => {
                       setShowStockForm(false);
                       setEditingStockId(null);
@@ -1738,7 +1737,7 @@ export function BudgetingTab({ graph }: BudgetingTabProps) {
                   {editingStockId && (
                     <button
                       type="button"
-                      className="button danger"
+                      className="inline-flex items-center justify-center gap-1.75 whitespace-nowrap rounded-[7px] px-3.25 py-2.25 text-[11px] font-medium min-h-8.5 cursor-pointer text-coral border border-[#633246] bg-[#2b1b28] hover:bg-[#3d2034] transition-colors"
                       style={{ marginLeft: 'auto' }}
                       onClick={() => handleDeleteStock(editingStockId)}
                     >
@@ -1870,12 +1869,12 @@ export function BudgetingTab({ graph }: BudgetingTabProps) {
                 </div>
 
                 <div style={{ display: 'flex', gap: '0.5rem', gridColumn: '1 / -1' }}>
-                  <button type="submit" className="button primary">
+                  <button type="submit" className="inline-flex items-center justify-center gap-1.75 whitespace-nowrap rounded-[7px] px-3.5 py-2.25 text-[11px] font-medium min-h-8.5 cursor-pointer bg-primary text-primary-fg hover:bg-[#cbbcfc] transition-colors">
                     Execute {tradeModal.type.toUpperCase()}
                   </button>
                   <button
                     type="button"
-                    className="button quiet"
+                    className="inline-flex items-center justify-center gap-1.75 whitespace-nowrap rounded-[7px] px-3.25 py-2.25 text-[11px] font-medium min-h-8.5 cursor-pointer bg-transparent text-[#97a7c2] border border-transparent hover:bg-[#1a2536] hover:text-text transition-colors"
                     onClick={() => setTradeModal((prev) => ({ ...prev, open: false }))}
                   >
                     Cancel
@@ -2008,7 +2007,7 @@ export function BudgetingTab({ graph }: BudgetingTabProps) {
                         >
                           <button
                             type="button"
-                            className="button quiet"
+                            className="inline-flex items-center justify-center whitespace-nowrap rounded-[7px] font-medium cursor-pointer bg-transparent border border-transparent hover:bg-[#1a2536] transition-colors"
                             style={{
                               padding: '4px 8px',
                               fontSize: '11px',
@@ -2021,7 +2020,7 @@ export function BudgetingTab({ graph }: BudgetingTabProps) {
                           </button>
                           <button
                             type="button"
-                            className="button quiet"
+                            className="inline-flex items-center justify-center whitespace-nowrap rounded-[7px] font-medium cursor-pointer bg-transparent border border-transparent hover:bg-[#1a2536] transition-colors"
                             style={{
                               padding: '4px 8px',
                               fontSize: '11px',
@@ -2034,7 +2033,7 @@ export function BudgetingTab({ graph }: BudgetingTabProps) {
                           </button>
                           <button
                             type="button"
-                            className="button quiet"
+                            className="inline-flex items-center justify-center whitespace-nowrap rounded-[7px] font-medium cursor-pointer bg-transparent border border-transparent hover:bg-[#1a2536] text-[#97a7c2] hover:text-text transition-colors"
                             onClick={() => handleEditStock(stock)}
                             style={{ padding: '4px 8px', fontSize: '11px', marginRight: '4px' }}
                           >
@@ -2042,7 +2041,7 @@ export function BudgetingTab({ graph }: BudgetingTabProps) {
                           </button>
                           <button
                             type="button"
-                            className="button quiet"
+                            className="inline-flex items-center justify-center whitespace-nowrap rounded-[7px] font-medium cursor-pointer bg-transparent border border-transparent hover:bg-[#1a2536] transition-colors"
                             style={{ color: '#f87171', padding: '4px 8px', fontSize: '11px' }}
                             onClick={() => stock.id && handleDeleteStock(stock.id)}
                           >
@@ -2074,7 +2073,7 @@ export function BudgetingTab({ graph }: BudgetingTabProps) {
               <h3 id="recurring-section-heading" style={{ margin: 0 }}>
                 Recurring Transaction Templates
               </h3>
-              <p className="muted small" style={{ margin: '2px 0 0 0' }}>
+              <p className="text-[#8b9ab1] text-[11px] mt-0.5 mb-0">
                 Automate repeating expenses and income (e.g. rent, payroll, Netflix). Occurrences
                 are generated into Transactions.
               </p>
@@ -2082,7 +2081,7 @@ export function BudgetingTab({ graph }: BudgetingTabProps) {
             <div style={{ display: 'flex', gap: '0.5rem' }}>
               <button
                 type="button"
-                className="button quiet budgeting-async-button"
+                className="inline-flex items-center justify-center gap-2 min-w-30 aria-busy:cursor-progress whitespace-nowrap rounded-[7px] font-medium cursor-pointer bg-transparent text-[#97a7c2] hover:bg-[#1a2536] hover:text-text transition-colors disabled:opacity-45 disabled:cursor-not-allowed"
                 onClick={handleGenerateDueOccurrences}
                 disabled={!userId}
                 aria-busy={generating}
@@ -2099,7 +2098,7 @@ export function BudgetingTab({ graph }: BudgetingTabProps) {
               </button>
               <button
                 type="button"
-                className="button primary"
+                className="inline-flex items-center justify-center gap-1.75 whitespace-nowrap rounded-[7px] px-3.5 py-2.25 text-[11px] font-medium min-h-8.5 cursor-pointer bg-primary text-primary-fg hover:bg-[#cbbcfc] transition-colors disabled:opacity-45 disabled:cursor-not-allowed"
                 onClick={handleOpenAddRecurring}
                 disabled={!userId}
               >
@@ -2320,12 +2319,12 @@ export function BudgetingTab({ graph }: BudgetingTabProps) {
                     marginTop: '0.5rem',
                   }}
                 >
-                  <button type="submit" className="button primary">
+                  <button type="submit" className="inline-flex items-center justify-center gap-1.75 whitespace-nowrap rounded-[7px] px-3.5 py-2.25 text-[11px] font-medium min-h-8.5 cursor-pointer bg-primary text-primary-fg hover:bg-[#cbbcfc] transition-colors">
                     {editingRecurId ? 'Save Changes' : 'Create Recurring Rule'}
                   </button>
                   <button
                     type="button"
-                    className="button quiet"
+                    className="inline-flex items-center justify-center gap-1.75 whitespace-nowrap rounded-[7px] px-3.25 py-2.25 text-[11px] font-medium min-h-8.5 cursor-pointer bg-transparent text-[#97a7c2] border border-transparent hover:bg-[#1a2536] hover:text-text transition-colors"
                     onClick={() => {
                       setShowRecurForm(false);
                       setEditingRecurId(null);
@@ -2336,7 +2335,7 @@ export function BudgetingTab({ graph }: BudgetingTabProps) {
                   {editingRecurId && (
                     <button
                       type="button"
-                      className="button danger"
+                      className="inline-flex items-center justify-center gap-1.75 whitespace-nowrap rounded-[7px] px-3.25 py-2.25 text-[11px] font-medium min-h-8.5 cursor-pointer text-coral border border-[#633246] bg-[#2b1b28] hover:bg-[#3d2034] transition-colors"
                       style={{ marginLeft: 'auto' }}
                       onClick={() => handleDeleteRecurring(editingRecurId)}
                     >
@@ -2435,7 +2434,7 @@ export function BudgetingTab({ graph }: BudgetingTabProps) {
                       >
                         <button
                           type="button"
-                          className="button quiet"
+                          className="inline-flex items-center justify-center whitespace-nowrap rounded-[7px] font-medium cursor-pointer bg-transparent border border-transparent hover:bg-[#1a2536] text-[#97a7c2] hover:text-text transition-colors"
                           onClick={() => {
                             setEditingRecurId(r.id ?? null);
                             setRecurDraft(r);
@@ -2447,7 +2446,7 @@ export function BudgetingTab({ graph }: BudgetingTabProps) {
                         </button>
                         <button
                           type="button"
-                          className="button quiet"
+                          className="inline-flex items-center justify-center whitespace-nowrap rounded-[7px] font-medium cursor-pointer bg-transparent border border-transparent hover:bg-[#1a2536] transition-colors"
                           style={{ color: '#f87171', padding: '4px 8px', fontSize: '11px' }}
                           onClick={() => r.id && handleDeleteRecurring(r.id)}
                         >

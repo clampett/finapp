@@ -286,6 +286,6 @@ python -m pytest tests/test_price_cache.py
 
 ## Project Documentation
 
-- [Code and Debugging Guide](docs/code-guide.md): File map, request flow, calculation responsibilities, and formatting commands.
-- [Current Implementation](docs/current-implementation.md): Scenario behavior, storage, authentication, and integration limits.
-- [Simulation Model](docs/simulation-model.md): Equations, assumptions, market data, and reference budgets.
+- [Code and Debugging Guide](docs/sprint-2/code-guide.md): File map, request flow, calculation responsibilities, and formatting commands.
+- [Current Implementation](docs/sprint-2/current-implementation.md): Scenario behavior, storage, authentication, and integration limits.
+- [Simulation Model](docs/sprint-2/simulation-model.md): Equations, assumptions, market data, and reference budgets.

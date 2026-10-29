@@ -38,52 +38,54 @@ export default function App() {
   }, [demo, userId]);
   if (!demo && !userId) return null;
   return (
-    <div className="app-shell">
-      <aside className="app-sidebar">
-        <a className="brand" href="/">
-          <span className="brand-mark" aria-hidden="true" />
+    <div className="flex min-h-dvh max-[760px]:block">
+      <aside className="w-54 shrink-0 border-r border-border p-[30px_18px] flex flex-col bg-raised sticky top-0 h-dvh max-[760px]:static max-[760px]:h-auto max-[760px]:w-full max-[760px]:px-4 max-[760px]:pt-3.75 max-[760px]:pb-2.25 max-[760px]:border-r-0 max-[760px]:border-b max-[760px]:border-border">
+        <a className="text-[25px] font-bold flex items-center gap-2.25 px-3 tracking-[-1px] text-text max-[760px]:text-[22px] max-[760px]:p-0" href="/">
+          <span className="block shrink-0 w-8 h-8 rounded-full bg-brand max-[760px]:w-7 max-[760px]:h-7" aria-hidden="true" />
           FinApp
         </a>
-        <div className="nav-caption">YOUR WORKSPACE</div>
-        <nav aria-label="Main navigation">
+        <div className="text-[9px] tracking-[1.6px] text-subtle m-[51px_14px_14px] max-[760px]:hidden">YOUR WORKSPACE</div>
+        <nav aria-label="Main navigation" className="max-[760px]:flex max-[760px]:gap-1.25 max-[760px]:mt-3.5 max-[760px]:overflow-auto">
           {views.map((item) => (
             <button
               key={item.id}
-              className={`nav-item ${view === item.id ? 'active' : ''}`}
+              // Kept active and inactive colors exclusive so generated CSS order could not hide selection.
+              className={`border flex items-center text-left gap-3 rounded-lg p-3 w-full my-0.75 text-[13px] cursor-pointer transition-colors duration-150 max-[760px]:w-auto max-[760px]:whitespace-nowrap max-[760px]:text-[11px] max-[760px]:px-2.75 max-[760px]:py-2.25 max-[760px]:gap-1.75 ${view === item.id ? 'active bg-active-bg text-active-text border-active-border' : 'border-transparent bg-transparent text-[#98a6bc] hover:bg-hover-bg hover:text-[#edf2fa]'}`}
               aria-current={view === item.id ? 'page' : undefined}
               onClick={() => setView(item.id)}
             >
-              <span aria-hidden="true">{item.icon}</span>
+              <span className="text-[19px] w-5 text-center max-[760px]:text-[15px] max-[760px]:w-3.5" aria-hidden="true">{item.icon}</span>
               {item.label}
             </button>
           ))}
         </nav>
-        <div className="sidebar-bottom">
-          <span className="status-dot" /> Personal finance, connected.
-          <p>Build a scenario. See the possibilities.</p>
+        <div className="mt-auto text-[10px] text-[#9aabc1] pt-5 px-2.5 pb-0 max-[760px]:hidden">
+          <span className="inline-block w-1.5 h-1.5 rounded-full bg-[#73d9af] align-middle mr-1.75" /> Personal finance, connected.
+          <p className="text-[10px] text-[#63748e] mt-2">Build a scenario. See the possibilities.</p>
         </div>
       </aside>
-      <main className="app-main">
-        <header className="app-header">
-          <div className="breadcrumb">
-            Workspace <span>/</span> <strong>{views.find((v) => v.id === view)?.label}</strong>
+      <main className="flex-1 min-w-0">
+        <header className="h-18.5 flex gap-5 items-center px-8 border-b border-border bg-header max-[760px]:h-15 max-[760px]:px-4 max-[760px]:gap-2.5">
+          <div className="text-xs text-[#7f8ea5] flex-1 max-[760px]:hidden">
+            Workspace <span className="mx-2.5 text-[#4b5971]">/</span> <strong className="text-[#bac5d7] font-medium">{views.find((v) => v.id === view)?.label}</strong>
           </div>
-          <label className="search-field">
-            <span aria-hidden="true">⌕</span>
+          <label className="flex items-center gap-2.25 text-[#8f9db3] bg-[#151c29] border border-[#293246] rounded-[7px] px-2.5 w-60 max-[760px]:flex-1 max-[760px]:w-auto">
+            <span className="text-[23px]" aria-hidden="true">⌕</span>
             <input
+              className="border-0 bg-transparent py-2.25 px-0 w-full text-xs outline-none text-text"
               aria-label="Search nodes"
               placeholder="Find a node…"
               value={search}
               onChange={(e) => setSearch(e.target.value)}
             />
             {search && (
-              <button aria-label="Clear search" onClick={() => setSearch('')}>
+              <button className="border-0 bg-transparent text-[#a3afc2] cursor-pointer" aria-label="Clear search" onClick={() => setSearch('')}>
                 ×
               </button>
             )}
           </label>
           <button
-            className="button quiet"
+            className="inline-flex items-center justify-center gap-1.75 whitespace-nowrap rounded-[7px] px-3.25 py-2.25 font-medium text-[11px] min-h-8.5 cursor-pointer bg-transparent border border-transparent text-[#a4b2c9] hover:bg-[#232f43] hover:text-text"
             onClick={async () => {
               await endSession();
               location.replace(demo ? '/' : '/login');
@@ -92,22 +94,23 @@ export default function App() {
             {demo ? 'Exit demo' : 'Sign out'} ↗
           </button>
         </header>
-        <div className="workspace-heading">
+        <div className="p-[29px_32px_24px] flex justify-between items-center gap-5 max-[760px]:items-start max-[760px]:p-[23px_16px_18px] max-[760px]:flex-col max-[760px]:gap-4">
           <div>
-            <div className="eyebrow">
+            <div className="text-[9px] text-[#a9b7ce] tracking-[1.7px] font-semibold mb-2.5">
               {demo ? 'EXPLORE A FINANCIAL SCENARIO' : 'YOUR FINANCIAL WORKSPACE'}
             </div>
-            <h1>Your money. A clearer picture.</h1>
-            <p>Connect the everyday decisions to the bigger plan.</p>
+            <h1 className="text-[clamp(22px,2.5vw,32px)] font-semibold tracking-[-1px] leading-tight text-text m-0 max-[760px]:text-[25px]">Your money. A clearer picture.</h1>
+            <p className="text-xs text-[#8998b0] mt-2 leading-relaxed">Connect the everyday decisions to the bigger plan.</p>
           </div>
           {demo && (
-            <div className="profile-switcher">
-              <span className="demo-badge">DEMO</span>
+            <div className="flex gap-2.5 items-center shrink-0 max-[760px]:w-full">
+              <span className="text-[9px] tracking-[1px] border border-[#705822] text-[#e8c67a] rounded px-1.75 py-1.25">DEMO</span>
               <label className="sr-only" htmlFor="profile">
                 Demo profile
               </label>
               <select
                 id="profile"
+                className="text-xs min-w-45 bg-[#171e2b] border border-border rounded-lg text-[#edf2fa] px-2.75 py-2.5 cursor-pointer max-[760px]:flex-1"
                 value={profile}
                 onChange={(e) => {
                   const next = Number(e.target.value);

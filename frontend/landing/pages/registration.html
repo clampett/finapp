@@ -14,34 +14,34 @@
       } catch {}
     </script>
   </head>
-  <body class="auth-page">
-    <a class="skip-link" href="#main">Skip to content</a>
-    <header class="site-container auth-header">
-      <a class="site-brand" href="/"><span class="brand-circle" aria-hidden="true"></span>FinApp</a
-      ><a href="/">← Back to home</a>
+  <body class="min-h-dvh flex flex-col bg-background text-text font-sans text-sm leading-[1.6] min-w-[320px] m-0">
+    <a class="fixed -top-25 left-4 py-3 px-4.5 z-99 bg-primary text-primary-fg rounded-[7px] focus:top-2.5 transition-[top] focus-visible:outline-2 focus-visible:outline-primary focus-visible:outline-offset-[5px]" href="#main">Skip to content</a>
+    <header class="w-full max-w-310 mx-auto px-8 max-xs:px-5 py-5.75 max-xs:py-5 flex items-center justify-between">
+      <a class="inline-flex items-center gap-3 text-[25px] max-xs:text-[23px] font-bold tracking-[-0.7px] text-text shrink-0" href="/"><span class="block shrink-0 w-8 h-8 rounded-full bg-[#00c9b7]" aria-hidden="true"></span>FinApp</a
+      ><a class="text-foreground text-[11px] hover:text-primary transition-colors focus-visible:outline-2 focus-visible:outline-primary focus-visible:outline-offset-[5px]" href="/">← Back to home</a>
     </header>
-    <main id="main" class="auth-main">
-      <div class="auth-layout">
-        <section class="auth-intro">
-          <div class="site-eyebrow">A CLEARER STARTING POINT</div>
-          <h2>Your financial life.<br />All connected.</h2>
-          <p>
+    <main id="main" class="flex-1 grid place-items-center py-7 px-5 pb-15 max-xs:pt-3 max-xs:px-5 max-xs:pb-8.75">
+      <div class="w-full max-w-220 grid grid-cols-2 max-xs:grid-cols-1 gap-17.5 max-mob:gap-8.75 max-xs:gap-6.25 max-xs:max-w-102.5 items-center">
+        <section class="max-xs:hidden">
+          <div class="flex items-center gap-2 text-[9px] tracking-[1.7px] font-[650] text-foreground mb-5 max-xs:mb-3">A CLEARER STARTING POINT</div>
+          <h2 class="text-[38px] max-mob:text-[32px] max-xs:text-[30px] leading-[1.16] tracking-[-1.3px] font-semibold m-0">Your financial life.<br />All connected.</h2>
+          <p class="text-[13px] max-xs:text-[12px] text-foreground mt-4.75 max-xs:mt-3 leading-[1.9] m-0">
             Create an account to open your own workspace. Add nodes, shape a scenario, and explore
             what could come next.
           </p>
-          <ul>
-            <li>No bank connection required</li>
-            <li>Build and export your own scenarios</li>
-            <li>Keep assumptions in view</li>
+          <ul class="p-0 list-none mt-6.25 text-xs text-foreground max-xs:hidden">
+            <li class="mb-3.5 before:content-['↗'] before:text-mint before:mr-3">No bank connection required</li>
+            <li class="mb-3.5 before:content-['↗'] before:text-mint before:mr-3">Build and export your own scenarios</li>
+            <li class="mb-3.5 before:content-['↗'] before:text-mint before:mr-3">Keep assumptions in view</li>
           </ul>
-          <p>Scenario edits currently save on this device. Export a JSON copy to keep a backup.</p>
+          <p class="text-[13px] max-xs:text-[12px] text-foreground mt-4.75 max-xs:mt-3 leading-[1.9] m-0">Scenario edits currently save on this device. Export a JSON copy to keep a backup.</p>
         </section>
-        <section class="auth-card" aria-labelledby="register-title">
-          <h1 id="register-title">Create your account.</h1>
-          <p class="auth-description">Already have an account? <a href="/login">Sign in</a></p>
-          <form id="registration-form" class="auth-form">
+        <section class="bg-card border border-border rounded-[13px] p-7 max-xs:p-6" aria-labelledby="register-title">
+          <h1 id="register-title" class="text-[23px] tracking-[-0.6px] font-semibold leading-[1.3] m-0">Create your account.</h1>
+          <p class="text-[11px] text-foreground my-2.25 mb-5.75 [&_a]:text-primary">Already have an account? <a href="/login">Sign in</a></p>
+          <form id="registration-form" class="flex flex-col gap-4.25">
             <div>
-              <label for="email">Email address</label
+              <label class="block text-[11px] font-medium mb-1.75" for="email">Email address</label
               ><input
                 id="email"
                 name="email"
@@ -50,10 +50,11 @@
                 maxlength="255"
                 autocomplete="email"
                 placeholder="you@example.com"
+                class="w-full py-2.75 px-3 bg-background border border-border rounded-[7px] text-text text-xs min-w-0 placeholder:text-foreground/70 focus-visible:outline-2 focus-visible:outline-primary focus-visible:outline-offset-[5px]"
               />
             </div>
             <div>
-              <label for="username">Username</label
+              <label class="block text-[11px] font-medium mb-1.75" for="username">Username</label
               ><input
                 id="username"
                 name="username"
@@ -61,13 +62,14 @@
                 maxlength="50"
                 autocomplete="username"
                 pattern="[A-Za-z0-9_.-]{3,50}"
-                title="3–50 letters, numbers, underscores, periods, or hyphens"
+                title="3-50 letters, numbers, underscores, periods, or hyphens"
                 placeholder="Choose a username"
+                class="w-full py-2.75 px-3 bg-background border border-border rounded-[7px] text-text text-xs min-w-0 placeholder:text-foreground/70 focus-visible:outline-2 focus-visible:outline-primary focus-visible:outline-offset-[5px]"
               />
             </div>
             <div>
-              <label for="password">Password</label>
-              <div class="password-field">
+              <label class="block text-[11px] font-medium mb-1.75" for="password">Password</label>
+              <div class="flex items-center relative">
                 <input
                   id="password"
                   name="password"
@@ -77,8 +79,9 @@
                   minlength="8"
                   maxlength="72"
                   placeholder="At least 8 characters"
+                  class="w-full py-2.75 px-3 pr-14.25 bg-background border border-border rounded-[7px] text-text text-xs min-w-0 placeholder:text-foreground/70 focus-visible:outline-2 focus-visible:outline-primary focus-visible:outline-offset-[5px]"
                 /><button
-                  class="password-toggle"
+                  class="absolute right-1.5 bg-transparent text-foreground text-[10px] p-1.75 border-0 rounded hover:text-text cursor-pointer transition-colors focus-visible:outline-2 focus-visible:outline-primary focus-visible:outline-offset-[5px]"
                   type="button"
                   data-password-toggle="password"
                   aria-label="Show or hide password"
@@ -90,8 +93,8 @@
               </div>
             </div>
             <div>
-              <label for="confirm-password">Confirm password</label>
-              <div class="password-field">
+              <label class="block text-[11px] font-medium mb-1.75" for="confirm-password">Confirm password</label>
+              <div class="flex items-center relative">
                 <input
                   id="confirm-password"
                   name="confirm-password"
@@ -101,8 +104,9 @@
                   minlength="8"
                   maxlength="72"
                   placeholder="At least 8 characters"
+                  class="w-full py-2.75 px-3 pr-14.25 bg-background border border-border rounded-[7px] text-text text-xs min-w-0 placeholder:text-foreground/70 focus-visible:outline-2 focus-visible:outline-primary focus-visible:outline-offset-[5px]"
                 /><button
-                  class="password-toggle"
+                  class="absolute right-1.5 bg-transparent text-foreground text-[10px] p-1.75 border-0 rounded hover:text-text cursor-pointer transition-colors focus-visible:outline-2 focus-visible:outline-primary focus-visible:outline-offset-[5px]"
                   type="button"
                   data-password-toggle="confirm-password"
                   aria-label="Show or hide confirm password"
@@ -113,18 +117,18 @@
                 </button>
               </div>
             </div>
-            <p id="registration-error" class="form-message" role="alert"></p>
-            <button id="register_button" class="site-button primary" type="submit">
+            <p id="registration-error" class="text-[11px] leading-[1.7] text-coral m-0 empty:hidden" role="alert"></p>
+            <button id="register_button" class="w-full mt-0.5 inline-flex items-center justify-center gap-3.5 min-h-9.75 border border-primary bg-primary text-primary-fg py-2.5 px-4 rounded-lg text-xs font-[550] whitespace-nowrap hover:brightness-[1.08] transition-all cursor-pointer disabled:opacity-50 disabled:cursor-wait focus-visible:outline-2 focus-visible:outline-primary focus-visible:outline-offset-[5px]" type="submit">
               Create account ↗
             </button>
           </form>
-          <p class="auth-switch">
+          <p class="text-[11px] text-center text-foreground mt-5.5 m-0 [&_a]:text-primary [&_a]:hover:underline">
             <a href="/dashboard/?demo=true">Just exploring? Open the demo instead ↗</a>
           </p>
         </section>
       </div>
     </main>
-    <footer class="auth-footer">
+    <footer class="text-center text-[9px] max-xs:text-[8px] text-foreground px-5 pb-5.5">
       FinApp · Educational financial modeling · Scenario edits stay in this browser
     </footer>
     <script src="/assets/login.js" defer></script>

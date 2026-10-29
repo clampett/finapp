@@ -223,34 +223,35 @@ export function Investing({ storageKey }: { storageKey: string }) {
   const available = suggestions.filter((s) => !holdings.some((h) => h.symbol === s.symbol));
 
   return (
-    <section className="investing" aria-label="Stock holdings">
+    <section className="flex flex-col gap-4 mb-6" aria-label="Stock holdings">
       <div>
-        <div className="eyebrow">STOCKS</div>
-        <h3>Your stock holdings</h3>
-        <p className="investing-intro">
+        <div className="text-[9px] text-[#a9b7ce] tracking-[1.7px] font-semibold mb-2">STOCKS</div>
+        <h3 className="text-[17px] font-semibold tracking-[-0.2px] text-text m-0">Your stock holdings</h3>
+        <p className="text-xs text-[#8998b0] m-0 mt-1.5">
           Search a USD-priced ticker symbol, enter your shares, and see its price, value, and
           history.
         </p>
       </div>
       <form
-        className="button-row investing-form"
+        className="flex gap-2 flex-wrap items-center"
         onSubmit={(event: FormEvent) => {
           event.preventDefault();
           void addSymbol(symbol);
         }}
       >
         <input
+          className="w-65 max-w-full text-xs min-w-0 border border-border rounded-lg bg-[#101722] text-[#edf2fa] px-2.75 py-2.5"
           aria-label="Ticker symbol"
           placeholder="Ticker symbol (for example AAPL)"
           value={symbol}
           maxLength={10}
           onChange={(event) => setSymbol(event.target.value)}
         />
-        <button className="button primary" type="submit" disabled={!symbol.trim()}>
+        <button className="inline-flex items-center justify-center gap-1.75 whitespace-nowrap rounded-[7px] px-3.25 py-2.25 text-[11px] font-medium min-h-8.5 cursor-pointer bg-primary text-primary-fg border border-primary hover:bg-[#cbbafa] disabled:opacity-40 disabled:cursor-not-allowed" type="submit" disabled={!symbol.trim()}>
           Add stock
         </button>
       </form>
-      <div className="stock-load-status" role="status" aria-live="polite">
+      <div className="min-h-[1.4em] flex items-center gap-2 text-[#91a3bd] text-[13px]" role="status" aria-live="polite">
         {pending.length > 0 && (
           <>
             <span className="stock-loading-spinner" aria-hidden="true" />
@@ -259,19 +260,19 @@ export function Investing({ storageKey }: { storageKey: string }) {
         )}
       </div>
       {message && (
-        <p className="negative" role="alert">
+        <p className="text-xs text-coral m-0 negative" role="alert">
           {message}
         </p>
       )}
       {available.length > 0 && (
         <div>
-          <div className="eyebrow">POPULAR STOCKS</div>
-          <div className="stock-chips">
+          <div className="text-[9px] text-[#a9b7ce] tracking-[1.7px] font-semibold mb-2">POPULAR STOCKS</div>
+          <div className="flex flex-wrap gap-2">
             {available.map((s) => (
               <button
                 key={s.symbol}
                 type="button"
-                className="button quiet stock-chip"
+                className="inline-flex items-center justify-center gap-1.5 whitespace-nowrap min-h-7 px-2.75 py-1 rounded-full border border-[#344056] hover:not-disabled:border-[#51607a] hover:not-disabled:text-[#e5ecf7] text-[11px] font-medium text-[#a4b2c9] bg-transparent cursor-pointer aria-busy:cursor-progress aria-busy:border-[#51607a]"
                 title={s.name}
                 aria-busy={pending.includes(s.symbol)}
                 aria-disabled={pending.includes(s.symbol)}
@@ -288,31 +289,31 @@ export function Investing({ storageKey }: { storageKey: string }) {
           </div>
         </div>
       )}
-      <div className="metric-grid">
-        <div className="metric-card">
-          <span>Total stock value (USD)</span>
-          <strong>{dollars(total)}</strong>
-          <small>
+      <div className="grid grid-cols-[repeat(auto-fit,minmax(200px,260px))] gap-3.5 mb-0">
+        <div className="p-[18px_19px] bg-surface border border-[#283145] rounded-[11px] flex flex-col gap-2.5 max-[760px]:p-3.5">
+          <span className="text-[11px] text-[#9cacbf]">Total stock value (USD)</span>
+          <strong className="text-[clamp(20px,2vw,28px)] tracking-[-0.7px] font-semibold text-text">{dollars(total)}</strong>
+          <small className="text-[10px] text-[#73839a]">
             {holdings.length} {holdings.length === 1 ? 'stock' : 'stocks'}
           </small>
         </div>
       </div>
       {holdings.length === 0 ? (
-        <div className="loading-panel">
+        <div className="py-17.5 px-6 text-center text-[#8d9fba]">
           No stocks yet. Type a ticker symbol above or pick a suggestion.
         </div>
       ) : (
-        <div className="account-table-wrap">
-          <table className="account-table">
+        <div className="border border-[#2a3549] rounded-[11px] bg-[#121a27] overflow-auto min-h-0">
+          <table className="w-full border-collapse text-left text-xs whitespace-nowrap">
             <thead>
               <tr>
-                <th>Stock</th>
-                <th>Shares</th>
-                <th>Price</th>
-                <th>Value</th>
-                <th>Annualized return</th>
-                <th>Annualized volatility</th>
-                <th />
+                <th className="text-[#8192ad] text-[10px] font-medium p-[16px_20px] bg-[#161f2e] max-[760px]:p-[11px_14px]">Stock</th>
+                <th className="text-[#8192ad] text-[10px] font-medium p-[16px_20px] bg-[#161f2e] max-[760px]:p-[11px_14px]">Shares</th>
+                <th className="text-[#8192ad] text-[10px] font-medium p-[16px_20px] bg-[#161f2e] max-[760px]:p-[11px_14px]">Price</th>
+                <th className="text-[#8192ad] text-[10px] font-medium p-[16px_20px] bg-[#161f2e] max-[760px]:p-[11px_14px]">Value</th>
+                <th className="text-[#8192ad] text-[10px] font-medium p-[16px_20px] bg-[#161f2e] max-[760px]:p-[11px_14px]">Annualized return</th>
+                <th className="text-[#8192ad] text-[10px] font-medium p-[16px_20px] bg-[#161f2e] max-[760px]:p-[11px_14px]">Annualized volatility</th>
+                <th className="p-[16px_20px] bg-[#161f2e] max-[760px]:p-[11px_14px]" />
               </tr>
             </thead>
             <tbody>
@@ -321,45 +322,46 @@ export function Investing({ storageKey }: { storageKey: string }) {
                 const problem = errorOf(state);
                 return (
                   <tr key={sym}>
-                    <td>
+                    <td className="p-[13px_20px] border-t border-[#263147] text-text max-[760px]:p-[11px_14px]">
                       <strong>{sym}</strong>
-                      {quote?.name && <small className="muted"> {quote.name}</small>}
-                      {problem && <small className="negative"> {problem}</small>}
+                      {quote?.name && <small className="text-[#8b9ab1]"> {quote.name}</small>}
+                      {problem && <small className="text-coral negative"> {problem}</small>}
                     </td>
-                    <td>
+                    <td className="p-[13px_20px] border-t border-[#263147] text-text max-[760px]:p-[11px_14px]">
                       <input
                         type="number"
                         min="0"
                         step="any"
                         aria-label={`Shares of ${sym}`}
                         defaultValue={shares}
+                        className="text-xs min-w-0 border border-border rounded-lg bg-[#101722] text-[#edf2fa] px-2.75 py-1.5"
                         style={{ width: '5.5rem' }}
                         onChange={(event) => setShares(sym, event.target.value)}
                       />
                     </td>
-                    <td>{quote ? dollars(quote.latest_price) : problem ? '—' : 'Loading…'}</td>
-                    <td>{quote ? dollars(quote.latest_price * shares) : '—'}</td>
+                    <td className="p-[13px_20px] border-t border-[#263147] text-text max-[760px]:p-[11px_14px]">{quote ? dollars(quote.latest_price) : problem ? '—' : 'Loading…'}</td>
+                    <td className="p-[13px_20px] border-t border-[#263147] text-text max-[760px]:p-[11px_14px]">{quote ? dollars(quote.latest_price * shares) : '—'}</td>
                     <td
-                      className={
+                      className={`p-[13px_20px] border-t border-[#263147] text-text max-[760px]:p-[11px_14px] ${
                         quote && quote.cagr !== null
                           ? quote.cagr >= 0
-                            ? 'positive'
-                            : 'negative'
+                            ? 'positive text-mint'
+                            : 'negative text-coral'
                           : ''
-                      }
+                      }`}
                     >
                       {percent(quote?.cagr)}
                       {quote?.stats_start_date && quote.stats_end_date && (
-                        <small className="muted" style={{ display: 'block' }}>
+                        <small className="text-[#8b9ab1]" style={{ display: 'block' }}>
                           {quote.stats_start_date} to {quote.stats_end_date}
                         </small>
                       )}
                     </td>
-                    <td>{percent(quote?.annual_volatility)}</td>
-                    <td>
+                    <td className="p-[13px_20px] border-t border-[#263147] text-text max-[760px]:p-[11px_14px]">{percent(quote?.annual_volatility)}</td>
+                    <td className="p-[13px_20px] border-t border-[#263147] text-text max-[760px]:p-[11px_14px]">
                       <button
                         type="button"
-                        className={`button ${sym === activeSymbol ? 'primary' : 'quiet'}`}
+                        className={`inline-flex items-center justify-center gap-1.75 whitespace-nowrap rounded-[7px] px-3.25 py-2.25 text-[11px] font-medium min-h-8.5 cursor-pointer ${sym === activeSymbol ? 'bg-primary text-primary-fg border border-primary' : 'bg-transparent border border-transparent text-[#a4b2c9] hover:bg-[#232f43] hover:text-text'}`}
                         aria-pressed={sym === activeSymbol}
                         onClick={() => {
                           selectionIntent.current++;
@@ -370,7 +372,7 @@ export function Investing({ storageKey }: { storageKey: string }) {
                       </button>{' '}
                       <button
                         type="button"
-                        className="button danger"
+                        className="inline-flex items-center justify-center gap-1.75 whitespace-nowrap rounded-[7px] px-3.25 py-2.25 text-[11px] font-medium min-h-8.5 cursor-pointer text-coral border border-[#633246] bg-[#2b1b28] hover:bg-[#3d2034]"
                         onClick={() => {
                           reserved.current.delete(sym);
                           requests.current.get(sym)?.abort();
@@ -389,7 +391,7 @@ export function Investing({ storageKey }: { storageKey: string }) {
         </div>
       )}
       {chartQuote && <StockPriceChart quote={chartQuote} />}
-      <p className="investing-note">
+      <p className="text-[11px] text-[#73839a] leading-relaxed m-0 mt-3">
         Prices come from Yahoo Finance and refresh about once a day. Past performance does not
         predict future results. Only verified USD-priced securities are supported; no currency
         conversion is performed. Annualized return is compounded yearly growth over the dates shown,
@@ -412,11 +414,11 @@ const StockPriceChart = memo(function StockPriceChart({ quote: chartQuote }: { q
   const chartColor = chartChange > 0 ? colors.INCOME : chartChange < 0 ? colors.DEBT : '#91a3bd';
   return (
     <div>
-      <h4>
+      <h4 className="text-[13px] font-semibold text-text m-0 mb-2">
         {chartQuote.symbol} · recent adjusted prices (USD){' '}
-        <small className="muted">as of {chartQuote.latest_date}</small>
+        <small className="text-[#8b9ab1]">as of {chartQuote.latest_date}</small>
       </h4>
-      <div className="investing-chart" role="img" aria-label={`${chartQuote.symbol} price history`}>
+      <div className="h-65 mt-2.5" role="img" aria-label={`${chartQuote.symbol} price history`}>
         <ResponsiveContainer width="100%" height="100%">
           <LineChart
             accessibilityLayer={false}
@@ -446,11 +448,11 @@ const StockPriceChart = memo(function StockPriceChart({ quote: chartQuote }: { q
                 if (!active || !payload?.length) return null;
                 const point = payload[0]?.payload as { date: string; close: number };
                 return (
-                  <div className="chart-tooltip">
-                    <strong>{point.date}</strong>
-                    <div>
+                  <div className="p-[13px_15px] bg-[#1c2638] border border-[#47536d] rounded-[9px] shadow-[0_10px_30px_#0005] min-w-50 text-[11px]">
+                    <strong className="block text-[11px] text-[#d9e3f3] mb-3">{point.date}</strong>
+                    <div className="flex justify-between gap-5.5 mt-2.5">
                       <span>Close</span>
-                      <b>{dollars(point.close)}</b>
+                      <b className="font-semibold text-text">{dollars(point.close)}</b>
                     </div>
                   </div>
                 );

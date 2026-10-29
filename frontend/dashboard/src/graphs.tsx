@@ -372,11 +372,11 @@ export function ArchetypeGraph({
   const archivePanel = (
     <>
       {showArchive && (
-        <section className="node-archive">
-          <div className="section-heading">
+        <section className="border border-[#33445b] rounded-xl bg-[#121d2c] p-5 mb-5">
+          <div className="flex items-center justify-between gap-3 mb-2 [&_h3]:text-base [&_h3]:font-semibold [&_h3]:m-0">
             <h3>Recently removed nodes</h3>
             <button
-              className="icon-button"
+              className="inline-flex items-center justify-center border border-[#303c54] bg-[#1a2538] hover:bg-[#25354e] text-[#d6e2f5] rounded-[7px] w-8 h-8 shrink-0 cursor-pointer transition-colors focus-visible:outline-2 focus-visible:outline-[#a78bfa] focus-visible:outline-offset-2"
               aria-label="Close restore panel"
               title="Close"
               onClick={() => setShowArchive(false)}
@@ -384,19 +384,19 @@ export function ArchetypeGraph({
               <CanvasIcon name="close" />
             </button>
           </div>
-          <p>
+          <p className="text-xs leading-[1.7] text-[#99aec6] my-2">
             Restored nodes recover their saved values, position, and connections when both endpoints
             are active.
           </p>
           {graph.nodes
             .filter((node) => node.archived)
             .map((node) => (
-              <div key={node.id}>
+              <div key={node.id} className="flex justify-between gap-3 items-center py-2 border-b border-[#243247] last:border-b-0 text-xs text-text">
                 <span>
                   {node.name} · {typeLabel(node.nodeType)}
                 </span>
                 <button
-                  className="button"
+                  className="inline-flex items-center justify-center gap-1.75 whitespace-nowrap rounded-[7px] px-3 py-1.5 text-xs font-medium cursor-pointer bg-[#20293a] text-text border border-[#37445c] hover:bg-[#28354c] transition-colors"
                   onClick={() =>
                     update({
                       ...graph,
@@ -411,7 +411,7 @@ export function ArchetypeGraph({
               </div>
             ))}
           {!graph.nodes.some((node) => node.archived) && (
-            <p>No removed nodes. Undo also restores recent edits.</p>
+            <p className="text-xs leading-[1.7] text-[#99aec6] my-2">No removed nodes. Undo also restores recent edits.</p>
           )}
         </section>
       )}
@@ -480,22 +480,22 @@ export function ArchetypeGraph({
     </>
   );
   return (
-    <div className={`workspace-content node-workspace${compact ? ' compact-nodes' : ''}`}>
+    <div className="px-8 pb-4.5 max-[1100px]:px-5.5 max-[1100px]:pb-4.5 max-[760px]:px-4 max-[760px]:pb-4 2xl:px-11 fullscreen:bg-[#0c1018] fullscreen:w-full fullscreen:h-full fullscreen:overflow-auto fullscreen:p-6 max-[650px]:fullscreen:p-3">
       {view !== 'overview' && (
-        <div className="metric-grid">
+        <div className="grid grid-cols-4 max-[1100px]:grid-cols-2 max-[600px]:grid-cols-1 gap-3.5 mb-7">
           {[
             [
               'Net worth',
               money(t.netWorth),
               'Assets minus outstanding debt',
-              t.netWorth < 0 ? 'negative' : '',
+              t.netWorth < 0 ? 'negative text-coral' : 'text-text',
             ],
-            ['Take-home income', money(t.takeHome), 'After the selected tax estimate', ''],
+            ['Take-home income', money(t.takeHome), 'After the selected tax estimate', 'text-text'],
             [
               'Monthly commitments',
               money(t.expenses + t.payments),
               `${money(t.payments)} in debt payments`,
-              '',
+              'text-text',
             ],
             [
               'Available each month',
@@ -503,20 +503,20 @@ export function ArchetypeGraph({
               t.surplus < 0
                 ? 'Bills exceed take-home pay'
                 : 'After bills; before savings transfers',
-              t.surplus < 0 ? 'negative' : 'positive',
+              t.surplus < 0 ? 'negative text-coral' : 'positive text-mint',
             ],
           ].map(([label, value, hint, tone]) => (
-            <div className="metric-card" key={label}>
-              <span>{label}</span>
-              <strong className={tone}>{value}</strong>
-              <small>{hint}</small>
+            <div className="rounded-xl p-[18px_20px] max-[1100px]:p-[15px_13px] border border-border bg-linear-to-b from-[#161c28] to-[#111722] flex flex-col gap-2" key={label}>
+              <span className="text-xs text-muted font-normal">{label}</span>
+              <strong className={`text-[clamp(20px,2vw,28px)] tracking-[-0.7px] font-semibold tabular-nums ${tone}`}>{value}</strong>
+              <small className="text-[11px] text-subtle leading-tight mt-auto">{hint}</small>
             </div>
           ))}
         </div>
       )}
-      <div className="section-heading workspace-toolbar">
+      <div className="flex items-center justify-between gap-4.5 flex-wrap mb-5">
         <div>
-          <h2>
+          <h2 className="text-[clamp(18px,2vw,24px)] font-semibold tracking-[-0.5px] text-text m-0">
             {view === 'graph'
               ? 'Node Graph'
               : view === 'overview'
@@ -527,9 +527,9 @@ export function ArchetypeGraph({
                     ? 'Budgeting & transactions'
                     : 'Savings & investments'}
           </h2>
-          <p>
+          <p className="text-xs text-muted mt-1.5 mb-0">
             {live.nodes.length} nodes · {live.edges.length} connections{' '}
-            <span className="toolbar-note">
+            <span className="max-[1100px]:hidden">
               · {storageStatus || 'Edits stay in this browser; export to share'}
             </span>
           </p>
@@ -557,10 +557,10 @@ export function ArchetypeGraph({
       />
       {view !== 'graph' && archivePanel}
       {error && (
-        <div className="notice error" role="alert">
+        <div className="p-[12px_16px] text-xs rounded-lg mb-3.5 flex gap-3.5 items-center justify-between leading-[1.6] bg-[#331d2b] text-[#fda4af] border border-[#743247]" role="alert">
           {error}
           <button
-            className="button"
+            className="inline-flex items-center justify-center gap-1.75 whitespace-nowrap rounded-[7px] px-3.5 py-1.75 text-[11px] font-medium cursor-pointer bg-[#20293a] text-text border border-[#37445c] hover:bg-[#28354c] transition-colors"
             onClick={() => {
               setLoaded(false);
               setError('');
@@ -579,19 +579,19 @@ export function ArchetypeGraph({
         />
       )}
       {t.surplus < 0 && (
-        <div className="notice warning">
+        <div className="p-[12px_16px] text-xs rounded-lg mb-3.5 flex gap-3.5 items-center justify-between leading-[1.6] bg-[#2b251b] border border-[#614b2c] text-[#e2c384]">
           Your monthly shortfall is {money(-t.surplus)}. Forecasts draw from reserves and
           investments before adding new borrowing.
         </div>
       )}
       {!loaded ? (
-        <div className="loading-panel" role="status">
+        <div className="py-17.5 px-6 text-center text-[#8d9fba] text-xs" role="status">
           Loading your node graph…
         </div>
       ) : (
         <>
-          <div className="scenario-layout">
-            <div className="scenario-main">
+          <div className="flex gap-4 items-stretch max-[1100px]:flex-col">
+            <div className="min-w-0 flex-1">
               {view === 'investing' && (
                 <Investing
                   key={`${demo}:${userId}`}
@@ -636,34 +636,34 @@ export function ArchetypeGraph({
                   }}
                 />
               ) : (
-                <div className="account-table-wrap">
-                  <table className="account-table">
+                <div className="border border-[#2a3549] rounded-[11px] bg-[#121a27] overflow-auto min-h-87.5">
+                  <table className="w-full border-collapse text-left text-xs whitespace-nowrap">
                     <thead>
                       <tr>
-                        <th>Account</th>
-                        <th>Type</th>
-                        <th>{view === 'cashflow' ? 'Monthly flow / Balance' : 'Balance'}</th>
-                        <th>APR</th>
-                        <th />
+                        <th className="text-[#8192ad] text-[10px] font-medium p-[16px_20px] bg-[#161f2e]">Account</th>
+                        <th className="text-[#8192ad] text-[10px] font-medium p-[16px_20px] bg-[#161f2e]">Type</th>
+                        <th className="text-[#8192ad] text-[10px] font-medium p-[16px_20px] bg-[#161f2e]">{view === 'cashflow' ? 'Monthly flow / Balance' : 'Balance'}</th>
+                        <th className="text-[#8192ad] text-[10px] font-medium p-[16px_20px] bg-[#161f2e]">APR</th>
+                        <th className="p-[16px_20px] bg-[#161f2e]" />
                       </tr>
                     </thead>
                     <tbody>
                       {filtered.map((n) => (
                         <tr key={n.id}>
-                          <td>
-                            <span className="type-dot" style={{ background: colors[n.nodeType] }} />
+                          <td className="p-[13px_20px] border-t border-[#263147]">
+                            <span className="inline-block w-1.5 h-1.5 rounded-full mr-2.5 shrink-0 align-middle" style={{ background: colors[n.nodeType] }} />
                             {n.name}
                           </td>
-                          <td>{typeLabel(n.nodeType)}</td>
-                          <td>
+                          <td className="p-[13px_20px] border-t border-[#263147]">{typeLabel(n.nodeType)}</td>
+                          <td className="p-[13px_20px] border-t border-[#263147]">
                             {money(
                               n.nodeType === 'EXPENSE' ? expenseAmount(n, live) : n.amountOrBalance,
                             )}
                             {['INCOME', 'EXPENSE'].includes(n.nodeType) ? '/mo' : ''}
                           </td>
-                          <td>{n.interestRateApr}%</td>
-                          <td>
-                            <button className="button quiet" onClick={() => setSelected(n)}>
+                          <td className="p-[13px_20px] border-t border-[#263147]">{n.interestRateApr}%</td>
+                          <td className="p-[13px_20px] border-t border-[#263147]">
+                            <button className="inline-flex items-center justify-center gap-1.75 whitespace-nowrap rounded-[7px] px-3 py-1.5 text-[11px] font-medium cursor-pointer bg-transparent text-[#97a7c2] border border-transparent hover:bg-[#1a2536] hover:text-text transition-colors" onClick={() => setSelected(n)}>
                               Edit ↗
                             </button>
                           </td>
@@ -672,22 +672,23 @@ export function ArchetypeGraph({
                     </tbody>
                   </table>
                   {!filtered.length && (
-                    <div className="loading-panel">
+                    <div className="py-17.5 px-6 text-center text-[#8d9fba] text-xs">
                       No matching nodes. Add a node or adjust your search.
                     </div>
                   )}
                 </div>
               )}
-              <div className="simulation-launcher">
+              <div className="border border-[#30384e] rounded-[11px] bg-linear-to-r from-[#1a1b2c] to-[#151b29] mt-3.75 p-[21px_22px] flex flex-col items-stretch gap-4.5">
                 <div>
-                  <div className="eyebrow">LOOK AHEAD</div>
-                  <h3>What could your next chapter look like?</h3>
-                  <p>Explore a range of outcomes from your current scenario.</p>
+                  <div className="text-[8px] text-[#b5a4e3] mb-1.75 font-semibold tracking-wider">LOOK AHEAD</div>
+                  <h3 className="text-sm font-semibold text-text m-0">What could your next chapter look like?</h3>
+                  <p className="text-[11px] text-[#8c9cb4] mt-1.25 mb-0">Explore a range of outcomes from your current scenario.</p>
                 </div>
-                <section className="simulation-scope">
-                  <label>
+                <section className="p-4 border border-[#30465a] rounded-xl bg-[#101c29]">
+                  <label className="flex items-center max-[650px]:items-stretch max-[650px]:flex-col gap-3.5 text-xs text-[#b9c5d9]">
                     Simulation scope
                     <select
+                      className="bg-[#182536] text-[#e2edf9] p-2.5 border border-[#3a516c] rounded-[7px] max-w-full text-xs"
                       value={scope}
                       onChange={(event) => setScope(event.target.value as typeof scope)}
                     >
@@ -696,12 +697,12 @@ export function ArchetypeGraph({
                       <option value="connected">Selected nodes and everything connected</option>
                     </select>
                   </label>
-                  <strong>
+                  <strong className="block mt-3 text-xs text-[#7de0bc] font-medium">
                     {simulationGraph.nodes.length} of {live.nodes.length} nodes included
                   </strong>
                   {!!selectionIds.length && (
                     <button
-                      className="button quiet"
+                      className="mt-2.5 inline-flex items-center justify-center gap-1.75 whitespace-nowrap rounded-[7px] px-3 py-1.5 text-[11px] font-medium cursor-pointer bg-transparent text-[#97a7c2] border border-[#30465a] hover:bg-[#1a2536] hover:text-text transition-colors"
                       onClick={() => {
                         setScope('selected');
                         setScopeIds(selectionIds);
@@ -712,17 +713,18 @@ export function ArchetypeGraph({
                   )}
                   {scope !== 'all' && (
                     <>
-                      <p>
+                      <p className="text-xs leading-[1.7] text-[#99aec6] my-3">
                         Select one or several nodes below. Canvas selections are used for editing
                         unless you choose “Use canvas selection for simulation.” Only included
                         income, expenses, balances, and internal connections are modeled. An
                         isolated account has no household income or bills unless you include them.
                       </p>
-                      <div className="scope-node-list">
+                      <div className="flex flex-wrap gap-2 mt-3 max-h-55 overflow-auto">
                         {live.nodes.map((node) => (
-                          <label key={node.id}>
+                          <label key={node.id} className="flex items-center gap-1.75 border border-[#2a3f56] px-2.75 py-2 rounded-full text-xs bg-[#182738] cursor-pointer text-text">
                             <input
                               type="checkbox"
+                              className="accent-brand w-3.5 h-3.5"
                               checked={scopeIds.includes(node.id)}
                               onChange={() =>
                                 setScopeIds((ids) =>
@@ -739,23 +741,23 @@ export function ArchetypeGraph({
                     </>
                   )}
                 </section>
-                <div className="button-row">
+                <div className="flex flex-wrap gap-2.5">
                   <button
-                    className="button forecast-button"
+                    className="inline-flex items-center justify-center gap-1.75 whitespace-nowrap rounded-[7px] px-3.5 py-2.25 text-[11px] font-medium min-h-8.5 cursor-pointer text-[#d2c4ff] border border-[#51496e] bg-[#30283f] hover:bg-[#3d3350] transition-colors disabled:opacity-45 disabled:cursor-not-allowed"
                     disabled={!simulationGraph.nodes.length}
                     onClick={() => setSimType('monte_carlo')}
                   >
                     Monte Carlo Simulation ↗
                   </button>
                   <button
-                    className="button"
+                    className="inline-flex items-center justify-center gap-1.75 whitespace-nowrap rounded-[7px] px-3.5 py-2.25 text-[11px] font-medium min-h-8.5 cursor-pointer bg-[#20293a] text-text border border-[#37445c] hover:bg-[#28354c] transition-colors disabled:opacity-45 disabled:cursor-not-allowed"
                     disabled={!simulationGraph.nodes.length}
                     onClick={() => setSimType('markov')}
                   >
                     Markov Regime Simulation ↗
                   </button>
                   <button
-                    className="button"
+                    className="inline-flex items-center justify-center gap-1.75 whitespace-nowrap rounded-[7px] px-3.5 py-2.25 text-[11px] font-medium min-h-8.5 cursor-pointer bg-[#20293a] text-text border border-[#37445c] hover:bg-[#28354c] transition-colors disabled:opacity-45 disabled:cursor-not-allowed"
                     disabled={
                       !simulationGraph.nodes.some(
                         (n) => n.nodeType === 'DEBT' && n.amountOrBalance > 0,
@@ -770,43 +772,43 @@ export function ArchetypeGraph({
             </div>
             {view !== 'graph' && inspector}
           </div>
-          <section className="connections-panel" ref={routesRef}>
+          <section className="border border-[#293449] rounded-[10px] mt-5 bg-[#111925]" ref={routesRef}>
             <button
-              className="connections-toggle"
+              className="w-full p-[16px_19px] bg-transparent border-0 cursor-pointer flex justify-between items-center text-xs font-medium text-text hover:text-white transition-colors"
               aria-expanded={connections}
               onClick={() => setConnections(!connections)}
             >
               <span>
-                Connections & monthly allocations <small>{live.edges.length} routes</small>
+                Connections & monthly allocations <small className="text-[10px] text-[#7e8da6] ml-2.5 font-normal">{live.edges.length} routes</small>
               </span>
               <span>{connections ? '−' : '+'}</span>
             </button>
             {connections && (
-              <div className="connections-body">
-                <p className="muted small">
+              <div className="px-4.75 pb-4.5">
+                <p className="text-[#8b9ab1] text-[11px] my-2 leading-[1.6]">
                   Incoming debt routes set payments unless the node has an override. Expense routes
                   from income/checking set monthly costs; percentages use starting take-home income.
                   Simulations fund fixed saving/investment routes first, then percentage routes,
                   then your extra-investment allocation.
                 </p>
-                <div className="connection-list">
+                <div className="my-3 max-h-60 overflow-auto">
                   {live.edges.map((edge) => (
-                    <div key={edge.id}>
-                      <span>
+                    <div key={edge.id} className="grid grid-cols-[minmax(120px,1fr)_auto_auto_auto] max-[650px]:grid-cols-[1fr_auto] items-center gap-3 border-b border-[#263047] py-2.5 text-[11px] text-text">
+                      <span className="truncate">
                         {graph.nodes.find((n) => n.id === edge.sourceNodeId)?.name}{' '}
-                        <span className="muted">→</span>{' '}
+                        <span className="text-muted">→</span>{' '}
                         {graph.nodes.find((n) => n.id === edge.targetNodeId)?.name}
                       </span>
-                      <strong>
+                      <strong className="font-medium tabular-nums">
                         {edge.monthlyFixedFlow != null
                           ? `${money(edge.monthlyFixedFlow)}/mo`
                           : `${edge.percentageFlow}%`}
                       </strong>
-                      <button className="button quiet" onClick={() => selectEdge(edge.id)}>
+                      <button className="inline-flex items-center justify-center gap-1.5 whitespace-nowrap rounded-[7px] px-2.5 py-1 text-[11px] font-medium cursor-pointer bg-transparent text-[#97a7c2] border border-transparent hover:bg-[#1a2536] hover:text-text transition-colors" onClick={() => selectEdge(edge.id)}>
                         Edit connection
                       </button>
                       <button
-                        className="icon-button"
+                        className="inline-flex items-center justify-center border border-[#303c54] bg-[#1a2538] hover:bg-[#25354e] text-[#d6e2f5] rounded-[7px] w-6 h-6 shrink-0 cursor-pointer text-sm transition-colors"
                         aria-label="Remove connection"
                         onClick={() =>
                           update({ ...graph, edges: graph.edges.filter((e) => e.id !== edge.id) })
@@ -817,7 +819,7 @@ export function ArchetypeGraph({
                     </div>
                   ))}
                 </div>
-                <form className="connection-form" onSubmit={addConnection}>
+                <form className="grid grid-cols-[1fr_1fr_1fr_1fr_auto] max-[760px]:grid-cols-2 max-[500px]:grid-cols-1 gap-2.5 items-end mt-4 [&_label]:flex [&_label]:flex-col [&_label]:gap-1.5 [&_label]:text-[11px] [&_label]:text-[#a9b6cc] [&_select]:w-full [&_select]:text-xs [&_select]:px-2.5 [&_select]:py-1.5 [&_select]:rounded-[7px] [&_select]:border [&_select]:border-border [&_select]:bg-base [&_select]:text-text [&_input]:w-full [&_input]:text-xs [&_input]:px-2.5 [&_input]:py-1.5 [&_input]:rounded-[7px] [&_input]:border [&_input]:border-border [&_input]:bg-base [&_input]:text-text" onSubmit={addConnection}>
                   <label>
                     From
                     <select name="source" required>
@@ -849,7 +851,7 @@ export function ArchetypeGraph({
                     Amount
                     <input name="amount" type="number" min={0} max={1e9} step="0.01" required />
                   </label>
-                  <button className="button" disabled={live.nodes.length < 2}>
+                  <button className="inline-flex items-center justify-center gap-1.75 whitespace-nowrap rounded-[7px] px-3.5 py-1.75 text-[11px] font-medium min-h-8.5 cursor-pointer bg-[#20293a] text-text border border-[#37445c] hover:bg-[#28354c] transition-colors disabled:opacity-45 disabled:cursor-not-allowed" disabled={live.nodes.length < 2}>
                     + Connect
                   </button>
                 </form>
@@ -858,17 +860,17 @@ export function ArchetypeGraph({
           </section>
         </>
       )}
-      <footer className="workspace-footer">
+      <footer className="flex justify-between gap-3 text-[#5f728c] text-[9px] mt-6">
         <span>
-          <span className="status-dot" /> Scenario workspace
+          <span className="inline-block w-1.5 h-1.5 rounded-full bg-[#73d9af] mr-1 align-middle" /> Scenario workspace
         </span>
         <span>Educational modeling · All amounts in USD</span>
       </footer>
       {simType && (
         <Suspense
           fallback={
-            <div className="modal-backdrop">
-              <div className="loading-panel" role="status">
+            <div className="fixed inset-0 z-100 bg-[#04070dbd] backdrop-blur-md flex items-center justify-center p-[clamp(12px,3vw,40px)]">
+              <div className="py-17.5 px-6 text-center text-[#8d9fba] text-xs" role="status">
                 Opening scenario lab…
               </div>
             </div>

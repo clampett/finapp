@@ -1002,7 +1002,7 @@ export function BudgetingTab({ graph }: BudgetingTabProps) {
           className={`inline-flex items-center justify-center gap-1.5 whitespace-nowrap rounded-[7px] font-medium cursor-pointer transition-colors ${activeSubTab === 'recurring' ? 'bg-primary text-primary-fg' : 'bg-transparent text-[#97a7c2] hover:bg-[#1a2536] hover:text-text'}`}
           style={{ padding: '6px 16px', fontSize: '14px' }}
         >
-          Recurring Rules ({recurringList.length})
+          Recurring Transactions ({recurringList.length})
         </button>
         <button
           type="button"
@@ -2102,7 +2102,7 @@ export function BudgetingTab({ graph }: BudgetingTabProps) {
                 onClick={handleOpenAddRecurring}
                 disabled={!userId}
               >
-                + Add Recurring Rule
+                + Add Recurring Transaction
               </button>
             </div>
           </div>
@@ -2359,7 +2359,7 @@ export function BudgetingTab({ graph }: BudgetingTabProps) {
                 color: '#8f9db3',
               }}
             >
-              No recurring rules set up yet. Click <strong>+ Add Recurring Rule</strong> to template
+              No recurring transactions set up yet. Click <strong>+ Add Recurring Rule</strong> to template
               repetitive bills or paychecks.
             </div>
           ) : (

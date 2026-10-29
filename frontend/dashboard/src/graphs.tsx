@@ -599,7 +599,10 @@ export function ArchetypeGraph({
                 />
               )}
               {view === 'overview' ? (
-                <DashboardTab graph={live} />
+                <DashboardTab
+                graph={live}
+                goalsStorageKey={`${storageKey}:goals`}
+              />
               ) : view === 'budgeting' ? (
                 <BudgetingTab graph={live} />
               ) : view === 'graph' ? (

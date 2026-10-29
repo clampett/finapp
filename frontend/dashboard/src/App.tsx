@@ -49,7 +49,8 @@ export default function App() {
           {views.map((item) => (
             <button
               key={item.id}
-              className={`border border-transparent bg-transparent flex items-center text-left gap-3 rounded-lg p-3 w-full text-[#98a6bc] my-0.75 text-[13px] hover:bg-hover-bg hover:text-[#edf2fa] cursor-pointer transition-colors duration-150 max-[760px]:w-auto max-[760px]:whitespace-nowrap max-[760px]:text-[11px] max-[760px]:px-2.75 max-[760px]:py-2.25 max-[760px]:gap-1.75 ${view === item.id ? 'active bg-active-bg text-active-text border-active-border' : ''}`}
+              // Kept active and inactive colors exclusive so generated CSS order could not hide selection.
+              className={`border flex items-center text-left gap-3 rounded-lg p-3 w-full my-0.75 text-[13px] cursor-pointer transition-colors duration-150 max-[760px]:w-auto max-[760px]:whitespace-nowrap max-[760px]:text-[11px] max-[760px]:px-2.75 max-[760px]:py-2.25 max-[760px]:gap-1.75 ${view === item.id ? 'active bg-active-bg text-active-text border-active-border' : 'border-transparent bg-transparent text-[#98a6bc] hover:bg-hover-bg hover:text-[#edf2fa]'}`}
               aria-current={view === item.id ? 'page' : undefined}
               onClick={() => setView(item.id)}
             >

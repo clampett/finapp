@@ -1257,7 +1257,7 @@ export function BudgetingTab({ graph }: BudgetingTabProps) {
                   </button>
                   <button
                     type="button"
-                    className="inline-flex items-center justify-center gap-1.75 whitespace-nowrap rounded-[7px] px-3.25y-[9px] text-[11px] font-medium min-h-8.5 cursor-pointer bg-transparent text-[#97a7c2] border border-transparent hover:bg-[#1a2536] hover:text-text transition-colors"
+                    className="inline-flex items-center justify-center gap-1.75 whitespace-nowrap rounded-[7px] px-3.25 py-2.25 text-[11px] font-medium min-h-8.5 cursor-pointer bg-transparent text-[#97a7c2] border border-transparent hover:bg-[#1a2536] hover:text-text transition-colors"
                     onClick={() => {
                       setShowTransForm(false);
                       setEditingTransId(null);

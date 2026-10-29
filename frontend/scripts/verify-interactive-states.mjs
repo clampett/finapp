@@ -4,8 +4,10 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import assert from 'node:assert/strict';
+import { fileURLToPath } from 'node:url';
 
-const ROOT = '/mnt/shared/files/documents/Class/Software Engineering/finapp/frontend';
+// Resolved the checkout from this script rather than one developer's filesystem.
+const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 
 let totalTests = 0;
 let passedTests = 0;
@@ -326,7 +328,14 @@ check('1.3.2 Password toggle switches input type between password and text, upda
 
 console.log('\n--- SECTION 2: Dashboard Interactive State Machines ---');
 
-const compiledDashboardCss = fs.readFileSync(path.join(ROOT, 'build/dashboard/assets/index-BpbBuX9v.css'), 'utf-8');
+// Located the current stylesheet through the built entry page instead of a stale content hash.
+const dashboardEntry = fs.readFileSync(path.join(ROOT, 'build/dashboard/index.html'), 'utf-8');
+const dashboardCssHref = dashboardEntry.match(/href=["']([^"']+\.css)["']/)?.[1];
+assert.ok(dashboardCssHref, 'Build the dashboard before running interactive verification');
+const compiledDashboardCss = fs.readFileSync(
+  path.join(ROOT, 'build/dashboard', dashboardCssHref.replace(/^\/dashboard\//, '')),
+  'utf-8',
+);
 const appTsx = fs.readFileSync(path.join(ROOT, 'dashboard/src/App.tsx'), 'utf-8');
 const canvasTsx = fs.readFileSync(path.join(ROOT, 'dashboard/src/components/Canvas.tsx'), 'utf-8');
 const simulationModalTsx = fs.readFileSync(path.join(ROOT, 'dashboard/src/SimulationModal.tsx'), 'utf-8');

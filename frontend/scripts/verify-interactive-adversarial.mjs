@@ -4,8 +4,10 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import assert from 'node:assert/strict';
+import { fileURLToPath } from 'node:url';
 
-const ROOT = '/mnt/shared/files/documents/Class/Software Engineering/finapp/frontend';
+// Resolved the checkout from this script rather than one developer's filesystem.
+const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 
 let totalTests = 0;
 let passedTests = 0;

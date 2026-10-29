@@ -685,7 +685,8 @@ export function Canvas({
   ]);
   return (
     <div
-      className={`canvas-host relative border border-[#2a3448] rounded-xl overflow-hidden h-[clamp(510px,62vh,760px)] min-h-127.5 isolate ${expanded ? 'fixed inset-0 w-screen h-dvh min-h-0 max-h-none border-0 rounded-none z-1000' : ''} fullscreen:w-screen fullscreen:h-dvh fullscreen:min-h-0 fullscreen:max-h-none fullscreen:border-0 fullscreen:rounded-none tool-${tool}${connecting ? ' connect-mode' : ''}`}
+      // Selected one frame geometry so normal sizing could not override the fullscreen fallback.
+      className={`canvas-host overflow-hidden isolate ${expanded ? 'fixed inset-0 w-screen h-dvh min-h-0 max-h-none border-0 rounded-none z-1000' : 'relative border border-[#2a3448] rounded-xl h-[clamp(510px,62vh,760px)] min-h-127.5'} fullscreen:w-screen fullscreen:h-dvh fullscreen:min-h-0 fullscreen:max-h-none fullscreen:border-0 fullscreen:rounded-none tool-${tool}${connecting ? ' connect-mode' : ''}`}
       ref={host}
       tabIndex={0}
       onPointerDown={(event) => {

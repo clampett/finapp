@@ -108,11 +108,11 @@ export interface SimulationResult {
     invested_contributions: number;
   }[];
 }
-const palette = ['#fb7185', '#fbbf24', '#a78bfa', '#22d3ee', '#34d399', '#60a5fa'];
+const palette = ['var(--ui-paint-fb7185)', 'var(--ui-paint-fbbf24)', 'var(--ui-paint-a78bfa)', 'var(--ui-paint-22d3ee)', 'var(--ui-paint-34d399)', 'var(--ui-paint-60a5fa)'];
 const quantiles = [
-  { key: 'p90', label: 'Upper outcome (P90)', color: '#a4a3f6' },
-  { key: 'p50', label: 'Median (P50)', color: '#7de0bc' },
-  { key: 'p10', label: 'Lower outcome (P10)', color: '#ee8ea8' },
+  { key: 'p90', label: 'Upper outcome (P90)', color: 'var(--ui-paint-a4a3f6)' },
+  { key: 'p50', label: 'Median (P50)', color: 'var(--ui-paint-7de0bc)' },
+  { key: 'p10', label: 'Lower outcome (P10)', color: 'var(--ui-paint-ee8ea8)' },
 ];
 const titles = {
   monte_carlo: 'Monte Carlo Simulation',
@@ -336,28 +336,28 @@ export function SimulationModal({
   const comparison = forecast?.debt_summary?.[strategy === 'avalanche' ? 'snowball' : 'avalanche'];
   return (
     <div
-      className="fixed inset-0 z-50 bg-[#04070dbd] backdrop-blur-md flex items-center justify-center p-[clamp(12px,3vw,40px)] max-[760px]:p-2"
+      className="fixed inset-0 z-50 bg-[var(--ui-surface-04070dbd)] backdrop-blur-md flex items-center justify-center p-[clamp(12px,3vw,40px)] max-[760px]:p-2"
       onMouseDown={(e) => {
         if (e.target === e.currentTarget) onClose();
       }}
     >
       <div
         ref={dialog}
-        className="w-[min(1460px,100%)] h-[min(990px,94dvh)] max-h-[calc(100dvh-32px)] 2xl:w-[min(1540px,100%)] flex flex-col border border-border rounded-2xl bg-raised shadow-[0_30px_140px_#0009] overflow-hidden outline-none max-[800px]:h-[96dvh] max-[800px]:max-h-[calc(100dvh-16px)] max-[800px]:rounded-xl"
+        className="w-[min(1460px,100%)] h-[min(990px,94dvh)] max-h-[calc(100dvh-32px)] 2xl:w-[min(1540px,100%)] flex flex-col border border-border rounded-2xl bg-raised shadow-[0_30px_140px_var(--ui-shadow-0009)] overflow-hidden outline-none max-[800px]:h-[96dvh] max-[800px]:max-h-[calc(100dvh-16px)] max-[800px]:rounded-xl"
         role="dialog"
         aria-modal="true"
         aria-labelledby="simulation-title"
         tabIndex={-1}
       >
-        <header className="flex items-start justify-between gap-5 p-[25px_28px] border-b border-[#293247] shrink-0 bg-[radial-gradient(ellipse_at_top_left,#24364075,transparent_65%)] max-[1100px]:p-4.5 max-[800px]:p-4.5">
+        <header className="flex items-start justify-between gap-5 p-[25px_28px] border-b border-[color:var(--ui-border-293247)] shrink-0 bg-[radial-gradient(ellipse_at_top_left,var(--ui-surface-24364075),transparent_65%)] max-[1100px]:p-4.5 max-[800px]:p-4.5">
           <div>
-            <div className="text-[8px] mb-2.25 text-[#b7a4e9]">
+            <div className="text-[8px] mb-2.25 text-[color:var(--ui-text-b7a4e9)]">
               SCENARIO LAB{' '}
-              <span className="text-[#6e7f99]"> / {simulationType === 'debt' ? 'REPAYMENT' : '1,000 SIMULATED PATHS'}</span>
+              <span className="text-[color:var(--ui-text-6e7f99)]"> / {simulationType === 'debt' ? 'REPAYMENT' : '1,000 SIMULATED PATHS'}</span>
             </div>
             <h2 id="simulation-title" className="text-[clamp(24px,2.5vw,34px)] font-semibold tracking-[-1px] max-[760px]:text-[22px] m-0">{titles[simulationType]}</h2>
-            {scopeLabel && <div className="text-[#7de0bc] text-[11px] mt-2">{scopeLabel}</div>}
-            <p className="text-xs max-w-180 leading-[1.6] text-[#8798b3] mt-1.75 max-[760px]:text-[10px] max-[760px]:max-w-[90%] mb-0">
+            {scopeLabel && <div className="text-[color:var(--ui-text-7de0bc)] text-[11px] mt-2">{scopeLabel}</div>}
+            <p className="text-xs max-w-180 leading-[1.6] text-[color:var(--ui-text-8798b3)] mt-1.75 max-[760px]:text-[10px] max-[760px]:max-w-[90%] mb-0">
               {simulationType === 'monte_carlo'
                 ? 'A Monte Carlo simulation runs many possible market paths to show a range of financial outcomes. These 1,000 paths include your cash, investments, and debt; they are scenarios, not guarantees.'
                 : simulationType === 'markov'
@@ -366,7 +366,7 @@ export function SimulationModal({
             </p>
           </div>
           <button
-            className="inline-flex items-center justify-center border border-[#303c54] bg-[#1a2538] hover:bg-[#25354e] text-[#d6e2f5] rounded-full w-8 h-8 shrink-0 cursor-pointer transition-colors focus-visible:outline-2 focus-visible:outline-[#a78bfa] focus-visible:outline-offset-2"
+            className="inline-flex items-center justify-center border border-[color:var(--ui-border-303c54)] bg-[var(--ui-surface-1a2538)] hover:bg-[var(--ui-surface-hover-25354e)] text-[color:var(--ui-text-d6e2f5)] rounded-full w-8 h-8 shrink-0 cursor-pointer transition-colors focus-visible:outline-2 focus-visible:outline-[var(--ui-border-a78bfa)] focus-visible:outline-offset-2"
             aria-label="Close simulation"
             onClick={onClose}
           >
@@ -386,8 +386,8 @@ export function SimulationModal({
           </button>
         </header>
         <div className="grid grid-cols-[minmax(0,1fr)_340px] max-[1100px]:grid-cols-[minmax(0,1fr)_300px] max-[800px]:grid-cols-1 flex-1 min-h-0 overflow-y-auto overscroll-contain scrollbar-gutter-stable">
-          <div className="block p-6.25 min-w-0 bg-[radial-gradient(ellipse_at_top_right,#24352e26,transparent_60%)] max-[1100px]:p-4.5 max-[760px]:p-[18px_12px] max-[500px]:p-3">
-            <div className="flex flex-wrap items-center gap-4 m-0 mb-6.25 p-[18px_20px] border border-[#2b3e50] rounded-xl bg-[#14212a] max-[1100px]:gap-2.75 max-[1100px]:p-3.5 max-[500px]:grid max-[500px]:grid-cols-2 max-[500px]:gap-3 [&>span]:flex [&>span]:flex-col [&>span]:gap-1.5 [&_small]:text-[#91a7ba] [&_small]:text-[9px] [&_small]:tracking-[0.35px] [&_b]:text-[clamp(12px,1.25vw,16px)] [&_b]:tabular-nums [&_b]:font-medium max-[1100px]:[&_b]:text-[13px] [&>i]:text-[#667f92] [&>i]:not-italic max-[500px]:[&>i]:hidden">
+          <div className="block p-6.25 min-w-0 bg-[radial-gradient(ellipse_at_top_right,var(--ui-surface-24352e26),transparent_60%)] max-[1100px]:p-4.5 max-[760px]:p-[18px_12px] max-[500px]:p-3">
+            <div className="flex flex-wrap items-center gap-4 m-0 mb-6.25 p-[18px_20px] border border-[color:var(--ui-border-2b3e50)] rounded-xl bg-[var(--ui-surface-14212a)] max-[1100px]:gap-2.75 max-[1100px]:p-3.5 max-[500px]:grid max-[500px]:grid-cols-2 max-[500px]:gap-3 [&>span]:flex [&>span]:flex-col [&>span]:gap-1.5 [&_small]:text-[color:var(--ui-text-91a7ba)] [&_small]:text-[9px] [&_small]:tracking-[0.35px] [&_b]:text-[clamp(12px,1.25vw,16px)] [&_b]:tabular-nums [&_b]:font-medium max-[1100px]:[&_b]:text-[13px] [&>i]:text-[color:var(--ui-text-667f92)] [&>i]:not-italic max-[500px]:[&>i]:hidden">
               <span>
                 <small>Take-home /mo</small>
                 <b>{dollars(currentBudget.takeHome)}</b>
@@ -409,7 +409,7 @@ export function SimulationModal({
               </span>
             </div>
             {!!forecast?.warnings?.length && (
-              <div className="border-l-2 border-[#bea16f] rounded-sm-[#30291c55] p-[10px_15px] mb-4.5xt-[#d9bd90] text-[11px] leading-[1.7] [&>p]:m-0 [&>p]:leading-[1.7]" role="status">
+              <div className="border-l-2 border-[color:var(--ui-border-bea16f)] rounded-sm bg-[var(--ui-surface-30291c55)] p-[10px_15px] mb-4.5 text-[color:var(--ui-text-d9bd90)] text-[11px] leading-[1.7] [&>p]:m-0 [&>p]:leading-[1.7]" role="status">
                 {forecast.warnings.map((warning) => (
                   <p key={warning}>{warning}</p>
                 ))}
@@ -419,29 +419,29 @@ export function SimulationModal({
               <div className="flex gap-3.75 flex-wrap max-[760px]:gap-2.5">
                 {simulationType !== 'debt'
                   ? [...quantiles].reverse().map((q) => (
-                      <span key={q.key} className="text-[10px] text-[#afbdd3] max-[760px]:text-[9px] inline-flex items-center gap-1.5">
+                      <span key={q.key} className="text-[10px] text-[color:var(--ui-text-afbdd3)] max-[760px]:text-[9px] inline-flex items-center gap-1.5">
                         <i className="w-1.75 h-1.75 rounded-full inline-block" style={{ background: q.color }} />
                         {q.label}
                       </span>
                     ))
                   : debtKeys.map((key, i) => (
-                      <span key={key} className="text-[10px] text-[#afbdd3] max-[760px]:text-[9px] inline-flex items-center gap-1.5">
+                      <span key={key} className="text-[10px] text-[color:var(--ui-text-afbdd3)] max-[760px]:text-[9px] inline-flex items-center gap-1.5">
                         <i className="w-1.75 h-1.75 rounded-full inline-block" style={{ background: palette[i % palette.length] }} />
                         {labels[key]}
                       </span>
                     ))}
               </div>
-              <span className="text-[8px] tracking-[1px] text-[#778ca8] whitespace-nowrap max-[760px]:hidden">
+              <span className="text-[8px] tracking-[1px] text-[color:var(--ui-text-778ca8)] whitespace-nowrap max-[760px]:hidden">
                 {inflation && simulationType !== 'debt' ? 'TODAY’S USD' : 'USD'}
               </span>
             </div>
             <div className="h-[clamp(400px,49vh,590px)] min-h-100 relative flex-none max-[800px]:min-h-107.5" aria-busy={loading}>
               {error ? (
-                <div className="absolute inset-0 flex items-center justify-center flex-col text-center p-8 gap-3.25 text-[#a9b9d0] text-xs" role="alert">
+                <div className="absolute inset-0 flex items-center justify-center flex-col text-center p-8 gap-3.25 text-[color:var(--ui-text-a9b9d0)] text-xs" role="alert">
                   <h3 className="text-base m-0">Let’s get this running</h3>
                   <p className="max-w-95 m-0">{error}</p>
                   <button
-                    className="inline-flex items-center justify-center gap-1.75 whitespace-nowrap rounded-[7px] px-3.5 py-2.25text-[11px] font-medium min-h-8.5 cursor-pointer bg-primary text-primary-fg hover:bg-[#cbbcfc] transition-colors"
+                    className="inline-flex items-center justify-center gap-1.75 whitespace-nowrap rounded-[7px] px-3.5 py-2.25 text-[11px] font-medium min-h-8.5 cursor-pointer bg-primary text-primary-fg hover:bg-[var(--ui-surface-hover-cbbcfc)] transition-colors"
                     onClick={() => {
                       setLoading(true);
                       setError('');
@@ -452,13 +452,13 @@ export function SimulationModal({
                   </button>
                 </div>
               ) : !forecast ? (
-                <div className="absolute inset-0 flex items-center justify-center flex-col text-center p-8 gap-3.25 text-[#a9b9d0] text-xs" role="status">
+                <div className="absolute inset-0 flex items-center justify-center flex-col text-center p-8 gap-3.25 text-[color:var(--ui-text-a9b9d0)] text-xs" role="status">
                   Calculating your scenario…
                 </div>
               ) : (
                 <>
                   {loading && (
-                    <span className="absolute right-2.5 top-0 text-[10px] bg-[#26314c] text-[#d8d0f5] rounded-[5px] px-2 py-1.25 z-1" role="status">
+                    <span className="absolute right-2.5 top-0 text-[10px] bg-[var(--ui-surface-26314c)] text-[color:var(--ui-text-d8d0f5)] rounded-[5px] px-2 py-1.25 z-1" role="status">
                       Updating scenario…
                     </span>
                   )}
@@ -475,27 +475,27 @@ export function SimulationModal({
                         data={debtRows}
                         margin={{ top: 20, right: 16, bottom: 8, left: 4 }}
                       >
-                        <CartesianGrid strokeDasharray="3 5" stroke="#263044" vertical={false} />
+                        <CartesianGrid strokeDasharray="3 5" stroke="var(--ui-paint-263044)" vertical={false} />
                         <XAxis
                           dataKey="month"
                           minTickGap={30}
                           tickFormatter={(v) => `${v} mo`}
-                          tick={{ fill: '#93a1b8', fontSize: 11 }}
+                          tick={{ fill: 'var(--ui-paint-93a1b8)', fontSize: 11 }}
                           axisLine={false}
                           tickLine={false}
                         />
                         <YAxis
                           width={72}
                           tickFormatter={(v) => money(v, true)}
-                          tick={{ fill: '#93a1b8', fontSize: 11 }}
+                          tick={{ fill: 'var(--ui-paint-93a1b8)', fontSize: 11 }}
                           axisLine={false}
                           tickLine={false}
                         />
                         <Tooltip
                           content={({ active, payload, label }) =>
                             active && payload?.length ? (
-                              <div className="p-[13px_15px] bg-[#1c2638] border border-[#47536d] rounded-[9px] shadow-[0_10px_30px_#0005] min-w-50 text-[11px]">
-                                <strong className="block text-[11px] text-[#d9e3f3] mb-3">{`Month ${label}`}</strong>
+                              <div className="p-[13px_15px] bg-[var(--ui-surface-1c2638)] border border-[color:var(--ui-border-47536d)] rounded-[9px] shadow-[0_10px_30px_var(--ui-shadow-0005)] min-w-50 text-[11px]">
+                                <strong className="block text-[11px] text-[color:var(--ui-text-d9e3f3)] mb-3">{`Month ${label}`}</strong>
                                 {payload.map((p, i) => (
                                   <div
                                     key={String(p.dataKey)}
@@ -529,7 +529,7 @@ export function SimulationModal({
                 </>
               )}
             </div>
-            <div className="flex justify-between text-[9px] text-[#788ca8] p-[12px_6px_17px] gap-2.5 max-[760px]:text-[8px]">
+            <div className="flex justify-between text-[9px] text-[color:var(--ui-text-788ca8)] p-[12px_6px_17px] gap-2.5 max-[760px]:text-[8px]">
               <span>{simulationType === 'debt' ? 'Months from today' : 'Years from today'}</span>
               <span>
                 {simulationType === 'debt'
@@ -538,7 +538,7 @@ export function SimulationModal({
               </span>
             </div>
             {forecast && (
-              <div className="grid grid-cols-3 max-[760px]:gap-2.5 gap-3.75 border border-[#2c3850] bg-[#172030] rounded-[9px] p-[17px_19px] max-[760px]:p-[14px_12px] [&>div]:flex [&>div]:flex-col [&>div]:gap-2.5 [&_span]:text-[9px] max-[760px]:[&_span]:text-[8px] [&_span]:text-[#8b9fba] [&_span]:leading-[1.4] [&_strong]:text-[clamp(15px,1.7vw,23px)] max-[760px]:[&_strong]:text-[17px] [&_strong]:font-semibold [&_strong]:tracking-[-0.5px]">
+              <div className="grid grid-cols-3 max-[760px]:gap-2.5 gap-3.75 border border-[color:var(--ui-border-2c3850)] bg-[var(--ui-surface-172030)] rounded-[9px] p-[17px_19px] max-[760px]:p-[14px_12px] [&>div]:flex [&>div]:flex-col [&>div]:gap-2.5 [&_span]:text-[9px] max-[760px]:[&_span]:text-[8px] [&_span]:text-[color:var(--ui-text-8b9fba)] [&_span]:leading-[1.4] [&_strong]:text-[clamp(15px,1.7vw,23px)] max-[760px]:[&_strong]:text-[17px] [&_strong]:font-semibold [&_strong]:tracking-[-0.5px]">
                 {simulationType !== 'debt' ? (
                   <>
                     <div>
@@ -583,13 +583,13 @@ export function SimulationModal({
               </div>
             )}
             {simulationType === 'debt' && summary && !summary.paid_off && (
-              <div className="border-l-2 border-[#bea16f] rounded-sm bg-[#30291c55] p-[10px_15px] mt-3.5 mb-0 text-[#d9bd90] text-[11px] leading-[1.7]" role="alert">
+              <div className="border-l-2 border-[color:var(--ui-border-bea16f)] rounded-sm bg-[var(--ui-surface-30291c55)] p-[10px_15px] mt-3.5 mb-0 text-[color:var(--ui-text-d9bd90)] text-[11px] leading-[1.7]" role="alert">
                 This budget does not clear your debt within {years} years. The last chart point is
                 not a payoff date.
               </div>
             )}
             {simulationType === 'debt' && comparison && summary && (
-              <p className="text-[#8b9ab1] text-[11px] mt-3.25 mb-0 leading-[1.6]">
+              <p className="text-[color:var(--ui-text-8b9ab1)] text-[11px] mt-3.25 mb-0 leading-[1.6]">
                 {Math.abs(comparison.total_interest - summary.total_interest) < 0.01
                   ? 'Both strategies accrue the same interest in this scenario.'
                   : `${strategy === 'avalanche' ? 'Avalanche' : 'Snowball'} accrues ${money(Math.abs(comparison.total_interest - summary.total_interest))} ${summary.total_interest < comparison.total_interest ? 'less' : 'more'} interest than the alternative over this horizon.`}
@@ -600,14 +600,14 @@ export function SimulationModal({
             )}
             <SimulationGuide mode={simulationType} />
           </div>
-          <aside className="border-l border-[#2c3447] bg-[#121c29] p-6 max-[1100px]:p-4.5 max-[800px]:p-5 max-[800px]:border-l-0 max-[800px]:border-t max-[800px]:border-[#314257] overflow-y-auto max-[800px]:overflow-visible min-h-0 [&>section]:pb-5.75 [&>section]:mb-5.5 [&>section]:border-b [&>section]:border-[#2c364b] max-[760px]:[&>section]:pb-4.5 max-[760px]:[&>section]:mb-4.5">
+          <aside className="border-l border-[color:var(--ui-border-2c3447)] bg-[var(--ui-surface-121c29)] p-6 max-[1100px]:p-4.5 max-[800px]:p-5 max-[800px]:border-l-0 max-[800px]:border-t max-[800px]:border-[color:var(--ui-border-314257)] overflow-y-auto max-[800px]:overflow-visible min-h-0 [&>section]:pb-5.75 [&>section]:mb-5.5 [&>section]:border-b [&>section]:border-[color:var(--ui-border-2c364b)] max-[760px]:[&>section]:pb-4.5 max-[760px]:[&>section]:mb-4.5">
             <section>
-              <div className="text-[8px] text-[#889ab6] mb-1.5 font-semibold tracking-wider">YOUR ASSUMPTIONS</div>
+              <div className="text-[8px] text-[color:var(--ui-text-889ab6)] mb-1.5 font-semibold tracking-wider">YOUR ASSUMPTIONS</div>
               <h3 className="text-sm font-semibold text-text mb-4 mt-0">Make it your scenario</h3>
               <BudgetControls graph={graphData} onChange={onAssumptionsChange} compact />
               {simulationType !== 'debt' && (
                 <section className="my-4.25 p-0 border-0">
-                  <label className="flex flex-col gap-2 text-[11px] text-[#b9c5d9] mt-4.25">
+                  <label className="flex flex-col gap-2 text-[11px] text-[color:var(--ui-text-b9c5d9)] mt-4.25">
                     Market assumptions
                     <select
                       className="w-full min-w-0 mt-2 px-2.5 py-1.5 text-xs rounded-[7px] border border-border bg-base text-text"
@@ -618,7 +618,7 @@ export function SimulationModal({
                       <option value="manual">Editable return assumptions</option>
                     </select>
                   </label>
-                  <label className="flex flex-col gap-2 text-[11px] text-[#b9c5d9] mt-4.25">
+                  <label className="flex flex-col gap-2 text-[11px] text-[color:var(--ui-text-b9c5d9)] mt-4.25">
                     Investment benchmark
                     <select
                       className="w-full min-w-0 mt-2 px-2.5 py-1.5 text-xs rounded-[7px] border border-border bg-base text-text"
@@ -632,9 +632,9 @@ export function SimulationModal({
                     </select>
                   </label>
                   <div
-                    className="bg-[#0c1520] border border-[#2a3d51] rounded-[9px] p-3.25 my-4"
+                    className="bg-[var(--ui-surface-0c1520)] border border-[color:var(--ui-border-2a3d51)] rounded-[9px] p-3.25 my-4"
                   >
-                    <p className="text-[10px] text-[#95abc2] leading-[1.6] mb-3.5 mt-0">
+                    <p className="text-[10px] text-[color:var(--ui-text-95abc2)] leading-[1.6] mb-3.5 mt-0">
                       {marketSource === 'manual'
                         ? 'Used for this simulation'
                         : returnMode === 'forward'
@@ -642,17 +642,17 @@ export function SimulationModal({
                           : 'Observed historical return; these values are fallbacks only'}
                     </p>
                     {marketSource === 'historical' && (
-                      <label className="inline-flex items-center gap-2 text-[11px] text-[#b9c5d9] cursor-pointer mb-3">
+                      <label className="inline-flex items-center gap-2 text-[11px] text-[color:var(--ui-text-b9c5d9)] cursor-pointer mb-3">
                         <input
                           type="checkbox"
-                          className="accent-[#82c9b1] w-3.25 h-3.25"
+                          className="accent-[var(--ui-paint-82c9b1)] w-3.25 h-3.25"
                           checked={returnMode === 'forward'}
                           onChange={(e) => setReturnMode(e.target.checked ? 'forward' : 'observed')}
                         />{' '}
                         Use an editable forward return
                       </label>
                     )}
-                    <label className="flex flex-col gap-2 text-[11px] text-[#b9c5d9] mt-4.25">
+                    <label className="flex flex-col gap-2 text-[11px] text-[color:var(--ui-text-b9c5d9)] mt-4.25">
                       {marketSource === 'historical' && returnMode === 'observed'
                         ? 'Fallback annual return (%)'
                         : 'Forward expected return (%)'}
@@ -665,7 +665,7 @@ export function SimulationModal({
                         onChange={(e) => setAnnualReturn(Number(e.target.value))}
                       />
                     </label>
-                    <label className="flex flex-col gap-2 text-[11px] text-[#b9c5d9] mt-4.25">
+                    <label className="flex flex-col gap-2 text-[11px] text-[color:var(--ui-text-b9c5d9)] mt-4.25">
                       {marketSource === 'historical'
                         ? 'Fallback volatility (%)'
                         : 'Annual volatility (%)'}
@@ -681,7 +681,7 @@ export function SimulationModal({
                   </div>
                 </section>
               )}
-              <label className="flex flex-col gap-2 text-[11px] text-[#b9c5d9] mt-4.25">
+              <label className="flex flex-col gap-2 text-[11px] text-[color:var(--ui-text-b9c5d9)] mt-4.25">
                 Time horizon
                 <select
                   className="w-full min-w-0 mt-2 px-2.5 py-1.5 text-xs rounded-[7px] border border-border bg-base text-text"
@@ -699,17 +699,17 @@ export function SimulationModal({
                   ))}
                 </select>
               </label>
-              <label className="flex items-center justify-between gap-3 text-[11px] text-[#b9c5d9] mt-4.25" htmlFor="allocation">
+              <label className="flex items-center justify-between gap-3 text-[11px] text-[color:var(--ui-text-b9c5d9)] mt-4.25" htmlFor="allocation">
                 <span>{simulationType === 'debt'
                   ? 'Extra surplus toward debt'
                   : 'Invest still-unassigned money'}</span>
-                <strong className="text-[#cebeff]">{rate}%</strong>
+                <strong className="text-[color:var(--ui-text-cebeff)]">{rate}%</strong>
               </label>
               {simulationType !== 'debt' && (
-                <label className="inline-flex items-center gap-2 text-[11px] text-[#b9c5d9] cursor-pointer mt-3">
+                <label className="inline-flex items-center gap-2 text-[11px] text-[color:var(--ui-text-b9c5d9)] cursor-pointer mt-3">
                   <input
                     type="checkbox"
-                    className="accent-[#82c9b1] w-3.25 h-3.25"
+                    className="accent-[var(--ui-paint-82c9b1)] w-3.25 h-3.25"
                     checked={scheduledInvesting}
                     onChange={(e) => setScheduledInvesting(e.target.checked)}
                   />{' '}
@@ -730,13 +730,13 @@ export function SimulationModal({
                   setRate(Number(e.target.value));
                 }}
               />
-              <p className="text-[#8b9ab1] text-[11px] mt-2 mb-0 leading-[1.6]">
+              <p className="text-[color:var(--ui-text-8b9ab1)] text-[11px] mt-2 mb-0 leading-[1.6]">
                 {simulationType === 'debt'
                   ? 'Minimum payments are included once. This adds a share of your remaining monthly surplus.'
                   : `${dollars(allocation.plannedInvestment)} scheduled + ${rate}% of ${dollars(allocation.unassigned)} unassigned = ${dollars(allocation.investment)}/mo invested initially. Remaining cash savings: ${dollars(allocation.cash)}/mo.`}
               </p>
               {simulationType !== 'debt' && (
-                <p className="text-[#8b9ab1] text-[11px] mt-2 mb-0 leading-[1.6]">
+                <p className="text-[color:var(--ui-text-8b9ab1)] text-[11px] mt-2 mb-0 leading-[1.6]">
                   For $0 in new investments, turn off scheduled transfers and set the slider to 0%.
                   Uninvested surplus stays in cash. Losses can still affect existing investments;
                   expenses above take-home income can drain assets and create debt. Set a negative
@@ -745,7 +745,7 @@ export function SimulationModal({
               )}
               {simulationType !== 'debt' && (
                 <>
-                  <label className="flex flex-col gap-2 text-[11px] text-[#b9c5d9] mt-4.25">
+                  <label className="flex flex-col gap-2 text-[11px] text-[color:var(--ui-text-b9c5d9)] mt-4.25">
                     Net-worth target ($)
                     <NumberField
                       type="number"
@@ -756,10 +756,10 @@ export function SimulationModal({
                       onChange={(e) => setTarget(Number(e.target.value))}
                     />
                   </label>
-                  <details className="my-5 border border-[#2d3f55] rounded-lg">
-                    <summary className="text-[11px] p-3 text-[#adbed0] cursor-pointer font-medium select-none">Growth, fees & shortfalls</summary>
+                  <details className="my-5 border border-[color:var(--ui-border-2d3f55)] rounded-lg">
+                    <summary className="text-[11px] p-3 text-[color:var(--ui-text-adbed0)] cursor-pointer font-medium select-none">Growth, fees & shortfalls</summary>
                     <div className="px-3 pt-1 pb-3">
-                      <label className="flex flex-col gap-2 text-[11px] text-[#b9c5d9] mt-4.25">
+                      <label className="flex flex-col gap-2 text-[11px] text-[color:var(--ui-text-b9c5d9)] mt-4.25">
                         Annual income growth (%)
                         <NumberField
                           type="number"
@@ -775,7 +775,7 @@ export function SimulationModal({
                           }
                         />
                       </label>
-                      <label className="flex flex-col gap-2 text-[11px] text-[#b9c5d9] mt-4.25">
+                      <label className="flex flex-col gap-2 text-[11px] text-[color:var(--ui-text-b9c5d9)] mt-4.25">
                         Annual living-cost growth (%)
                         <NumberField
                           type="number"
@@ -791,7 +791,7 @@ export function SimulationModal({
                           }
                         />
                       </label>
-                      <label className="flex flex-col gap-2 text-[11px] text-[#b9c5d9] mt-4.25">
+                      <label className="flex flex-col gap-2 text-[11px] text-[color:var(--ui-text-b9c5d9)] mt-4.25">
                         Additional portfolio fee (%)
                         <NumberField
                           type="number"
@@ -802,7 +802,7 @@ export function SimulationModal({
                           onChange={(e) => setFee(Number(e.target.value))}
                         />
                       </label>
-                      <label className="flex flex-col gap-2 text-[11px] text-[#b9c5d9] mt-4.25">
+                      <label className="flex flex-col gap-2 text-[11px] text-[color:var(--ui-text-b9c5d9)] mt-4.25">
                         Shortfall borrowing APR (%)
                         <NumberField
                           type="number"
@@ -813,7 +813,7 @@ export function SimulationModal({
                           onChange={(e) => setBorrowingApr(Number(e.target.value))}
                         />
                       </label>
-                      <p className="text-[#8b9ab1] text-[11px] mt-3 mb-0 leading-[1.6]">
+                      <p className="text-[color:var(--ui-text-8b9ab1)] text-[11px] mt-3 mb-0 leading-[1.6]">
                         Growth is nominal and applied annually. Income continues through the
                         horizon; retirement withdrawals are not modeled. The additional fee is
                         separate from costs already reflected in adjusted fund prices.
@@ -825,7 +825,7 @@ export function SimulationModal({
               {simulationType !== 'debt' && (
                 <label className="flex items-center justify-between gap-2.5 mt-5 text-[11px] cursor-pointer">
                   <span>
-                    Adjust for inflation<small className="block text-[#7f91ac] text-[9px] mt-1">2.5% annually · today’s purchasing power</small>
+                    Adjust for inflation<small className="block text-[color:var(--ui-text-7f91ac)] text-[9px] mt-1">2.5% annually · today’s purchasing power</small>
                   </span>
                   <input
                     type="checkbox"
@@ -846,13 +846,13 @@ export function SimulationModal({
                       key={s}
                       className={`text-left p-[10px_12px] rounded-[7px] border transition-colors cursor-pointer ${
                         strategy === s
-                          ? 'border-[#a78bfa] bg-[#2a2440]'
-                          : 'border-[#354259] bg-[#182233] hover:border-[#4f6080]'
+                          ? 'border-[color:var(--ui-border-a78bfa)] bg-[var(--ui-surface-2a2440)]'
+                          : 'border-[color:var(--ui-border-354259)] bg-[var(--ui-surface-182233)] hover:border-[color:var(--ui-border-4f6080)]'
                       }`}
                       onClick={() => setStrategy(s)}
                     >
                       <strong className="block text-[11px] text-text font-semibold">{s === 'avalanche' ? 'Avalanche' : 'Snowball'}</strong>
-                      <small className="block text-[10px] text-[#97a5bd] mt-1">
+                      <small className="block text-[10px] text-[color:var(--ui-text-97a5bd)] mt-1">
                         {s === 'avalanche' ? 'Highest APR first' : 'Smallest balance first'}
                       </small>
                     </button>
@@ -864,27 +864,27 @@ export function SimulationModal({
               <section
                 className={`rounded-[10px] p-4.25 border ${
                   forecast.market_data.status === 'fallback'
-                    ? 'border-[#6a5535] bg-[#30291b55]'
-                    : 'border-[#365b54] bg-[#182f2b60]'
+                    ? 'border-[color:var(--ui-border-6a5535)] bg-[var(--ui-surface-30291b55)]'
+                    : 'border-[color:var(--ui-border-365b54)] bg-[var(--ui-surface-182f2b60)]'
                 }`}
               >
-                <div className="text-[8px] text-[#87bea9] mb-2.25 font-semibold tracking-wider">DATA BEHIND THE MODEL</div>
-                <h3 className="text-sm font-semibold text-[#c1e3d5] m-0">
+                <div className="text-[8px] text-[color:var(--ui-text-87bea9)] mb-2.25 font-semibold tracking-wider">DATA BEHIND THE MODEL</div>
+                <h3 className="text-sm font-semibold text-[color:var(--ui-text-c1e3d5)] m-0">
                   {['historical', 'stale_history'].includes(forecast.market_data.status)
                     ? `${forecast.market_data.ticker} · ${forecast.market_data.years} years`
                     : forecast.market_data.pending
                       ? 'History loading'
                       : 'Editable assumptions'}
                 </h3>
-                <p className="text-[10px] text-[#a0b7b1] leading-[1.8] my-2.25">{forecast.market_data.source}</p>
+                <p className="text-[10px] text-[color:var(--ui-text-a0b7b1)] leading-[1.8] my-2.25">{forecast.market_data.source}</p>
                 {forecast.market_data.start && (
-                  <p className="text-[10px] text-[#a0b7b1] leading-[1.8] my-2.25">
+                  <p className="text-[10px] text-[color:var(--ui-text-a0b7b1)] leading-[1.8] my-2.25">
                     {forecast.market_data.start} → {forecast.market_data.end}
                     <br />
                     {forecast.market_data.observations} completed monthly returns
                   </p>
                 )}
-                <dl className="text-[10px] leading-normal my-2 [&>div]:flex [&>div]:justify-between [&>div]:gap-2.25 [&>div]:mb-2.5 [&_dt]:text-[#879bb8] [&_dd]:m-0 [&_dd]:text-right font-medium">
+                <dl className="text-[10px] leading-normal my-2 [&>div]:flex [&>div]:justify-between [&>div]:gap-2.25 [&>div]:mb-2.5 [&_dt]:text-[color:var(--ui-text-879bb8)] [&_dd]:m-0 [&_dd]:text-right font-medium">
                   <div>
                     <dt>
                       {forecast.market_data.return_mode === 'forward'
@@ -899,34 +899,34 @@ export function SimulationModal({
                   </div>
                 </dl>
                 {forecast.market_data.observed_annual_return != null && (
-                  <p className="text-[10px] text-[#a0b7b1] leading-[1.8] my-2.25">
+                  <p className="text-[10px] text-[color:var(--ui-text-a0b7b1)] leading-[1.8] my-2.25">
                     Observed historical mean:{' '}
                     {(forecast.market_data.observed_annual_return * 100).toFixed(2)}%. Historical
                     movements have been centered on the selected forward assumption; the past
                     average is not treated as a forecast.
                   </p>
                 )}
-                <p className="text-[10px] text-[#a0b7b1] leading-[1.8] my-2.25">{forecast.market_data.method}</p>
+                <p className="text-[10px] text-[color:var(--ui-text-a0b7b1)] leading-[1.8] my-2.25">{forecast.market_data.method}</p>
                 {forecast.market_data.regime_transitions && (
-                  <p className="text-[10px] text-[#a0b7b1] leading-[1.8] my-2.25">
+                  <p className="text-[10px] text-[color:var(--ui-text-a0b7b1)] leading-[1.8] my-2.25">
                     Bull → bear:{' '}
                     {(forecast.market_data.regime_transitions[0]![1]! * 100).toFixed(1)}%/mo · Bear
                     → bull: {(forecast.market_data.regime_transitions[1]![0]! * 100).toFixed(1)}%/mo
                   </p>
                 )}
                 {forecast.market_data.status === 'stale_history' && (
-                  <p className="text-[10px] text-[#a0b7b1] leading-[1.8] my-2.25">
+                  <p className="text-[10px] text-[color:var(--ui-text-a0b7b1)] leading-[1.8] my-2.25">
                     Cached history is older than 24 hours. Refresh is attempted in the background.
                   </p>
                 )}
                 <button
-                  className="w-full mt-2.5 inline-flex items-center justify-center gap-1.75 whitespace-nowrap rounded-[7px] px-3.5 py-2.25 text-[11px] font-medium min-h-8.5 cursor-pointer bg-[#20293a] text-text border border-[#37445c] hover:bg-[#28354c] transition-colors disabled:opacity-45 disabled:cursor-not-allowed"
+                  className="w-full mt-2.5 inline-flex items-center justify-center gap-1.75 whitespace-nowrap rounded-[7px] px-3.5 py-2.25 text-[11px] font-medium min-h-8.5 cursor-pointer bg-[var(--ui-surface-20293a)] text-text border border-[color:var(--ui-border-37445c)] hover:bg-[var(--ui-surface-hover-28354c)] transition-colors disabled:opacity-45 disabled:cursor-not-allowed"
                   disabled={loading}
                   onClick={() => setRetry((n) => n + 1)}
                 >
                   {forecast.market_data.pending ? 'Check loaded history' : 'Refresh forecast'}
                 </button>
-                <small className="block text-[#91a99f] text-[9px] leading-[1.7] mt-3">
+                <small className="block text-[color:var(--ui-text-91a99f)] text-[9px] leading-[1.7] mt-3">
                   Free, cached data · no API key · historical performance is not a promise.
                 </small>
               </section>
@@ -939,7 +939,7 @@ export function SimulationModal({
                     <i className="w-1.75 h-1.75 rounded-full mt-1.25 shrink-0" style={{ background: q.color }} />
                     <div>
                       <strong className="text-[11px] font-[550]" style={{ color: q.color }}>{q.label}</strong>
-                      <p className="text-[10px] text-[#8e9fb9] mt-1.25 mb-0 leading-[1.65] max-[760px]:text-[11px]">
+                      <p className="text-[10px] text-[color:var(--ui-text-8e9fb9)] mt-1.25 mb-0 leading-[1.65] max-[760px]:text-[11px]">
                         {q.key === 'p90'
                           ? '90% of modeled outcomes fall below this value. It is an optimistic outcome, not a guaranteed bull market.'
                           : q.key === 'p50'
@@ -949,7 +949,7 @@ export function SimulationModal({
                     </div>
                   </div>
                 ))}
-                <p className="text-[#8b9ab1] text-[9px] leading-[1.6] mt-2 mb-0">
+                <p className="text-[color:var(--ui-text-8b9ab1)] text-[9px] leading-[1.6] mt-2 mb-0">
                   The shaded band spans P10–P90 at each year. These curves are percentiles, not
                   three individual market paths.
                 </p>
@@ -958,7 +958,7 @@ export function SimulationModal({
             {metrics && simulationType !== 'debt' && (
               <section>
                 <h3 className="text-sm font-semibold text-text mb-4 mt-0">What drives the result?</h3>
-                <dl className="text-[10px] leading-normal my-2 [&>div]:flex [&>div]:justify-between [&>div]:gap-2.25 [&>div]:mb-2.5 [&_dt]:text-[#879bb8] [&_dd]:m-0 [&_dd]:text-right font-medium">
+                <dl className="text-[10px] leading-normal my-2 [&>div]:flex [&>div]:justify-between [&>div]:gap-2.25 [&>div]:mb-2.5 [&_dt]:text-[color:var(--ui-text-879bb8)] [&_dd]:m-0 [&_dd]:text-right font-medium">
                   <div>
                     <dt>Entered income</dt>
                     <dd>{dollars(metrics.monthly_income)}</dd>
@@ -992,15 +992,15 @@ export function SimulationModal({
                     <dd>{money(metrics.no_growth_baseline ?? 0)}</dd>
                   </div>
                 </dl>
-                <p className="text-[#8b9ab1] text-[11px] leading-[1.6] mt-2 mb-0">
+                <p className="text-[color:var(--ui-text-8b9ab1)] text-[11px] leading-[1.6] mt-2 mb-0">
                   The reference uses the same cash flows and debt schedule without asset growth,
                   expressed in the chart’s dollars.
                 </p>
               </section>
             )}
             <details className="mt-4">
-              <summary className="cursor-pointer text-[11px] text-[#b6c2d9] font-medium select-none">Model assumptions</summary>
-              <ul className="pl-3.75 text-[10px] text-[#8fa1bb] leading-[1.8] my-2 [&>li]:mt-2.25">
+              <summary className="cursor-pointer text-[11px] text-[color:var(--ui-text-b6c2d9)] font-medium select-none">Model assumptions</summary>
+              <ul className="pl-3.75 text-[10px] text-[color:var(--ui-text-8fa1bb)] leading-[1.8] my-2 [&>li]:mt-2.25">
                 {(
                   forecast?.assumptions ?? [
                     'Start the Java and Python services to calculate this scenario.',
@@ -1016,13 +1016,13 @@ export function SimulationModal({
             </details>
           </aside>
         </div>
-        <footer className="flex items-center justify-between gap-4 border-t border-[#2c3448] shrink-0 p-[12px_24px] max-[760px]:p-[10px_15px] bg-[#111925]">
-          <span className="text-[9px] text-[#7d90ad] max-[760px]:text-[8px]">
+        <footer className="flex items-center justify-between gap-4 border-t border-[color:var(--ui-border-2c3448)] shrink-0 p-[12px_24px] max-[760px]:p-[10px_15px] bg-[var(--ui-surface-111925)]">
+          <span className="text-[9px] text-[color:var(--ui-text-7d90ad)] max-[760px]:text-[8px]">
             Educational scenario modeling ·{' '}
             {inflation && simulationType !== 'debt' ? 'Inflation adjusted' : 'Nominal dollars'}
           </span>
           <button
-            className="inline-flex items-center justify-center gap-1.75 whitespace-nowrap rounded-[7px] px-3.5 py-2.25 text-[11px] font-medium min-h-8.5 cursor-pointer bg-[#20293a] text-text border border-[#37445c] hover:bg-[#28354c] transition-colors disabled:opacity-45 disabled:cursor-not-allowed"
+            className="inline-flex items-center justify-center gap-1.75 whitespace-nowrap rounded-[7px] px-3.5 py-2.25 text-[11px] font-medium min-h-8.5 cursor-pointer bg-[var(--ui-surface-20293a)] text-text border border-[color:var(--ui-border-37445c)] hover:bg-[var(--ui-surface-hover-28354c)] transition-colors disabled:opacity-45 disabled:cursor-not-allowed"
             disabled={!forecast || loading || !!error}
             onClick={() => downloadJson(forecast, `finapp-${simulationType}-${years}y.json`)}
           >

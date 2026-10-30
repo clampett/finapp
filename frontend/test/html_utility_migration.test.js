@@ -91,7 +91,11 @@ test('F3-T1-5 (Coverage): index.html uses responsive breakpoint variants (max-na
 
 test('F3-T2-1 (Boundary): index.html preserves skip link with accessibility focus styling', () => {
   const html = readPage('index.html');
-  assert.match(html, /<a[^>]+href=["']#main["'][^>]*>Skip to content<\/a>/i, 'Skip to content link must point to #main');
+  assert.match(
+    html,
+    /<a[^>]+href=["']#main["'][^>]*>\s*Skip to content\s*<\/a\s*>/i,
+    'Skip to content link must point to #main',
+  );
   assert.match(html, /focus(-visible)?:/, 'Skip link must include focus utility classes');
 });
 
@@ -100,12 +104,12 @@ test('F3-T2-2 (Boundary): index.html preserves main semantic landmark with id="m
   assert.match(html, /<main[^>]+id=["']main["']/i, 'Main landmark element with id="main" must be preserved');
 });
 
-test('F3-T2-3 (Boundary): index.html preserves navigation jump links (#features, #how-it-works, #scenarios, #questions)', () => {
+test('F3-T2-3 (Boundary): index.html links to dedicated information pages', () => {
   const html = readPage('index.html');
-  assert.match(html, /href=["']#features["']/, 'Missing link to #features');
-  assert.match(html, /href=["']#how-it-works["']/, 'Missing link to #how-it-works');
-  assert.match(html, /href=["']#scenarios["']/, 'Missing link to #scenarios');
-  assert.match(html, /href=["']#questions["']/, 'Missing link to #questions');
+  for (const route of ['features', 'how-it-works', 'scenarios', 'faq']) {
+    assert.ok(html.includes(`href="/${route}"`), `Missing link to /${route}`);
+    assert.ok(fs.existsSync(path.join(PAGES_DIR, `${route}.html`)));
+  }
 });
 
 test('F3-T2-4 (Boundary): index.html preserves SVG preview graph and node structure', () => {
@@ -298,9 +302,9 @@ test('F5-T1-4 (Coverage): 404.html uses text-foreground instead of non-existent 
   assert.match(html, /\btext-foreground\b/, '404.html must use text-foreground');
 });
 
-test('F5-T1-5 (Coverage): 404.html preserves back link to index.html', () => {
+test('F5-T1-5 (Coverage): 404.html returns to the root from any missing path', () => {
   const html = readPage('404.html');
-  assert.match(html, /<a[^>]+href=["']index\.html["'][^>]*>[\s\S]*?Go back to homepage[\s\S]*?<\/a>/i);
+  assert.match(html, /<a[^>]+href=["']\/["'][^>]*>[\s\S]*?Go back to homepage[\s\S]*?<\/a>/i);
 });
 
 test('F5-T2-1 (Boundary): 404.html has valid HTML structure (doctype, html, head, body)', () => {
@@ -321,30 +325,28 @@ test('F5-T2-3 (Boundary): 404.html includes font-sans stack utility', () => {
   assert.match(html, /\bfont-sans\b/, '404.html body should specify font-sans utility');
 });
 
-test('F5-T2-4 (Boundary): 404.html center card uses max-w-md and rounded utilities', () => {
+test('F5-T2-4 (Boundary): 404.html explains the error without a spinning image', () => {
   const html = readPage('404.html');
-  assert.match(html, /\bmax-w-md\b/);
-  assert.match(html, /\brounded-(xl|lg|2xl)\b/);
+  assert.match(html, /<main[^>]*id="main"/);
+  assert.match(html, /<svg[^>]*role="img"/);
+  assert.doesNotMatch(html, /money_spin\.gif/);
 });
 
 test('F5-T2-5 (Boundary): 404.html preserves logo markup and homepage link', () => {
   const html = readPage('404.html');
   assert.match(html, /FinApp/);
-  assert.match(html, /href=["']index\.html["']/);
+  assert.match(html, /href=["']\/["']/);
 });
 
 // ============================================================================
 // FEATURE 14: Responsive & Interactive Parity on Landing Pages (R3)
 // ============================================================================
 
-test('F14-T1-1 (Coverage): index.html includes inline script for pre-render data-theme initialization', () => {
+test('F14-T1-1 (Coverage): index.html restores the theme synchronously before CSS', () => {
   const html = readPage('index.html');
-  assert.match(
-    html,
-    /localStorage\.getItem\(['"]user-theme['"]\)/,
-    'index.html head must contain theme restore script to prevent FOUC',
-  );
-  assert.match(html, /(document\.documentElement|doc)\.dataset\.theme\s*=/, 'Theme restore script must set dataset.theme on documentElement');
+  const bootstrap = '<script src="/assets/theme-init.js"></script>';
+  assert.ok(html.includes(bootstrap));
+  assert.ok(html.indexOf(bootstrap) < html.indexOf('<link rel="stylesheet"'));
 });
 
 test('F14-T1-2 (Coverage): index.html includes #theme_button switcher and #menu-toggle button', () => {

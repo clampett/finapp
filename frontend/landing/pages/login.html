@@ -5,14 +5,10 @@
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <meta name="theme-color" content="#0c1018" />
     <title>Sign in FinApp</title>
+    <script src="/assets/theme-init.js"></script>
     <link rel="stylesheet" href="/assets/styles.css" />
     <link rel="icon" type="image/svg+xml" href="/static/finapp-circle.svg" />
-    <script>
-      try {
-        document.documentElement.dataset.theme =
-          localStorage.getItem('user-theme') === 'light' ? 'light' : 'dark';
-      } catch {}
-    </script>
+
   </head>
   <body class="min-h-dvh flex flex-col bg-background text-text font-sans text-sm leading-[1.6] min-w-[320px] m-0">
     <a class="fixed -top-25 left-4 py-3 px-4.5 z-99 bg-primary text-primary-fg rounded-[7px] focus:top-2.5 transition-[top] focus-visible:outline-2 focus-visible:outline-primary focus-visible:outline-offset-[5px]" href="#main">Skip to content</a>

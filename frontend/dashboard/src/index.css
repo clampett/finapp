@@ -1,4 +1,6 @@
 @import 'tailwindcss';
+@import './theme-palette.css';
+@import './theme.css';
 
 @theme {
   --color-base: #0c1018;
@@ -74,8 +76,13 @@ summary::-webkit-details-marker {
 /* Canvas drawing grid pattern */
 .canvas-host {
   background-color: #0e131d;
-  background-image: radial-gradient(#34405770 0.7px, transparent 0.7px);
-  background-size: 20px 20px;
+  /* Layered fine and major rules to give the workspace a graph-paper finish. */
+  background-image:
+    linear-gradient(#34405766 1px, transparent 1px),
+    linear-gradient(90deg, #34405766 1px, transparent 1px),
+    linear-gradient(#34405730 1px, transparent 1px),
+    linear-gradient(90deg, #34405730 1px, transparent 1px);
+  background-size: 100px 100px, 100px 100px, 20px 20px, 20px 20px;
 }
 
 /* D3-rendered SVG Canvas nodes and edges */

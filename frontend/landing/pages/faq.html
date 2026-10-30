@@ -1,0 +1,307 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta
+      name="description"
+      content="Straight answers about getting started, saving your work, and understanding the numbers."
+    />
+    <meta name="theme-color" content="#0c1018" />
+    <title>Frequently asked questions FinApp</title>
+    <script src="/assets/theme-init.js"></script>
+    <link rel="stylesheet" href="/assets/styles.css" />
+    <link rel="icon" type="image/svg+xml" href="/static/finapp-circle.svg" />
+  </head>
+  <body class="marketing guide-page bg-background text-text font-sans">
+    <a class="skip-link" href="#main">Skip to content</a>
+    <header class="site-header sticky top-0 z-20 bg-header backdrop-blur-md border-b border-border">
+      <div
+        class="max-w-310 mx-auto px-8 max-xs:px-5 min-h-20.5 max-xs:min-h-17.5 flex gap-7 max-nav:gap-4.5 max-xs:gap-3 items-center justify-between relative"
+      >
+        <a
+          class="inline-flex items-center gap-3 max-xs:gap-2.25 text-[25px] max-xs:text-[23px] font-bold tracking-[-0.7px] text-text shrink-0"
+          href="/"
+          aria-label="FinApp home"
+          ><span
+            class="block shrink-0 w-8 h-8 max-xs:w-7 max-xs:h-7 rounded-full bg-[#00c9b7]"
+            aria-hidden="true"
+          ></span
+          >FinApp</a
+        >
+        <nav
+          id="site-navigation"
+          class="site-navigation flex gap-6.75 max-nav:gap-4.25 text-xs max-nav:text-[11px] text-foreground ml-auto mr-3 max-nav:mr-0 max-mob:hidden max-mob:absolute max-mob:top-full max-mob:left-0 max-mob:right-0 max-mob:bg-card max-mob:border-b max-mob:border-border max-mob:py-3.75 max-mob:px-6.25 max-mob:flex-col max-mob:gap-0"
+          aria-label="Main navigation"
+        >
+          <a
+            class="hover:text-primary transition-colors max-mob:py-2.75 max-mob:text-[13px] focus-visible:outline-2 focus-visible:outline-primary focus-visible:outline-offset-[5px]"
+            href="/features"
+            >Features</a
+          ><a
+            class="hover:text-primary transition-colors max-mob:py-2.75 max-mob:text-[13px] focus-visible:outline-2 focus-visible:outline-primary focus-visible:outline-offset-[5px]"
+            href="/how-it-works"
+            >How it works</a
+          ><a
+            class="hover:text-primary transition-colors max-mob:py-2.75 max-mob:text-[13px] focus-visible:outline-2 focus-visible:outline-primary focus-visible:outline-offset-[5px]"
+            href="/scenarios"
+            >Demo scenarios</a
+          ><a
+            class="hover:text-primary transition-colors max-mob:py-2.75 max-mob:text-[13px] focus-visible:outline-2 focus-visible:outline-primary focus-visible:outline-offset-[5px]"
+            href="/faq"
+            aria-current="page"
+            >FAQ</a
+          >
+        </nav>
+        <div class="flex gap-2.5 max-xs:gap-1.5 items-center max-mob:ml-auto">
+          <a
+            class="inline-flex items-center justify-center gap-3.5 min-h-9.75 max-xs:min-h-8.5 border border-transparent bg-transparent text-foreground py-2.5 px-4 max-xs:py-2 max-xs:px-2.5 rounded-lg text-xs max-xs:text-[11px] font-[550] whitespace-nowrap hover:text-text hover:bg-muted/50 transition-colors focus-visible:outline-2 focus-visible:outline-primary focus-visible:outline-offset-[5px]"
+            href="/login"
+            data-workspace-link
+            >Sign in</a
+          ><a
+            class="inline-flex items-center justify-center gap-3.5 min-h-9.75 max-xs:min-h-8.5 border border-primary bg-primary text-primary-fg py-2.5 px-4 rounded-lg text-xs font-[550] whitespace-nowrap hover:brightness-[1.08] transition-all max-xs:hidden focus-visible:outline-2 focus-visible:outline-primary focus-visible:outline-offset-[5px]"
+            href="/dashboard/?demo=true&profile=2"
+            >Open demo <span aria-hidden="true">↗</span></a
+          ><button
+            id="theme_button"
+            data-theme-control
+            class="bg-transparent border border-border rounded-lg w-8.75 h-8.75 max-xs:w-8 max-xs:h-8 grid place-items-center text-foreground text-[19px] max-xs:text-[17px] hover:bg-muted cursor-pointer transition-colors focus-visible:outline-2 focus-visible:outline-primary focus-visible:outline-offset-[5px]"
+            aria-label="Switch to light theme"
+            type="button"
+            title="Switch theme"
+          >
+            <svg
+              class="theme-sun"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="1.7"
+              aria-hidden="true"
+            >
+              <circle cx="12" cy="12" r="4" />
+              <path
+                d="M12 2v2m0 16v2M2 12h2m16 0h2M5 5l1.5 1.5m11 11L19 19M5 19l1.5-1.5m11-11L19 5"
+              /></svg
+            ><svg
+              class="theme-moon"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="1.7"
+              aria-hidden="true"
+            >
+              <path d="M20.5 14A8.5 8.5 0 0 1 10 3.5 8.5 8.5 0 1 0 20.5 14Z" />
+            </svg></button
+          ><button
+            class="hidden max-mob:grid bg-transparent border border-border rounded-lg w-8.75 h-8.75 max-xs:w-8 max-xs:h-8 place-items-center text-foreground text-[19px] max-xs:text-[17px] hover:bg-muted cursor-pointer transition-colors focus-visible:outline-2 focus-visible:outline-primary focus-visible:outline-offset-[5px]"
+            id="menu-toggle"
+            type="button"
+            aria-label="Open navigation"
+            aria-expanded="false"
+            aria-controls="site-navigation"
+          >
+            ☰
+          </button>
+        </div>
+      </div>
+    </header>
+    <main id="main" class="max-w-310 mx-auto px-8 max-xs:px-5">
+      <header class="guide-hero">
+        <nav class="breadcrumbs" aria-label="Breadcrumb">
+          <a href="/">Home</a><span aria-hidden="true">/</span
+          ><span>Frequently asked questions</span>
+        </nav>
+        <p class="eyebrow">FINAPP / FREQUENTLY ASKED QUESTIONS</p>
+        <h1>A few questions.<br /><span>A clearer starting point.</span></h1>
+        <p class="guide-lead">
+          Straight answers about getting started, saving your work, and understanding the numbers.
+        </p>
+      </header>
+      <div class="faq-layout">
+        <aside class="faq-index" aria-label="Question categories">
+          <p class="eyebrow">ON THIS PAGE</p>
+          <a href="#faq-0">Getting started</a><a href="#faq-1">Saving and accounts</a
+          ><a href="#faq-2">Numbers and simulations</a
+          ><a class="guide-link" href="mailto:meleja49@rowan.edu">Contact the team ↗</a>
+        </aside>
+        <div>
+          <section id="faq-0" class="faq-group">
+            <h2>Getting started</h2>
+            <details>
+              <summary>Do I need an account or a bank connection?</summary>
+              <p>
+                No account is needed for the demo, and no bank connection is required. FinApp uses
+                manual entries, sample profiles, and scenario JSON imports. It does not move real
+                money, place trades, or connect to your bank.
+              </p>
+            </details>
+            <details>
+              <summary>Which demo should I choose?</summary>
+              <p>
+                Mid-Career Family is the default and shows income, bills, savings, investments, and
+                an auto loan together. Recent Grad emphasizes student debt and getting started. FIRE
+                Strategist emphasizes investing and a longer-term savings plan. Each uses the same
+                calculation engine.
+              </p>
+            </details>
+            <details>
+              <summary>How do I switch between light and dark?</summary>
+              <p>
+                Use the sun/moon control in the header. Your explicit choice is stored in this
+                browser and is restored when you reload or reopen a public page. Before a choice is
+                saved, the page follows your device preference. Restricted storage or private
+                browsing may limit how long the preference is retained. The dashboard uses the same
+                saved preference and includes its own sun/moon switch in the header.
+              </p>
+            </details>
+          </section>
+          <section id="faq-1" class="faq-group">
+            <h2>Saving and accounts</h2>
+            <details>
+              <summary>Where does my work live?</summary>
+              <p>
+                Node Graph scenario drafts, including demo edits, are stored in this browser for the
+                selected profile. JSON export/import lets you back them up and move them to another
+                device. Signed-in budgeting and stock records are stored in the application’s
+                PostgreSQL database. Those records and the Node Graph draft are separate; changing
+                one does not automatically update the other.
+              </p>
+            </details>
+            <details>
+              <summary>Will my account appear on a teammate’s computer?</summary>
+              <p>
+                In the current local development setup, each machine has its own database. New
+                registrations belong to that local database. The development testuser account is
+                seeded independently on each machine; it is not one shared cloud account. Git shares
+                application code, not your private account records.
+              </p>
+            </details>
+            <details>
+              <summary>How is registration verified?</summary>
+              <p>
+                In the local classroom setup, the backend prints the six-digit verification code to
+                the Spring Boot terminal. Enter it on the verification page, or use resend if
+                needed. Codes expire after 15 minutes. This setup does not require a paid email
+                provider.
+              </p>
+            </details>
+            <details>
+              <summary>What happens if I close the tab or clear browser data?</summary>
+              <p>
+                Sign-in is tied to the current tab. Sign out or return to a public page to end the
+                private workspace session. Browser session restore can affect tab state. Graph
+                drafts remain saved independently of sign-in, but clearing site storage can remove
+                them. A JSON export is the portable backup for your scenario.
+              </p>
+            </details>
+          </section>
+          <section id="faq-2" class="faq-group">
+            <h2>Numbers and simulations</h2>
+            <details>
+              <summary>Why does 0% investing still show a contribution?</summary>
+              <p>
+                The extra-investing slider applies only to money left after bills and planned
+                transfers. A scheduled investment connection can still contribute at 0% extra
+                investing. To model no new investment contributions, disable scheduled investment
+                transfers as well. Existing investments can still gain or lose value.
+              </p>
+            </details>
+            <details>
+              <summary>Does a zero contribution make every line fall?</summary>
+              <p>
+                No. A household can keep accumulating cash even when it makes no new investments. A
+                decline needs a reason, such as losses, inflation, or spending more than income. The
+                model does not force downward results merely because the contribution is zero.
+              </p>
+            </details>
+            <details>
+              <summary>What do P10, P50, and P90 mean?</summary>
+              <p>
+                They summarize the distribution of simulated outcomes at each year. P10 has about
+                10% of outcomes below it; P50 is the midpoint; P90 has about 90% below it. Results
+                can fall outside that band. The lines are neither guaranteed bounds nor three
+                individual market paths.
+              </p>
+            </details>
+            <details>
+              <summary>Are prices live and forecasts certain?</summary>
+              <p>
+                No. Market history is cached from a free provider. The dashboard reports the source,
+                dates, and fallback assumptions when history is unavailable. Stock charts show
+                historical adjusted prices, rather than live trading quotes. Forecasts are
+                educational possibilities and cannot guarantee investment results.
+              </p>
+            </details>
+            <details>
+              <summary>What is the difference between Monte Carlo and Markov?</summary>
+              <p>
+                Monte Carlo explores many possible return sequences, using historical blocks or
+                manual return assumptions. Markov adds persistent stronger and weaker market states
+                and their transitions. Both apply the same household budget rules. The How it works
+                page explains each model and its limits.
+              </p>
+            </details>
+            <details>
+              <summary>How is income tax calculated?</summary>
+              <p>
+                Gross pay is reduced by the effective percentage you choose, initially 20% for new
+                demo scenarios. This is an estimate, not a calculation of federal or state tax
+                brackets. When income is entered as take-home pay, the model does not subtract tax
+                again.
+              </p>
+            </details>
+          </section>
+        </div>
+      </div>
+      <section class="guide-cta">
+        <div>
+          <p class="eyebrow">PUT THE PICTURE TOGETHER</p>
+          <h2>Try a plan. Learn from the possibilities.</h2>
+          <p>The Family demo is ready to explore. No sign-up required.</p>
+        </div>
+        <a class="primary-action" href="/dashboard/?demo=true&amp;profile=2">Explore the demo ↗</a>
+      </section>
+    </main>
+    <footer class="public-footer border-t border-border bg-card">
+      <div class="footer-shell">
+        <div class="footer-top">
+          <nav class="footer-navigation" aria-label="More about FinApp">
+            <div>
+              <p class="footer-heading">Product</p>
+              <a href="/features">Features</a><a href="/scenarios">Live demo scenarios</a>
+            </div>
+            <div>
+              <p class="footer-heading">Resources</p>
+              <a href="/how-it-works">How it works</a><a href="/faq">Help &amp; FAQ</a>
+            </div>
+          </nav>
+          <div class="footer-identity">
+            <a class="footer-brand" href="/" aria-label="FinApp home"
+              ><span aria-hidden="true"></span>FinApp</a
+            >
+            <p class="footer-description">
+              Your money, connected. A clearer view of what comes next.
+            </p>
+          </div>
+        </div>
+        <div class="footer-bottom">
+          <p>
+            Built by Sean Bassi, Ali Canturk, Braden Elsworth, Quinn Johnson, Jason Mele &amp; Lucas
+            Polo.
+          </p>
+
+          <p class="footer-note">
+            A Rowan University software engineering project.<br />Educational financial modeling.
+            All amounts in USD.
+          </p>
+          <div class="footer-utility">
+            <a href="mailto:meleja49@rowan.edu">Contact the team</a
+            ><a href="#main">Back to top <span aria-hidden="true">↑</span></a>
+          </div>
+        </div>
+      </div>
+    </footer>
+    <script src="/assets/main.js" defer></script>
+  </body>
+</html>

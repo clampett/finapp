@@ -1,4 +1,57 @@
 # Shared startup, database configuration, and console helpers. No secrets are logged.
+function Test-FinAppPortOpen([int] $Port) {
+    # Replaced Windows connection-table queries with a bounded loopback connection,
+    # avoiding false negatives when the networking cmdlet could not list listeners.
+    $client = [System.Net.Sockets.TcpClient]::new()
+    try {
+        $connection = $client.ConnectAsync('localhost', $Port)
+        return ($connection.Wait(500) -and $client.Connected)
+    }
+    catch {
+        return $false
+    }
+    finally {
+        $client.Dispose()
+    }
+}
+
+function Test-FinAppBackendReady([uri] $Uri = 'http://127.0.0.1:8081/api/v1/health') {
+    # Confirmed the application's health response instead of merely finding a port.
+    # Bypassed system proxies and bounded each request for Windows PowerShell 5.1
+    # compatibility, keeping normal startup retries quick and non-interactive.
+    $response = $null
+    $reader = $null
+    try {
+        $request = [System.Net.HttpWebRequest]::Create($Uri)
+        $request.Proxy = $null
+        $request.Timeout = 1500
+        $request.ReadWriteTimeout = 1500
+        $request.AllowAutoRedirect = $false
+        $response = $request.GetResponse()
+        if ([int] $response.StatusCode -ne 200) {
+            return $false
+        }
+        $reader = [System.IO.StreamReader]::new($response.GetResponseStream())
+        $health = $reader.ReadToEnd() | ConvertFrom-Json
+        return ($health.success -eq $true -and $health.data.status -eq 'UP' -and
+            $health.data.service -eq 'java-backend')
+    }
+    catch {
+        if ($_.Exception.Response) {
+            $_.Exception.Response.Dispose()
+        }
+        return $false
+    }
+    finally {
+        if ($null -ne $reader) {
+            $reader.Dispose()
+        }
+        if ($null -ne $response) {
+            $response.Dispose()
+        }
+    }
+}
+
 function ConvertTo-FinAppAscii([string] $Text) {
     # Removed terminal control sequences and translated known Unicode symbols,
     # keeping startup output readable in Windows terminals with mixed encodings.

@@ -447,7 +447,7 @@ test('F8-T2-2 (Boundary): dashboard index.css retains global focus-visible outli
 
 test('F8-T2-3 (Boundary): dashboard index.css retains canvas host background styling', () => {
   const css = readCss(DASHBOARD_CSS_PATH);
-  assert.match(css, /\.canvas-host\s*\{[\s\S]*?radial-gradient/i, 'Missing canvas host background pattern');
+  assert.match(css, /\.canvas-host\s*\{[\s\S]*?linear-gradient/i, 'Missing canvas host background pattern');
 });
 
 test('F8-T2-4 (Boundary): dashboard index.css retains cursor modes and tool interaction rules', () => {
@@ -559,7 +559,7 @@ test('F1-F2-T4-1 (Workload Scenario): Landing Theme Switching scenario CSS varia
   assert.ok(darkBg && lightBg, 'Both dark and light backgrounds must be declared');
   assert.notEqual(darkBg, lightBg, 'Theme switching requires differing backgrounds');
   assert.equal(darkBg.toLowerCase(), '#0c1018');
-  assert.equal(lightBg.toLowerCase(), '#f5f7fb');
+  assert.equal(lightBg.toLowerCase(), '#f3f4f7');
 });
 
 test('F7-F8-T4-2 (Workload Scenario): Dashboard Canvas flow keyframe and D3 connection preview animation contract', () => {

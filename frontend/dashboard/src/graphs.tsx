@@ -615,7 +615,10 @@ export function ArchetypeGraph({
                 />
               )}
               {view === 'overview' ? (
-                <DashboardTab graph={live} portfolioValue={portfolioValue} />
+                <DashboardTab
+                graph={live} portfolioValue={portfolioValue}
+                goalsStorageKey={`${storageKey}:goals`}
+              />
               ) : view === 'budgeting' ? (
                 <BudgetingTab graph={live} userId={userId} demo={demo} onUpdateGraph={update} />
               ) : view === 'graph' ? (

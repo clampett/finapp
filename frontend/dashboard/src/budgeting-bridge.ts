@@ -51,7 +51,7 @@ export function getScenarioSalary(graph?: GraphData | null): ScenarioIncomeSumma
   if (!graph?.nodes?.length) {
     return { totalMonthly: 0, nodes: [] };
   }
-  const nodes = graph.nodes.filter((n) => n.nodeType === 'INCOME' && !n.archived);
+  const nodes = graph.nodes.filter((n) => n.nodeType === 'INCOME' && !n.archived && !n.disabled);
   const totalMonthly = nodes.reduce((sum, n) => sum + Number(n.amountOrBalance || 0), 0);
   return { totalMonthly, nodes };
 }
@@ -60,7 +60,9 @@ export function getScenarioDebts(graph?: GraphData | null): ScenarioDebtSummary 
   if (!graph?.nodes?.length) {
     return { totalBalance: 0, totalMonthlyPayment: 0, nodes: [] };
   }
-  const rawDebtNodes = graph.nodes.filter((n) => n.nodeType === 'DEBT' && !n.archived);
+  const rawDebtNodes = graph.nodes.filter(
+    (n) => n.nodeType === 'DEBT' && !n.archived && !n.disabled,
+  );
   const nodes = rawDebtNodes.map((node) => ({
     ...node,
     monthlyPayment: debtPayment(node, graph),

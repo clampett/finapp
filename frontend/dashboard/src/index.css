@@ -88,9 +88,17 @@ summary::-webkit-details-marker {
 .canvas-node rect {
   filter: drop-shadow(0 5px 7px #0006);
 }
+.canvas-node.is-disabled rect {
+  filter: none;
+}
 .canvas-node:hover rect {
   fill: #20344a;
   stroke-opacity: 1;
+}
+.canvas-node.is-disabled:hover rect {
+  fill: #151d2a;
+  stroke: #5a6e87;
+  stroke-opacity: 0.8;
 }
 .canvas-node.is-selected rect {
   stroke: #8ce8d0;

@@ -662,27 +662,75 @@ export function ArchetypeGraph({
                         <th className="text-[#8192ad] text-[10px] font-medium p-[16px_20px] bg-[#161f2e]">Account</th>
                         <th className="text-[#8192ad] text-[10px] font-medium p-[16px_20px] bg-[#161f2e]">Type</th>
                         <th className="text-[#8192ad] text-[10px] font-medium p-[16px_20px] bg-[#161f2e]">{view === 'cashflow' ? 'Monthly flow / Balance' : 'Balance'}</th>
+                        <th className="text-[#8192ad] text-[10px] font-medium p-[16px_20px] bg-[#161f2e]">Status</th>
                         <th className="text-[#8192ad] text-[10px] font-medium p-[16px_20px] bg-[#161f2e]">APR</th>
                         <th className="p-[16px_20px] bg-[#161f2e]" />
                       </tr>
                     </thead>
                     <tbody>
                       {filtered.map((n) => (
-                        <tr key={n.id}>
+                        <tr
+                          key={n.id}
+                          className={`transition-colors ${n.disabled ? 'opacity-65 bg-[#0e141f]/50' : 'hover:bg-[#151f2e]/40'}`}
+                        >
                           <td className="p-[13px_20px] border-t border-[#263147]">
-                            <span className="inline-block w-1.5 h-1.5 rounded-full mr-2.5 shrink-0 align-middle" style={{ background: colors[n.nodeType] }} />
-                            {n.name}
+                            <label className="inline-flex items-center gap-2.5 cursor-pointer select-none">
+                              <input
+                                type="checkbox"
+                                checked={!n.disabled}
+                                onChange={() => {
+                                  update({
+                                    ...graph,
+                                    nodes: graph.nodes.map((node) =>
+                                      node.id === n.id ? { ...node, disabled: !node.disabled } : node,
+                                    ),
+                                  });
+                                }}
+                                className="accent-brand w-4 h-4 rounded cursor-pointer shrink-0"
+                                aria-label={`Toggle ${n.name}`}
+                              />
+                              <span
+                                className="inline-block w-1.5 h-1.5 rounded-full shrink-0 align-middle transition-opacity"
+                                style={{
+                                  background: colors[n.nodeType],
+                                  opacity: n.disabled ? 0.35 : 1,
+                                }}
+                              />
+                              <span className={n.disabled ? 'line-through text-[#6e8099]' : 'text-text font-medium'}>
+                                {n.name}
+                              </span>
+                            </label>
                           </td>
-                          <td className="p-[13px_20px] border-t border-[#263147]">{typeLabel(n.nodeType)}</td>
                           <td className="p-[13px_20px] border-t border-[#263147]">
-                            {money(
-                              n.nodeType === 'EXPENSE' ? expenseAmount(n, live) : n.amountOrBalance,
+                            <span className={n.disabled ? 'text-[#6e8099]' : ''}>{typeLabel(n.nodeType)}</span>
+                          </td>
+                          <td className="p-[13px_20px] border-t border-[#263147]">
+                            <span className={n.disabled ? 'line-through text-[#6e8099]' : ''}>
+                              {money(
+                                n.nodeType === 'EXPENSE' ? expenseAmount(n, live, true) : n.amountOrBalance,
+                              )}
+                              {['INCOME', 'EXPENSE'].includes(n.nodeType) ? '/mo' : ''}
+                            </span>
+                          </td>
+                          <td className="p-[13px_20px] border-t border-[#263147]">
+                            {n.disabled ? (
+                              <span className="inline-flex items-center gap-1 text-[11px] font-medium text-[#fda4af] bg-[#2b1822] border border-[#642c3d] px-2 py-0.5 rounded-full">
+                                <span className="w-1.5 h-1.5 rounded-full bg-[#fda4af] inline-block" /> Off
+                              </span>
+                            ) : (
+                              <span className="inline-flex items-center gap-1 text-[11px] font-medium text-[#7de0bc] bg-[#122822] border border-[#215344] px-2 py-0.5 rounded-full">
+                                <span className="w-1.5 h-1.5 rounded-full bg-[#7de0bc] inline-block" /> Active
+                              </span>
                             )}
-                            {['INCOME', 'EXPENSE'].includes(n.nodeType) ? '/mo' : ''}
                           </td>
-                          <td className="p-[13px_20px] border-t border-[#263147]">{n.interestRateApr}%</td>
+                          <td className={`p-[13px_20px] border-t border-[#263147] ${n.disabled ? 'text-[#6e8099]' : ''}`}>
+                            {n.interestRateApr}%
+                          </td>
                           <td className="p-[13px_20px] border-t border-[#263147]">
-                            <button className="inline-flex items-center justify-center gap-1.75 whitespace-nowrap rounded-[7px] px-3 py-1.5 text-[11px] font-medium cursor-pointer bg-transparent text-[#97a7c2] border border-transparent hover:bg-[#1a2536] hover:text-text transition-colors" onClick={() => setSelected(n)}>
+                            <button
+                              className="inline-flex items-center justify-center gap-1.75 whitespace-nowrap rounded-[7px] px-3 py-1.5 text-[11px] font-medium cursor-pointer bg-transparent text-[#97a7c2] border border-transparent hover:bg-[#1a2536] hover:text-text transition-colors"
+                              onClick={() => setSelected(n)}
+                            >
                               Edit ↗
                             </button>
                           </td>
@@ -717,7 +765,7 @@ export function ArchetypeGraph({
                     </select>
                   </label>
                   <strong className="block mt-3 text-xs text-[#7de0bc] font-medium">
-                    {simulationGraph.nodes.length} of {live.nodes.length} nodes included
+                    {simulationGraph.nodes.length} of {live.nodes.filter((n) => !n.disabled).length} active nodes included
                   </strong>
                   {!!selectionIds.length && (
                     <button
@@ -740,11 +788,17 @@ export function ArchetypeGraph({
                       </p>
                       <div className="flex flex-wrap gap-2 mt-3 max-h-55 overflow-auto">
                         {live.nodes.map((node) => (
-                          <label key={node.id} className="flex items-center gap-1.75 border border-[#2a3f56] px-2.75 py-2 rounded-full text-xs bg-[#182738] cursor-pointer text-text">
+                          <label
+                            key={node.id}
+                            className={`flex items-center gap-1.75 border border-[#2a3f56] px-2.75 py-2 rounded-full text-xs bg-[#182738] text-text ${
+                              node.disabled ? 'opacity-45 cursor-not-allowed' : 'cursor-pointer'
+                            }`}
+                          >
                             <input
                               type="checkbox"
                               className="accent-brand w-3.5 h-3.5"
                               checked={scopeIds.includes(node.id)}
+                              disabled={node.disabled}
                               onChange={() =>
                                 setScopeIds((ids) =>
                                   ids.includes(node.id)
@@ -753,7 +807,12 @@ export function ArchetypeGraph({
                                 )
                               }
                             />
-                            {node.name}
+                            <span className={node.disabled ? 'line-through text-[#6e8099]' : ''}>
+                              {node.name}
+                            </span>
+                            {node.disabled && (
+                              <span className="text-[10px] text-[#fda4af]">(off)</span>
+                            )}
                           </label>
                         ))}
                       </div>

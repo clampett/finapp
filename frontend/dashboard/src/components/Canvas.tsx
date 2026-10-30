@@ -143,15 +143,30 @@ export function Canvas({
       .data(graph.edges)
       .join('path')
       .attr('fill', 'none')
-      .attr(
-        'stroke',
-        (edge) => colors[graph.nodes.find((node) => node.id === edge.targetNodeId)!.nodeType],
-      )
-      .attr('stroke-opacity', 0.6)
+      .attr('stroke', (edge) => {
+        const src = graph.nodes.find((node) => node.id === edge.sourceNodeId);
+        const tgt = graph.nodes.find((node) => node.id === edge.targetNodeId);
+        if (src?.disabled || tgt?.disabled) return '#445163';
+        return colors[tgt!.nodeType];
+      })
+      .attr('stroke-opacity', (edge) => {
+        const src = graph.nodes.find((node) => node.id === edge.sourceNodeId);
+        const tgt = graph.nodes.find((node) => node.id === edge.targetNodeId);
+        return src?.disabled || tgt?.disabled ? 0.25 : 0.6;
+      })
+      .attr('stroke-dasharray', (edge) => {
+        const src = graph.nodes.find((node) => node.id === edge.sourceNodeId);
+        const tgt = graph.nodes.find((node) => node.id === edge.targetNodeId);
+        return src?.disabled || tgt?.disabled ? '4 4' : null;
+      })
       .attr('stroke-width', (edge) =>
         Math.min(6, 1.5 + Math.log1p(edge.monthlyFixedFlow ?? edge.percentageFlow ?? 0) / 2),
       )
-      .attr('marker-end', `url(#${markerId})`)
+      .attr('marker-end', (edge) => {
+        const src = graph.nodes.find((node) => node.id === edge.sourceNodeId);
+        const tgt = graph.nodes.find((node) => node.id === edge.targetNodeId);
+        return src?.disabled || tgt?.disabled ? 'none' : `url(#${markerId})`;
+      })
       .attr('class', 'canvas-edge')
       .classed('edge-selected', (edge) => edgeSelectionIds.includes(edge.id))
       .attr('tabindex', 0)
@@ -177,7 +192,16 @@ export function Canvas({
       .selectAll('text')
       .data(graph.edges)
       .join('text')
-      .attr('fill', '#91a0b7')
+      .attr('fill', (edge) => {
+        const src = graph.nodes.find((node) => node.id === edge.sourceNodeId);
+        const tgt = graph.nodes.find((node) => node.id === edge.targetNodeId);
+        return src?.disabled || tgt?.disabled ? '#475467' : '#91a0b7';
+      })
+      .attr('opacity', (edge) => {
+        const src = graph.nodes.find((node) => node.id === edge.sourceNodeId);
+        const tgt = graph.nodes.find((node) => node.id === edge.targetNodeId);
+        return src?.disabled || tgt?.disabled ? 0.45 : 1;
+      })
       .attr('font-size', 10)
       .attr('text-anchor', 'middle')
       .attr('paint-order', 'stroke')
@@ -199,16 +223,19 @@ export function Canvas({
       .join('g')
       .attr('class', 'canvas-node')
       .classed('is-selected', (node) => selectionIds.includes(node.id))
+      .classed('is-disabled', (node) => !!node.disabled)
       .attr('tabindex', 0)
       .attr('role', 'button')
       .attr(
         'aria-label',
         (n) =>
-          `Edit ${n.name}, ${money(n.nodeType === 'EXPENSE' ? expenseAmount(n, graph) : n.amountOrBalance)}`,
+          `${n.disabled ? '[Turned Off] ' : ''}Edit ${n.name}, ${money(n.nodeType === 'EXPENSE' ? expenseAmount(n, graph, true) : n.amountOrBalance)}`,
       )
-      .attr('opacity', (n) =>
-        !search || n.name.toLowerCase().includes(search.toLowerCase()) ? 1 : 0.2,
-      )
+      .attr('opacity', (n) => {
+        const matches = !search || n.name.toLowerCase().includes(search.toLowerCase());
+        if (!matches) return 0.2;
+        return n.disabled ? 0.5 : 1;
+      })
       .on('click', (event, n) => {
         if (event.defaultPrevented) return;
         if (tool === 'pan') return;
@@ -228,64 +255,109 @@ export function Canvas({
       .attr('width', cardWidth)
       .attr('height', cardHeight)
       .attr('rx', 12)
-      .attr('fill', '#171f2e')
+      .attr('fill', (n) => (n.disabled ? '#0e141f' : '#171f2e'))
       .attr('stroke', (n) =>
-        n.id === selected || scopeIds.includes(n.id) ? '#e0e7ff' : colors[n.nodeType],
+        n.disabled
+          ? '#3b4759'
+          : n.id === selected || scopeIds.includes(n.id)
+            ? '#e0e7ff'
+            : colors[n.nodeType],
       )
-      .attr('stroke-opacity', (n) => (n.id === selected || scopeIds.includes(n.id) ? 1 : 0.6))
-      .attr('stroke-width', (n) => (n.id === selected || scopeIds.includes(n.id) ? 2.5 : 1));
+      .attr('stroke-opacity', (n) =>
+        n.disabled ? 0.45 : n.id === selected || scopeIds.includes(n.id) ? 1 : 0.6,
+      )
+      .attr('stroke-width', (n) => (n.id === selected || scopeIds.includes(n.id) ? 2.5 : 1))
+      .attr('stroke-dasharray', (n) => (n.disabled ? '5 4' : null));
     cards
       .append('circle')
       .attr('cx', 15)
       .attr('cy', 17)
       .attr('r', 3)
-      .attr('fill', (n) => colors[n.nodeType]);
+      .attr('fill', (n) => (n.disabled ? '#506076' : colors[n.nodeType]));
     cards
       .append('text')
       .attr('x', 25)
       .attr('y', 21)
-      .attr('fill', '#9caec7')
+      .attr('fill', (n) => (n.disabled ? '#617288' : '#9caec7'))
       .attr('font-size', 9)
       .attr('letter-spacing', '1px')
-      .text((n) => n.nodeType);
+      .text((n) => (n.disabled ? `${n.nodeType} · OFF` : n.nodeType));
+
+    const offBadges = cards
+      .filter((n) => !!n.disabled)
+      .append('g')
+      .attr('class', 'node-off-badge')
+      .attr('transform', `translate(${cardWidth - 44}, 9)`);
+    offBadges
+      .append('rect')
+      .attr('width', 32)
+      .attr('height', 15)
+      .attr('rx', 4)
+      .attr('fill', '#261720')
+      .attr('stroke', '#6e2b3c')
+      .attr('stroke-width', 1);
+    offBadges
+      .append('text')
+      .attr('x', 16)
+      .attr('y', 11)
+      .attr('text-anchor', 'middle')
+      .attr('fill', '#fda4af')
+      .attr('font-size', 8.5)
+      .attr('font-weight', 700)
+      .attr('letter-spacing', '0.5px')
+      .text('OFF');
+
     cards
       .append('text')
       .attr('x', 14)
       .attr('y', 40)
-      .attr('fill', '#e7edf8')
+      .attr('fill', (n) => (n.disabled ? '#7889a2' : '#e7edf8'))
       .attr('font-size', 12)
       .text((n) => (n.name.length > 23 ? `${n.name.slice(0, 22)}…` : n.name));
+
+    cards
+      .filter((n) => !!n.disabled)
+      .append('line')
+      .attr('x1', 14)
+      .attr('x2', (n) => Math.min(cardWidth - 50, 14 + Math.min(n.name.length, 22) * 7.2))
+      .attr('y1', 36)
+      .attr('y2', 36)
+      .attr('stroke', '#64758d')
+      .attr('stroke-width', 1.5);
+
     cards
       .append('text')
       .attr('x', 14)
       .attr('y', 62)
-      .attr('fill', (n) => colors[n.nodeType])
+      .attr('fill', (n) => (n.disabled ? '#617288' : colors[n.nodeType]))
       .attr('font-size', 16)
       .attr('font-weight', 650)
       .text(
         (n) =>
-          `${money(n.nodeType === 'EXPENSE' ? expenseAmount(n, graph) : n.amountOrBalance)}${['INCOME', 'EXPENSE'].includes(n.nodeType) ? ' /mo' : ''}`,
+          `${money(n.nodeType === 'EXPENSE' ? expenseAmount(n, graph, true) : n.amountOrBalance)}${['INCOME', 'EXPENSE'].includes(n.nodeType) ? ' /mo' : ''}`,
       );
     cards
       .append('text')
       .attr('x', 14)
       .attr('y', 79)
-      .attr('fill', '#96a9c2')
+      .attr('fill', (n) => (n.disabled ? '#55657b' : '#96a9c2'))
       .attr('font-size', 9)
       .text((node) =>
-        scopeIds.includes(node.id)
-          ? '✓ SELECTED FOR SIMULATION'
-          : node.nodeType === 'DEBT'
-            ? `${node.interestRateApr}% APR · click to edit`
-            : node.nodeType === 'INVESTMENT'
-              ? 'Market-linked asset · click to edit'
-              : `Click to edit · ${shortcuts.select} to select`,
+        node.disabled
+          ? 'Turned off · click to edit or re-enable'
+          : scopeIds.includes(node.id)
+            ? '✓ SELECTED FOR SIMULATION'
+            : node.nodeType === 'DEBT'
+              ? `${node.interestRateApr}% APR · click to edit`
+              : node.nodeType === 'INVESTMENT'
+                ? 'Market-linked asset · click to edit'
+                : `Click to edit · ${shortcuts.select} to select`,
       );
     cards
       .append('title')
       .text(
         (n) =>
-          `${n.name}\n${typeLabel(n.nodeType)} · ${money(n.nodeType === 'EXPENSE' ? expenseAmount(n, graph) : n.amountOrBalance)}\nClick to edit`,
+          `${n.disabled ? '[Turned Off] ' : ''}${n.name}\n${typeLabel(n.nodeType)} · ${money(n.nodeType === 'EXPENSE' ? expenseAmount(n, graph, true) : n.amountOrBalance)}\nClick to edit`,
       );
     // Added dedicated ports with a live, snapped connector preview; kept link
     // gestures separate from card dragging and committed only valid destinations.
@@ -316,6 +388,7 @@ export function Canvas({
       .attr('cx', 0)
       .attr('cy', cardHeight / 2)
       .attr('r', 5)
+      .attr('opacity', (node) => (node.disabled ? 0.2 : null))
       .attr('tabindex', 0)
       .attr('role', 'button')
       .attr('aria-label', (node) => `Connect to ${node.name}`)
@@ -336,6 +409,7 @@ export function Canvas({
       .attr('cx', cardWidth)
       .attr('cy', cardHeight / 2)
       .attr('r', 6)
+      .attr('opacity', (node) => (node.disabled ? 0.2 : null))
       .attr('tabindex', 0)
       .attr('role', 'button')
       .attr('aria-label', (node) => `Connect from ${node.name}`)

@@ -8,6 +8,7 @@ export function demoProfile(value: string | null): 1 | 2 | 3 {
 }
 export interface GraphNode {
   archived?: boolean;
+  disabled?: boolean;
   position?: { x: number; y: number };
   id: string;
   name: string;
@@ -39,18 +40,21 @@ export function activeGraph(graph: GraphData): GraphData {
     edges: graph.edges.filter((edge) => ids.has(edge.sourceNodeId) && ids.has(edge.targetNodeId)),
   };
 }
-export function expenseAmount(node: GraphNode, graph: GraphData): number {
+export function expenseAmount(node: GraphNode, graph: GraphData, ignoreDisabled = false): number {
+  if (!ignoreDisabled && node.disabled) return 0;
   const routes = graph.edges.filter(
     (edge) =>
       edge.targetNodeId === node.id &&
       graph.nodes.some(
         (source) =>
-          source.id === edge.sourceNodeId && ['INCOME', 'CHECKING'].includes(source.nodeType),
+          source.id === edge.sourceNodeId &&
+          (ignoreDisabled || !source.disabled) &&
+          ['INCOME', 'CHECKING'].includes(source.nodeType),
       ),
   );
   if (!routes.length) return node.amountOrBalance;
   const income = graph.nodes
-    .filter((n) => n.nodeType === 'INCOME')
+    .filter((n) => n.nodeType === 'INCOME' && (ignoreDisabled || !n.disabled))
     .reduce((sum, n) => sum + n.amountOrBalance, 0);
   const settings = assumptionsFor(graph);
   const takeHome = income * (settings.incomeBasis === 'gross' ? 1 - settings.taxRate / 100 : 1);
@@ -95,7 +99,14 @@ export function allocations(graph: GraphData, surplus: number, rate = 0) {
   for (const edge of graph.edges) {
     const source = nodes.get(edge.sourceNodeId),
       target = nodes.get(edge.targetNodeId);
-    if (!source || !target || !['INCOME', 'CHECKING'].includes(source.nodeType)) continue;
+    if (
+      !source ||
+      !target ||
+      source.disabled ||
+      target.disabled ||
+      !['INCOME', 'CHECKING'].includes(source.nodeType)
+    )
+      continue;
     if (target.nodeType === 'INVESTMENT') {
       fixedInvestment += edge.monthlyFixedFlow ?? 0;
       percentInvestment += edge.percentageFlow ?? 0;
@@ -139,17 +150,21 @@ export const colors: Record<NodeType, string> = {
   EXPENSE: '#fbbf24',
 };
 export const typeLabel = (type: NodeType) => type.charAt(0) + type.slice(1).toLowerCase();
-export function debtPayment(node: GraphNode, graph: GraphData): number {
+export function debtPayment(node: GraphNode, graph: GraphData, ignoreDisabled = false): number {
   // Matched Python's payment precedence: node override, fixed incoming flows,
   // then 2% of principal. Explicit zero payments were retained as valid choices.
-  if (node.amountOrBalance <= 0) return 0;
+  if ((!ignoreDisabled && node.disabled) || node.amountOrBalance <= 0) return 0;
   const payoff = node.amountOrBalance * (1 + node.interestRateApr / 1200);
   if (node.minPayment != null) return Math.min(node.minPayment, payoff);
-  const edges = graph.edges.filter((e) => e.targetNodeId === node.id);
+  const edges = graph.edges.filter((e) => {
+    if (e.targetNodeId !== node.id) return false;
+    const src = graph.nodes.find((n) => n.id === e.sourceNodeId);
+    return !src || ignoreDisabled || !src.disabled;
+  });
   const settings = assumptionsFor(graph);
   const takeHome =
     graph.nodes
-      .filter((n) => n.nodeType === 'INCOME')
+      .filter((n) => n.nodeType === 'INCOME' && (ignoreDisabled || !n.disabled))
       .reduce((sum, n) => sum + n.amountOrBalance, 0) *
     (settings.incomeBasis === 'gross' ? 1 - settings.taxRate / 100 : 1);
   return Math.min(
@@ -168,18 +183,18 @@ export function totals(graph: GraphData, portfolioValue = 0) {
   // deducted once from surplus, while total debt reduced net worth separately.
   const sum = (types: NodeType[]) =>
     graph.nodes
-      .filter((n) => types.includes(n.nodeType))
+      .filter((n) => !n.disabled && types.includes(n.nodeType))
       .reduce((s, n) => s + n.amountOrBalance, 0);
   const income = sum(['INCOME']),
     expenses = graph.nodes
-      .filter((node) => node.nodeType === 'EXPENSE')
+      .filter((node) => !node.disabled && node.nodeType === 'EXPENSE')
       .reduce((sum, node) => sum + expenseAmount(node, graph), 0),
     debt = sum(['DEBT']);
   const nodeInvestments = sum(['INVESTMENT']);
   const totalInvestments = nodeInvestments + (portfolioValue > 0 ? portfolioValue : 0);
   const assets = sum(['CHECKING', 'SAVINGS']) + totalInvestments;
   const payments = graph.nodes
-    .filter((n) => n.nodeType === 'DEBT')
+    .filter((n) => !n.disabled && n.nodeType === 'DEBT')
     .reduce((s, n) => s + debtPayment(n, graph), 0);
   // Applied the saved gross/net choice everywhere rather than silently giving
   // the overview and simulation different disposable-income formulas.
@@ -209,7 +224,7 @@ export function overviewBreakdown(graph: GraphData, mode: OverviewMode, portfoli
   graph = activeGraph(graph);
   const t = totals(graph, portfolioValue);
   const nodeInvestments = graph.nodes
-    .filter((node) => node.nodeType === 'INVESTMENT')
+    .filter((node) => !node.disabled && node.nodeType === 'INVESTMENT')
     .reduce((sum, node) => sum + node.amountOrBalance, 0);
   const totalInvestments = nodeInvestments + (portfolioValue > 0 ? portfolioValue : 0);
   // Kept balance-sheet amounts separate from monthly flows; never encoded a
@@ -220,14 +235,14 @@ export function overviewBreakdown(graph: GraphData, mode: OverviewMode, portfoli
           {
             label: 'Checking',
             value: graph.nodes
-              .filter((node) => node.nodeType === 'CHECKING')
+              .filter((node) => !node.disabled && node.nodeType === 'CHECKING')
               .reduce((sum, node) => sum + node.amountOrBalance, 0),
             color: '#60a5fa',
           },
           {
             label: 'Savings',
             value: graph.nodes
-              .filter((node) => node.nodeType === 'SAVINGS')
+              .filter((node) => !node.disabled && node.nodeType === 'SAVINGS')
               .reduce((sum, node) => sum + node.amountOrBalance, 0),
             color: '#22d3ee',
           },
@@ -240,7 +255,7 @@ export function overviewBreakdown(graph: GraphData, mode: OverviewMode, portfoli
         ]
       : mode === 'debt'
         ? graph.nodes
-            .filter((node) => node.nodeType === 'DEBT')
+            .filter((node) => !node.disabled && node.nodeType === 'DEBT')
             .map((node, index) => ({
               label: node.name,
               value: node.amountOrBalance,
@@ -300,6 +315,7 @@ export function parseGraph(value: unknown): GraphData {
       amountOrBalance: number(n.amountOrBalance, 1e12),
       interestRateApr: number(n.interestRateApr ?? 0, 100),
       ...(n.archived === true ? { archived: true } : {}),
+      ...(n.disabled === true ? { disabled: true } : {}),
       ...(n.position &&
       Number.isFinite(n.position.x) &&
       Number.isFinite(n.position.y) &&

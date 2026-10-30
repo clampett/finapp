@@ -62,6 +62,20 @@ export function AccountEditor({
         </button>
       </div>
       <form onSubmit={submit} className="flex flex-col gap-3.75 mt-5.5 max-md:grid max-md:grid-cols-2">
+        <label className="flex items-center gap-2.5 text-xs text-[#cad6e8] cursor-pointer p-2.5 rounded-lg bg-[#101722] border border-[#283548]">
+          <input
+            type="checkbox"
+            className="accent-brand w-4 h-4 cursor-pointer rounded"
+            checked={!draft.disabled}
+            onChange={(e) => setDraft({ ...draft, disabled: !e.target.checked })}
+          />
+          <div>
+            <span className="font-medium block">Active in cash flow & calculations</span>
+            <small className="text-[10px] text-[#7d91ac] leading-normal block">
+              Untick to turn off this payment/account and exclude it from cash flow and totals.
+            </small>
+          </div>
+        </label>
         <label className="flex flex-col gap-1.75 text-[11px] text-[#a9b6cc]">
           Name
           <input
@@ -96,7 +110,7 @@ export function AccountEditor({
             max={1e12}
             step="0.01"
             required
-            value={expenseRoutes.length ? expenseAmount(draft, graph) : draft.amountOrBalance}
+            value={expenseRoutes.length ? expenseAmount(draft, graph, true) : draft.amountOrBalance}
             disabled={expenseRoutes.length > 0}
             onChange={(e) => setDraft({ ...draft, amountOrBalance: Number(e.target.value) })}
           />

@@ -1,0 +1,346 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta
+      name="description"
+      content="Explore a different financial situation without creating an account. Change the numbers, compare the outcomes, and make the scenario your own."
+    />
+    <meta name="theme-color" content="#0c1018" />
+    <title>Demo scenarios FinApp</title>
+    <script src="/assets/theme-init.js"></script>
+    <link rel="stylesheet" href="/assets/styles.css" />
+    <link rel="icon" type="image/svg+xml" href="/static/finapp-circle.svg" />
+  </head>
+  <body class="marketing guide-page bg-background text-text font-sans">
+    <a class="skip-link" href="#main">Skip to content</a>
+    <header class="site-header sticky top-0 z-20 bg-header backdrop-blur-md border-b border-border">
+      <div
+        class="max-w-310 mx-auto px-8 max-xs:px-5 min-h-20.5 max-xs:min-h-17.5 flex gap-7 max-nav:gap-4.5 max-xs:gap-3 items-center justify-between relative"
+      >
+        <a
+          class="inline-flex items-center gap-3 max-xs:gap-2.25 text-[25px] max-xs:text-[23px] font-bold tracking-[-0.7px] text-text shrink-0"
+          href="/"
+          aria-label="FinApp home"
+          ><span
+            class="block shrink-0 w-8 h-8 max-xs:w-7 max-xs:h-7 rounded-full bg-[#00c9b7]"
+            aria-hidden="true"
+          ></span
+          >FinApp</a
+        >
+        <nav
+          id="site-navigation"
+          class="site-navigation flex gap-6.75 max-nav:gap-4.25 text-xs max-nav:text-[11px] text-foreground ml-auto mr-3 max-nav:mr-0 max-mob:hidden max-mob:absolute max-mob:top-full max-mob:left-0 max-mob:right-0 max-mob:bg-card max-mob:border-b max-mob:border-border max-mob:py-3.75 max-mob:px-6.25 max-mob:flex-col max-mob:gap-0"
+          aria-label="Main navigation"
+        >
+          <a
+            class="hover:text-primary transition-colors max-mob:py-2.75 max-mob:text-[13px] focus-visible:outline-2 focus-visible:outline-primary focus-visible:outline-offset-[5px]"
+            href="/features"
+            >Features</a
+          ><a
+            class="hover:text-primary transition-colors max-mob:py-2.75 max-mob:text-[13px] focus-visible:outline-2 focus-visible:outline-primary focus-visible:outline-offset-[5px]"
+            href="/how-it-works"
+            >How it works</a
+          ><a
+            class="hover:text-primary transition-colors max-mob:py-2.75 max-mob:text-[13px] focus-visible:outline-2 focus-visible:outline-primary focus-visible:outline-offset-[5px]"
+            href="/scenarios"
+            aria-current="page"
+            >Demo scenarios</a
+          ><a
+            class="hover:text-primary transition-colors max-mob:py-2.75 max-mob:text-[13px] focus-visible:outline-2 focus-visible:outline-primary focus-visible:outline-offset-[5px]"
+            href="/faq"
+            >FAQ</a
+          >
+        </nav>
+        <div class="flex gap-2.5 max-xs:gap-1.5 items-center max-mob:ml-auto">
+          <a
+            class="inline-flex items-center justify-center gap-3.5 min-h-9.75 max-xs:min-h-8.5 border border-transparent bg-transparent text-foreground py-2.5 px-4 max-xs:py-2 max-xs:px-2.5 rounded-lg text-xs max-xs:text-[11px] font-[550] whitespace-nowrap hover:text-text hover:bg-muted/50 transition-colors focus-visible:outline-2 focus-visible:outline-primary focus-visible:outline-offset-[5px]"
+            href="/login"
+            data-workspace-link
+            >Sign in</a
+          ><a
+            class="inline-flex items-center justify-center gap-3.5 min-h-9.75 max-xs:min-h-8.5 border border-primary bg-primary text-primary-fg py-2.5 px-4 rounded-lg text-xs font-[550] whitespace-nowrap hover:brightness-[1.08] transition-all max-xs:hidden focus-visible:outline-2 focus-visible:outline-primary focus-visible:outline-offset-[5px]"
+            href="/dashboard/?demo=true&profile=2"
+            >Open demo <span aria-hidden="true">↗</span></a
+          ><button
+            id="theme_button"
+            data-theme-control
+            class="bg-transparent border border-border rounded-lg w-8.75 h-8.75 max-xs:w-8 max-xs:h-8 grid place-items-center text-foreground text-[19px] max-xs:text-[17px] hover:bg-muted cursor-pointer transition-colors focus-visible:outline-2 focus-visible:outline-primary focus-visible:outline-offset-[5px]"
+            aria-label="Switch to light theme"
+            type="button"
+            title="Switch theme"
+          >
+            <svg
+              class="theme-sun"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="1.7"
+              aria-hidden="true"
+            >
+              <circle cx="12" cy="12" r="4" />
+              <path
+                d="M12 2v2m0 16v2M2 12h2m16 0h2M5 5l1.5 1.5m11 11L19 19M5 19l1.5-1.5m11-11L19 5"
+              /></svg
+            ><svg
+              class="theme-moon"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="1.7"
+              aria-hidden="true"
+            >
+              <path d="M20.5 14A8.5 8.5 0 0 1 10 3.5 8.5 8.5 0 1 0 20.5 14Z" />
+            </svg></button
+          ><button
+            class="hidden max-mob:grid bg-transparent border border-border rounded-lg w-8.75 h-8.75 max-xs:w-8 max-xs:h-8 place-items-center text-foreground text-[19px] max-xs:text-[17px] hover:bg-muted cursor-pointer transition-colors focus-visible:outline-2 focus-visible:outline-primary focus-visible:outline-offset-[5px]"
+            id="menu-toggle"
+            type="button"
+            aria-label="Open navigation"
+            aria-expanded="false"
+            aria-controls="site-navigation"
+          >
+            ☰
+          </button>
+        </div>
+      </div>
+    </header>
+    <main id="main" class="max-w-310 mx-auto px-8 max-xs:px-5">
+      <header class="guide-hero">
+        <nav class="breadcrumbs" aria-label="Breadcrumb">
+          <a href="/">Home</a><span aria-hidden="true">/</span><span>Demo scenarios</span>
+        </nav>
+        <p class="eyebrow">FINAPP / DEMO SCENARIOS</p>
+        <h1>Three starting points.<br /><span>Plenty of possibilities.</span></h1>
+        <p class="guide-lead">
+          Explore a different financial situation without creating an account. Change the numbers,
+          compare the outcomes, and make the scenario your own.
+        </p>
+      </header>
+      <section class="guide-intro">
+        <p>
+          Choose a starting point close to the question you want to ask. Each profile uses the same
+          model; the starting balances, monthly bills, and planned transfers differ. The figures
+          below reflect the seeded examples, with gross pay and a 20% effective tax estimate.
+        </p>
+      </section>
+      <section class="profile-detail" id="profile-1">
+        <div>
+          <p class="eyebrow">PROFILE 01</p>
+          <h2>Recent Grad</h2>
+          <p class="profile-subtitle">Build a foundation while paying down debt.</p>
+          <p>
+            Start with $1,800 in checking, $1,200 in a Roth IRA, and $30,000 of student loans. The
+            initial loan payments total $450 per month, living expenses are $1,400, and the plan
+            invests $200.
+          </p>
+          <h3>A useful experiment</h3>
+          <p>
+            Try reducing extra investing while increasing your debt-payment plan. Compare the debt
+            strategies, then inspect how a higher expense assumption changes the cash buffer.
+          </p>
+          <a class="primary-action" href="/dashboard/?demo=true&amp;profile=1"
+            >Open Recent Grad demo <span aria-hidden="true">↗</span></a
+          >
+        </div>
+        <dl class="profile-metrics">
+          <div>
+            <dt>Gross monthly pay</dt>
+            <dd>$4,583.33</dd>
+          </div>
+          <div>
+            <dt>Monthly surplus after bills</dt>
+            <dd>$1,816.66</dd>
+          </div>
+          <div>
+            <dt>Starting net worth</dt>
+            <dd>−$27,000</dd>
+          </div>
+        </dl>
+      </section>
+      <section class="profile-detail" id="profile-2">
+        <div>
+          <p class="eyebrow">PROFILE 02 / DEFAULT DEMO</p>
+          <h2>Mid-Career Family</h2>
+          <p class="profile-subtitle">Balance today’s commitments with tomorrow’s plans.</p>
+          <p>
+            Start with $6,200 in checking, $88,000 in a 401(k), $15,000 in savings, and a $14,000
+            auto loan. Living expenses total $4,600, the loan payment is $450, and planned transfers
+            direct $1,100 to investments and $300 to savings.
+          </p>
+          <h3>A useful experiment</h3>
+          <p>
+            Try a lower forward-return assumption or higher living-cost growth. Watch how the loan
+            payoff releases monthly cash, and compare the inflation-adjusted result with nominal
+            dollars.
+          </p>
+          <a class="primary-action" href="/dashboard/?demo=true&amp;profile=2"
+            >Open Mid-Career Family demo <span aria-hidden="true">↗</span></a
+          >
+        </div>
+        <dl class="profile-metrics">
+          <div>
+            <dt>Gross monthly pay</dt>
+            <dd>$11,250.00</dd>
+          </div>
+          <div>
+            <dt>Monthly surplus after bills</dt>
+            <dd>$3,950.00</dd>
+          </div>
+          <div>
+            <dt>Starting net worth</dt>
+            <dd>$95,200</dd>
+          </div>
+        </dl>
+      </section>
+      <section class="profile-detail" id="profile-3">
+        <div>
+          <p class="eyebrow">PROFILE 03</p>
+          <h2>FIRE Strategist</h2>
+          <p class="profile-subtitle">Explore the trade-offs behind a savings-focused plan.</p>
+          <p>
+            Start with $2,500 in checking, $117,000 in investments, $20,000 in savings, and no
+            outstanding debt. Living expenses are $2,200. Planned percentage transfers initially
+            invest about $3,033.34 and save $216.67 per month.
+          </p>
+          <h3>A useful experiment</h3>
+          <p>
+            Try changing the planned allocation and market assumptions. A long horizon magnifies
+            small differences, but the model does not automatically stop income or begin retirement
+            withdrawals.
+          </p>
+          <a class="primary-action" href="/dashboard/?demo=true&amp;profile=3"
+            >Open FIRE Strategist demo <span aria-hidden="true">↗</span></a
+          >
+        </div>
+        <dl class="profile-metrics">
+          <div>
+            <dt>Gross monthly pay</dt>
+            <dd>$8,166.67</dd>
+          </div>
+          <div>
+            <dt>Monthly surplus after bills</dt>
+            <dd>$4,333.34</dd>
+          </div>
+          <div>
+            <dt>Starting net worth</dt>
+            <dd>$139,500</dd>
+          </div>
+        </dl>
+      </section>
+      <section class="guide-section">
+        <div class="guide-copy">
+          <p class="eyebrow">READ THE DEMO CORRECTLY</p>
+          <h2>A starting point, ready for your what-if.</h2>
+          <p>
+            The Family profile is the default. Selecting Recent Grad or FIRE opens that specific
+            scenario. The Overview is the first dashboard tab, and the Node Graph gives you the
+            editable financial map.
+          </p>
+          <p>
+            Changing a demo creates a browser-local scenario draft. It does not overwrite the seeded
+            example for other people. Export your JSON before switching devices or clearing browser
+            data. Reset restores the original server profile.
+          </p>
+          <p>
+            After-bill surplus is not all disposable spending: planned savings and investment
+            transfers still need to be funded. Incomplete costs make a plan look stronger than it
+            really is, so add realistic expenses before interpreting the forecast.
+          </p>
+        </div>
+        <figure class="diagram-panel">
+          <div class="diagram-heading">
+            <span class="status-dot"></span>Follow the monthly money<span class="diagram-badge"
+              >EXPLAINED</span
+            >
+          </div>
+          <svg viewBox="0 0 560 340" role="img" aria-labelledby="budget-title budget-desc">
+            <title id="budget-title">Family monthly budget</title>
+            <desc id="budget-desc">
+              Gross income 11,250 dollars less tax 2,250, living costs 4,600 and loan payment 450
+              leaves 3,950 after bills. Of that, 1,100 is planned investing, 300 saving and 2,550
+              unassigned.
+            </desc>
+            <g class="chart-grid"><path d="M60 60H520M60 120H520M60 180H520M60 240H520" /></g>
+            <text x="32" y="32" class="diagram-label">$11,250 GROSS MONTHLY INCOME</text>
+            <rect x="32" y="55" width="496" height="46" rx="8" fill="var(--muted)" />
+            <rect x="32" y="55" width="99" height="46" rx="8" fill="var(--primary)" />
+            <rect x="131" y="55" width="203" height="46" fill="var(--blue)" />
+            <rect x="334" y="55" width="20" height="46" fill="var(--coral)" />
+            <rect x="354" y="55" width="174" height="46" rx="8" fill="var(--mint)" />
+            <g class="diagram-text">
+              <circle cx="42" cy="139" r="5" fill="var(--primary)" />
+              <text x="58" y="144">Estimated tax</text>
+              <text x="515" y="144" text-anchor="end">$2,250</text>
+              <circle cx="42" cy="177" r="5" fill="var(--blue)" />
+              <text x="58" y="182">Living costs</text>
+              <text x="515" y="182" text-anchor="end">$4,600</text>
+              <circle cx="42" cy="215" r="5" fill="var(--coral)" />
+              <text x="58" y="220">Required loan payment</text>
+              <text x="515" y="220" text-anchor="end">$450</text>
+              <circle cx="42" cy="253" r="5" fill="var(--mint)" />
+              <text x="58" y="258">After-bill surplus</text>
+              <text x="515" y="258" text-anchor="end">$3,950</text>
+            </g>
+            <text x="32" y="305" class="diagram-label">
+              $1,100 INVESTING · $300 SAVING · $2,550 UNASSIGNED
+            </text>
+          </svg>
+          <figcaption>
+            Seeded Mid-Career Family example with a 20% effective tax estimate. Values are monthly
+            USD, before extra investing.
+          </figcaption>
+        </figure>
+      </section>
+      <section class="guide-cta">
+        <div>
+          <p class="eyebrow">PUT THE PICTURE TOGETHER</p>
+          <h2>Try a plan. Learn from the possibilities.</h2>
+          <p>The Family demo is ready to explore. No sign-up required.</p>
+        </div>
+        <a class="primary-action" href="/dashboard/?demo=true&amp;profile=2">Explore the demo ↗</a>
+      </section>
+    </main>
+    <footer class="public-footer border-t border-border bg-card">
+      <div class="footer-shell">
+        <div class="footer-top">
+          <nav class="footer-navigation" aria-label="More about FinApp">
+            <div>
+              <p class="footer-heading">Product</p>
+              <a href="/features">Features</a><a href="/scenarios">Live demo scenarios</a>
+            </div>
+            <div>
+              <p class="footer-heading">Resources</p>
+              <a href="/how-it-works">How it works</a><a href="/faq">Help &amp; FAQ</a>
+            </div>
+          </nav>
+          <div class="footer-identity">
+            <a class="footer-brand" href="/" aria-label="FinApp home"
+              ><span aria-hidden="true"></span>FinApp</a
+            >
+            <p class="footer-description">
+              Your money, connected. A clearer view of what comes next.
+            </p>
+          </div>
+        </div>
+        <div class="footer-bottom">
+          <p>
+            Built by Sean Bassi, Ali Canturk, Braden Elsworth, Quinn Johnson, Jason Mele &amp; Lucas
+            Polo.
+          </p>
+
+          <p class="footer-note">
+            A Rowan University software engineering project.<br />Educational financial modeling.
+            All amounts in USD.
+          </p>
+          <div class="footer-utility">
+            <a href="mailto:meleja49@rowan.edu">Contact the team</a
+            ><a href="#main">Back to top <span aria-hidden="true">↑</span></a>
+          </div>
+        </div>
+      </div>
+    </footer>
+    <script src="/assets/main.js" defer></script>
+  </body>
+</html>

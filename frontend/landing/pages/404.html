@@ -1,35 +1,195 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Error - 404</title>
-  <link rel="stylesheet" href="/assets/styles.css">
-  <link rel="icon" type="image/svg+xml" href="/static/finapp-circle.svg" sizes="any">
-</head>
-<body class="bg-background text-text font-sans min-h-screen flex items-center justify-center p-4">
-  <!-- Logo at the top left -->
-  <div class="absolute top-4 left-4">
-    <a href="index.html" class="flex items-center group shrink-0">
-      <!--<img src="/static/logo_green.svg" alt="FinApp Logo" class="h-10 w-auto"> -->
-      <div class="w-8 h-8 rounded-full bg-teal-400 mr-3 group-hover:bg-teal-300 transition-colors"></div>
-      <h1 class="text-2xl font-bold tracking-wide">FinApp</h1>
-    </a>
-  </div>
-
-  <div class="max-w-md w-full bg-card rounded-xl shadow-lg p-8 flex flex-col items-center text-center">
-    <div class="flex flex-col md:flex-row items-center justify-center gap-6 mb-8">
-      <div>
-        <h1 class="text-4xl font-bold mb-2">Oops!</h1>
-        <p class="text-foreground">We cannot find that page.</p>
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta
+      name="description"
+      content="This page could not be found. Return to FinApp or explore the demo."
+    />
+    <meta name="theme-color" content="#0c1018" />
+    <title>Page not found FinApp</title>
+    <script src="/assets/theme-init.js"></script>
+    <link rel="stylesheet" href="/assets/styles.css" />
+    <link rel="icon" type="image/svg+xml" href="/static/finapp-circle.svg" />
+  </head>
+  <body class="marketing bg-background text-text font-sans">
+    <a class="skip-link" href="#main">Skip to content</a><!-- Logo at the top left -->
+    <!--<img src="/static/logo_green.svg" alt="FinApp Logo" class="h-10 w-auto"> -->
+    <header class="site-header sticky top-0 z-20 bg-header backdrop-blur-md border-b border-border">
+      <div
+        class="max-w-310 mx-auto px-8 max-xs:px-5 min-h-20.5 max-xs:min-h-17.5 flex gap-7 max-nav:gap-4.5 max-xs:gap-3 items-center justify-between relative"
+      >
+        <a
+          class="inline-flex items-center gap-3 max-xs:gap-2.25 text-[25px] max-xs:text-[23px] font-bold tracking-[-0.7px] text-text shrink-0"
+          href="/"
+          aria-label="FinApp home"
+          ><span
+            class="block shrink-0 w-8 h-8 max-xs:w-7 max-xs:h-7 rounded-full bg-[#00c9b7]"
+            aria-hidden="true"
+          ></span
+          >FinApp</a
+        >
+        <nav
+          id="site-navigation"
+          class="site-navigation flex gap-6.75 max-nav:gap-4.25 text-xs max-nav:text-[11px] text-foreground ml-auto mr-3 max-nav:mr-0 max-mob:hidden max-mob:absolute max-mob:top-full max-mob:left-0 max-mob:right-0 max-mob:bg-card max-mob:border-b max-mob:border-border max-mob:py-3.75 max-mob:px-6.25 max-mob:flex-col max-mob:gap-0"
+          aria-label="Main navigation"
+        >
+          <a
+            class="hover:text-primary transition-colors max-mob:py-2.75 max-mob:text-[13px] focus-visible:outline-2 focus-visible:outline-primary focus-visible:outline-offset-[5px]"
+            href="/features"
+            >Features</a
+          ><a
+            class="hover:text-primary transition-colors max-mob:py-2.75 max-mob:text-[13px] focus-visible:outline-2 focus-visible:outline-primary focus-visible:outline-offset-[5px]"
+            href="/how-it-works"
+            >How it works</a
+          ><a
+            class="hover:text-primary transition-colors max-mob:py-2.75 max-mob:text-[13px] focus-visible:outline-2 focus-visible:outline-primary focus-visible:outline-offset-[5px]"
+            href="/scenarios"
+            >Demo scenarios</a
+          ><a
+            class="hover:text-primary transition-colors max-mob:py-2.75 max-mob:text-[13px] focus-visible:outline-2 focus-visible:outline-primary focus-visible:outline-offset-[5px]"
+            href="/faq"
+            >FAQ</a
+          >
+        </nav>
+        <div class="flex gap-2.5 max-xs:gap-1.5 items-center max-mob:ml-auto">
+          <a
+            class="inline-flex items-center justify-center gap-3.5 min-h-9.75 max-xs:min-h-8.5 border border-transparent bg-transparent text-foreground py-2.5 px-4 max-xs:py-2 max-xs:px-2.5 rounded-lg text-xs max-xs:text-[11px] font-[550] whitespace-nowrap hover:text-text hover:bg-muted/50 transition-colors focus-visible:outline-2 focus-visible:outline-primary focus-visible:outline-offset-[5px]"
+            href="/login"
+            data-workspace-link
+            >Sign in</a
+          ><a
+            class="inline-flex items-center justify-center gap-3.5 min-h-9.75 max-xs:min-h-8.5 border border-primary bg-primary text-primary-fg py-2.5 px-4 rounded-lg text-xs font-[550] whitespace-nowrap hover:brightness-[1.08] transition-all max-xs:hidden focus-visible:outline-2 focus-visible:outline-primary focus-visible:outline-offset-[5px]"
+            href="/dashboard/?demo=true&profile=2"
+            >Open demo <span aria-hidden="true">↗</span></a
+          ><button
+            id="theme_button"
+            data-theme-control
+            class="bg-transparent border border-border rounded-lg w-8.75 h-8.75 max-xs:w-8 max-xs:h-8 grid place-items-center text-foreground text-[19px] max-xs:text-[17px] hover:bg-muted cursor-pointer transition-colors focus-visible:outline-2 focus-visible:outline-primary focus-visible:outline-offset-[5px]"
+            aria-label="Switch to light theme"
+            type="button"
+            title="Switch theme"
+          >
+            <svg
+              class="theme-sun"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="1.7"
+              aria-hidden="true"
+            >
+              <circle cx="12" cy="12" r="4" />
+              <path
+                d="M12 2v2m0 16v2M2 12h2m16 0h2M5 5l1.5 1.5m11 11L19 19M5 19l1.5-1.5m11-11L19 5"
+              /></svg
+            ><svg
+              class="theme-moon"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="1.7"
+              aria-hidden="true"
+            >
+              <path d="M20.5 14A8.5 8.5 0 0 1 10 3.5 8.5 8.5 0 1 0 20.5 14Z" />
+            </svg></button
+          ><button
+            class="hidden max-mob:grid bg-transparent border border-border rounded-lg w-8.75 h-8.75 max-xs:w-8 max-xs:h-8 place-items-center text-foreground text-[19px] max-xs:text-[17px] hover:bg-muted cursor-pointer transition-colors focus-visible:outline-2 focus-visible:outline-primary focus-visible:outline-offset-[5px]"
+            id="menu-toggle"
+            type="button"
+            aria-label="Open navigation"
+            aria-expanded="false"
+            aria-controls="site-navigation"
+          >
+            ☰
+          </button>
+        </div>
       </div>
-      
-      <img src="/static/money_spin.gif" alt="Money spinning animation" class="w-32 h-32">
-    </div>
-    
-    <a href="index.html" class="px-6 py-3 bg-primary text-primary-fg rounded-lg font-medium hover:bg-primary/90 transition-colors">
-      Go back to homepage
-    </a>
-  </div>
-</body>
+    </header>
+    <main id="main" class="error-page">
+      <div class="error-art">
+        <svg viewBox="0 0 440 220" role="img" aria-label="A disconnected node in a financial map">
+          <g fill="none" stroke="var(--border)" stroke-width="2">
+            <path d="M70 110H160M280 110H370" stroke-dasharray="6 7" />
+            <circle cx="60" cy="110" r="20" />
+            <circle cx="380" cy="110" r="20" />
+          </g>
+          <rect
+            x="160"
+            y="50"
+            width="120"
+            height="120"
+            rx="28"
+            fill="var(--card)"
+            stroke="var(--primary)"
+            stroke-width="2"
+          />
+          <text
+            x="220"
+            y="125"
+            text-anchor="middle"
+            fill="var(--text_color)"
+            font-size="44"
+            font-weight="600"
+          >
+            404
+          </text>
+          <circle cx="279" cy="51" r="9" fill="#00c9b7" />
+        </svg>
+      </div>
+      <p class="eyebrow">A CONNECTION IS MISSING</p>
+      <h1>This page is off the map.</h1>
+      <p>
+        The address may have changed, or the page may no longer exist.<br />Let’s get you back to a
+        clearer picture.
+      </p>
+      <div class="error-actions">
+        <a class="primary-action bg-primary text-primary-fg" href="/">Go back to homepage</a
+        ><a class="secondary-action" href="/dashboard/?demo=true&amp;profile=2"
+          >Explore the demo ↗</a
+        >
+      </div>
+      <a class="guide-link" href="/how-it-works">New here? See how FinApp works →</a>
+    </main>
+    <footer class="public-footer border-t border-border bg-card">
+      <div class="footer-shell">
+        <div class="footer-top">
+          <nav class="footer-navigation" aria-label="More about FinApp">
+            <div>
+              <p class="footer-heading">Product</p>
+              <a href="/features">Features</a><a href="/scenarios">Live demo scenarios</a>
+            </div>
+            <div>
+              <p class="footer-heading">Resources</p>
+              <a href="/how-it-works">How it works</a><a href="/faq">Help &amp; FAQ</a>
+            </div>
+          </nav>
+          <div class="footer-identity">
+            <a class="footer-brand" href="/" aria-label="FinApp home"
+              ><span aria-hidden="true"></span>FinApp</a
+            >
+            <p class="footer-description">
+              Your money, connected. A clearer view of what comes next.
+            </p>
+          </div>
+        </div>
+        <div class="footer-bottom">
+          <p>
+            Built by Sean Bassi, Ali Canturk, Braden Elsworth, Quinn Johnson, Jason Mele &amp; Lucas
+            Polo.
+          </p>
+
+          <p class="footer-note">
+            A Rowan University software engineering project.<br />Educational financial modeling.
+            All amounts in USD.
+          </p>
+          <div class="footer-utility">
+            <a href="mailto:meleja49@rowan.edu">Contact the team</a
+            ><a href="#main">Back to top <span aria-hidden="true">↑</span></a>
+          </div>
+        </div>
+      </div>
+    </footer>
+    <script src="/assets/main.js" defer></script>
+  </body>
 </html>

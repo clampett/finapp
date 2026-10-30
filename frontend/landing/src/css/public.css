@@ -1,0 +1,887 @@
+/* Kept the public-page polish scoped so dashboard controls retained their own geometry. */
+html {
+  scroll-behavior: smooth;
+  scroll-padding-top: 110px;
+}
+body {
+  transition:
+    background-color 180ms ease,
+    color 180ms ease;
+}
+.marketing {
+  -webkit-font-smoothing: antialiased;
+  --public-width: 80rem;
+}
+/* Unified the header, content, and footer width instead of mixing fixed pixels
+   with rem-based containers on larger screens and scaled browser text. */
+.marketing .max-w-310 {
+  max-width: var(--public-width);
+}
+.marketing .site-header > div {
+  width: 100%;
+  display: grid;
+  grid-template-columns: 1fr auto 1fr;
+  gap: 28px;
+  min-height: 80px;
+}
+.marketing .site-header > div > a {
+  justify-self: start;
+}
+.marketing .site-header > div > div {
+  justify-self: end;
+}
+.marketing .site-header .site-navigation {
+  margin: 0;
+  justify-content: center;
+}
+/* Softened large light surfaces and shaded the diagram canvases so panels
+   remained distinct without filling the screen with pure white. */
+[data-theme='light'] .marketing :is(.diagram-panel, .guide-card, .profile-metrics) {
+  box-shadow:
+    0 12px 32px var(--shadow),
+    inset 0 1px 0 #ffffff70;
+}
+[data-theme='light'] .marketing .diagram-panel svg,
+[data-theme='light'] .marketing #about svg {
+  background-color: color-mix(in srgb, var(--muted) 70%, var(--card));
+}
+[data-theme='light'] .marketing .public-footer {
+  background-color: #edf0f6;
+}
+[data-theme='light'] .marketing .diagram-panel figcaption {
+  background: var(--muted);
+}
+/* Layered graph-paper rules behind the node illustrations while keeping
+   account cards opaque and the connectors easy to follow in either theme. */
+.marketing svg:has(.sample-node) {
+  background-color: var(--background);
+  background-image:
+    linear-gradient(color-mix(in srgb, var(--foreground) 22%, transparent) 1px, transparent 1px),
+    linear-gradient(
+      90deg,
+      color-mix(in srgb, var(--foreground) 22%, transparent) 1px,
+      transparent 1px
+    ),
+    linear-gradient(color-mix(in srgb, var(--foreground) 10%, transparent) 1px, transparent 1px),
+    linear-gradient(
+      90deg,
+      color-mix(in srgb, var(--foreground) 10%, transparent) 1px,
+      transparent 1px
+    );
+  background-size:
+    80px 80px,
+    80px 80px,
+    16px 16px,
+    16px 16px;
+}
+.marketing a,
+.marketing button,
+.marketing summary {
+  -webkit-tap-highlight-color: transparent;
+}
+.marketing :is(a, button, summary):focus-visible {
+  outline: 3px solid var(--primary);
+  outline-offset: 5px;
+}
+.marketing .site-header {
+  box-shadow: 0 1px 0 color-mix(in srgb, var(--border) 30%, transparent);
+}
+.marketing .site-navigation {
+  font-size: 13px;
+  gap: 25px;
+}
+.site-navigation a[aria-current='page'] {
+  color: var(--text_color);
+  position: relative;
+}
+.site-navigation a[aria-current='page']::after {
+  content: '';
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: -10px;
+  height: 2px;
+  background: var(--primary);
+  border-radius: 2px;
+}
+/* Replaced the text glyph with a single, optically centered sun/moon control. */
+[data-theme-control] {
+  width: 40px;
+  height: 40px;
+  flex: 0 0 40px;
+  position: relative;
+  background: var(--card);
+  overflow: hidden;
+  border-radius: 50%;
+}
+[data-theme-control] svg {
+  width: 19px;
+  height: 19px;
+  position: absolute;
+  transition:
+    opacity 180ms ease,
+    transform 180ms ease;
+}
+.theme-sun {
+  opacity: 1;
+  transform: rotate(0deg) scale(1);
+}
+.theme-moon {
+  opacity: 0;
+  transform: rotate(-35deg) scale(0.65);
+}
+[data-theme='light'] .theme-sun {
+  opacity: 0;
+  transform: rotate(35deg) scale(0.65);
+}
+[data-theme='light'] .theme-moon {
+  opacity: 1;
+  transform: rotate(0deg) scale(1);
+}
+.marketing #about {
+  padding-top: 92px;
+  padding-bottom: 76px;
+  gap: 48px;
+}
+.marketing #about h1 {
+  font-size: clamp(44px, 4.65vw, 64px);
+  line-height: 1.07;
+  letter-spacing: -2.8px;
+}
+.marketing #about > div:first-child > p {
+  font-size: 16px;
+  line-height: 1.85;
+}
+.marketing #about > div:last-child > div:first-child {
+  box-shadow:
+    0 24px 80px var(--shadow),
+    0 0 90px color-mix(in srgb, var(--primary) 7%, transparent);
+  border-radius: 18px;
+}
+.marketing #about > div:last-child {
+  position: relative;
+}
+.marketing #about > div:last-child::before {
+  content: '';
+  position: absolute;
+  inset: -30px 0;
+  z-index: -1;
+  pointer-events: none;
+  background: radial-gradient(
+    ellipse at 70% 40%,
+    color-mix(in srgb, var(--primary) 10%, transparent),
+    transparent 65%
+  );
+}
+.marketing #features h2,
+.marketing #scenarios h2 {
+  font-size: clamp(30px, 3vw, 40px);
+}
+.marketing #features article {
+  border-radius: 16px;
+  padding: 30px;
+  background: linear-gradient(150deg, var(--card), var(--background));
+  transition:
+    border-color 180ms ease,
+    box-shadow 180ms ease;
+}
+.marketing #features article:hover {
+  border-color: var(--primary);
+  box-shadow: 0 12px 35px var(--shadow);
+}
+.marketing #features article p {
+  font-size: 14px;
+}
+.marketing #features article h3 {
+  font-size: 20px;
+}
+.marketing #features article a {
+  font-size: 13px;
+}
+.marketing #questions {
+  position: relative;
+  padding-bottom: 118px;
+}
+.marketing #questions > .guide-link {
+  position: absolute;
+  bottom: 58px;
+  left: 32px;
+}
+.marketing #questions summary {
+  font-size: 15px;
+}
+.marketing #questions details p {
+  font-size: 14px;
+}
+.marketing #scenarios > div:last-of-type > a {
+  border-radius: 16px;
+}
+.marketing #scenarios p {
+  font-size: 14px;
+}
+.guide-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 14px;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--primary);
+  margin-top: 28px;
+}
+.guide-link:hover {
+  text-decoration: underline;
+  text-underline-offset: 5px;
+}
+.public-footer .footer-shell {
+  width: 100%;
+  max-width: var(--public-width);
+  margin-inline: auto;
+  padding: 32px 32px 22px;
+}
+.footer-top {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  gap: 48px;
+  align-items: center;
+}
+/* Positioned the brand after the link groups in both reading and visual order. */
+.footer-identity {
+  justify-self: end;
+  max-width: 360px;
+}
+.footer-brand {
+  display: inline-flex;
+  gap: 12px;
+  align-items: center;
+  font-size: 23px;
+  font-weight: 700;
+  letter-spacing: -0.7px;
+}
+.footer-brand > span {
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  background: #00c9b7;
+}
+.footer-description {
+  color: var(--foreground);
+  font-size: 13px;
+  line-height: 1.8;
+  margin: 10px 0 0;
+  max-width: 310px;
+}
+.footer-note {
+  color: var(--foreground);
+  font-size: 11px;
+  line-height: 1.8;
+  margin: 0;
+  max-width: 280px;
+  text-align: center;
+  justify-self: center;
+  align-self: center;
+}
+.footer-navigation {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(120px, 1fr));
+  gap: 40px;
+  max-width: 320px;
+}
+.footer-navigation a {
+  color: var(--foreground);
+  font-size: 13px;
+  display: block;
+  padding: 5px 0;
+}
+.footer-navigation a:hover {
+  color: var(--primary);
+}
+.footer-utility {
+  display: flex;
+  gap: 24px;
+  flex-shrink: 0;
+  justify-self: end;
+}
+.footer-utility a {
+  white-space: nowrap;
+}
+.footer-heading {
+  color: var(--text_color);
+  font-size: 12px;
+  font-weight: 600;
+  margin: 4px 0 8px;
+}
+.footer-bottom {
+  margin-top: 28px;
+  padding-top: 18px;
+  border-top: 1px solid var(--border);
+  /* Centered the project note in a quiet metadata row below the main links. */
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  align-items: center;
+  gap: 24px;
+  color: var(--foreground);
+  font-size: 11px;
+  line-height: 1.8;
+}
+.footer-bottom p {
+  margin: 0;
+  max-width: 720px;
+}
+.footer-bottom a:hover {
+  color: var(--primary);
+  text-decoration: underline;
+  text-underline-offset: 4px;
+}
+.skip-link {
+  position: fixed;
+  top: -100px;
+  left: 20px;
+  z-index: 100;
+  background: var(--primary);
+  color: var(--primary-foreground);
+  padding: 12px 20px;
+  border-radius: 8px;
+}
+.skip-link:focus {
+  top: 10px;
+}
+.guide-hero {
+  padding: 32px 0 68px;
+  max-width: 900px;
+}
+.breadcrumbs {
+  display: flex;
+  gap: 12px;
+  color: var(--foreground);
+  font-size: 12px;
+  margin-bottom: 56px;
+}
+.breadcrumbs a:hover {
+  color: var(--primary);
+}
+.eyebrow {
+  font-size: 11px;
+  font-weight: 650;
+  letter-spacing: 1.8px;
+  color: var(--primary);
+  margin: 0 0 20px;
+}
+.guide-hero h1 {
+  font-size: clamp(40px, 4.8vw, 64px);
+  line-height: 1.1;
+  letter-spacing: -2.5px;
+  font-weight: 600;
+  margin: 0;
+}
+.guide-hero h1 span {
+  color: var(--primary);
+}
+.guide-lead {
+  font-size: 18px;
+  line-height: 1.8;
+  color: var(--foreground);
+  max-width: 740px;
+  margin: 26px 0 0;
+}
+/* Added section shortcuts so the longer explanations remained easy to navigate. */
+.guide-toc {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin: -24px 0 42px;
+}
+.guide-toc a {
+  padding: 9px 15px;
+  border: 1px solid var(--border);
+  border-radius: 100px;
+  font-size: 13px;
+  color: var(--foreground);
+  background: var(--card);
+}
+.guide-toc a:hover {
+  border-color: var(--primary);
+  color: var(--primary);
+}
+.guide-section {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 64px;
+  align-items: center;
+  padding: 64px 0;
+  border-top: 1px solid var(--border);
+}
+.guide-copy h2,
+.profile-detail h2,
+.faq-group h2,
+.guide-cta h2 {
+  font-size: clamp(27px, 3vw, 37px);
+  line-height: 1.2;
+  letter-spacing: -1px;
+  font-weight: 600;
+  margin: 0 0 24px;
+}
+.guide-copy p:not(.eyebrow),
+.guide-copy li,
+.guide-intro p,
+.profile-detail p:not(.eyebrow),
+.guide-card p {
+  font-size: 15px;
+  line-height: 1.9;
+  color: var(--foreground);
+  margin: 0 0 18px;
+}
+.guide-copy strong {
+  font-weight: 600;
+  color: var(--text_color);
+}
+.guide-copy ul {
+  padding-left: 20px;
+  list-style: disc;
+}
+.guide-copy li {
+  margin-bottom: 8px;
+}
+.guide-copy .guide-link {
+  margin-top: 0;
+}
+.diagram-panel {
+  margin: 0;
+  border: 1px solid var(--border);
+  border-radius: 18px;
+  background: var(--card);
+  overflow: hidden;
+  box-shadow: 0 16px 50px var(--shadow);
+}
+.diagram-heading {
+  padding: 20px;
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  border-bottom: 1px solid var(--border);
+  font-size: 13px;
+  font-weight: 550;
+}
+.status-dot {
+  width: 6px;
+  height: 6px;
+  background: var(--mint);
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+.diagram-badge {
+  margin-left: auto;
+  color: var(--foreground);
+  font-size: 8px;
+  letter-spacing: 1px;
+}
+.diagram-panel svg {
+  display: block;
+  width: 100%;
+  height: auto;
+  margin: 12px 0;
+}
+.diagram-panel figcaption {
+  padding: 18px 22px;
+  color: var(--foreground);
+  font-size: 12px;
+  line-height: 1.8;
+  border-top: 1px solid var(--border);
+  background: color-mix(in srgb, var(--muted) 35%, transparent);
+}
+.chart-grid {
+  stroke: var(--border);
+  stroke-dasharray: 3 6;
+  fill: none;
+}
+.chart-line {
+  fill: none;
+  stroke-width: 3;
+  stroke-linecap: round;
+}
+.diagram-label {
+  fill: var(--foreground);
+  font-size: 11px;
+  letter-spacing: 0.4px;
+}
+.diagram-text {
+  fill: var(--text_color);
+  font-size: 15px;
+}
+.flow-box {
+  fill: var(--background);
+  stroke: var(--border);
+}
+.guide-card-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 20px;
+  padding: 36px 0 64px;
+}
+.guide-card {
+  padding: 28px;
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  background: var(--card);
+}
+.guide-card h3 {
+  font-size: 20px;
+  line-height: 1.3;
+  margin: 0 0 16px;
+  font-weight: 600;
+  letter-spacing: -0.4px;
+}
+.guide-card p {
+  margin: 0;
+  font-size: 14px;
+}
+.guide-cta {
+  margin: 32px 0 80px;
+  padding: 42px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 32px;
+  border: 1px solid var(--border);
+  border-radius: 20px;
+  background: linear-gradient(120deg, var(--card), var(--muted));
+}
+.guide-cta h2 {
+  font-size: 28px;
+  margin-bottom: 14px;
+}
+.guide-cta p:not(.eyebrow) {
+  color: var(--foreground);
+  font-size: 14px;
+  margin: 0;
+}
+.primary-action,
+.secondary-action {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 18px;
+  border-radius: 9px;
+  padding: 14px 22px;
+  font-size: 14px;
+  font-weight: 600;
+  min-height: 48px;
+  line-height: 1.4;
+  transition:
+    box-shadow 180ms ease,
+    background-color 180ms ease;
+}
+.primary-action {
+  background: var(--primary);
+  color: var(--primary-foreground);
+  border: 1px solid var(--primary);
+  flex-shrink: 0;
+}
+.primary-action:hover {
+  box-shadow: 0 4px 20px color-mix(in srgb, var(--primary) 25%, transparent);
+}
+.secondary-action {
+  background: var(--card);
+  border: 1px solid var(--border);
+}
+.secondary-action:hover {
+  background: var(--muted);
+}
+.guide-intro {
+  max-width: 820px;
+  padding-bottom: 28px;
+}
+.profile-detail {
+  display: grid;
+  grid-template-columns: 1.3fr 0.7fr;
+  gap: 80px;
+  padding: 64px 0;
+  border-top: 1px solid var(--border);
+  align-items: center;
+}
+.profile-detail h2 {
+  margin-bottom: 12px;
+}
+.profile-detail h3 {
+  font-size: 16px;
+  font-weight: 600;
+  margin: 24px 0 10px;
+}
+.profile-detail .profile-subtitle {
+  font-size: 19px;
+  color: var(--text_color);
+}
+.profile-metrics {
+  padding: 12px 30px;
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 18px;
+  margin: 0;
+}
+.profile-metrics > div {
+  padding: 28px 0;
+  border-bottom: 1px solid var(--border);
+}
+.profile-metrics > div:last-child {
+  border-bottom: 0;
+}
+.profile-metrics dt {
+  font-size: 13px;
+  color: var(--foreground);
+  margin-bottom: 12px;
+}
+.profile-metrics dd {
+  font-size: 32px;
+  font-weight: 600;
+  letter-spacing: -1px;
+  margin: 0;
+}
+.profile-metrics > div:nth-child(2) dd {
+  color: var(--mint);
+}
+.faq-layout {
+  display: grid;
+  grid-template-columns: 240px 1fr;
+  gap: 80px;
+  align-items: start;
+}
+.faq-index {
+  position: sticky;
+  top: 120px;
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+  font-size: 14px;
+  color: var(--foreground);
+}
+.faq-index a:hover {
+  color: var(--primary);
+}
+.faq-index .eyebrow {
+  margin-bottom: 4px;
+}
+.faq-group {
+  padding-bottom: 52px;
+  scroll-margin-top: 120px;
+}
+.faq-group h2 {
+  font-size: 28px;
+}
+.faq-group details {
+  border-top: 1px solid var(--border);
+}
+.faq-group details:last-child {
+  border-bottom: 1px solid var(--border);
+}
+.faq-group summary {
+  list-style: none;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 24px;
+  padding: 22px 0;
+  font-size: 16px;
+  font-weight: 500;
+  cursor: pointer;
+}
+.faq-group details p {
+  font-size: 15px;
+  color: var(--foreground);
+  line-height: 1.9;
+  margin: 0;
+  padding: 0 32px 24px 0;
+}
+.error-page {
+  padding: 50px 24px 90px;
+  min-height: 75dvh;
+  text-align: center;
+  max-width: 850px;
+  margin: auto;
+}
+.error-art {
+  max-width: 380px;
+  margin: 0 auto 8px;
+}
+.error-page h1 {
+  font-size: clamp(34px, 4vw, 50px);
+  font-weight: 600;
+  letter-spacing: -1.8px;
+  line-height: 1.2;
+  margin: 0 0 20px;
+}
+.error-page > p:not(.eyebrow) {
+  color: var(--foreground);
+  font-size: 16px;
+  line-height: 1.85;
+}
+.error-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  justify-content: center;
+  margin-top: 28px;
+}
+@media (max-width: 1050px) {
+  .footer-bottom { grid-template-columns: 1fr auto; }
+  .footer-top {
+    grid-template-columns: 1fr 1fr;
+  }
+  .footer-note {
+    grid-column: 1 / -1;
+    order: 3;
+  }
+  .marketing .site-header > div {
+    grid-template-columns: auto 1fr auto;
+    gap: 20px;
+  }
+  .marketing .site-navigation {
+    gap: 16px;
+    font-size: 12px;
+  }
+  .marketing #about {
+    gap: 30px;
+  }
+  .guide-section {
+    gap: 32px;
+  }
+  .profile-detail {
+    gap: 40px;
+  }
+  .guide-card {
+    padding: 22px;
+  }
+}
+@media (max-width: 850px) {
+  .marketing .site-header > div {
+    grid-template-columns: 1fr auto;
+    gap: 16px;
+    min-height: 72px;
+  }
+  .footer-top {
+    grid-template-columns: 1fr;
+    gap: 32px;
+  }
+  .footer-navigation {
+    max-width: 400px;
+    gap: 32px;
+  }
+  .footer-identity {
+    justify-self: start;
+  }
+  .footer-top > div:first-child {
+    grid-column: 1 / -1;
+  }
+  .marketing #about {
+    padding-top: 60px;
+    padding-bottom: 50px;
+  }
+  .marketing #about h1 {
+    font-size: clamp(42px, 7vw, 60px);
+  }
+  .marketing .site-navigation {
+    font-size: 15px;
+    box-shadow: 0 20px 30px var(--shadow);
+  }
+  .site-navigation a[aria-current='page']::after {
+    display: none;
+  }
+  .guide-hero {
+    padding-bottom: 44px;
+  }
+  .guide-section {
+    grid-template-columns: 1fr;
+    padding: 44px 0;
+    gap: 24px;
+  }
+  .diagram-panel {
+    width: 100%;
+    max-width: 620px;
+    margin: 0 auto;
+  }
+  .guide-card-grid {
+    grid-template-columns: 1fr;
+    padding-bottom: 32px;
+  }
+  .guide-cta {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+  .faq-layout {
+    gap: 28px;
+    grid-template-columns: 1fr;
+  }
+  .faq-index {
+    position: static;
+    flex-direction: row;
+    flex-wrap: wrap;
+    padding-bottom: 28px;
+  }
+  .faq-index .eyebrow {
+    width: 100%;
+  }
+  .faq-index .guide-link {
+    margin-top: 0;
+  }
+}
+@media (max-width: 600px) {
+  .marketing .site-header > div {
+    gap: 12px;
+  }
+  .public-footer .footer-shell {
+    padding: 36px 20px 24px;
+  }
+  .footer-top {
+    grid-template-columns: 1fr;
+    gap: 28px;
+  }
+  .footer-bottom {
+    grid-template-columns: 1fr;
+    gap: 14px;
+  }
+  .footer-utility {
+    justify-self: start;
+  }
+  .marketing #about h1 {
+    letter-spacing: -1.7px;
+  }
+  .marketing #about > div:first-child > p {
+    font-size: 15px;
+  }
+  .marketing #features article {
+    padding: 26px;
+  }
+  .marketing #questions > .guide-link {
+    left: 20px;
+  }
+  .guide-hero h1 {
+    letter-spacing: -1.7px;
+  }
+  .guide-lead {
+    font-size: 16px;
+  }
+  .breadcrumbs {
+    margin-bottom: 36px;
+  }
+  .profile-detail {
+    grid-template-columns: 1fr;
+    gap: 28px;
+    padding: 40px 0;
+  }
+  .profile-metrics dd {
+    font-size: 28px;
+  }
+  .guide-cta {
+    padding: 28px;
+    margin-bottom: 48px;
+  }
+  .diagram-heading {
+    padding: 16px;
+    font-size: 12px;
+  }
+  .diagram-badge {
+    display: none;
+  }
+  .guide-copy p:not(.eyebrow),
+  .guide-copy li {
+    font-size: 15px;
+  }
+}

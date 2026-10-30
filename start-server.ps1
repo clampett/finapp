@@ -58,7 +58,7 @@ try {
     $infrastructureServices = @('db', 'python-backend')
     Write-Host '[DATABASE] LOCAL - testuser / test123. Each developer has a separate database.' -ForegroundColor Green
     foreach ($port in @(8080, 8081)) {
-        if (Get-NetTCPConnection -State Listen -LocalPort $port -ErrorAction SilentlyContinue) {
+        if (Test-FinAppPortOpen $port) {
             throw "Port $port is already in use. Stop the previous FinApp launch before retrying."
         }
     }
@@ -138,10 +138,10 @@ try {
             throw 'Spring Boot stopped. See java-backend\target\finapp-start.log and finapp-start-error.log.'
         }
         if ((Get-Date) -gt $deadline) {
-            throw 'Spring Boot did not become ready on port 8081 within 90 seconds.'
+            throw 'Spring Boot health check failed at http://127.0.0.1:8081/api/v1/health within 90 seconds. See the [SPRING] output above.'
         }
         Start-Sleep -Seconds 1
-    } while (!(Get-NetTCPConnection -State Listen -LocalPort 8081 -ErrorAction SilentlyContinue))
+    } while (!(Test-FinAppBackendReady))
     Set-Location -LiteralPath (Join-Path $projectRoot 'frontend')
     $frontendStart = @{
         FilePath               = (Get-Command 'node.exe').Source

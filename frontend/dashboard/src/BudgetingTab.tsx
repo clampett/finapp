@@ -811,7 +811,7 @@ export function BudgetingTab({ graph }: BudgetingTabProps) {
       >
         <div>
           <h2 style={{ margin: 0 }}>Budgeting & Stock Portfolio</h2>
-          <p className="text-[#8b9ab1] text-[11px] mt-1 mb-0">
+          <p className="text-[color:var(--ui-text-8b9ab1)] text-[11px] mt-1 mb-0">
             Track income, expenses, recurring payments, and stock investments in your database.
           </p>
         </div>
@@ -819,10 +819,10 @@ export function BudgetingTab({ graph }: BudgetingTabProps) {
           <div
             style={{
               padding: '6px 12px',
-              background: '#3b2f15',
-              border: '1px solid #705822',
+              background: 'var(--ui-paint-3b2f15)',
+              border: '1px solid var(--ui-paint-705822)',
               borderRadius: '4px',
-              color: '#e8c67a',
+              color: 'var(--ui-paint-e8c67a)',
               fontSize: '13px',
             }}
           >
@@ -840,17 +840,17 @@ export function BudgetingTab({ graph }: BudgetingTabProps) {
             marginBottom: '1rem',
             background:
               statusMessage.type === 'error'
-                ? '#3d1b1b'
+                ? 'var(--ui-paint-3d1b1b)'
                 : statusMessage.type === 'success'
-                  ? '#143825'
-                  : '#1e2838',
+                  ? 'var(--ui-paint-143825)'
+                  : 'var(--ui-paint-1e2838)',
             color:
               statusMessage.type === 'error'
-                ? '#fca5a5'
+                ? 'var(--ui-paint-fca5a5)'
                 : statusMessage.type === 'success'
-                  ? '#86efac'
-                  : '#93c5fd',
-            border: `1px solid ${statusMessage.type === 'error' ? '#7f1d1d' : statusMessage.type === 'success' ? '#166534' : '#2563eb'}`,
+                  ? 'var(--ui-paint-86efac)'
+                  : 'var(--ui-paint-93c5fd)',
+            border: `1px solid ${statusMessage.type === 'error' ? 'var(--ui-paint-7f1d1d)' : statusMessage.type === 'success' ? 'var(--ui-paint-166534)' : 'var(--ui-paint-2563eb)'}`,
             display: 'flex',
             justifyContent: 'space-between',
             alignItems: 'center',
@@ -884,52 +884,52 @@ export function BudgetingTab({ graph }: BudgetingTabProps) {
       >
         <div
           style={{
-            background: '#161d2b',
-            border: '1px solid #283347',
+            background: 'var(--ui-paint-161d2b)',
+            border: '1px solid var(--ui-paint-283347)',
             borderRadius: '8px',
             padding: '1rem',
           }}
         >
-          <span style={{ fontSize: '12px', color: '#8f9db3', textTransform: 'uppercase' }}>
+          <span style={{ fontSize: '12px', color: 'var(--ui-paint-8f9db3)', textTransform: 'uppercase' }}>
             Total Income
           </span>
-          <div style={{ fontSize: '1.5rem', fontWeight: 600, color: '#4ade80', marginTop: '4px' }}>
+          <div style={{ fontSize: '1.5rem', fontWeight: 600, color: 'var(--ui-paint-4ade80)', marginTop: '4px' }}>
             {dollars(totalIncome)}
           </div>
         </div>
 
         <div
           style={{
-            background: '#161d2b',
-            border: '1px solid #283347',
+            background: 'var(--ui-paint-161d2b)',
+            border: '1px solid var(--ui-paint-283347)',
             borderRadius: '8px',
             padding: '1rem',
           }}
         >
-          <span style={{ fontSize: '12px', color: '#8f9db3', textTransform: 'uppercase' }}>
+          <span style={{ fontSize: '12px', color: 'var(--ui-paint-8f9db3)', textTransform: 'uppercase' }}>
             Total Expenses
           </span>
-          <div style={{ fontSize: '1.5rem', fontWeight: 600, color: '#f87171', marginTop: '4px' }}>
+          <div style={{ fontSize: '1.5rem', fontWeight: 600, color: 'var(--ui-paint-f87171)', marginTop: '4px' }}>
             {dollars(totalExpense)}
           </div>
         </div>
 
         <div
           style={{
-            background: '#161d2b',
-            border: '1px solid #283347',
+            background: 'var(--ui-paint-161d2b)',
+            border: '1px solid var(--ui-paint-283347)',
             borderRadius: '8px',
             padding: '1rem',
           }}
         >
-          <span style={{ fontSize: '12px', color: '#8f9db3', textTransform: 'uppercase' }}>
+          <span style={{ fontSize: '12px', color: 'var(--ui-paint-8f9db3)', textTransform: 'uppercase' }}>
             Net Cash Flow
           </span>
           <div
             style={{
               fontSize: '1.5rem',
               fontWeight: 600,
-              color: netCashFlow >= 0 ? '#4ade80' : '#f87171',
+              color: netCashFlow >= 0 ? 'var(--ui-paint-4ade80)' : 'var(--ui-paint-f87171)',
               marginTop: '4px',
             }}
           >
@@ -939,16 +939,16 @@ export function BudgetingTab({ graph }: BudgetingTabProps) {
 
         <div
           style={{
-            background: '#161d2b',
-            border: '1px solid #283347',
+            background: 'var(--ui-paint-161d2b)',
+            border: '1px solid var(--ui-paint-283347)',
             borderRadius: '8px',
             padding: '1rem',
           }}
         >
-          <span style={{ fontSize: '12px', color: '#8f9db3', textTransform: 'uppercase' }}>
+          <span style={{ fontSize: '12px', color: 'var(--ui-paint-8f9db3)', textTransform: 'uppercase' }}>
             Stock Portfolio
           </span>
-          <div style={{ fontSize: '1.5rem', fontWeight: 600, color: '#38bdf8', marginTop: '4px' }}>
+          <div style={{ fontSize: '1.5rem', fontWeight: 600, color: 'var(--ui-paint-38bdf8)', marginTop: '4px' }}>
             {dollars(totalPortfolioValue)}
           </div>
           {totalPurchasedValue > 0 && (
@@ -956,7 +956,7 @@ export function BudgetingTab({ graph }: BudgetingTabProps) {
               style={{
                 fontSize: '12px',
                 marginTop: '4px',
-                color: totalPortfolioValue >= totalPurchasedValue ? '#4ade80' : '#f87171',
+                color: totalPortfolioValue >= totalPurchasedValue ? 'var(--ui-paint-4ade80)' : 'var(--ui-paint-f87171)',
               }}
             >
               {totalPortfolioValue >= totalPurchasedValue ? '+' : ''}
@@ -975,7 +975,7 @@ export function BudgetingTab({ graph }: BudgetingTabProps) {
         style={{
           display: 'flex',
           gap: '0.5rem',
-          borderBottom: '1px solid #283347',
+          borderBottom: '1px solid var(--ui-paint-283347)',
           paddingBottom: '0.5rem',
           marginBottom: '1.5rem',
         }}
@@ -983,7 +983,7 @@ export function BudgetingTab({ graph }: BudgetingTabProps) {
         <button
           type="button"
           onClick={() => setActiveSubTab('transactions')}
-          className={`inline-flex items-center justify-center gap-1.5 whitespace-nowrap rounded-[7px] font-medium cursor-pointer transition-colors ${activeSubTab === 'transactions' ? 'bg-primary text-primary-fg' : 'bg-transparent text-[#97a7c2] hover:bg-[#1a2536] hover:text-text'}`}
+          className={`inline-flex items-center justify-center gap-1.5 whitespace-nowrap rounded-[7px] font-medium cursor-pointer transition-colors ${activeSubTab === 'transactions' ? 'bg-primary text-primary-fg' : 'bg-transparent text-[color:var(--ui-text-97a7c2)] hover:bg-[var(--ui-surface-hover-1a2536)] hover:text-text'}`}
           style={{ padding: '6px 16px', fontSize: '14px' }}
         >
           Transactions ({transactions.length})
@@ -991,7 +991,7 @@ export function BudgetingTab({ graph }: BudgetingTabProps) {
         <button
           type="button"
           onClick={() => setActiveSubTab('stocks')}
-          className={`inline-flex items-center justify-center gap-1.5 whitespace-nowrap rounded-[7px] font-medium cursor-pointer transition-colors ${activeSubTab === 'stocks' ? 'bg-primary text-primary-fg' : 'bg-transparent text-[#97a7c2] hover:bg-[#1a2536] hover:text-text'}`}
+          className={`inline-flex items-center justify-center gap-1.5 whitespace-nowrap rounded-[7px] font-medium cursor-pointer transition-colors ${activeSubTab === 'stocks' ? 'bg-primary text-primary-fg' : 'bg-transparent text-[color:var(--ui-text-97a7c2)] hover:bg-[var(--ui-surface-hover-1a2536)] hover:text-text'}`}
           style={{ padding: '6px 16px', fontSize: '14px' }}
         >
           Stocks & Positions ({stocks.length})
@@ -999,7 +999,7 @@ export function BudgetingTab({ graph }: BudgetingTabProps) {
         <button
           type="button"
           onClick={() => setActiveSubTab('recurring')}
-          className={`inline-flex items-center justify-center gap-1.5 whitespace-nowrap rounded-[7px] font-medium cursor-pointer transition-colors ${activeSubTab === 'recurring' ? 'bg-primary text-primary-fg' : 'bg-transparent text-[#97a7c2] hover:bg-[#1a2536] hover:text-text'}`}
+          className={`inline-flex items-center justify-center gap-1.5 whitespace-nowrap rounded-[7px] font-medium cursor-pointer transition-colors ${activeSubTab === 'recurring' ? 'bg-primary text-primary-fg' : 'bg-transparent text-[color:var(--ui-text-97a7c2)] hover:bg-[var(--ui-surface-hover-1a2536)] hover:text-text'}`}
           style={{ padding: '6px 16px', fontSize: '14px' }}
         >
           Recurring Rules ({recurringList.length})
@@ -1012,7 +1012,7 @@ export function BudgetingTab({ graph }: BudgetingTabProps) {
           disabled={!userId}
           aria-busy={refreshing}
           aria-disabled={refreshing || !userId}
-          className="inline-flex items-center justify-center gap-2 min-w-30 aria-busy:cursor-progress whitespace-nowrap rounded-[7px] font-medium cursor-pointer bg-transparent text-[#97a7c2] hover:bg-[#1a2536] hover:text-text transition-colors disabled:opacity-45 disabled:cursor-not-allowed"
+          className="inline-flex items-center justify-center gap-2 min-w-30 aria-busy:cursor-progress whitespace-nowrap rounded-[7px] font-medium cursor-pointer bg-transparent text-[color:var(--ui-text-97a7c2)] hover:bg-[var(--ui-surface-hover-1a2536)] hover:text-text transition-colors disabled:opacity-45 disabled:cursor-not-allowed"
           style={{ marginLeft: 'auto', padding: '6px 12px', fontSize: '12px' }}
         >
           {refreshing ? (
@@ -1024,7 +1024,7 @@ export function BudgetingTab({ graph }: BudgetingTabProps) {
           )}
         </button>
       </div>
-      <div className="min-h-[1.4em] flex items-center gap-2 text-[#91a3bd] text-[13px]" role="status" aria-live="polite">
+      <div className="min-h-[1.4em] flex items-center gap-2 text-[color:var(--ui-text-91a3bd)] text-[13px]" role="status" aria-live="polite">
         {generating
           ? 'Generating due occurrences. You can keep browsing.'
           : refreshing
@@ -1047,13 +1047,13 @@ export function BudgetingTab({ graph }: BudgetingTabProps) {
               <h3 id="transactions-section-heading" style={{ margin: 0 }}>
                 Recorded Transactions
               </h3>
-              <p className="text-[#8b9ab1] text-[11px] mt-0.5 mb-0">
+              <p className="text-[color:var(--ui-text-8b9ab1)] text-[11px] mt-0.5 mb-0">
                 Income and expenses linked to your accounts.
               </p>
             </div>
             <button
               type="button"
-              className="inline-flex items-center justify-center gap-1.75 whitespace-nowrap rounded-[7px] px-3.5 py-2.25 text-[11px] font-medium min-h-8.5 cursor-pointer bg-primary text-primary-fg hover:bg-[#cbbcfc] transition-colors disabled:opacity-45 disabled:cursor-not-allowed"
+              className="inline-flex items-center justify-center gap-1.75 whitespace-nowrap rounded-[7px] px-3.5 py-2.25 text-[11px] font-medium min-h-8.5 cursor-pointer bg-primary text-primary-fg hover:bg-[var(--ui-surface-hover-cbbcfc)] transition-colors disabled:opacity-45 disabled:cursor-not-allowed"
               onClick={handleOpenAddTransaction}
               disabled={!userId}
             >
@@ -1065,8 +1065,8 @@ export function BudgetingTab({ graph }: BudgetingTabProps) {
           {showTransForm && (
             <div
               style={{
-                background: '#161d2b',
-                border: '1px solid #283347',
+                background: 'var(--ui-paint-161d2b)',
+                border: '1px solid var(--ui-paint-283347)',
                 borderRadius: '8px',
                 padding: '1.25rem',
                 marginBottom: '1.5rem',
@@ -1095,8 +1095,8 @@ export function BudgetingTab({ graph }: BudgetingTabProps) {
                     style={{
                       padding: '8px',
                       borderRadius: '4px',
-                      background: '#0f141e',
-                      border: '1px solid #283347',
+                      background: 'var(--ui-paint-0f141e)',
+                      border: '1px solid var(--ui-paint-283347)',
                       color: 'white',
                     }}
                   >
@@ -1120,8 +1120,8 @@ export function BudgetingTab({ graph }: BudgetingTabProps) {
                     style={{
                       padding: '8px',
                       borderRadius: '4px',
-                      background: '#0f141e',
-                      border: '1px solid #283347',
+                      background: 'var(--ui-paint-0f141e)',
+                      border: '1px solid var(--ui-paint-283347)',
                       color: 'white',
                     }}
                   />
@@ -1142,8 +1142,8 @@ export function BudgetingTab({ graph }: BudgetingTabProps) {
                     style={{
                       padding: '8px',
                       borderRadius: '4px',
-                      background: '#0f141e',
-                      border: '1px solid #283347',
+                      background: 'var(--ui-paint-0f141e)',
+                      border: '1px solid var(--ui-paint-283347)',
                       color: 'white',
                     }}
                   />
@@ -1161,8 +1161,8 @@ export function BudgetingTab({ graph }: BudgetingTabProps) {
                     style={{
                       padding: '8px',
                       borderRadius: '4px',
-                      background: '#0f141e',
-                      border: '1px solid #283347',
+                      background: 'var(--ui-paint-0f141e)',
+                      border: '1px solid var(--ui-paint-283347)',
                       color: 'white',
                     }}
                   >
@@ -1193,8 +1193,8 @@ export function BudgetingTab({ graph }: BudgetingTabProps) {
                     style={{
                       padding: '8px',
                       borderRadius: '4px',
-                      background: '#0f141e',
-                      border: '1px solid #283347',
+                      background: 'var(--ui-paint-0f141e)',
+                      border: '1px solid var(--ui-paint-283347)',
                       color: 'white',
                     }}
                   />
@@ -1212,8 +1212,8 @@ export function BudgetingTab({ graph }: BudgetingTabProps) {
                     style={{
                       padding: '8px',
                       borderRadius: '4px',
-                      background: '#0f141e',
-                      border: '1px solid #283347',
+                      background: 'var(--ui-paint-0f141e)',
+                      border: '1px solid var(--ui-paint-283347)',
                       color: 'white',
                     }}
                   />
@@ -1237,8 +1237,8 @@ export function BudgetingTab({ graph }: BudgetingTabProps) {
                     style={{
                       padding: '8px',
                       borderRadius: '4px',
-                      background: '#0f141e',
-                      border: '1px solid #283347',
+                      background: 'var(--ui-paint-0f141e)',
+                      border: '1px solid var(--ui-paint-283347)',
                       color: 'white',
                     }}
                   />
@@ -1252,12 +1252,12 @@ export function BudgetingTab({ graph }: BudgetingTabProps) {
                     marginTop: '0.5rem',
                   }}
                 >
-                  <button type="submit" className="inline-flex items-center justify-center gap-1.75 whitespace-nowrap rounded-[7px] px-3.5 py-2.25 text-[11px] font-medium min-h-8.5 cursor-pointer bg-primary text-primary-fg hover:bg-[#cbbcfc] transition-colors">
+                  <button type="submit" className="inline-flex items-center justify-center gap-1.75 whitespace-nowrap rounded-[7px] px-3.5 py-2.25 text-[11px] font-medium min-h-8.5 cursor-pointer bg-primary text-primary-fg hover:bg-[var(--ui-surface-hover-cbbcfc)] transition-colors">
                     {editingTransId ? 'Save Changes' : 'Record Transaction'}
                   </button>
                   <button
                     type="button"
-                    className="inline-flex items-center justify-center gap-1.75 whitespace-nowrap rounded-[7px] px-3.25 py-2.25 text-[11px] font-medium min-h-8.5 cursor-pointer bg-transparent text-[#97a7c2] border border-transparent hover:bg-[#1a2536] hover:text-text transition-colors"
+                    className="inline-flex items-center justify-center gap-1.75 whitespace-nowrap rounded-[7px] px-3.25 py-2.25 text-[11px] font-medium min-h-8.5 cursor-pointer bg-transparent text-[color:var(--ui-text-97a7c2)] border border-transparent hover:bg-[var(--ui-surface-hover-1a2536)] hover:text-text transition-colors"
                     onClick={() => {
                       setShowTransForm(false);
                       setEditingTransId(null);
@@ -1268,7 +1268,7 @@ export function BudgetingTab({ graph }: BudgetingTabProps) {
                   {editingTransId && (
                     <button
                       type="button"
-                      className="inline-flex items-center justify-center gap-1.75 whitespace-nowrap rounded-[7px] px-3.25 py-2.25 text-[11px] font-medium min-h-8.5 cursor-pointer text-coral border border-[#633246] bg-[#2b1b28] hover:bg-[#3d2034] transition-colors"
+                      className="inline-flex items-center justify-center gap-1.75 whitespace-nowrap rounded-[7px] px-3.25 py-2.25 text-[11px] font-medium min-h-8.5 cursor-pointer text-coral border border-[color:var(--ui-border-633246)] bg-[var(--ui-surface-2b1b28)] hover:bg-[var(--ui-surface-hover-3d2034)] transition-colors"
                       style={{ marginLeft: 'auto' }}
                       onClick={() => handleDeleteTransaction(editingTransId)}
                     >
@@ -1286,10 +1286,10 @@ export function BudgetingTab({ graph }: BudgetingTabProps) {
               style={{
                 textAlign: 'center',
                 padding: '3rem',
-                background: '#161d2b',
+                background: 'var(--ui-paint-161d2b)',
                 borderRadius: '8px',
-                border: '1px dashed #283347',
-                color: '#8f9db3',
+                border: '1px dashed var(--ui-paint-283347)',
+                color: 'var(--ui-paint-8f9db3)',
               }}
             >
               No transactions recorded yet. Click <strong>+ Add Transaction</strong> to record
@@ -1299,9 +1299,9 @@ export function BudgetingTab({ graph }: BudgetingTabProps) {
             <div
               style={{
                 overflowX: 'auto',
-                background: '#161d2b',
+                background: 'var(--ui-paint-161d2b)',
                 borderRadius: '8px',
-                border: '1px solid #283347',
+                border: '1px solid var(--ui-paint-283347)',
               }}
             >
               <table
@@ -1315,9 +1315,9 @@ export function BudgetingTab({ graph }: BudgetingTabProps) {
                 <thead>
                   <tr
                     style={{
-                      borderBottom: '1px solid #283347',
-                      background: '#121824',
-                      color: '#8f9db3',
+                      borderBottom: '1px solid var(--ui-paint-283347)',
+                      background: 'var(--ui-paint-121824)',
+                      color: 'var(--ui-paint-8f9db3)',
                     }}
                   >
                     <th style={{ padding: '12px' }}>Date</th>
@@ -1332,7 +1332,7 @@ export function BudgetingTab({ graph }: BudgetingTabProps) {
                 </thead>
                 <tbody>
                   {transactions.map((t) => (
-                    <tr key={t.id} style={{ borderBottom: '1px solid #1f2737' }}>
+                    <tr key={t.id} style={{ borderBottom: '1px solid var(--ui-paint-1f2737)' }}>
                       <td style={{ padding: '10px 12px', whiteSpace: 'nowrap' }}>
                         {t.transactionDate || t.date}
                       </td>
@@ -1344,20 +1344,20 @@ export function BudgetingTab({ graph }: BudgetingTabProps) {
                             fontSize: '11px',
                             fontWeight: 600,
                             textTransform: 'uppercase',
-                            background: t.kind === 'income' ? '#064e3b' : '#7f1d1d',
-                            color: t.kind === 'income' ? '#86efac' : '#fca5a5',
+                            background: t.kind === 'income' ? 'var(--ui-paint-064e3b)' : 'var(--ui-paint-7f1d1d)',
+                            color: t.kind === 'income' ? 'var(--ui-paint-86efac)' : 'var(--ui-paint-fca5a5)',
                           }}
                         >
                           {t.kind}
                         </span>
                       </td>
                       <td style={{ padding: '10px 12px', fontWeight: 500 }}>{t.description}</td>
-                      <td style={{ padding: '10px 12px', color: '#93c5fd' }}>
+                      <td style={{ padding: '10px 12px', color: 'var(--ui-paint-93c5fd)' }}>
                         {t.accountName && t.accountName.trim().toLowerCase() === 'checking account'
                           ? 'Checking'
                           : t.accountName || '—'}
                       </td>
-                      <td style={{ padding: '10px 12px', color: '#d1d5db' }}>
+                      <td style={{ padding: '10px 12px', color: 'var(--ui-paint-d1d5db)' }}>
                         {t.categoryName || '—'}
                       </td>
                       <td
@@ -1365,7 +1365,7 @@ export function BudgetingTab({ graph }: BudgetingTabProps) {
                           padding: '10px 12px',
                           textAlign: 'right',
                           fontWeight: 600,
-                          color: t.kind === 'income' ? '#4ade80' : '#f87171',
+                          color: t.kind === 'income' ? 'var(--ui-paint-4ade80)' : 'var(--ui-paint-f87171)',
                         }}
                       >
                         {t.kind === 'income' ? `+${dollars(t.amount)}` : `-${dollars(t.amount)}`}
@@ -1373,7 +1373,7 @@ export function BudgetingTab({ graph }: BudgetingTabProps) {
                       <td
                         style={{
                           padding: '10px 12px',
-                          color: '#8f9db3',
+                          color: 'var(--ui-paint-8f9db3)',
                           maxWidth: '200px',
                           overflow: 'hidden',
                           textOverflow: 'ellipsis',
@@ -1387,7 +1387,7 @@ export function BudgetingTab({ graph }: BudgetingTabProps) {
                       >
                         <button
                           type="button"
-                          className="inline-flex items-center justify-center whitespace-nowrap rounded-[7px] font-medium cursor-pointer bg-transparent border border-transparent hover:bg-[#1a2536] text-[#97a7c2] hover:text-text transition-colors"
+                          className="inline-flex items-center justify-center whitespace-nowrap rounded-[7px] font-medium cursor-pointer bg-transparent border border-transparent hover:bg-[var(--ui-surface-hover-1a2536)] text-[color:var(--ui-text-97a7c2)] hover:text-text transition-colors"
                           onClick={() => handleEditTransaction(t)}
                           style={{ padding: '4px 8px', fontSize: '11px', marginRight: '6px' }}
                         >
@@ -1395,8 +1395,8 @@ export function BudgetingTab({ graph }: BudgetingTabProps) {
                         </button>
                         <button
                           type="button"
-                          className="inline-flex items-center justify-center whitespace-nowrap rounded-[7px] font-medium cursor-pointer bg-transparent border border-transparent hover:bg-[#1a2536] transition-colors"
-                          style={{ color: '#f87171', padding: '4px 8px', fontSize: '11px' }}
+                          className="inline-flex items-center justify-center whitespace-nowrap rounded-[7px] font-medium cursor-pointer bg-transparent border border-transparent hover:bg-[var(--ui-surface-hover-1a2536)] transition-colors"
+                          style={{ color: 'var(--ui-paint-f87171)', padding: '4px 8px', fontSize: '11px' }}
                           onClick={() => t.id && handleDeleteTransaction(t.id)}
                         >
                           Delete
@@ -1440,18 +1440,18 @@ export function BudgetingTab({ graph }: BudgetingTabProps) {
                       style={{
                         fontSize: '14px',
                         fontWeight: 500,
-                        color: '#8f9db3',
+                        color: 'var(--ui-paint-8f9db3)',
                         display: 'inline-flex',
                         gap: '6px',
                         alignItems: 'center',
                       }}
                     >
                       (Purchased Price:{' '}
-                      <strong style={{ color: '#cbd5e1' }}>{dollars(totalPurchasedValue)}</strong> |
+                      <strong style={{ color: 'var(--ui-paint-cbd5e1)' }}>{dollars(totalPurchasedValue)}</strong> |
                       Current Price:{' '}
                       <strong
                         style={{
-                          color: totalPortfolioValue >= totalPurchasedValue ? '#4ade80' : '#f87171',
+                          color: totalPortfolioValue >= totalPurchasedValue ? 'var(--ui-paint-4ade80)' : 'var(--ui-paint-f87171)',
                         }}
                       >
                         {dollars(totalPortfolioValue)}
@@ -1461,13 +1461,13 @@ export function BudgetingTab({ graph }: BudgetingTabProps) {
                   )}
                 </h3>
               </div>
-              <p className="text-[#8b9ab1] text-[11px] mt-0.5 mb-0">
+              <p className="text-[color:var(--ui-text-8b9ab1)] text-[11px] mt-0.5 mb-0">
                 Track shares, cost basis, market prices, and buy/sell operations.
               </p>
             </div>
             <button
               type="button"
-              className="inline-flex items-center justify-center gap-1.75 whitespace-nowrap rounded-[7px] px-3.5 py-2.25 text-[11px] font-medium min-h-8.5 cursor-pointer bg-primary text-primary-fg hover:bg-[#cbbcfc] transition-colors disabled:opacity-45 disabled:cursor-not-allowed"
+              className="inline-flex items-center justify-center gap-1.75 whitespace-nowrap rounded-[7px] px-3.5 py-2.25 text-[11px] font-medium min-h-8.5 cursor-pointer bg-primary text-primary-fg hover:bg-[var(--ui-surface-hover-cbbcfc)] transition-colors disabled:opacity-45 disabled:cursor-not-allowed"
               onClick={handleOpenAddStock}
               disabled={!userId}
             >
@@ -1479,8 +1479,8 @@ export function BudgetingTab({ graph }: BudgetingTabProps) {
           {showStockForm && (
             <div
               style={{
-                background: '#161d2b',
-                border: '1px solid #283347',
+                background: 'var(--ui-paint-161d2b)',
+                border: '1px solid var(--ui-paint-283347)',
                 borderRadius: '8px',
                 padding: '1.25rem',
                 marginBottom: '1.5rem',
@@ -1490,7 +1490,7 @@ export function BudgetingTab({ graph }: BudgetingTabProps) {
                 {editingStockId ? 'Edit Stock Details' : 'Add Stock To Portfolio'}
               </h4>
               {editingStockId && (
-                <p className="text-[#8b9ab1] text-[11px]">
+                <p className="text-[color:var(--ui-text-8b9ab1)] text-[11px]">
                   Current holdings are shown for reference. Use Buy or Sell to record position
                   changes; editing stock details preserves your purchase history.
                 </p>
@@ -1519,8 +1519,8 @@ export function BudgetingTab({ graph }: BudgetingTabProps) {
                     style={{
                       padding: '8px',
                       borderRadius: '4px',
-                      background: '#0f141e',
-                      border: '1px solid #283347',
+                      background: 'var(--ui-paint-0f141e)',
+                      border: '1px solid var(--ui-paint-283347)',
                       color: 'white',
                     }}
                   />
@@ -1542,8 +1542,8 @@ export function BudgetingTab({ graph }: BudgetingTabProps) {
                     style={{
                       padding: '8px',
                       borderRadius: '4px',
-                      background: '#0f141e',
-                      border: '1px solid #283347',
+                      background: 'var(--ui-paint-0f141e)',
+                      border: '1px solid var(--ui-paint-283347)',
                       color: 'white',
                     }}
                   />
@@ -1565,8 +1565,8 @@ export function BudgetingTab({ graph }: BudgetingTabProps) {
                     style={{
                       padding: '8px',
                       borderRadius: '4px',
-                      background: '#0f141e',
-                      border: '1px solid #283347',
+                      background: 'var(--ui-paint-0f141e)',
+                      border: '1px solid var(--ui-paint-283347)',
                       color: 'white',
                     }}
                   />
@@ -1575,13 +1575,13 @@ export function BudgetingTab({ graph }: BudgetingTabProps) {
                 <div
                   style={{ display: 'flex', flexDirection: 'column', gap: '4px', fontSize: '13px' }}
                 >
-                  <span style={{ color: '#8f9db3' }}>Current Price ($)</span>
+                  <span style={{ color: 'var(--ui-paint-8f9db3)' }}>Current Price ($)</span>
                   <div
                     style={{
                       padding: '8px 12px',
                       borderRadius: '4px',
-                      background: '#0f141e',
-                      border: '1px solid #283347',
+                      background: 'var(--ui-paint-0f141e)',
+                      border: '1px solid var(--ui-paint-283347)',
                       minHeight: '38px',
                       display: 'flex',
                       alignItems: 'center',
@@ -1589,15 +1589,15 @@ export function BudgetingTab({ graph }: BudgetingTabProps) {
                     }}
                   >
                     {fetchingQuote ? (
-                      <span style={{ color: '#93c5fd', fontSize: '12px' }}>
+                      <span style={{ color: 'var(--ui-paint-93c5fd)', fontSize: '12px' }}>
                         Fetching current price...
                       </span>
                     ) : quotePrice != null ? (
-                      <span style={{ color: '#4ade80', fontWeight: 600 }}>
+                      <span style={{ color: 'var(--ui-paint-4ade80)', fontWeight: 600 }}>
                         {dollars(quotePrice)}
                       </span>
                     ) : (
-                      <span style={{ color: '#64748b', fontSize: '12px' }}>
+                      <span style={{ color: 'var(--ui-paint-64748b)', fontSize: '12px' }}>
                         Auto-fetched from market
                       </span>
                     )}
@@ -1618,8 +1618,8 @@ export function BudgetingTab({ graph }: BudgetingTabProps) {
                     style={{
                       padding: '8px',
                       borderRadius: '4px',
-                      background: '#0f141e',
-                      border: '1px solid #283347',
+                      background: 'var(--ui-paint-0f141e)',
+                      border: '1px solid var(--ui-paint-283347)',
                       color: 'white',
                     }}
                   />
@@ -1669,8 +1669,8 @@ export function BudgetingTab({ graph }: BudgetingTabProps) {
                         style={{
                           padding: '8px',
                           borderRadius: '4px',
-                          background: '#0f141e',
-                          border: '1px solid #283347',
+                          background: 'var(--ui-paint-0f141e)',
+                          border: '1px solid var(--ui-paint-283347)',
                           color: 'white',
                         }}
                       >
@@ -1704,8 +1704,8 @@ export function BudgetingTab({ graph }: BudgetingTabProps) {
                         style={{
                           padding: '8px',
                           borderRadius: '4px',
-                          background: '#0f141e',
-                          border: '1px solid #283347',
+                          background: 'var(--ui-paint-0f141e)',
+                          border: '1px solid var(--ui-paint-283347)',
                           color: 'white',
                         }}
                       />
@@ -1721,12 +1721,12 @@ export function BudgetingTab({ graph }: BudgetingTabProps) {
                     marginTop: '0.5rem',
                   }}
                 >
-                  <button type="submit" className="inline-flex items-center justify-center gap-1.75 whitespace-nowrap rounded-[7px] px-3.5 py-2.25 text-[11px] font-medium min-h-8.5 cursor-pointer bg-primary text-primary-fg hover:bg-[#cbbcfc] transition-colors">
+                  <button type="submit" className="inline-flex items-center justify-center gap-1.75 whitespace-nowrap rounded-[7px] px-3.5 py-2.25 text-[11px] font-medium min-h-8.5 cursor-pointer bg-primary text-primary-fg hover:bg-[var(--ui-surface-hover-cbbcfc)] transition-colors">
                     {editingStockId ? 'Save Changes' : 'Add Stock'}
                   </button>
                   <button
                     type="button"
-                    className="inline-flex items-center justify-center gap-1.75 whitespace-nowrap rounded-[7px] px-3.25 py-2.25 text-[11px] font-medium min-h-8.5 cursor-pointer bg-transparent text-[#97a7c2] border border-transparent hover:bg-[#1a2536] hover:text-text transition-colors"
+                    className="inline-flex items-center justify-center gap-1.75 whitespace-nowrap rounded-[7px] px-3.25 py-2.25 text-[11px] font-medium min-h-8.5 cursor-pointer bg-transparent text-[color:var(--ui-text-97a7c2)] border border-transparent hover:bg-[var(--ui-surface-hover-1a2536)] hover:text-text transition-colors"
                     onClick={() => {
                       setShowStockForm(false);
                       setEditingStockId(null);
@@ -1737,7 +1737,7 @@ export function BudgetingTab({ graph }: BudgetingTabProps) {
                   {editingStockId && (
                     <button
                       type="button"
-                      className="inline-flex items-center justify-center gap-1.75 whitespace-nowrap rounded-[7px] px-3.25 py-2.25 text-[11px] font-medium min-h-8.5 cursor-pointer text-coral border border-[#633246] bg-[#2b1b28] hover:bg-[#3d2034] transition-colors"
+                      className="inline-flex items-center justify-center gap-1.75 whitespace-nowrap rounded-[7px] px-3.25 py-2.25 text-[11px] font-medium min-h-8.5 cursor-pointer text-coral border border-[color:var(--ui-border-633246)] bg-[var(--ui-surface-2b1b28)] hover:bg-[var(--ui-surface-hover-3d2034)] transition-colors"
                       style={{ marginLeft: 'auto' }}
                       onClick={() => handleDeleteStock(editingStockId)}
                     >
@@ -1753,8 +1753,8 @@ export function BudgetingTab({ graph }: BudgetingTabProps) {
           {tradeModal.open && (
             <div
               style={{
-                background: '#1c2436',
-                border: '1px solid #3b82f6',
+                background: 'var(--ui-paint-1c2436)',
+                border: '1px solid var(--ui-paint-3b82f6)',
                 borderRadius: '8px',
                 padding: '1.25rem',
                 marginBottom: '1.5rem',
@@ -1784,8 +1784,8 @@ export function BudgetingTab({ graph }: BudgetingTabProps) {
                     style={{
                       padding: '8px',
                       borderRadius: '4px',
-                      background: '#0f141e',
-                      border: '1px solid #283347',
+                      background: 'var(--ui-paint-0f141e)',
+                      border: '1px solid var(--ui-paint-283347)',
                       color: 'white',
                     }}
                   >
@@ -1809,8 +1809,8 @@ export function BudgetingTab({ graph }: BudgetingTabProps) {
                     style={{
                       padding: '8px',
                       borderRadius: '4px',
-                      background: '#0f141e',
-                      border: '1px solid #283347',
+                      background: 'var(--ui-paint-0f141e)',
+                      border: '1px solid var(--ui-paint-283347)',
                       color: 'white',
                     }}
                   />
@@ -1831,8 +1831,8 @@ export function BudgetingTab({ graph }: BudgetingTabProps) {
                     style={{
                       padding: '8px',
                       borderRadius: '4px',
-                      background: '#0f141e',
-                      border: '1px solid #283347',
+                      background: 'var(--ui-paint-0f141e)',
+                      border: '1px solid var(--ui-paint-283347)',
                       color: 'white',
                     }}
                   />
@@ -1850,8 +1850,8 @@ export function BudgetingTab({ graph }: BudgetingTabProps) {
                     style={{
                       padding: '8px',
                       borderRadius: '4px',
-                      background: '#0f141e',
-                      border: '1px solid #283347',
+                      background: 'var(--ui-paint-0f141e)',
+                      border: '1px solid var(--ui-paint-283347)',
                       color: 'white',
                     }}
                   >
@@ -1863,18 +1863,18 @@ export function BudgetingTab({ graph }: BudgetingTabProps) {
                   </select>
                 </label>
 
-                <div style={{ gridColumn: '1 / -1', fontSize: '13px', color: '#93c5fd' }}>
+                <div style={{ gridColumn: '1 / -1', fontSize: '13px', color: 'var(--ui-paint-93c5fd)' }}>
                   Total Estimated {tradeModal.type === 'buy' ? 'Cost' : 'Proceeds'}:{' '}
                   <strong>{dollars(tradeModal.quantity * tradeModal.price)}</strong>
                 </div>
 
                 <div style={{ display: 'flex', gap: '0.5rem', gridColumn: '1 / -1' }}>
-                  <button type="submit" className="inline-flex items-center justify-center gap-1.75 whitespace-nowrap rounded-[7px] px-3.5 py-2.25 text-[11px] font-medium min-h-8.5 cursor-pointer bg-primary text-primary-fg hover:bg-[#cbbcfc] transition-colors">
+                  <button type="submit" className="inline-flex items-center justify-center gap-1.75 whitespace-nowrap rounded-[7px] px-3.5 py-2.25 text-[11px] font-medium min-h-8.5 cursor-pointer bg-primary text-primary-fg hover:bg-[var(--ui-surface-hover-cbbcfc)] transition-colors">
                     Execute {tradeModal.type.toUpperCase()}
                   </button>
                   <button
                     type="button"
-                    className="inline-flex items-center justify-center gap-1.75 whitespace-nowrap rounded-[7px] px-3.25 py-2.25 text-[11px] font-medium min-h-8.5 cursor-pointer bg-transparent text-[#97a7c2] border border-transparent hover:bg-[#1a2536] hover:text-text transition-colors"
+                    className="inline-flex items-center justify-center gap-1.75 whitespace-nowrap rounded-[7px] px-3.25 py-2.25 text-[11px] font-medium min-h-8.5 cursor-pointer bg-transparent text-[color:var(--ui-text-97a7c2)] border border-transparent hover:bg-[var(--ui-surface-hover-1a2536)] hover:text-text transition-colors"
                     onClick={() => setTradeModal((prev) => ({ ...prev, open: false }))}
                   >
                     Cancel
@@ -1890,10 +1890,10 @@ export function BudgetingTab({ graph }: BudgetingTabProps) {
               style={{
                 textAlign: 'center',
                 padding: '3rem',
-                background: '#161d2b',
+                background: 'var(--ui-paint-161d2b)',
                 borderRadius: '8px',
-                border: '1px dashed #283347',
-                color: '#8f9db3',
+                border: '1px dashed var(--ui-paint-283347)',
+                color: 'var(--ui-paint-8f9db3)',
               }}
             >
               No stock positions yet. Click <strong>+ Add Stock Ticker</strong> to track your
@@ -1903,9 +1903,9 @@ export function BudgetingTab({ graph }: BudgetingTabProps) {
             <div
               style={{
                 overflowX: 'auto',
-                background: '#161d2b',
+                background: 'var(--ui-paint-161d2b)',
                 borderRadius: '8px',
-                border: '1px solid #283347',
+                border: '1px solid var(--ui-paint-283347)',
               }}
             >
               <table
@@ -1919,9 +1919,9 @@ export function BudgetingTab({ graph }: BudgetingTabProps) {
                 <thead>
                   <tr
                     style={{
-                      borderBottom: '1px solid #283347',
-                      background: '#121824',
-                      color: '#8f9db3',
+                      borderBottom: '1px solid var(--ui-paint-283347)',
+                      background: 'var(--ui-paint-121824)',
+                      color: 'var(--ui-paint-8f9db3)',
                     }}
                   >
                     <th style={{ padding: '12px' }}>Ticker</th>
@@ -1957,11 +1957,11 @@ export function BudgetingTab({ graph }: BudgetingTabProps) {
                     const totalDiv = pos ? pos.totalDividends : 0;
 
                     return (
-                      <tr key={stock.id} style={{ borderBottom: '1px solid #1f2737' }}>
-                        <td style={{ padding: '10px 12px', fontWeight: 700, color: '#38bdf8' }}>
+                      <tr key={stock.id} style={{ borderBottom: '1px solid var(--ui-paint-1f2737)' }}>
+                        <td style={{ padding: '10px 12px', fontWeight: 700, color: 'var(--ui-paint-38bdf8)' }}>
                           {stock.ticker}
                         </td>
-                        <td style={{ padding: '10px 12px', color: '#cbd5e1' }}>
+                        <td style={{ padding: '10px 12px', color: 'var(--ui-paint-cbd5e1)' }}>
                           {stock.companyName || '—'}
                         </td>
                         <td style={{ padding: '10px 12px', textAlign: 'right', fontWeight: 600 }}>
@@ -1977,7 +1977,7 @@ export function BudgetingTab({ graph }: BudgetingTabProps) {
                             padding: '10px 12px',
                             textAlign: 'right',
                             fontWeight: 600,
-                            color: currentPrice >= purchasedPrice ? '#4ade80' : '#f87171',
+                            color: currentPrice >= purchasedPrice ? 'var(--ui-paint-4ade80)' : 'var(--ui-paint-f87171)',
                           }}
                         >
                           {dollars(currentPrice)}
@@ -1987,15 +1987,15 @@ export function BudgetingTab({ graph }: BudgetingTabProps) {
                             padding: '10px 12px',
                             textAlign: 'right',
                             fontWeight: 600,
-                            color: '#4ade80',
+                            color: 'var(--ui-paint-4ade80)',
                           }}
                         >
                           {dollars(marketVal)}
                         </td>
-                        <td style={{ padding: '10px 12px', textAlign: 'right', color: '#8f9db3' }}>
+                        <td style={{ padding: '10px 12px', textAlign: 'right', color: 'var(--ui-paint-8f9db3)' }}>
                           {costBasis ? dollars(costBasis) : '—'}
                         </td>
-                        <td style={{ padding: '10px 12px', textAlign: 'right', color: '#a7f3d0' }}>
+                        <td style={{ padding: '10px 12px', textAlign: 'right', color: 'var(--ui-paint-a7f3d0)' }}>
                           {totalDiv ? dollars(totalDiv) : '—'}
                         </td>
                         <td
@@ -2007,12 +2007,12 @@ export function BudgetingTab({ graph }: BudgetingTabProps) {
                         >
                           <button
                             type="button"
-                            className="inline-flex items-center justify-center whitespace-nowrap rounded-[7px] font-medium cursor-pointer bg-transparent border border-transparent hover:bg-[#1a2536] transition-colors"
+                            className="inline-flex items-center justify-center whitespace-nowrap rounded-[7px] font-medium cursor-pointer bg-transparent border border-transparent hover:bg-[var(--ui-surface-hover-1a2536)] transition-colors"
                             style={{
                               padding: '4px 8px',
                               fontSize: '11px',
                               marginRight: '4px',
-                              color: '#4ade80',
+                              color: 'var(--ui-paint-4ade80)',
                             }}
                             onClick={() => handleOpenTrade(pos || stock, 'buy')}
                           >
@@ -2020,12 +2020,12 @@ export function BudgetingTab({ graph }: BudgetingTabProps) {
                           </button>
                           <button
                             type="button"
-                            className="inline-flex items-center justify-center whitespace-nowrap rounded-[7px] font-medium cursor-pointer bg-transparent border border-transparent hover:bg-[#1a2536] transition-colors"
+                            className="inline-flex items-center justify-center whitespace-nowrap rounded-[7px] font-medium cursor-pointer bg-transparent border border-transparent hover:bg-[var(--ui-surface-hover-1a2536)] transition-colors"
                             style={{
                               padding: '4px 8px',
                               fontSize: '11px',
                               marginRight: '6px',
-                              color: '#fb923c',
+                              color: 'var(--ui-paint-fb923c)',
                             }}
                             onClick={() => handleOpenTrade(pos || stock, 'sell')}
                           >
@@ -2033,7 +2033,7 @@ export function BudgetingTab({ graph }: BudgetingTabProps) {
                           </button>
                           <button
                             type="button"
-                            className="inline-flex items-center justify-center whitespace-nowrap rounded-[7px] font-medium cursor-pointer bg-transparent border border-transparent hover:bg-[#1a2536] text-[#97a7c2] hover:text-text transition-colors"
+                            className="inline-flex items-center justify-center whitespace-nowrap rounded-[7px] font-medium cursor-pointer bg-transparent border border-transparent hover:bg-[var(--ui-surface-hover-1a2536)] text-[color:var(--ui-text-97a7c2)] hover:text-text transition-colors"
                             onClick={() => handleEditStock(stock)}
                             style={{ padding: '4px 8px', fontSize: '11px', marginRight: '4px' }}
                           >
@@ -2041,8 +2041,8 @@ export function BudgetingTab({ graph }: BudgetingTabProps) {
                           </button>
                           <button
                             type="button"
-                            className="inline-flex items-center justify-center whitespace-nowrap rounded-[7px] font-medium cursor-pointer bg-transparent border border-transparent hover:bg-[#1a2536] transition-colors"
-                            style={{ color: '#f87171', padding: '4px 8px', fontSize: '11px' }}
+                            className="inline-flex items-center justify-center whitespace-nowrap rounded-[7px] font-medium cursor-pointer bg-transparent border border-transparent hover:bg-[var(--ui-surface-hover-1a2536)] transition-colors"
+                            style={{ color: 'var(--ui-paint-f87171)', padding: '4px 8px', fontSize: '11px' }}
                             onClick={() => stock.id && handleDeleteStock(stock.id)}
                           >
                             Delete
@@ -2073,7 +2073,7 @@ export function BudgetingTab({ graph }: BudgetingTabProps) {
               <h3 id="recurring-section-heading" style={{ margin: 0 }}>
                 Recurring Transaction Templates
               </h3>
-              <p className="text-[#8b9ab1] text-[11px] mt-0.5 mb-0">
+              <p className="text-[color:var(--ui-text-8b9ab1)] text-[11px] mt-0.5 mb-0">
                 Automate repeating expenses and income (e.g. rent, payroll, Netflix). Occurrences
                 are generated into Transactions.
               </p>
@@ -2081,7 +2081,7 @@ export function BudgetingTab({ graph }: BudgetingTabProps) {
             <div style={{ display: 'flex', gap: '0.5rem' }}>
               <button
                 type="button"
-                className="inline-flex items-center justify-center gap-2 min-w-30 aria-busy:cursor-progress whitespace-nowrap rounded-[7px] font-medium cursor-pointer bg-transparent text-[#97a7c2] hover:bg-[#1a2536] hover:text-text transition-colors disabled:opacity-45 disabled:cursor-not-allowed"
+                className="inline-flex items-center justify-center gap-2 min-w-30 aria-busy:cursor-progress whitespace-nowrap rounded-[7px] font-medium cursor-pointer bg-transparent text-[color:var(--ui-text-97a7c2)] hover:bg-[var(--ui-surface-hover-1a2536)] hover:text-text transition-colors disabled:opacity-45 disabled:cursor-not-allowed"
                 onClick={handleGenerateDueOccurrences}
                 disabled={!userId}
                 aria-busy={generating}
@@ -2098,7 +2098,7 @@ export function BudgetingTab({ graph }: BudgetingTabProps) {
               </button>
               <button
                 type="button"
-                className="inline-flex items-center justify-center gap-1.75 whitespace-nowrap rounded-[7px] px-3.5 py-2.25 text-[11px] font-medium min-h-8.5 cursor-pointer bg-primary text-primary-fg hover:bg-[#cbbcfc] transition-colors disabled:opacity-45 disabled:cursor-not-allowed"
+                className="inline-flex items-center justify-center gap-1.75 whitespace-nowrap rounded-[7px] px-3.5 py-2.25 text-[11px] font-medium min-h-8.5 cursor-pointer bg-primary text-primary-fg hover:bg-[var(--ui-surface-hover-cbbcfc)] transition-colors disabled:opacity-45 disabled:cursor-not-allowed"
                 onClick={handleOpenAddRecurring}
                 disabled={!userId}
               >
@@ -2111,8 +2111,8 @@ export function BudgetingTab({ graph }: BudgetingTabProps) {
           {showRecurForm && (
             <div
               style={{
-                background: '#161d2b',
-                border: '1px solid #283347',
+                background: 'var(--ui-paint-161d2b)',
+                border: '1px solid var(--ui-paint-283347)',
                 borderRadius: '8px',
                 padding: '1.25rem',
                 marginBottom: '1.5rem',
@@ -2141,8 +2141,8 @@ export function BudgetingTab({ graph }: BudgetingTabProps) {
                     style={{
                       padding: '8px',
                       borderRadius: '4px',
-                      background: '#0f141e',
-                      border: '1px solid #283347',
+                      background: 'var(--ui-paint-0f141e)',
+                      border: '1px solid var(--ui-paint-283347)',
                       color: 'white',
                     }}
                   >
@@ -2166,8 +2166,8 @@ export function BudgetingTab({ graph }: BudgetingTabProps) {
                     style={{
                       padding: '8px',
                       borderRadius: '4px',
-                      background: '#0f141e',
-                      border: '1px solid #283347',
+                      background: 'var(--ui-paint-0f141e)',
+                      border: '1px solid var(--ui-paint-283347)',
                       color: 'white',
                     }}
                   />
@@ -2188,8 +2188,8 @@ export function BudgetingTab({ graph }: BudgetingTabProps) {
                     style={{
                       padding: '8px',
                       borderRadius: '4px',
-                      background: '#0f141e',
-                      border: '1px solid #283347',
+                      background: 'var(--ui-paint-0f141e)',
+                      border: '1px solid var(--ui-paint-283347)',
                       color: 'white',
                     }}
                   />
@@ -2210,8 +2210,8 @@ export function BudgetingTab({ graph }: BudgetingTabProps) {
                     style={{
                       padding: '8px',
                       borderRadius: '4px',
-                      background: '#0f141e',
-                      border: '1px solid #283347',
+                      background: 'var(--ui-paint-0f141e)',
+                      border: '1px solid var(--ui-paint-283347)',
                       color: 'white',
                     }}
                   >
@@ -2242,8 +2242,8 @@ export function BudgetingTab({ graph }: BudgetingTabProps) {
                     style={{
                       padding: '8px',
                       borderRadius: '4px',
-                      background: '#0f141e',
-                      border: '1px solid #283347',
+                      background: 'var(--ui-paint-0f141e)',
+                      border: '1px solid var(--ui-paint-283347)',
                       color: 'white',
                     }}
                   />
@@ -2263,8 +2263,8 @@ export function BudgetingTab({ graph }: BudgetingTabProps) {
                     style={{
                       padding: '8px',
                       borderRadius: '4px',
-                      background: '#0f141e',
-                      border: '1px solid #283347',
+                      background: 'var(--ui-paint-0f141e)',
+                      border: '1px solid var(--ui-paint-283347)',
                       color: 'white',
                     }}
                   />
@@ -2284,8 +2284,8 @@ export function BudgetingTab({ graph }: BudgetingTabProps) {
                     style={{
                       padding: '8px',
                       borderRadius: '4px',
-                      background: '#0f141e',
-                      border: '1px solid #283347',
+                      background: 'var(--ui-paint-0f141e)',
+                      border: '1px solid var(--ui-paint-283347)',
                       color: 'white',
                     }}
                   />
@@ -2304,8 +2304,8 @@ export function BudgetingTab({ graph }: BudgetingTabProps) {
                     style={{
                       padding: '8px',
                       borderRadius: '4px',
-                      background: '#0f141e',
-                      border: '1px solid #283347',
+                      background: 'var(--ui-paint-0f141e)',
+                      border: '1px solid var(--ui-paint-283347)',
                       color: 'white',
                     }}
                   />
@@ -2319,12 +2319,12 @@ export function BudgetingTab({ graph }: BudgetingTabProps) {
                     marginTop: '0.5rem',
                   }}
                 >
-                  <button type="submit" className="inline-flex items-center justify-center gap-1.75 whitespace-nowrap rounded-[7px] px-3.5 py-2.25 text-[11px] font-medium min-h-8.5 cursor-pointer bg-primary text-primary-fg hover:bg-[#cbbcfc] transition-colors">
+                  <button type="submit" className="inline-flex items-center justify-center gap-1.75 whitespace-nowrap rounded-[7px] px-3.5 py-2.25 text-[11px] font-medium min-h-8.5 cursor-pointer bg-primary text-primary-fg hover:bg-[var(--ui-surface-hover-cbbcfc)] transition-colors">
                     {editingRecurId ? 'Save Changes' : 'Create Recurring Rule'}
                   </button>
                   <button
                     type="button"
-                    className="inline-flex items-center justify-center gap-1.75 whitespace-nowrap rounded-[7px] px-3.25 py-2.25 text-[11px] font-medium min-h-8.5 cursor-pointer bg-transparent text-[#97a7c2] border border-transparent hover:bg-[#1a2536] hover:text-text transition-colors"
+                    className="inline-flex items-center justify-center gap-1.75 whitespace-nowrap rounded-[7px] px-3.25 py-2.25 text-[11px] font-medium min-h-8.5 cursor-pointer bg-transparent text-[color:var(--ui-text-97a7c2)] border border-transparent hover:bg-[var(--ui-surface-hover-1a2536)] hover:text-text transition-colors"
                     onClick={() => {
                       setShowRecurForm(false);
                       setEditingRecurId(null);
@@ -2335,7 +2335,7 @@ export function BudgetingTab({ graph }: BudgetingTabProps) {
                   {editingRecurId && (
                     <button
                       type="button"
-                      className="inline-flex items-center justify-center gap-1.75 whitespace-nowrap rounded-[7px] px-3.25 py-2.25 text-[11px] font-medium min-h-8.5 cursor-pointer text-coral border border-[#633246] bg-[#2b1b28] hover:bg-[#3d2034] transition-colors"
+                      className="inline-flex items-center justify-center gap-1.75 whitespace-nowrap rounded-[7px] px-3.25 py-2.25 text-[11px] font-medium min-h-8.5 cursor-pointer text-coral border border-[color:var(--ui-border-633246)] bg-[var(--ui-surface-2b1b28)] hover:bg-[var(--ui-surface-hover-3d2034)] transition-colors"
                       style={{ marginLeft: 'auto' }}
                       onClick={() => handleDeleteRecurring(editingRecurId)}
                     >
@@ -2353,10 +2353,10 @@ export function BudgetingTab({ graph }: BudgetingTabProps) {
               style={{
                 textAlign: 'center',
                 padding: '3rem',
-                background: '#161d2b',
+                background: 'var(--ui-paint-161d2b)',
                 borderRadius: '8px',
-                border: '1px dashed #283347',
-                color: '#8f9db3',
+                border: '1px dashed var(--ui-paint-283347)',
+                color: 'var(--ui-paint-8f9db3)',
               }}
             >
               No recurring rules set up yet. Click <strong>+ Add Recurring Rule</strong> to template
@@ -2366,9 +2366,9 @@ export function BudgetingTab({ graph }: BudgetingTabProps) {
             <div
               style={{
                 overflowX: 'auto',
-                background: '#161d2b',
+                background: 'var(--ui-paint-161d2b)',
                 borderRadius: '8px',
-                border: '1px solid #283347',
+                border: '1px solid var(--ui-paint-283347)',
               }}
             >
               <table
@@ -2382,9 +2382,9 @@ export function BudgetingTab({ graph }: BudgetingTabProps) {
                 <thead>
                   <tr
                     style={{
-                      borderBottom: '1px solid #283347',
-                      background: '#121824',
-                      color: '#8f9db3',
+                      borderBottom: '1px solid var(--ui-paint-283347)',
+                      background: 'var(--ui-paint-121824)',
+                      color: 'var(--ui-paint-8f9db3)',
                     }}
                   >
                     <th style={{ padding: '12px' }}>Description</th>
@@ -2398,7 +2398,7 @@ export function BudgetingTab({ graph }: BudgetingTabProps) {
                 </thead>
                 <tbody>
                   {recurringList.map((r) => (
-                    <tr key={r.id} style={{ borderBottom: '1px solid #1f2737' }}>
+                    <tr key={r.id} style={{ borderBottom: '1px solid var(--ui-paint-1f2737)' }}>
                       <td style={{ padding: '10px 12px', fontWeight: 600 }}>{r.description}</td>
                       <td style={{ padding: '10px 12px' }}>
                         <span
@@ -2408,8 +2408,8 @@ export function BudgetingTab({ graph }: BudgetingTabProps) {
                             fontSize: '11px',
                             fontWeight: 600,
                             textTransform: 'uppercase',
-                            background: r.kind === 'income' ? '#064e3b' : '#7f1d1d',
-                            color: r.kind === 'income' ? '#86efac' : '#fca5a5',
+                            background: r.kind === 'income' ? 'var(--ui-paint-064e3b)' : 'var(--ui-paint-7f1d1d)',
+                            color: r.kind === 'income' ? 'var(--ui-paint-86efac)' : 'var(--ui-paint-fca5a5)',
                           }}
                         >
                           {r.kind}
@@ -2425,7 +2425,7 @@ export function BudgetingTab({ graph }: BudgetingTabProps) {
                       </td>
                       <td style={{ padding: '10px 12px' }}>{r.nextDueDate}</td>
                       <td style={{ padding: '10px 12px' }}>
-                        <span style={{ color: r.isActive ? '#4ade80' : '#8f9db3' }}>
+                        <span style={{ color: r.isActive ? 'var(--ui-paint-4ade80)' : 'var(--ui-paint-8f9db3)' }}>
                           {r.isActive ? '● Active' : '○ Inactive'}
                         </span>
                       </td>
@@ -2434,7 +2434,7 @@ export function BudgetingTab({ graph }: BudgetingTabProps) {
                       >
                         <button
                           type="button"
-                          className="inline-flex items-center justify-center whitespace-nowrap rounded-[7px] font-medium cursor-pointer bg-transparent border border-transparent hover:bg-[#1a2536] text-[#97a7c2] hover:text-text transition-colors"
+                          className="inline-flex items-center justify-center whitespace-nowrap rounded-[7px] font-medium cursor-pointer bg-transparent border border-transparent hover:bg-[var(--ui-surface-hover-1a2536)] text-[color:var(--ui-text-97a7c2)] hover:text-text transition-colors"
                           onClick={() => {
                             setEditingRecurId(r.id ?? null);
                             setRecurDraft(r);
@@ -2446,8 +2446,8 @@ export function BudgetingTab({ graph }: BudgetingTabProps) {
                         </button>
                         <button
                           type="button"
-                          className="inline-flex items-center justify-center whitespace-nowrap rounded-[7px] font-medium cursor-pointer bg-transparent border border-transparent hover:bg-[#1a2536] transition-colors"
-                          style={{ color: '#f87171', padding: '4px 8px', fontSize: '11px' }}
+                          className="inline-flex items-center justify-center whitespace-nowrap rounded-[7px] font-medium cursor-pointer bg-transparent border border-transparent hover:bg-[var(--ui-surface-hover-1a2536)] transition-colors"
+                          style={{ color: 'var(--ui-paint-f87171)', padding: '4px 8px', fontSize: '11px' }}
                           onClick={() => r.id && handleDeleteRecurring(r.id)}
                         >
                           Delete

@@ -1,0 +1,422 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta
+      name="description"
+      content="From the everyday budget to the long view, see what each part of FinApp does and how it fits together."
+    />
+    <meta name="theme-color" content="#0c1018" />
+    <title>Features FinApp</title>
+    <script src="/assets/theme-init.js"></script>
+    <link rel="stylesheet" href="/assets/styles.css" />
+    <link rel="icon" type="image/svg+xml" href="/static/finapp-circle.svg" />
+  </head>
+  <body class="marketing guide-page bg-background text-text font-sans">
+    <a class="skip-link" href="#main">Skip to content</a>
+    <header class="site-header sticky top-0 z-20 bg-header backdrop-blur-md border-b border-border">
+      <div
+        class="max-w-310 mx-auto px-8 max-xs:px-5 min-h-20.5 max-xs:min-h-17.5 flex gap-7 max-nav:gap-4.5 max-xs:gap-3 items-center justify-between relative"
+      >
+        <a
+          class="inline-flex items-center gap-3 max-xs:gap-2.25 text-[25px] max-xs:text-[23px] font-bold tracking-[-0.7px] text-text shrink-0"
+          href="/"
+          aria-label="FinApp home"
+          ><span
+            class="block shrink-0 w-8 h-8 max-xs:w-7 max-xs:h-7 rounded-full bg-[#00c9b7]"
+            aria-hidden="true"
+          ></span
+          >FinApp</a
+        >
+        <nav
+          id="site-navigation"
+          class="site-navigation flex gap-6.75 max-nav:gap-4.25 text-xs max-nav:text-[11px] text-foreground ml-auto mr-3 max-nav:mr-0 max-mob:hidden max-mob:absolute max-mob:top-full max-mob:left-0 max-mob:right-0 max-mob:bg-card max-mob:border-b max-mob:border-border max-mob:py-3.75 max-mob:px-6.25 max-mob:flex-col max-mob:gap-0"
+          aria-label="Main navigation"
+        >
+          <a
+            class="hover:text-primary transition-colors max-mob:py-2.75 max-mob:text-[13px] focus-visible:outline-2 focus-visible:outline-primary focus-visible:outline-offset-[5px]"
+            href="/features"
+            aria-current="page"
+            >Features</a
+          ><a
+            class="hover:text-primary transition-colors max-mob:py-2.75 max-mob:text-[13px] focus-visible:outline-2 focus-visible:outline-primary focus-visible:outline-offset-[5px]"
+            href="/how-it-works"
+            >How it works</a
+          ><a
+            class="hover:text-primary transition-colors max-mob:py-2.75 max-mob:text-[13px] focus-visible:outline-2 focus-visible:outline-primary focus-visible:outline-offset-[5px]"
+            href="/scenarios"
+            >Demo scenarios</a
+          ><a
+            class="hover:text-primary transition-colors max-mob:py-2.75 max-mob:text-[13px] focus-visible:outline-2 focus-visible:outline-primary focus-visible:outline-offset-[5px]"
+            href="/faq"
+            >FAQ</a
+          >
+        </nav>
+        <div class="flex gap-2.5 max-xs:gap-1.5 items-center max-mob:ml-auto">
+          <a
+            class="inline-flex items-center justify-center gap-3.5 min-h-9.75 max-xs:min-h-8.5 border border-transparent bg-transparent text-foreground py-2.5 px-4 max-xs:py-2 max-xs:px-2.5 rounded-lg text-xs max-xs:text-[11px] font-[550] whitespace-nowrap hover:text-text hover:bg-muted/50 transition-colors focus-visible:outline-2 focus-visible:outline-primary focus-visible:outline-offset-[5px]"
+            href="/login"
+            data-workspace-link
+            >Sign in</a
+          ><a
+            class="inline-flex items-center justify-center gap-3.5 min-h-9.75 max-xs:min-h-8.5 border border-primary bg-primary text-primary-fg py-2.5 px-4 rounded-lg text-xs font-[550] whitespace-nowrap hover:brightness-[1.08] transition-all max-xs:hidden focus-visible:outline-2 focus-visible:outline-primary focus-visible:outline-offset-[5px]"
+            href="/dashboard/?demo=true&profile=2"
+            >Open demo <span aria-hidden="true">↗</span></a
+          ><button
+            id="theme_button"
+            data-theme-control
+            class="bg-transparent border border-border rounded-lg w-8.75 h-8.75 max-xs:w-8 max-xs:h-8 grid place-items-center text-foreground text-[19px] max-xs:text-[17px] hover:bg-muted cursor-pointer transition-colors focus-visible:outline-2 focus-visible:outline-primary focus-visible:outline-offset-[5px]"
+            aria-label="Switch to light theme"
+            type="button"
+            title="Switch theme"
+          >
+            <svg
+              class="theme-sun"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="1.7"
+              aria-hidden="true"
+            >
+              <circle cx="12" cy="12" r="4" />
+              <path
+                d="M12 2v2m0 16v2M2 12h2m16 0h2M5 5l1.5 1.5m11 11L19 19M5 19l1.5-1.5m11-11L19 5"
+              /></svg
+            ><svg
+              class="theme-moon"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="1.7"
+              aria-hidden="true"
+            >
+              <path d="M20.5 14A8.5 8.5 0 0 1 10 3.5 8.5 8.5 0 1 0 20.5 14Z" />
+            </svg></button
+          ><button
+            class="hidden max-mob:grid bg-transparent border border-border rounded-lg w-8.75 h-8.75 max-xs:w-8 max-xs:h-8 place-items-center text-foreground text-[19px] max-xs:text-[17px] hover:bg-muted cursor-pointer transition-colors focus-visible:outline-2 focus-visible:outline-primary focus-visible:outline-offset-[5px]"
+            id="menu-toggle"
+            type="button"
+            aria-label="Open navigation"
+            aria-expanded="false"
+            aria-controls="site-navigation"
+          >
+            ☰
+          </button>
+        </div>
+      </div>
+    </header>
+    <main id="main" class="max-w-310 mx-auto px-8 max-xs:px-5">
+      <header class="guide-hero">
+        <nav class="breadcrumbs" aria-label="Breadcrumb">
+          <a href="/">Home</a><span aria-hidden="true">/</span><span>Features</span>
+        </nav>
+        <p class="eyebrow">FINAPP / FEATURES</p>
+        <h1>Tools that connect.<br /><span>Decisions that make sense.</span></h1>
+        <p class="guide-lead">
+          From the everyday budget to the long view, see what each part of FinApp does and how it
+          fits together.
+        </p>
+      </header>
+      <nav class="guide-toc" aria-label="On this page">
+        <a href="#node-graph">Node Graph</a><a href="#monthly-budget">Budgeting</a
+        ><a href="#forecast-tools">Simulations</a>
+      </nav>
+      <section id="node-graph" class="guide-section">
+        <div class="guide-copy">
+          <p class="eyebrow">01 / NODE GRAPH</p>
+          <h2>A financial map you can actually work with.</h2>
+          <p>
+            A node represents one part of your finances: income, checking, savings, investments, a
+            debt, or an expense. Its connections describe how money is routed. Keeping both in the
+            same picture makes it easier to notice competing priorities.
+          </p>
+          <p>
+            Add a node, enter a balance or monthly amount, and connect it to a destination. Set a
+            connection to a fixed dollar amount or a percentage, then inspect the budget before
+            running a simulation.
+          </p>
+          <ul>
+            <li>Separate selection, pan, box-select, and connection tools.</li>
+            <li>Canvas-only fullscreen, zoom, fit view, and automatic layout.</li>
+            <li>Undo and redo, recoverable archived nodes, and JSON import/export.</li>
+            <li>Simulate the full graph or a selected set of nodes.</li>
+          </ul>
+        </div>
+        <figure class="diagram-panel">
+          <div class="diagram-heading">
+            <span class="status-dot"></span>One connected financial picture<span
+              class="diagram-badge"
+              >EXPLAINED</span
+            >
+          </div>
+          <svg
+            viewBox="0 0 550 300"
+            role="img"
+            aria-label="Family income connected to checking, investments, expenses and debt"
+            class="block w-full h-auto overflow-visible"
+          >
+            <title>
+              Example nodes connecting income to checking, investments, expenses, and debt
+            </title>
+            <defs>
+              <marker
+                id="guide-arrow"
+                viewBox="0 -5 10 10"
+                refX="10"
+                markerWidth="5"
+                markerHeight="5"
+                orient="auto"
+              >
+                <path d="M0,-5L10,0L0,5" fill="#596a86" />
+              </marker>
+            </defs>
+            <g class="preview-edges" fill="none" marker-end="url(#guide-arrow)">
+              <path d="M160 150H205" />
+              <path d="M345 150C370 150 365 60 395 60" />
+              <path d="M345 150H395" />
+              <path d="M345 150C370 150 365 240 395 240" />
+            </g>
+            <g class="sample-node income" transform="translate(20,117)">
+              <rect width="140" height="66" rx="9" />
+              <text x="12" y="17" class="node-type">INCOME</text>
+              <text x="12" y="35" class="node-name">Monthly salary</text>
+              <text x="12" y="54" class="node-amount">$11,250</text>
+            </g>
+            <g class="sample-node checking" transform="translate(205,117)">
+              <rect width="140" height="66" rx="9" />
+              <text x="12" y="17" class="node-type">CHECKING</text>
+              <text x="12" y="35" class="node-name">Checking account</text>
+              <text x="12" y="54" class="node-amount">$6,200</text>
+            </g>
+            <g class="sample-node investment" transform="translate(395,27)">
+              <rect width="140" height="66" rx="9" />
+              <text x="12" y="17" class="node-type">INVESTMENT</text>
+              <text x="12" y="35" class="node-name">401(k)</text>
+              <text x="12" y="54" class="node-amount">$88,000</text>
+            </g>
+            <g class="sample-node expense" transform="translate(395,117)">
+              <rect width="140" height="66" rx="9" />
+              <text x="12" y="17" class="node-type">EXPENSE</text>
+              <text x="12" y="35" class="node-name">Living expenses</text>
+              <text x="12" y="54" class="node-amount">$4,600 /mo</text>
+            </g>
+            <g class="sample-node debt" transform="translate(395,207)">
+              <rect width="140" height="66" rx="9" />
+              <text x="12" y="17" class="node-type">DEBT</text>
+              <text x="12" y="35" class="node-name">Auto loan</text>
+              <text x="12" y="54" class="node-amount">$14,000</text>
+            </g>
+          </svg>
+          <figcaption>
+            Illustrative Family profile. Lines describe the movement of money; balances and monthly
+            amounts have different meanings.
+          </figcaption>
+        </figure>
+      </section>
+      <section id="monthly-budget" class="guide-section">
+        <div class="guide-copy">
+          <p class="eyebrow">02 / EVERYDAY MONEY</p>
+          <h2>Understand what is available before investing.</h2>
+          <p>
+            The Overview separates your monthly budget from your current assets and debts. The donut
+            chart lets you switch between these views so a loan balance is never confused with a
+            monthly loan payment.
+          </p>
+          <p>
+            Budgeting lets signed-in users manage income and expense records, accounts, categories,
+            and recurring entries. Occurrences turn a recurring plan into dated records. These
+            database records and the Node Graph scenario draft are separate workflows; changes are
+            not automatically synchronized between them.
+          </p>
+          <p>
+            Gross pay can be reduced by an editable effective tax estimate. Income entered as
+            take-home pay is not taxed again. Saving and investing are transfers between your
+            accounts, rather than living costs.
+          </p>
+        </div>
+        <figure class="diagram-panel">
+          <div class="diagram-heading">
+            <span class="status-dot"></span>Follow the monthly money<span class="diagram-badge"
+              >EXPLAINED</span
+            >
+          </div>
+          <svg viewBox="0 0 560 340" role="img" aria-labelledby="budget-title budget-desc">
+            <title id="budget-title">Family monthly budget</title>
+            <desc id="budget-desc">
+              Gross income 11,250 dollars less tax 2,250, living costs 4,600 and loan payment 450
+              leaves 3,950 after bills. Of that, 1,100 is planned investing, 300 saving and 2,550
+              unassigned.
+            </desc>
+            <g class="chart-grid"><path d="M60 60H520M60 120H520M60 180H520M60 240H520" /></g>
+            <text x="32" y="32" class="diagram-label">$11,250 GROSS MONTHLY INCOME</text>
+            <rect x="32" y="55" width="496" height="46" rx="8" fill="var(--muted)" />
+            <rect x="32" y="55" width="99" height="46" rx="8" fill="var(--primary)" />
+            <rect x="131" y="55" width="203" height="46" fill="var(--blue)" />
+            <rect x="334" y="55" width="20" height="46" fill="var(--coral)" />
+            <rect x="354" y="55" width="174" height="46" rx="8" fill="var(--mint)" />
+            <g class="diagram-text">
+              <circle cx="42" cy="139" r="5" fill="var(--primary)" />
+              <text x="58" y="144">Estimated tax</text>
+              <text x="515" y="144" text-anchor="end">$2,250</text>
+              <circle cx="42" cy="177" r="5" fill="var(--blue)" />
+              <text x="58" y="182">Living costs</text>
+              <text x="515" y="182" text-anchor="end">$4,600</text>
+              <circle cx="42" cy="215" r="5" fill="var(--coral)" />
+              <text x="58" y="220">Required loan payment</text>
+              <text x="515" y="220" text-anchor="end">$450</text>
+              <circle cx="42" cy="253" r="5" fill="var(--mint)" />
+              <text x="58" y="258">After-bill surplus</text>
+              <text x="515" y="258" text-anchor="end">$3,950</text>
+            </g>
+            <text x="32" y="305" class="diagram-label">
+              $1,100 INVESTING · $300 SAVING · $2,550 UNASSIGNED
+            </text>
+          </svg>
+          <figcaption>
+            Seeded Mid-Career Family example with a 20% effective tax estimate. Values are monthly
+            USD, before extra investing.
+          </figcaption>
+        </figure>
+      </section>
+      <section id="forecast-tools" class="guide-section">
+        <div class="guide-copy">
+          <p class="eyebrow">03 / SIMULATIONS</p>
+          <h2>Trade one predicted number for a range of outcomes.</h2>
+          <p>
+            <strong>Monte Carlo Simulation</strong> runs many possible return sequences through the
+            same financial plan. Historical mode samples twelve-month blocks of monthly returns,
+            keeping some of the market patterns that occurred together.
+          </p>
+          <p>
+            <strong>Markov Regime Simulation</strong> models stronger and weaker market states and
+            the chance of remaining in, or switching between, them. Both models use the same
+            cash-flow rules so their differences reflect market paths.
+          </p>
+          <p>
+            Inspect percentiles, sample paths, the final-outcome distribution, and the year-by-year
+            audit. Change tax, investing, growth, inflation, and return assumptions to understand
+            what moves the result.
+          </p>
+          <a class="guide-link" href="/how-it-works#simulations">Read the simulation guide →</a>
+        </div>
+        <figure class="diagram-panel">
+          <div class="diagram-heading">
+            <span class="status-dot"></span>Possibilities, with room for uncertainty<span
+              class="diagram-badge"
+              >EXPLAINED</span
+            >
+          </div>
+          <svg viewBox="0 0 560 340" role="img" aria-labelledby="forecast-title forecast-desc">
+            <title id="forecast-title">A range of possible futures</title>
+            <desc id="forecast-desc">
+              An illustrative outcome band expands over time. Upper P90, median P50 and lower P10
+              are cross-sectional percentiles, not best and worst cases. The lower line crosses
+              zero.
+            </desc>
+            <g class="chart-grid"><path d="M52 65H525M52 130H525M52 195H525M52 260H525" /></g>
+            <path
+              d="M52 226C180 208 290 170 525 48L525 286C300 235 190 232 52 226Z"
+              fill="var(--primary)"
+              opacity=".12"
+            />
+            <path d="M52 226C180 208 290 170 525 48" class="chart-line" stroke="var(--primary)" />
+            <path d="M52 226C180 215 320 175 525 133" class="chart-line" stroke="var(--mint)" />
+            <path d="M52 226C190 232 300 235 525 286" class="chart-line" stroke="var(--coral)" />
+            <path d="M52 260H525" stroke="var(--foreground)" stroke-dasharray="4 5" />
+            <g class="diagram-label">
+              <text x="12" y="264">$0</text>
+              <text x="52" y="316">TODAY</text>
+              <text x="450" y="316">LATER YEARS</text>
+              <text x="485" y="36">P90</text>
+              <text x="485" y="120">P50</text>
+              <text x="485" y="278">P10</text>
+            </g>
+          </svg>
+          <figcaption>
+            Conceptual illustration, not a computed forecast. Actual results depend on your nodes,
+            selected market data, and assumptions; losses and negative net worth are possible.
+          </figcaption>
+        </figure>
+      </section>
+      <div class="guide-card-grid">
+        <article class="guide-card">
+          <span class="eyebrow">01</span>
+          <h3>Holdings with context</h3>
+          <p>
+            Search a ticker, enter shares, and inspect adjusted price history, annualized return,
+            and volatility when enough history is available. Historical prices are cached and are
+            not real-time trading quotes. Holdings do not automatically change the Node Graph
+            simulation.
+          </p>
+        </article>
+        <article class="guide-card">
+          <span class="eyebrow">02</span>
+          <h3>Debt strategies, side by side</h3>
+          <p>
+            Compare avalanche, which targets the highest interest rate, with snowball, which targets
+            the smallest balance. The comparison keeps the same payment budget and reports balances
+            that remain unpaid at the end of the horizon.
+          </p>
+        </article>
+        <article class="guide-card">
+          <span class="eyebrow">03</span>
+          <h3>Your assumptions, visible</h3>
+          <p>
+            Choose the model inputs and inspect the data source. Export a scenario to share its
+            setup with a teammate, or export simulation results to keep a record of the inputs and
+            outcome.
+          </p>
+        </article>
+      </div>
+      <section class="guide-cta">
+        <div>
+          <p class="eyebrow">PUT THE PICTURE TOGETHER</p>
+          <h2>Try a plan. Learn from the possibilities.</h2>
+          <p>The Family demo is ready to explore. No sign-up required.</p>
+        </div>
+        <a class="primary-action" href="/dashboard/?demo=true&amp;profile=2">Explore the demo ↗</a>
+      </section>
+    </main>
+    <footer class="public-footer border-t border-border bg-card">
+      <div class="footer-shell">
+        <div class="footer-top">
+          <nav class="footer-navigation" aria-label="More about FinApp">
+            <div>
+              <p class="footer-heading">Product</p>
+              <a href="/features">Features</a><a href="/scenarios">Live demo scenarios</a>
+            </div>
+            <div>
+              <p class="footer-heading">Resources</p>
+              <a href="/how-it-works">How it works</a><a href="/faq">Help &amp; FAQ</a>
+            </div>
+          </nav>
+          <div class="footer-identity">
+            <a class="footer-brand" href="/" aria-label="FinApp home"
+              ><span aria-hidden="true"></span>FinApp</a
+            >
+            <p class="footer-description">
+              Your money, connected. A clearer view of what comes next.
+            </p>
+          </div>
+        </div>
+        <div class="footer-bottom">
+          <p>
+            Built by Sean Bassi, Ali Canturk, Braden Elsworth, Quinn Johnson, Jason Mele &amp; Lucas
+            Polo.
+          </p>
+
+          <p class="footer-note">
+            A Rowan University software engineering project.<br />Educational financial modeling.
+            All amounts in USD.
+          </p>
+          <div class="footer-utility">
+            <a href="mailto:meleja49@rowan.edu">Contact the team</a
+            ><a href="#main">Back to top <span aria-hidden="true">↑</span></a>
+          </div>
+        </div>
+      </div>
+    </footer>
+    <script src="/assets/main.js" defer></script>
+  </body>
+</html>

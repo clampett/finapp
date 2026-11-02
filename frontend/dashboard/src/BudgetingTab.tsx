@@ -1318,7 +1318,6 @@ export function BudgetingTab({
       setRecurringList(updated);
       try {
         const saved = JSON.parse(localStorage.getItem(budgetStorageKey) || '{}');
-        saved.recurring = updated;
         localStorage.setItem(budgetStorageKey, JSON.stringify(saved));
       } catch {}
       if (graphSync && onUpdateGraph) {
@@ -1481,7 +1480,6 @@ export function BudgetingTab({
       setRecurringList(updated);
       try {
         const saved = JSON.parse(localStorage.getItem(budgetStorageKey) || '{}');
-        saved.recurring = updated;
         localStorage.setItem(budgetStorageKey, JSON.stringify(saved));
       } catch {}
       setStatusMessage({

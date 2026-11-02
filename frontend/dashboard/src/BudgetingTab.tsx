@@ -1178,7 +1178,7 @@ export function BudgetingTab({
       setRecurringList(updated);
       try {
         const saved = JSON.parse(localStorage.getItem(budgetStorageKey) || '{}');
-        saved.recurring = updated;
+        saved.recurringIds = updated.map((r) => r.id);
         localStorage.setItem(budgetStorageKey, JSON.stringify(saved));
       } catch {}
       setStatusMessage({ type: 'success', text: 'Recurring rule deleted.' });

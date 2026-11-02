@@ -1359,7 +1359,7 @@ export function BudgetingTab({
       >
         <div>
           <h2 style={{ margin: 0 }}>Budgeting & Stock Portfolio</h2>
-          <p className="text-[color:var(--ui-text-8b9ab1)] text-[11px] mt-1 mb-0">
+          <p className="text-(--ui-text-8b9ab1) text-[11px] mt-1 mb-0">
             Track income, expenses, recurring payments, and stock investments in your database.
           </p>
         </div>
@@ -1729,7 +1729,7 @@ export function BudgetingTab({
         <button
           type="button"
           onClick={() => setActiveSubTab('transactions')}
-          className={`inline-flex items-center justify-center gap-1.5 whitespace-nowrap rounded-[7px] font-medium cursor-pointer transition-colors ${activeSubTab === 'transactions' ? 'bg-primary text-primary-fg' : 'bg-transparent text-[color:var(--ui-text-97a7c2)] hover:bg-[var(--ui-surface-hover-1a2536)] hover:text-text'}`}
+          className={`inline-flex items-center justify-center gap-1.5 whitespace-nowrap rounded-[7px] font-medium cursor-pointer transition-colors ${activeSubTab === 'transactions' ? 'bg-primary text-primary-fg' : 'bg-transparent text-(--ui-text-97a7c2) hover:bg-(--ui-surface-hover-1a2536) hover:text-text'}`}
           style={{ padding: '6px 16px', fontSize: '14px' }}
         >
           Transactions ({transactions.length})
@@ -1737,7 +1737,7 @@ export function BudgetingTab({
         <button
           type="button"
           onClick={() => setActiveSubTab('recurring')}
-          className={`inline-flex items-center justify-center gap-1.5 whitespace-nowrap rounded-[7px] font-medium cursor-pointer transition-colors ${activeSubTab === 'recurring' ? 'bg-primary text-primary-fg' : 'bg-transparent text-[color:var(--ui-text-97a7c2)] hover:bg-[var(--ui-surface-hover-1a2536)] hover:text-text'}`}
+          className={`inline-flex items-center justify-center gap-1.5 whitespace-nowrap rounded-[7px] font-medium cursor-pointer transition-colors ${activeSubTab === 'recurring' ? 'bg-primary text-primary-fg' : 'bg-transparent text-(--ui-text-97a7c2) hover:bg-(--ui-surface-hover-1a2536) hover:text-text'}`}
           style={{ padding: '6px 16px', fontSize: '14px' }}
         >
           Recurring Transactions ({recurringList.length})
@@ -1745,7 +1745,7 @@ export function BudgetingTab({
         <button
           type="button"
           onClick={() => setActiveSubTab('stocks')}
-          className={`inline-flex items-center justify-center gap-1.5 whitespace-nowrap rounded-[7px] font-medium cursor-pointer transition-colors ${activeSubTab === 'stocks' ? 'bg-primary text-primary-fg' : 'bg-transparent text-[color:var(--ui-text-97a7c2)] hover:bg-[var(--ui-surface-hover-1a2536)] hover:text-text'}`}
+          className={`inline-flex items-center justify-center gap-1.5 whitespace-nowrap rounded-[7px] font-medium cursor-pointer transition-colors ${activeSubTab === 'stocks' ? 'bg-primary text-primary-fg' : 'bg-transparent text-(--ui-text-97a7c2) hover:bg-(--ui-surface-hover-1a2536) hover:text-text'}`}
           style={{ padding: '6px 16px', fontSize: '14px' }}
         >
           Stocks & Positions ({stocks.length})
@@ -1770,7 +1770,7 @@ export function BudgetingTab({
           )}
         </button>
       </div>
-      <div className="min-h-[1.4em] flex items-center gap-2 text-[color:var(--ui-text-91a3bd)] text-[13px]" role="status" aria-live="polite">
+      <div className="min-h-[1.4em] flex items-center gap-2 text-(--ui-text-91a3bd) text-[13px]" role="status" aria-live="polite">
         {generating
           ? 'Generating due occurrences. You can keep browsing.'
           : refreshing
@@ -1793,13 +1793,13 @@ export function BudgetingTab({
               <h3 id="transactions-section-heading" style={{ margin: 0 }}>
                 Recorded Transactions
               </h3>
-              <p className="text-[color:var(--ui-text-8b9ab1)] text-[11px] mt-0.5 mb-0">
+              <p className="text-(--ui-text-8b9ab1) text-[11px] mt-0.5 mb-0">
                 Income and expenses linked to your accounts.
               </p>
             </div>
             <button
               type="button"
-              className="inline-flex items-center justify-center gap-1.75 whitespace-nowrap rounded-[7px] px-3.5 py-2.25 text-[11px] font-medium min-h-8.5 cursor-pointer bg-primary text-primary-fg hover:bg-[var(--ui-surface-hover-cbbcfc)] transition-colors disabled:opacity-45 disabled:cursor-not-allowed"
+              className="inline-flex items-center justify-center gap-1.75 whitespace-nowrap rounded-[7px] px-3.5 py-2.25 text-[11px] font-medium min-h-8.5 cursor-pointer bg-primary text-primary-fg hover:bg-(--ui-surface-hover-cbbcfc) transition-colors disabled:opacity-45 disabled:cursor-not-allowed"
               onClick={handleOpenAddTransaction}
               disabled={!userId && !isDemo}
             >
@@ -2020,12 +2020,12 @@ export function BudgetingTab({
                     marginTop: '0.5rem',
                   }}
                 >
-                  <button type="submit" className="inline-flex items-center justify-center gap-1.75 whitespace-nowrap rounded-[7px] px-3.5 py-2.25 text-[11px] font-medium min-h-8.5 cursor-pointer bg-primary text-primary-fg hover:bg-[var(--ui-surface-hover-cbbcfc)] transition-colors">
+                  <button type="submit" className="inline-flex items-center justify-center gap-1.75 whitespace-nowrap rounded-[7px] px-3.5 py-2.25 text-[11px] font-medium min-h-8.5 cursor-pointer bg-primary text-primary-fg hover:bg-(--ui-surface-hover-cbbcfc) transition-colors">
                     {editingTransId ? 'Save Changes' : 'Record Transaction'}
                   </button>
                   <button
                     type="button"
-                    className="inline-flex items-center justify-center gap-1.75 whitespace-nowrap rounded-[7px] px-3.25 py-2.25 text-[11px] font-medium min-h-8.5 cursor-pointer bg-transparent text-[color:var(--ui-text-97a7c2)] border border-transparent hover:bg-[var(--ui-surface-hover-1a2536)] hover:text-text transition-colors"
+                    className="inline-flex items-center justify-center gap-1.75 whitespace-nowrap rounded-[7px] px-3.25 py-2.25 text-[11px] font-medium min-h-8.5 cursor-pointer bg-transparent text-(--ui-text-97a7c2) border border-transparent hover:bg-(--ui-surface-hover-1a2536) hover:text-text transition-colors"
                     onClick={() => {
                       setShowTransForm(false);
                       setEditingTransId(null);
@@ -2036,7 +2036,7 @@ export function BudgetingTab({
                   {editingTransId && (
                     <button
                       type="button"
-                      className="inline-flex items-center justify-center gap-1.75 whitespace-nowrap rounded-[7px] px-3.25 py-2.25 text-[11px] font-medium min-h-8.5 cursor-pointer text-coral border border-[color:var(--ui-border-633246)] bg-[var(--ui-surface-2b1b28)] hover:bg-[var(--ui-surface-hover-3d2034)] transition-colors"
+                      className="inline-flex items-center justify-center gap-1.75 whitespace-nowrap rounded-[7px] px-3.25 py-2.25 text-[11px] font-medium min-h-8.5 cursor-pointer text-coral border border-(--ui-border-633246) bg-(--ui-surface-2b1b28) hover:bg-(--ui-surface-hover-3d2034) transition-colors"
                       style={{ marginLeft: 'auto' }}
                       onClick={() => handleDeleteTransaction(editingTransId)}
                     >
@@ -2161,7 +2161,7 @@ export function BudgetingTab({
                       >
                         <button
                           type="button"
-                          className="inline-flex items-center justify-center whitespace-nowrap rounded-[7px] font-medium cursor-pointer bg-transparent border border-transparent hover:bg-[var(--ui-surface-hover-1a2536)] text-[color:var(--ui-text-97a7c2)] hover:text-text transition-colors"
+                          className="inline-flex items-center justify-center whitespace-nowrap rounded-[7px] font-medium cursor-pointer bg-transparent border border-transparent hover:bg-(--ui-surface-hover-1a2536) text-(--ui-text-97a7c2) hover:text-text transition-colors"
                           onClick={() => handleEditTransaction(t)}
                           style={{ padding: '4px 8px', fontSize: '11px', marginRight: '6px' }}
                         >
@@ -2169,7 +2169,7 @@ export function BudgetingTab({
                         </button>
                         <button
                           type="button"
-                          className="inline-flex items-center justify-center whitespace-nowrap rounded-[7px] font-medium cursor-pointer bg-transparent border border-transparent hover:bg-[var(--ui-surface-hover-1a2536)] transition-colors"
+                          className="inline-flex items-center justify-center whitespace-nowrap rounded-[7px] font-medium cursor-pointer bg-transparent border border-transparent hover:bg-(--ui-surface-hover-1a2536) transition-colors"
                           style={{ color: 'var(--ui-paint-f87171)', padding: '4px 8px', fontSize: '11px' }}
                           onClick={() => t.id && handleDeleteTransaction(t.id)}
                         >
@@ -2239,13 +2239,13 @@ export function BudgetingTab({
                   )}
                 </h3>
               </div>
-              <p className="text-[color:var(--ui-text-8b9ab1)] text-[11px] mt-0.5 mb-0">
+              <p className="text-(--ui-text-8b9ab1) text-[11px] mt-0.5 mb-0">
                 Track shares, cost basis, market prices, and buy/sell operations.
               </p>
             </div>
             <button
               type="button"
-              className="inline-flex items-center justify-center gap-1.75 whitespace-nowrap rounded-[7px] px-3.5 py-2.25 text-[11px] font-medium min-h-8.5 cursor-pointer bg-primary text-primary-fg hover:bg-[var(--ui-surface-hover-cbbcfc)] transition-colors disabled:opacity-45 disabled:cursor-not-allowed"
+              className="inline-flex items-center justify-center gap-1.75 whitespace-nowrap rounded-[7px] px-3.5 py-2.25 text-[11px] font-medium min-h-8.5 cursor-pointer bg-primary text-primary-fg hover:bg-(--ui-surface-hover-cbbcfc) transition-colors disabled:opacity-45 disabled:cursor-not-allowed"
               onClick={handleOpenAddStock}
               disabled={!userId}
             >
@@ -2268,7 +2268,7 @@ export function BudgetingTab({
                 {editingStockId ? 'Edit Stock Details' : 'Add Stock To Portfolio'}
               </h4>
               {editingStockId && (
-                <p className="text-[color:var(--ui-text-8b9ab1)] text-[11px]">
+                <p className="text-(--ui-text-8b9ab1) text-[11px]">
                   Current holdings are shown for reference. Use Buy or Sell to record position
                   changes; editing stock details preserves your purchase history.
                 </p>
@@ -2499,12 +2499,12 @@ export function BudgetingTab({
                     marginTop: '0.5rem',
                   }}
                 >
-                  <button type="submit" className="inline-flex items-center justify-center gap-1.75 whitespace-nowrap rounded-[7px] px-3.5 py-2.25 text-[11px] font-medium min-h-8.5 cursor-pointer bg-primary text-primary-fg hover:bg-[var(--ui-surface-hover-cbbcfc)] transition-colors">
+                  <button type="submit" className="inline-flex items-center justify-center gap-1.75 whitespace-nowrap rounded-[7px] px-3.5 py-2.25 text-[11px] font-medium min-h-8.5 cursor-pointer bg-primary text-primary-fg hover:bg-(--ui-surface-hover-cbbcfc) transition-colors">
                     {editingStockId ? 'Save Changes' : 'Add Stock'}
                   </button>
                   <button
                     type="button"
-                    className="inline-flex items-center justify-center gap-1.75 whitespace-nowrap rounded-[7px] px-3.25 py-2.25 text-[11px] font-medium min-h-8.5 cursor-pointer bg-transparent text-[color:var(--ui-text-97a7c2)] border border-transparent hover:bg-[var(--ui-surface-hover-1a2536)] hover:text-text transition-colors"
+                    className="inline-flex items-center justify-center gap-1.75 whitespace-nowrap rounded-[7px] px-3.25 py-2.25 text-[11px] font-medium min-h-8.5 cursor-pointer bg-transparent text-(--ui-text-97a7c2) border border-transparent hover:bg-(--ui-surface-hover-1a2536) hover:text-text transition-colors"
                     onClick={() => {
                       setShowStockForm(false);
                       setEditingStockId(null);
@@ -2515,7 +2515,7 @@ export function BudgetingTab({
                   {editingStockId && (
                     <button
                       type="button"
-                      className="inline-flex items-center justify-center gap-1.75 whitespace-nowrap rounded-[7px] px-3.25 py-2.25 text-[11px] font-medium min-h-8.5 cursor-pointer text-coral border border-[color:var(--ui-border-633246)] bg-[var(--ui-surface-2b1b28)] hover:bg-[var(--ui-surface-hover-3d2034)] transition-colors"
+                      className="inline-flex items-center justify-center gap-1.75 whitespace-nowrap rounded-[7px] px-3.25 py-2.25 text-[11px] font-medium min-h-8.5 cursor-pointer text-coral border border-(--ui-border-633246) bg-(--ui-surface-2b1b28) hover:bg-(--ui-surface-hover-3d2034) transition-colors"
                       style={{ marginLeft: 'auto' }}
                       onClick={() => handleDeleteStock(editingStockId)}
                     >
@@ -2647,12 +2647,12 @@ export function BudgetingTab({
                 </div>
 
                 <div style={{ display: 'flex', gap: '0.5rem', gridColumn: '1 / -1' }}>
-                  <button type="submit" className="inline-flex items-center justify-center gap-1.75 whitespace-nowrap rounded-[7px] px-3.5 py-2.25 text-[11px] font-medium min-h-8.5 cursor-pointer bg-primary text-primary-fg hover:bg-[var(--ui-surface-hover-cbbcfc)] transition-colors">
+                  <button type="submit" className="inline-flex items-center justify-center gap-1.75 whitespace-nowrap rounded-[7px] px-3.5 py-2.25 text-[11px] font-medium min-h-8.5 cursor-pointer bg-primary text-primary-fg hover:bg-(--ui-surface-hover-cbbcfc) transition-colors">
                     Execute {tradeModal.type.toUpperCase()}
                   </button>
                   <button
                     type="button"
-                    className="inline-flex items-center justify-center gap-1.75 whitespace-nowrap rounded-[7px] px-3.25 py-2.25 text-[11px] font-medium min-h-8.5 cursor-pointer bg-transparent text-[color:var(--ui-text-97a7c2)] border border-transparent hover:bg-[var(--ui-surface-hover-1a2536)] hover:text-text transition-colors"
+                    className="inline-flex items-center justify-center gap-1.75 whitespace-nowrap rounded-[7px] px-3.25 py-2.25 text-[11px] font-medium min-h-8.5 cursor-pointer bg-transparent text-(--ui-text-97a7c2) border border-transparent hover:bg-(--ui-surface-hover-1a2536) hover:text-text transition-colors"
                     onClick={() => setTradeModal((prev) => ({ ...prev, open: false }))}
                   >
                     Cancel
@@ -2785,7 +2785,7 @@ export function BudgetingTab({
                         >
                           <button
                             type="button"
-                            className="inline-flex items-center justify-center whitespace-nowrap rounded-[7px] font-medium cursor-pointer bg-transparent border border-transparent hover:bg-[var(--ui-surface-hover-1a2536)] transition-colors"
+                            className="inline-flex items-center justify-center whitespace-nowrap rounded-[7px] font-medium cursor-pointer bg-transparent border border-transparent hover:bg-(--ui-surface-hover-1a2536) transition-colors"
                             style={{
                               padding: '4px 8px',
                               fontSize: '11px',
@@ -2798,7 +2798,7 @@ export function BudgetingTab({
                           </button>
                           <button
                             type="button"
-                            className="inline-flex items-center justify-center whitespace-nowrap rounded-[7px] font-medium cursor-pointer bg-transparent border border-transparent hover:bg-[var(--ui-surface-hover-1a2536)] transition-colors"
+                            className="inline-flex items-center justify-center whitespace-nowrap rounded-[7px] font-medium cursor-pointer bg-transparent border border-transparent hover:bg-(--ui-surface-hover-1a2536) transition-colors"
                             style={{
                               padding: '4px 8px',
                               fontSize: '11px',
@@ -2811,7 +2811,7 @@ export function BudgetingTab({
                           </button>
                           <button
                             type="button"
-                            className="inline-flex items-center justify-center whitespace-nowrap rounded-[7px] font-medium cursor-pointer bg-transparent border border-transparent hover:bg-[var(--ui-surface-hover-1a2536)] text-[color:var(--ui-text-97a7c2)] hover:text-text transition-colors"
+                            className="inline-flex items-center justify-center whitespace-nowrap rounded-[7px] font-medium cursor-pointer bg-transparent border border-transparent hover:bg-(--ui-surface-hover-1a2536) text-(--ui-text-97a7c2) hover:text-text transition-colors"
                             onClick={() => handleEditStock(stock)}
                             style={{ padding: '4px 8px', fontSize: '11px', marginRight: '4px' }}
                           >
@@ -2819,7 +2819,7 @@ export function BudgetingTab({
                           </button>
                           <button
                             type="button"
-                            className="inline-flex items-center justify-center whitespace-nowrap rounded-[7px] font-medium cursor-pointer bg-transparent border border-transparent hover:bg-[var(--ui-surface-hover-1a2536)] transition-colors"
+                            className="inline-flex items-center justify-center whitespace-nowrap rounded-[7px] font-medium cursor-pointer bg-transparent border border-transparent hover:bg-(--ui-surface-hover-1a2536) transition-colors"
                             style={{ color: 'var(--ui-paint-f87171)', padding: '4px 8px', fontSize: '11px' }}
                             onClick={() => stock.id && handleDeleteStock(stock.id)}
                           >
@@ -2851,7 +2851,7 @@ export function BudgetingTab({
               <h3 id="recurring-section-heading" style={{ margin: 0 }}>
                 Recurring Transaction Templates
               </h3>
-              <p className="text-[color:var(--ui-text-8b9ab1)] text-[11px] mt-0.5 mb-0">
+              <p className="text-(--ui-text-8b9ab1) text-[11px] mt-0.5 mb-0">
                 Automate repeating expenses and income (e.g. rent, payroll, Netflix). Occurrences
                 are generated into Transactions.
               </p>
@@ -2859,7 +2859,7 @@ export function BudgetingTab({
             <div style={{ display: 'flex', gap: '0.5rem' }}>
               <button
                 type="button"
-                className="inline-flex items-center justify-center gap-2 min-w-30 aria-busy:cursor-progress whitespace-nowrap rounded-[7px] font-medium cursor-pointer bg-transparent text-[color:var(--ui-text-97a7c2)] hover:bg-[var(--ui-surface-hover-1a2536)] hover:text-text transition-colors disabled:opacity-45 disabled:cursor-not-allowed"
+                className="inline-flex items-center justify-center gap-2 min-w-30 aria-busy:cursor-progress whitespace-nowrap rounded-[7px] font-medium cursor-pointer bg-transparent text-(--ui-text-97a7c2) hover:bg-(--ui-surface-hover-1a2536) hover:text-text transition-colors disabled:opacity-45 disabled:cursor-not-allowed"
                 onClick={handleGenerateDueOccurrences}
                 disabled={!userId}
                 aria-busy={generating}
@@ -2896,7 +2896,7 @@ export function BudgetingTab({
               )}
               <button
                 type="button"
-                className="inline-flex items-center justify-center gap-1.75 whitespace-nowrap rounded-[7px] px-3.5 py-2.25 text-[11px] font-medium min-h-8.5 cursor-pointer bg-primary text-primary-fg hover:bg-[var(--ui-surface-hover-cbbcfc)] transition-colors disabled:opacity-45 disabled:cursor-not-allowed"
+                className="inline-flex items-center justify-center gap-1.75 whitespace-nowrap rounded-[7px] px-3.5 py-2.25 text-[11px] font-medium min-h-8.5 cursor-pointer bg-primary text-primary-fg hover:bg-(--ui-surface-hover-cbbcfc) transition-colors disabled:opacity-45 disabled:cursor-not-allowed"
                 onClick={handleOpenAddRecurring}
                 disabled={!userId && !isDemo}
               >
@@ -3138,12 +3138,12 @@ export function BudgetingTab({
                     marginTop: '0.5rem',
                   }}
                 >
-                  <button type="submit" className="inline-flex items-center justify-center gap-1.75 whitespace-nowrap rounded-[7px] px-3.5 py-2.25 text-[11px] font-medium min-h-8.5 cursor-pointer bg-primary text-primary-fg hover:bg-[var(--ui-surface-hover-cbbcfc)] transition-colors">
+                  <button type="submit" className="inline-flex items-center justify-center gap-1.75 whitespace-nowrap rounded-[7px] px-3.5 py-2.25 text-[11px] font-medium min-h-8.5 cursor-pointer bg-primary text-primary-fg hover:bg-(--ui-surface-hover-cbbcfc) transition-colors">
                     {editingRecurId ? 'Save Changes' : 'Create Recurring Rule'}
                   </button>
                   <button
                     type="button"
-                    className="inline-flex items-center justify-center gap-1.75 whitespace-nowrap rounded-[7px] px-3.25 py-2.25 text-[11px] font-medium min-h-8.5 cursor-pointer bg-transparent text-[color:var(--ui-text-97a7c2)] border border-transparent hover:bg-[var(--ui-surface-hover-1a2536)] hover:text-text transition-colors"
+                    className="inline-flex items-center justify-center gap-1.75 whitespace-nowrap rounded-[7px] px-3.25 py-2.25 text-[11px] font-medium min-h-8.5 cursor-pointer bg-transparent text-(--ui-text-97a7c2) border border-transparent hover:bg-(--ui-surface-hover-1a2536) hover:text-text transition-colors"
                     onClick={() => {
                       setShowRecurForm(false);
                       setEditingRecurId(null);
@@ -3154,7 +3154,7 @@ export function BudgetingTab({
                   {editingRecurId && (
                     <button
                       type="button"
-                      className="inline-flex items-center justify-center gap-1.75 whitespace-nowrap rounded-[7px] px-3.25 py-2.25 text-[11px] font-medium min-h-8.5 cursor-pointer text-coral border border-[color:var(--ui-border-633246)] bg-[var(--ui-surface-2b1b28)] hover:bg-[var(--ui-surface-hover-3d2034)] transition-colors"
+                      className="inline-flex items-center justify-center gap-1.75 whitespace-nowrap rounded-[7px] px-3.25 py-2.25 text-[11px] font-medium min-h-8.5 cursor-pointer text-coral border border-(--ui-border-633246) bg-(--ui-surface-2b1b28) hover:bg-(--ui-surface-hover-3d2034) transition-colors"
                       style={{ marginLeft: 'auto' }}
                       onClick={() => handleDeleteRecurring(editingRecurId)}
                     >
@@ -3253,7 +3253,7 @@ export function BudgetingTab({
                       >
                         <button
                           type="button"
-                          className="inline-flex items-center justify-center whitespace-nowrap rounded-[7px] font-medium cursor-pointer bg-transparent border border-transparent hover:bg-[var(--ui-surface-hover-1a2536)] text-[color:var(--ui-text-97a7c2)] hover:text-text transition-colors"
+                          className="inline-flex items-center justify-center whitespace-nowrap rounded-[7px] font-medium cursor-pointer bg-transparent border border-transparent hover:bg-(--ui-surface-hover-1a2536) text-(--ui-text-97a7c2) hover:text-text transition-colors"
                           onClick={() => {
                             setEditingRecurId(r.id ?? null);
                             setRecurDraft(r);
@@ -3265,7 +3265,7 @@ export function BudgetingTab({
                         </button>
                         <button
                           type="button"
-                          className="inline-flex items-center justify-center whitespace-nowrap rounded-[7px] font-medium cursor-pointer bg-transparent border border-transparent hover:bg-[var(--ui-surface-hover-1a2536)] transition-colors"
+                          className="inline-flex items-center justify-center whitespace-nowrap rounded-[7px] font-medium cursor-pointer bg-transparent border border-transparent hover:bg-(--ui-surface-hover-1a2536) transition-colors"
                           style={{ color: 'var(--ui-paint-f87171)', padding: '4px 8px', fontSize: '11px' }}
                           onClick={() => r.id && handleDeleteRecurring(r.id)}
                         >

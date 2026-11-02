@@ -39,8 +39,14 @@ interface BudgetingTabProps {
 const DEMO_BUDGET_ENC_PREFIX = 'enc:v1:';
 
 const toB64 = (bytes: Uint8Array): string => btoa(String.fromCharCode(...bytes));
-const fromB64 = (b64: string): Uint8Array =>
-  Uint8Array.from(atob(b64), (c) => c.charCodeAt(0));
+const fromB64 = (b64: string): Uint8Array<ArrayBuffer> => {
+  const binary = atob(b64);
+  const bytes = new Uint8Array(new ArrayBuffer(binary.length));
+  for (let i = 0; i < binary.length; i++) {
+    bytes[i] = binary.charCodeAt(i);
+  }
+  return bytes;
+};
 
 const getDemoStorageSecret = (storageKey: string): string => {
   const existing = sessionStorage.getItem(`${storageKey}:k`);
@@ -429,11 +435,14 @@ export function BudgetingTab({
           let demoTxns: Transaction[] = [];
           let demoRecur: RecurringTransaction[] = [];
           try {
-            const saved = localStorage.getItem(budgetStorageKey);
-            if (saved) {
-              const parsed = JSON.parse(saved);
-              demoTxns = Array.isArray(parsed.transactions) ? parsed.transactions : [];
-              demoRecur = Array.isArray(parsed.recurring) ? parsed.recurring : [];
+            const savedRaw = localStorage.getItem(budgetStorageKey);
+            const parsed = await decryptFromDemoStorage<Record<string, unknown>>(
+              budgetStorageKey,
+              savedRaw
+            );
+            if (parsed) {
+              demoTxns = Array.isArray(parsed.transactions) ? (parsed.transactions as Transaction[]) : [];
+              demoRecur = Array.isArray(parsed.recurring) ? (parsed.recurring as RecurringTransaction[]) : [];
             }
           } catch {}
 
@@ -515,7 +524,10 @@ export function BudgetingTab({
           try {
             localStorage.setItem(
               budgetStorageKey,
-              JSON.stringify({ transactions: demoTxns, recurring: syncedDemoRecur }),
+              await encryptForDemoStorage(budgetStorageKey, {
+                transactions: demoTxns,
+                recurring: syncedDemoRecur,
+              }),
             );
           } catch {}
 
@@ -731,11 +743,17 @@ export function BudgetingTab({
       if (!hasChanges) return prevList;
       if (isDemo) {
         const budgetStorageKey = `finapp-budget-v1:demo:${userId || 1}`;
-        try {
-          const saved = JSON.parse(localStorage.getItem(budgetStorageKey) || '{}');
-          saved.recurring = updatedRecurring;
-          localStorage.setItem(budgetStorageKey, JSON.stringify(saved));
-        } catch {}
+        void (async () => {
+          try {
+            const saved =
+              (await decryptFromDemoStorage<Record<string, unknown>>(
+                budgetStorageKey,
+                localStorage.getItem(budgetStorageKey)
+              )) || {};
+            saved.recurring = updatedRecurring;
+            localStorage.setItem(budgetStorageKey, await encryptForDemoStorage(budgetStorageKey, saved));
+          } catch {}
+        })();
         return updatedRecurring;
       }
       // For signed-in users, clean up duplicates and save graph-generated new rules to PostgreSQL
@@ -930,9 +948,13 @@ export function BudgetingTab({
       }
       setTransactions(updated);
       try {
-        const saved = JSON.parse(localStorage.getItem(budgetStorageKey) || '{}');
+        const saved =
+          (await decryptFromDemoStorage<Record<string, unknown>>(
+            budgetStorageKey,
+            localStorage.getItem(budgetStorageKey)
+          )) || {};
         saved.transactions = updated;
-        localStorage.setItem(budgetStorageKey, JSON.stringify(saved));
+        localStorage.setItem(budgetStorageKey, await encryptForDemoStorage(budgetStorageKey, saved));
       } catch {}
       if (syncResult && onUpdateGraph) {
         onUpdateGraph(syncResult.updatedGraph);
@@ -1009,9 +1031,13 @@ export function BudgetingTab({
       const updated = transactions.filter((t) => t.id !== id);
       setTransactions(updated);
       try {
-        const saved = JSON.parse(localStorage.getItem(budgetStorageKey) || '{}');
+        const saved =
+          (await decryptFromDemoStorage<Record<string, unknown>>(
+            budgetStorageKey,
+            localStorage.getItem(budgetStorageKey)
+          )) || {};
         saved.transactions = updated;
-        localStorage.setItem(budgetStorageKey, JSON.stringify(saved));
+        localStorage.setItem(budgetStorageKey, await encryptForDemoStorage(budgetStorageKey, saved));
       } catch {}
       if (reverseSync && onUpdateGraph) {
         onUpdateGraph(reverseSync.updatedGraph);
@@ -1387,8 +1413,13 @@ export function BudgetingTab({
       }
       setRecurringList(updated);
       try {
-        const saved = JSON.parse(localStorage.getItem(budgetStorageKey) || '{}');
-        localStorage.setItem(budgetStorageKey, JSON.stringify(saved));
+        const saved =
+          (await decryptFromDemoStorage<Record<string, unknown>>(
+            budgetStorageKey,
+            localStorage.getItem(budgetStorageKey)
+          )) || {};
+        saved.recurring = updated;
+        localStorage.setItem(budgetStorageKey, await encryptForDemoStorage(budgetStorageKey, saved));
       } catch {}
       if (graphSync && onUpdateGraph) {
         onUpdateGraph(graphSync.updatedGraph);
@@ -1469,14 +1500,14 @@ export function BudgetingTab({
       const updated = recurringList.filter((r) => r.id !== id);
       setRecurringList(updated);
       try {
-        const saved = JSON.parse(localStorage.getItem(budgetStorageKey) || '{}');
         const saved =
           (await decryptFromDemoStorage<Record<string, unknown>>(
             budgetStorageKey,
             localStorage.getItem(budgetStorageKey)
           )) || {};
-        localStorage.setItem(budgetStorageKey, JSON.stringify(saved));
+        saved.recurring = updated;
         localStorage.setItem(budgetStorageKey, await encryptForDemoStorage(budgetStorageKey, saved));
+      } catch {}
       if (graphSync && onUpdateGraph) {
         onUpdateGraph(graphSync.updatedGraph);
       }
@@ -1553,14 +1584,15 @@ export function BudgetingTab({
       const updated = [...created, ...recurringList];
       setRecurringList(updated);
       try {
-        const saved = JSON.parse(localStorage.getItem(budgetStorageKey) || '{}');
         const saved =
           (await decryptFromDemoStorage<Record<string, unknown>>(
             budgetStorageKey,
             localStorage.getItem(budgetStorageKey)
           )) || {};
-      } catch {}
+        saved.recurring = updated;
         localStorage.setItem(budgetStorageKey, await encryptForDemoStorage(budgetStorageKey, saved));
+      } catch {}
+      setStatusMessage({
         type: 'success',
         text: `Imported ${created.length} salary template(s) into recurring transactions.`,
       });
@@ -1605,9 +1637,13 @@ export function BudgetingTab({
       const updated = [...created, ...recurringList];
       setRecurringList(updated);
       try {
-        const saved = JSON.parse(localStorage.getItem(budgetStorageKey) || '{}');
+        const saved =
+          (await decryptFromDemoStorage<Record<string, unknown>>(
+            budgetStorageKey,
+            localStorage.getItem(budgetStorageKey)
+          )) || {};
         saved.recurring = updated;
-        localStorage.setItem(budgetStorageKey, JSON.stringify(saved));
+        localStorage.setItem(budgetStorageKey, await encryptForDemoStorage(budgetStorageKey, saved));
       } catch {}
       setStatusMessage({
         type: 'success',

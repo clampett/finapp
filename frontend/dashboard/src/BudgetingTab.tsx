@@ -26,6 +26,51 @@ import {
   syncRecurringDeletionToGraph,
 } from './budgeting-bridge';
 
+const textEncoder = new TextEncoder();
+
+const toBase64 = (bytes: Uint8Array): string => {
+  let binary = '';
+  for (let i = 0; i < bytes.length; i++) binary += String.fromCharCode(bytes[i]);
+  return btoa(binary);
+};
+
+const deriveAesKey = async (passphrase: string, salt: Uint8Array): Promise<CryptoKey> => {
+  const keyMaterial = await crypto.subtle.importKey(
+    'raw',
+    textEncoder.encode(passphrase),
+    'PBKDF2',
+    false,
+    ['deriveKey']
+  );
+  return crypto.subtle.deriveKey(
+    { name: 'PBKDF2', salt, iterations: 100000, hash: 'SHA-256' },
+    keyMaterial,
+    { name: 'AES-GCM', length: 256 },
+    false,
+    ['encrypt', 'decrypt']
+  );
+};
+
+const encryptForStorage = async (plaintext: string, passphrase: string): Promise<string> => {
+  const salt = crypto.getRandomValues(new Uint8Array(16));
+  const iv = crypto.getRandomValues(new Uint8Array(12));
+  const key = await deriveAesKey(passphrase, salt);
+  const encrypted = await crypto.subtle.encrypt(
+    { name: 'AES-GCM', iv },
+    key,
+    textEncoder.encode(plaintext)
+  );
+  return JSON.stringify({
+    v: 1,
+    alg: 'AES-GCM',
+    kdf: 'PBKDF2-SHA256',
+    i: 100000,
+    s: toBase64(salt),
+    iv: toBase64(iv),
+    ct: toBase64(new Uint8Array(encrypted)),
+  });
+};
+
 interface BudgetingTabProps {
   graph: GraphData;
   userId?: number;
@@ -1294,8 +1339,14 @@ export function BudgetingTab({
       const updated = [...created, ...recurringList];
       setRecurringList(updated);
       try {
-        const saved = JSON.parse(localStorage.getItem(budgetStorageKey) || '{}');
-        saved.recurring = updated;
+        const encryptedPayload = await encryptForStorage(
+          JSON.stringify(saved),
+          `finapp-demo-storage:${userId || 1}`
+        );
+        localStorage.setItem(budgetStorageKey, encryptedPayload);
+      } catch {
+        setStatusMessage({ type: 'error', text: 'Failed to securely store demo recurring data.' });
+      }
         localStorage.setItem(budgetStorageKey, JSON.stringify(saved));
       } catch {}
       setStatusMessage({

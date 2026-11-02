@@ -126,6 +126,7 @@ export function SimulationModal({
   onClose,
   onAssumptionsChange,
   scopeLabel,
+  scope,
   portfolioValue = 0,
 }: {
   graphData: GraphData;
@@ -133,6 +134,7 @@ export function SimulationModal({
   onClose: () => void;
   onAssumptionsChange: (settings: ScenarioAssumptions) => void;
   scopeLabel?: string;
+  scope?: 'all' | 'selected' | 'connected';
   portfolioValue?: number;
 }) {
   const [forecast, setForecast] = useState<SimulationResult | null>(null);
@@ -153,7 +155,15 @@ export function SimulationModal({
   const [borrowingApr, setBorrowingApr] = useState(12);
   const [target, setTarget] = useState(500000);
   const settings = assumptionsFor(graphData);
-  const currentBudget = totals(graphData, portfolioValue);
+  const isSelectedScope =
+    scope != null
+      ? scope !== 'all'
+      : Boolean(
+          scopeLabel?.toLowerCase().includes('selected') ||
+            scopeLabel?.toLowerCase().includes('selection'),
+        );
+  const effectivePortfolioValue = isSelectedScope ? 0 : Math.max(0, portfolioValue);
+  const currentBudget = totals(graphData, effectivePortfolioValue);
   // Paused only new investment transfers in this experiment; retained existing
   // assets, cash-saving routes, and the saved node graph for later use.
   const scenarioEdges = useMemo(
@@ -250,20 +260,17 @@ export function SimulationModal({
               id: n.id,
               name: n.name,
               type: n.nodeType,
-              balance:
-                n.nodeType === 'INVESTMENT' && portfolioValue > 0
-                  ? n.amountOrBalance + portfolioValue
-                  : n.amountOrBalance,
+              balance: n.amountOrBalance,
               apr: n.interestRateApr,
               ...(n.minPayment != null ? { min_payment: n.minPayment } : {}),
             })),
-            ...(portfolioValue > 0 && !graphData.nodes.some((n) => n.nodeType === 'INVESTMENT')
+            ...(effectivePortfolioValue > 0
               ? [
                   {
                     id: 'portfolio-holdings',
                     name: 'Stock Portfolio',
                     type: 'INVESTMENT' as const,
-                    balance: portfolioValue,
+                    balance: effectivePortfolioValue,
                     apr: 7,
                   },
                 ]
@@ -339,7 +346,7 @@ export function SimulationModal({
     fee,
     borrowingApr,
     target,
-    portfolioValue,
+    effectivePortfolioValue,
   ]);
   // Prepared the P10-P90 envelope from year-specific quantiles; these bounds
   // represented a distribution, not one continuous bull or bear market path.

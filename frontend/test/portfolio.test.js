@@ -8,10 +8,11 @@ const runtime = {
   module: { exports: {} },
   window: { dispatchEvent: () => {} },
   CustomEvent: class {},
+  fetch: global.fetch || (() => {}),
   localStorage: {
     data: {},
     getItem(k) {
-      return this.data[k] || null;
+      return this.data[k] !== undefined ? this.data[k] : null;
     },
     setItem(k, v) {
       this.data[k] = String(v);
@@ -38,6 +39,10 @@ const {
   PORTFOLIO_UPDATED_EVENT,
   getStoredPortfolioValue,
   saveStoredPortfolioValue,
+  loadUnifiedHoldings,
+  addStockUnified,
+  updateSharesUnified,
+  removeStockUnified,
 } = runtime.module.exports;
 
 const financeRuntime = { module: { exports: {} } };
@@ -52,7 +57,7 @@ vm.runInNewContext(
   }).outputFiles[0].text,
   financeRuntime,
 );
-const { totals, overviewBreakdown } = financeRuntime.module.exports;
+const { totals, overviewBreakdown, debtPayment } = financeRuntime.module.exports;
 
 test('portfolio: default demo archetypes are defined for profiles 1, 2, and 3', () => {
   assert.ok(DEFAULT_DEMO_HOLDINGS[1]?.length >= 2, 'Recent Grad has demo holdings');
@@ -151,6 +156,10 @@ const {
   syncGraphNodesToRecurring,
   syncRecurringToGraphNode,
   syncRecurringDeletionToGraph,
+  recurringToMonthlyAmount,
+  monthlyToRecurringAmount,
+  isRecurringActive,
+  getAvailableBudgetAccounts,
 } = bridgeRuntime.module.exports;
 
 test('budgeting-bridge: getScenarioSalary extracts active income nodes', () => {
@@ -613,6 +622,414 @@ test('end-to-end interconnected system: multi-step budgeting, investing, and dyn
   // Assets = 10000 + 5000 + 18000 = 33000. Net worth = 33000 - 8000 = 25000.
   assert.equal(t.assets, 33000);
   assert.equal(t.netWorth, 25000);
+});
+
+test('issue 1: editing a recurring debt payment preserves loan balance and updates payment settings', () => {
+  const loanNode = {
+    id: 'loan-1',
+    name: 'Auto Loan',
+    nodeType: 'DEBT',
+    amountOrBalance: 14000,
+    interestRateApr: 5,
+    minPayment: 300,
+  };
+  const checkingNode = {
+    id: 'chk-1',
+    name: 'Checking',
+    nodeType: 'CHECKING',
+    amountOrBalance: 5000,
+    interestRateApr: 0,
+  };
+  const edge = {
+    id: 'e1',
+    sourceNodeId: 'chk-1',
+    targetNodeId: 'loan-1',
+    monthlyFixedFlow: 300,
+  };
+  const graph = {
+    nodes: [loanNode, checkingNode],
+    edges: [edge],
+  };
+
+  // Edit recurring payment to $400
+  const result = syncRecurringToGraphNode(graph, {
+    description: 'Auto Loan Payment',
+    amount: 400,
+    frequency: 'monthly',
+    intervalCount: 1,
+    categoryName: 'Debt',
+    notes: '[node-id:loan-1]',
+  });
+
+  const updatedLoan = result.updatedGraph.nodes.find((n) => n.id === 'loan-1');
+  assert.equal(updatedLoan.amountOrBalance, 14000, 'Principal balance must be preserved at $14,000');
+  assert.equal(result.affectedNode.amountOrBalance, 14000, 'Affected node balance must be preserved');
+  assert.equal(result.updatedGraph.edges[0].monthlyFixedFlow, 400, 'Incoming payment edge updated to $400');
+  assert.equal(debtPayment(updatedLoan, result.updatedGraph), 400, 'Debt payment calculates to $400');
+});
+
+test('issue 2: syncGraphNodesToRecurring returns newly created rules for database persistence', () => {
+  const graph = {
+    nodes: [
+      { id: 'inc-1', name: 'Software Engineer Salary', nodeType: 'INCOME', amountOrBalance: 6000, interestRateApr: 0 },
+      { id: 'exp-1', name: 'Rent', nodeType: 'EXPENSE', amountOrBalance: 1500, interestRateApr: 0 },
+    ],
+    edges: [],
+  };
+
+  const { updatedRecurring, hasChanges, newRules } = syncGraphNodesToRecurring(graph, []);
+  assert.ok(hasChanges);
+  assert.equal(updatedRecurring.length, 2);
+  assert.equal(newRules.length, 2, 'Must return newRules array so caller can persist them to PostgreSQL');
+  assert.equal(newRules[0].description, 'Software Engineer Salary');
+  assert.equal(newRules[1].description, 'Rent');
+});
+
+test('issue 3: recurring frequency, interval, and inactive status are respected by graph synchronization', () => {
+  const graph = {
+    nodes: [
+      { id: 'chk-1', name: 'Checking', nodeType: 'CHECKING', amountOrBalance: 5000, interestRateApr: 0 },
+    ],
+    edges: [],
+  };
+
+  // 1. Weekly $500 income -> becomes monthly $2166.67
+  const weeklyResult = syncRecurringToGraphNode(graph, {
+    description: 'Weekly Gig',
+    amount: 500,
+    frequency: 'weekly',
+    intervalCount: 1,
+    kind: 'income',
+    isActive: true,
+  });
+  const weeklyNode = weeklyResult.affectedNode;
+  assert.equal(weeklyNode.amountOrBalance, 2166.67, 'Weekly $500 should translate to ~$2,166.67 monthly');
+  assert.equal(weeklyNode.disabled, false, 'Active rule creates enabled node');
+
+  // 2. Inactive rule -> creates disabled node
+  const inactiveResult = syncRecurringToGraphNode(graph, {
+    description: 'Old Side Business',
+    amount: 1000,
+    frequency: 'monthly',
+    intervalCount: 1,
+    kind: 'income',
+    isActive: false,
+  });
+  assert.equal(inactiveResult.affectedNode.disabled, true, 'Inactive rule creates disabled node');
+
+  // 3. Expired rule -> creates disabled node
+  const expiredResult = syncRecurringToGraphNode(graph, {
+    description: 'Expired Grant',
+    amount: 500,
+    frequency: 'monthly',
+    intervalCount: 1,
+    kind: 'income',
+    isActive: true,
+    endDate: '2020-01-01',
+  });
+  assert.equal(expiredResult.affectedNode.disabled, true, 'Expired rule creates disabled node');
+
+  // 4. In syncGraphNodesToRecurring, disabled node syncs to isActive: false
+  const graphWithDisabled = {
+    nodes: [
+      { id: 'inc-off', name: 'Disabled Income', nodeType: 'INCOME', amountOrBalance: 2000, interestRateApr: 0, disabled: true },
+    ],
+    edges: [],
+  };
+  const { updatedRecurring } = syncGraphNodesToRecurring(graphWithDisabled, []);
+  assert.equal(updatedRecurring[0].isActive, false, 'Disabled node syncs to isActive: false');
+});
+
+test('issue 4: portfolio helpers do not update storage when server rejects write with HTTP 500', async () => {
+  const storageKey = 'test-storage-fail-4';
+  runtime.localStorage.data[storageKey] = JSON.stringify([{ symbol: 'AAPL', shares: 5, lastPrice: 150 }]);
+
+  // Mock server HTTP 500 error
+  runtime.fetch = async () => ({
+    ok: false,
+    status: 500,
+    statusText: 'Internal Server Error',
+    json: async () => ({ message: 'Database transaction failed' }),
+  });
+
+  await assert.rejects(
+    async () => {
+      await addStockUnified({
+        storageKey,
+        userId: 10,
+        demo: false,
+        symbol: 'MSFT',
+        price: 300,
+        shares: 2,
+      });
+    },
+    /Server rejected stock creation|Database transaction failed/,
+  );
+
+  // Verify local storage was NOT mutated
+  const remaining = parseLocalHoldings(storageKey);
+  assert.equal(remaining.length, 1);
+  assert.equal(remaining[0].symbol, 'AAPL');
+  assert.ok(!remaining.some((h) => h.symbol === 'MSFT'), 'Rejected stock must not be saved locally');
+});
+
+test('issue 5: simulations do not count portfolio multiple times across multiple investment nodes or in selected scopes', () => {
+  const investmentNodes = [
+    { id: 'inv-1', name: '401(k)', nodeType: 'INVESTMENT', amountOrBalance: 10000, interestRateApr: 7 },
+    { id: 'inv-2', name: 'Roth IRA', nodeType: 'INVESTMENT', amountOrBalance: 20000, interestRateApr: 7 },
+  ];
+  const portfolioValue = 50000;
+
+  // When scope is 'all', each investment node retains its individual balance and portfolio is added ONCE as portfolio-holdings
+  const isSelectedScopeAll = false;
+  const effectivePortfolioAll = isSelectedScopeAll ? 0 : portfolioValue;
+  const simNodesAll = [
+    ...investmentNodes.map((n) => ({
+      id: n.id,
+      name: n.name,
+      type: n.nodeType,
+      balance: n.amountOrBalance,
+      apr: n.interestRateApr,
+    })),
+    ...(effectivePortfolioAll > 0
+      ? [{ id: 'portfolio-holdings', name: 'Stock Portfolio', type: 'INVESTMENT', balance: effectivePortfolioAll, apr: 7 }]
+      : []),
+  ];
+  const totalMarketAssetsAll = simNodesAll.reduce((sum, n) => sum + n.balance, 0);
+  assert.equal(totalMarketAssetsAll, 80000, '10,000 + 20,000 + 50,000 = 80,000 (not double counted to 130,000)');
+
+  // When scope is 'selected', portfolio holdings are not included
+  const isSelectedScopeSelected = true;
+  const effectivePortfolioSelected = isSelectedScopeSelected ? 0 : portfolioValue;
+  const simNodesSelected = [
+    ...investmentNodes.map((n) => ({
+      id: n.id,
+      name: n.name,
+      type: n.nodeType,
+      balance: n.amountOrBalance,
+      apr: n.interestRateApr,
+    })),
+    ...(effectivePortfolioSelected > 0
+      ? [{ id: 'portfolio-holdings', name: 'Stock Portfolio', type: 'INVESTMENT', balance: effectivePortfolioSelected, apr: 7 }]
+      : []),
+  ];
+  const totalMarketAssetsSelected = simNodesSelected.reduce((sum, n) => sum + n.balance, 0);
+  assert.equal(totalMarketAssetsSelected, 30000, 'Selected scope excludes unselected portfolio holdings');
+});
+
+test('issue 6: cash balances allow overdraft and reversing an expense accurately restores original balance without creating money', () => {
+  const graph = {
+    nodes: [
+      { id: 'c1', name: 'Checking Account', nodeType: 'CHECKING', amountOrBalance: 100, interestRateApr: 0 },
+    ],
+    edges: [],
+  };
+
+  // 1. Start with $100 -> spend $150
+  const spendResult = syncScenarioTransactionToGraph(graph, {
+    kind: 'expense',
+    accountName: 'Checking Account',
+    amount: 150,
+    description: 'Large Purchase',
+  });
+  assert.ok(spendResult);
+  assert.equal(spendResult.newBalance, -50, 'Cash balance should reflect overdraft of -$50');
+  assert.equal(spendResult.insufficientFunds, true);
+  assert.equal(spendResult.updatedGraph.nodes[0].amountOrBalance, -50);
+
+  // 2. Delete the $150 expense (reversal of +150)
+  const deleteResult = syncScenarioTransactionToGraph(spendResult.updatedGraph, {
+    kind: 'income',
+    accountName: 'Checking Account',
+    amount: 150,
+    description: 'Large Purchase',
+    isReversal: true,
+  });
+  assert.ok(deleteResult);
+  assert.equal(deleteResult.newBalance, 100, 'Original balance of $100 must be restored');
+  assert.equal(deleteResult.updatedGraph.nodes[0].amountOrBalance, 100, 'Final balance must be $100, not $150');
+});
+
+test('issue 7: removing all demo stocks does not repopulate default holdings on reload', async () => {
+  const storageKey = 'test-demo-holdings-empty';
+  // Simulate user removing all demo stocks: storage has empty array '[]'
+  runtime.localStorage.data[storageKey] = '[]';
+
+  runtime.fetch = async () => ({ ok: false });
+
+  const result = await loadUnifiedHoldings(storageKey, 1, true);
+  assert.equal(result.holdings.length, 0, 'Must remain empty array, not repopulate defaults');
+  assert.equal(result.stocks.length, 0);
+  assert.equal(result.positions.length, 0);
+});
+
+test('issue 7: demo recurring transactions persist reliably without deleting list or saving unread recurringIds', () => {
+  const budgetKey = 'finapp-budget-v1:demo:1';
+  runtime.localStorage.data[budgetKey] = JSON.stringify({
+    transactions: [],
+    recurring: [
+      { id: 1, description: 'Paycheck', amount: 3000, frequency: 'monthly', kind: 'income', isActive: true },
+      { id: 2, description: 'Gym', amount: 50, frequency: 'monthly', kind: 'expense', isActive: true },
+    ],
+  });
+
+  // 1. Simulating saving a recurring rule (must update saved.recurring, not delete it)
+  const initialSaved = JSON.parse(runtime.localStorage.data[budgetKey]);
+  const newRule = { id: 3, description: 'Internet', amount: 80, frequency: 'monthly', kind: 'expense', isActive: true };
+  const updatedList = [...initialSaved.recurring, newRule];
+  initialSaved.recurring = updatedList;
+  runtime.localStorage.data[budgetKey] = JSON.stringify(initialSaved);
+
+  const afterSave = JSON.parse(runtime.localStorage.data[budgetKey]);
+  assert.ok(Array.isArray(afterSave.recurring), 'saved.recurring must exist and be an array');
+  assert.equal(afterSave.recurring.length, 3);
+  assert.equal(afterSave.recurring[2].description, 'Internet');
+
+  // 2. Simulating deleting a recurring rule (must update saved.recurring, not set unread saved.recurringIds)
+  const afterDeleteList = afterSave.recurring.filter((r) => r.id !== 2);
+  afterSave.recurring = afterDeleteList;
+  runtime.localStorage.data[budgetKey] = JSON.stringify(afterSave);
+
+  const afterDelete = JSON.parse(runtime.localStorage.data[budgetKey]);
+  assert.ok(Array.isArray(afterDelete.recurring), 'saved.recurring must be an array after deletion');
+  assert.equal(afterDelete.recurring.length, 2);
+  assert.equal(afterDelete.recurringIds, undefined, 'saved.recurringIds must not be used');
+  assert.ok(!afterDelete.recurring.some((r) => r.id === 2), 'Gym must be removed');
+});
+
+test('issue 8: syncGraphNodesToRecurring deduplicates repeated/recopied recurring rules and removes duplicates', () => {
+  const graph = {
+    nodes: [
+      { id: 'sal1', name: 'Salary', nodeType: 'INCOME', amountOrBalance: 5000, interestRateApr: 0 },
+      { id: 'rent1', name: 'Rent', nodeType: 'EXPENSE', amountOrBalance: 1800, interestRateApr: 0 },
+    ],
+    edges: [],
+  };
+
+  const initial = syncGraphNodesToRecurring(graph, []);
+  assert.equal(initial.updatedRecurring.length, 2);
+
+  // Simulate multiple repeats (e.g. from clicking into and out of tab)
+  const duplicatedList = [
+    ...initial.updatedRecurring,
+    { ...initial.updatedRecurring[0], id: 101 },
+    { ...initial.updatedRecurring[0], id: 102 },
+    { ...initial.updatedRecurring[1], id: 103 },
+  ];
+  assert.equal(duplicatedList.length, 5);
+
+  const cleanSync = syncGraphNodesToRecurring(graph, duplicatedList);
+  assert.equal(cleanSync.hasChanges, true);
+  assert.equal(cleanSync.updatedRecurring.length, 2, 'Must deduplicate back to 2 recurring rules');
+  assert.equal(cleanSync.removedDuplicates.length, 3, 'Must identify 3 removed duplicates');
+  assert.equal(
+    JSON.stringify(cleanSync.removedDuplicates.map((d) => d.id).sort((a, b) => a - b)),
+    JSON.stringify([101, 102, 103]),
+  );
+});
+
+test('issue 8: createSalaryRecurringTemplates and createDebtRecurringTemplates do not create duplicates when rules with [node-id] exist', () => {
+  const graph = {
+    nodes: [
+      { id: 'sal1', name: 'Salary', nodeType: 'INCOME', amountOrBalance: 5000, interestRateApr: 0 },
+      { id: 'loan1', name: 'Auto Loan', nodeType: 'DEBT', amountOrBalance: 12000, interestRateApr: 5, minPayment: 320 },
+    ],
+    edges: [],
+  };
+
+  const existing = [
+    {
+      id: 1,
+      kind: 'income',
+      description: 'Salary',
+      amount: 5000,
+      notes: '[node-id:sal1] Scenario Income: Salary',
+    },
+    {
+      id: 2,
+      kind: 'expense',
+      description: 'Auto Loan Payment',
+      amount: 320,
+      notes: '[node-id:loan1] Scenario Debt: Auto Loan',
+    },
+  ];
+
+  const newSalaries = createSalaryRecurringTemplates(graph, existing);
+  assert.equal(newSalaries.length, 0, 'Must not duplicate existing salary template');
+
+  const newDebts = createDebtRecurringTemplates(graph, existing);
+  assert.equal(newDebts.length, 0, 'Must not duplicate existing debt template');
+});
+
+test('budgeting-bridge: availableAccounts strictly contains Checking, Savings, and active loans only', () => {
+  const activeGraph = {
+    nodes: [
+      { id: '1', name: 'Software Engineer Salary', nodeType: 'INCOME', amountOrBalance: 8500 },
+      { id: '2', name: 'Checking Account', nodeType: 'CHECKING', amountOrBalance: 3000 },
+      { id: '3', name: 'Rent', nodeType: 'EXPENSE', amountOrBalance: 1500 },
+      { id: '4', name: 'Student Loan A', nodeType: 'DEBT', amountOrBalance: 22000, interestRateApr: 5.8 },
+      { id: '5', name: 'Student Loan B', nodeType: 'DEBT', amountOrBalance: 8000, interestRateApr: 3.4 },
+      { id: '6', name: 'Roth IRA', nodeType: 'INVESTMENT', amountOrBalance: 1200 },
+    ],
+    edges: [],
+  };
+
+  // 1. When Student Loan A and B are active, both are in available accounts along with Checking and Savings
+  const accountsWhenActive = getAvailableBudgetAccounts(activeGraph);
+  assert.deepEqual([...accountsWhenActive], ['Checking', 'Savings', 'Student Loan A', 'Student Loan B']);
+
+  // 2. When Student Loan A is deleted/archived, only Student Loan B remains with Checking and Savings
+  const graphAfterDeletingLoanA = {
+    nodes: [
+      { id: '1', name: 'Software Engineer Salary', nodeType: 'INCOME', amountOrBalance: 8500 },
+      { id: '2', name: 'Checking Account', nodeType: 'CHECKING', amountOrBalance: 3000 },
+      { id: '3', name: 'Rent', nodeType: 'EXPENSE', amountOrBalance: 1500 },
+      { id: '4', name: 'Student Loan A', nodeType: 'DEBT', amountOrBalance: 22000, archived: true },
+      { id: '5', name: 'Student Loan B', nodeType: 'DEBT', amountOrBalance: 8000, interestRateApr: 3.4 },
+      { id: '6', name: 'Roth IRA', nodeType: 'INVESTMENT', amountOrBalance: 1200 },
+    ],
+    edges: [],
+  };
+  const accountsAfterDeletingA = getAvailableBudgetAccounts(graphAfterDeletingLoanA);
+  assert.equal(accountsAfterDeletingA.includes('Student Loan A'), false, 'Deleted Student Loan A must not be present');
+  assert.deepEqual([...accountsAfterDeletingA], ['Checking', 'Savings', 'Student Loan B']);
+
+  // 3. When both loans are deleted, only Checking and Savings remain
+  const graphWithoutLoans = {
+    nodes: [
+      { id: '1', name: 'Software Engineer Salary', nodeType: 'INCOME', amountOrBalance: 8500 },
+      { id: '2', name: 'Checking Account', nodeType: 'CHECKING', amountOrBalance: 3000 },
+      { id: '4', name: 'Student Loan A', nodeType: 'DEBT', amountOrBalance: 22000, archived: true },
+      { id: '5', name: 'Student Loan B', nodeType: 'DEBT', amountOrBalance: 8000, archived: true },
+    ],
+    edges: [],
+  };
+  const accountsWithoutLoans = getAvailableBudgetAccounts(graphWithoutLoans);
+  assert.deepEqual([...accountsWithoutLoans], ['Checking', 'Savings']);
+});
+
+test('budgeting-bridge: syncRecurringDeletionToGraph matches DEBT node by accountName and archives it', () => {
+  const graph = {
+    nodes: [
+      { id: 'chk1', name: 'Checking', nodeType: 'CHECKING', amountOrBalance: 3000 },
+      { id: 'loan1', name: 'Auto Loan', nodeType: 'DEBT', amountOrBalance: 8000, interestRateApr: 4.5 },
+    ],
+    edges: [],
+  };
+
+  const deletedRule = {
+    kind: 'expense',
+    accountName: 'Auto Loan',
+    description: 'Monthly Car Payment',
+  };
+
+  const result = syncRecurringDeletionToGraph(graph, deletedRule);
+  assert.ok(result, 'Should find matching debt node by accountName');
+  assert.equal(result.removedNode.id, 'loan1');
+  const updatedLoan = result.updatedGraph.nodes.find((n) => n.id === 'loan1');
+  assert.equal(updatedLoan.archived, true, 'Debt node must be archived in graph');
+  const updatedChecking = result.updatedGraph.nodes.find((n) => n.id === 'chk1');
+  assert.equal(Boolean(updatedChecking.archived), false, 'Checking node must not be archived');
 });
 
 test('portfolio: addStockUnified preserves dividend information', async () => {

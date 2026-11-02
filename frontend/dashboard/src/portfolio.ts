@@ -204,10 +204,13 @@ export async function loadUnifiedHoldings(
   }
 
   // 2. Demo mode or offline fallback: Load from localStorage or defaults
-  let localHoldings = parseLocalHoldings(storageKey);
-  if (localHoldings.length === 0 && demo) {
+  const rawStorage = typeof localStorage !== 'undefined' ? localStorage.getItem(storageKey) : null;
+  let localHoldings: Holding[];
+  if (rawStorage === null && demo) {
     localHoldings = DEFAULT_DEMO_HOLDINGS[userId || 2] || DEFAULT_DEMO_HOLDINGS[2];
     saveLocalHoldings(storageKey, localHoldings);
+  } else {
+    localHoldings = parseLocalHoldings(storageKey);
   }
 
   const { stocks, positions } = holdingsToSynthetic(localHoldings, userId || 1);
@@ -242,30 +245,32 @@ export async function addStockUnified({
   let newStockId: number | undefined;
 
   if (!demo && userId && userId > 0) {
-    try {
-      const res = await fetch(`${API_BASE}/stocks`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', ...sessionHeaders() },
-        credentials: 'include',
-        body: JSON.stringify({
-          userId,
-          ticker: sym,
-          companyName: companyName || sym,
-          lastPrice: price,
-          purchasePrice: price,
-          sharesOwned: shares,
-          paysDividend,
+    const res = await fetch(`${API_BASE}/stocks`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', ...sessionHeaders() },
+      credentials: 'include',
+      body: JSON.stringify({
+        userId,
+        ticker: sym,
+        companyName: companyName || sym,
+        lastPrice: price,
+        purchasePrice: price,
+        sharesOwned: shares,
+        paysDividend,
           dividendFrequency: paysDividend ? dividendFrequency : null,
           dividendPerShare: paysDividend ? dividendPerShare : null,
-        }),
-      });
-      if (res.ok) {
+      }),
+    });
+    if (!res.ok) {
+      let msg = `Server rejected stock creation (HTTP ${res.status})`;
+      try {
         const json = await res.json();
-        newStockId = json?.data?.id;
-      }
-    } catch (err) {
-      console.error('Failed to create stock in database:', err);
+        if (json?.message) msg = json.message;
+      } catch {}
+      throw new Error(msg);
     }
+    const json = await res.json().catch(() => ({}));
+    newStockId = json?.data?.id;
   }
 
   const updated: Holding[] = [
@@ -309,23 +314,27 @@ export async function updateSharesUnified({
   const delta = newShares - currentShares;
 
   if (!demo && userId && userId > 0 && stockId && delta !== 0) {
-    try {
-      await fetch(`${API_BASE}/stock-transactions`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', ...sessionHeaders() },
-        credentials: 'include',
-        body: JSON.stringify({
-          userId,
-          stockId,
-          type: delta > 0 ? 'buy' : 'sell',
-          quantity: Math.abs(delta),
-          pricePerShare: price,
-          transactionDate: new Date().toISOString().split('T')[0],
-          notes: 'Position adjustment from portfolio',
-        }),
-      });
-    } catch (err) {
-      console.error('Failed to record stock transaction:', err);
+    const res = await fetch(`${API_BASE}/stock-transactions`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', ...sessionHeaders() },
+      credentials: 'include',
+      body: JSON.stringify({
+        userId,
+        stockId,
+        type: delta > 0 ? 'buy' : 'sell',
+        quantity: Math.abs(delta),
+        pricePerShare: price,
+        transactionDate: new Date().toISOString().split('T')[0],
+        notes: 'Position adjustment from portfolio',
+      }),
+    });
+    if (!res.ok) {
+      let msg = `Server rejected stock transaction (HTTP ${res.status})`;
+      try {
+        const json = await res.json();
+        if (json?.message) msg = json.message;
+      } catch {}
+      throw new Error(msg);
     }
   }
 
@@ -351,14 +360,18 @@ export async function removeStockUnified({
   const sym = symbol.trim().toUpperCase();
 
   if (!demo && userId && userId > 0 && stockId) {
-    try {
-      await fetch(`${API_BASE}/stocks/${stockId}`, {
-        method: 'DELETE',
-        headers: sessionHeaders(),
-        credentials: 'include',
-      });
-    } catch (err) {
-      console.error('Failed to delete stock from database:', err);
+    const res = await fetch(`${API_BASE}/stocks/${stockId}`, {
+      method: 'DELETE',
+      headers: sessionHeaders(),
+      credentials: 'include',
+    });
+    if (!res.ok) {
+      let msg = `Server rejected stock deletion (HTTP ${res.status})`;
+      try {
+        const json = await res.json();
+        if (json?.message) msg = json.message;
+      } catch {}
+      throw new Error(msg);
     }
   }
 

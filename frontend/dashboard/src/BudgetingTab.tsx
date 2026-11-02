@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useRef } from 'react';
+import { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import type { FormEvent } from 'react';
 import type { GraphData } from './finance';
 import { API_BASE, dollars, debtPayment, expenseAmount, colors, totals } from './finance';
@@ -24,15 +24,93 @@ import {
   syncGraphNodesToRecurring,
   syncRecurringToGraphNode,
   syncRecurringDeletionToGraph,
+  getAvailableBudgetAccounts,
 } from './budgeting-bridge';
 
 interface BudgetingTabProps {
   graph: GraphData;
+  rawGraph?: GraphData;
   userId?: number;
   demo?: boolean;
   portfolioValue?: number;
   onUpdateGraph?: (next: GraphData) => void;
 }
+
+const DEMO_BUDGET_ENC_PREFIX = 'enc:v1:';
+
+const toB64 = (bytes: Uint8Array): string => btoa(String.fromCharCode(...bytes));
+const fromB64 = (b64: string): Uint8Array<ArrayBuffer> => {
+  const binary = atob(b64);
+  const bytes = new Uint8Array(new ArrayBuffer(binary.length));
+  for (let i = 0; i < binary.length; i++) {
+    bytes[i] = binary.charCodeAt(i);
+  }
+  return bytes;
+};
+
+const getDemoStorageSecret = (storageKey: string): string => {
+  const existing = sessionStorage.getItem(`${storageKey}:k`);
+  if (existing) return existing;
+  const generated = `${storageKey}:${crypto.randomUUID()}`;
+  sessionStorage.setItem(`${storageKey}:k`, generated);
+  return generated;
+};
+
+const deriveDemoCryptoKey = async (storageKey: string): Promise<CryptoKey> => {
+  const enc = new TextEncoder();
+  const baseKey = await crypto.subtle.importKey(
+    'raw',
+    enc.encode(getDemoStorageSecret(storageKey)),
+    'PBKDF2',
+    false,
+    ['deriveKey']
+  );
+  return crypto.subtle.deriveKey(
+    {
+      name: 'PBKDF2',
+      salt: enc.encode(storageKey),
+      iterations: 100000,
+      hash: 'SHA-256',
+    },
+    baseKey,
+    { name: 'AES-GCM', length: 256 },
+    false,
+    ['encrypt', 'decrypt']
+  );
+};
+
+const encryptForDemoStorage = async (storageKey: string, payload: unknown): Promise<string> => {
+  const key = await deriveDemoCryptoKey(storageKey);
+  const iv = crypto.getRandomValues(new Uint8Array(12));
+  const data = new TextEncoder().encode(JSON.stringify(payload));
+  const cipher = await crypto.subtle.encrypt({ name: 'AES-GCM', iv }, key, data);
+  return `${DEMO_BUDGET_ENC_PREFIX}${toB64(iv)}:${toB64(new Uint8Array(cipher))}`;
+};
+
+const decryptFromDemoStorage = async <T,>(storageKey: string, raw: string | null): Promise<T | null> => {
+  if (!raw) return null;
+  if (!raw.startsWith(DEMO_BUDGET_ENC_PREFIX)) {
+    try {
+      return JSON.parse(raw) as T;
+    } catch {
+      return null;
+    }
+  }
+  const body = raw.slice(DEMO_BUDGET_ENC_PREFIX.length);
+  const [ivB64, dataB64] = body.split(':');
+  if (!ivB64 || !dataB64) return null;
+  try {
+    const key = await deriveDemoCryptoKey(storageKey);
+    const plain = await crypto.subtle.decrypt(
+      { name: 'AES-GCM', iv: fromB64(ivB64) },
+      key,
+      fromB64(dataB64)
+    );
+    return JSON.parse(new TextDecoder().decode(plain)) as T;
+  } catch {
+    return null;
+  }
+};
 
 export type TransactionKind = 'income' | 'expense';
 export type StockTxnType = 'buy' | 'sell' | 'dividend' | 'split';
@@ -109,7 +187,7 @@ export interface AccountOption {
 
 const initialTransaction = (): Transaction => ({
   kind: 'expense',
-  accountName: '',
+  accountName: 'Checking',
   description: '',
   amount: 0,
   transactionDate: new Date().toISOString().split('T')[0],
@@ -140,6 +218,7 @@ const initialRecurring = (): RecurringTransaction => ({
 
 export function BudgetingTab({
   graph,
+  rawGraph,
   userId: propUserId,
   demo,
   portfolioValue: propPortfolioValue,
@@ -263,6 +342,8 @@ export function BudgetingTab({
   const lastQuoteRefresh = useRef<number>(0);
   const graphRef = useRef(graph);
   graphRef.current = graph;
+  const rawGraphRef = useRef(rawGraph);
+  rawGraphRef.current = rawGraph;
 
   // Refresh current market prices for all tracked stocks
   const refreshCurrentPrices = useCallback(
@@ -377,11 +458,14 @@ export function BudgetingTab({
           let demoTxns: Transaction[] = [];
           let demoRecur: RecurringTransaction[] = [];
           try {
-            const saved = localStorage.getItem(budgetStorageKey);
-            if (saved) {
-              const parsed = JSON.parse(saved);
-              demoTxns = Array.isArray(parsed.transactions) ? parsed.transactions : [];
-              demoRecur = Array.isArray(parsed.recurring) ? parsed.recurring : [];
+            const savedRaw = localStorage.getItem(budgetStorageKey);
+            const parsed = await decryptFromDemoStorage<Record<string, unknown>>(
+              budgetStorageKey,
+              savedRaw
+            );
+            if (parsed) {
+              demoTxns = Array.isArray(parsed.transactions) ? (parsed.transactions as Transaction[]) : [];
+              demoRecur = Array.isArray(parsed.recurring) ? (parsed.recurring as RecurringTransaction[]) : [];
             }
           } catch {}
 
@@ -456,16 +540,24 @@ export function BudgetingTab({
             ];
           }
 
-          const syncedDemoRecur = syncGraphNodesToRecurring(graphRef.current, demoRecur).updatedRecurring;
+          const { updatedRecurring: syncedDemoRecur } = syncGraphNodesToRecurring(
+            graphRef.current,
+            demoRecur,
+          );
           try {
             localStorage.setItem(
               budgetStorageKey,
-              JSON.stringify({ transactions: demoTxns, recurring: syncedDemoRecur }),
+              await encryptForDemoStorage(budgetStorageKey, {
+                transactions: demoTxns,
+                recurring: syncedDemoRecur,
+              }),
             );
           } catch {}
 
           setTransactions(demoTxns);
           setRecurringList(syncedDemoRecur);
+          isInitialLoaded.current = true;
+          lastSyncedGraph.current = graphRef.current;
           if (includePrices) await refreshCurrentPrices(loadedStocks, controller.signal, forcePrices);
           return true;
         } finally {
@@ -510,7 +602,7 @@ export function BudgetingTab({
             throw new Error(`Invalid response for ${path}.`);
           }
           if (!Array.isArray(json?.data)) throw new Error(`Invalid response for ${path}.`);
-          if (!controller.signal.aborted) apply(json.data);
+          if (!controller.signal.aborted) await apply(json.data);
         };
         const results = await Promise.allSettled([
           read<Transaction[]>('transactions', setTransactions),
@@ -519,11 +611,87 @@ export function BudgetingTab({
             setStocks(data);
           }),
           read<StockPosition[]>('positions', setPositions),
-          read<RecurringTransaction[]>('recurring-transactions', (data) => {
-            const synced = syncGraphNodesToRecurring(graphRef.current, data).updatedRecurring;
-            setRecurringList(synced);
+          read<RecurringTransaction[]>('recurring-transactions', async (data) => {
+            const { updatedRecurring, newRules, removedDuplicates } = syncGraphNodesToRecurring(
+              graphRef.current,
+              data,
+            );
+            if (!isDemo) {
+              if (removedDuplicates && removedDuplicates.length > 0) {
+                for (const dup of removedDuplicates) {
+                  if (dup.id) {
+                    try {
+                      await fetch(`${API_BASE}/recurring-transactions/${dup.id}`, {
+                        method: 'DELETE',
+                        headers: sessionHeaders(),
+                        credentials: 'include',
+                        signal: controller.signal,
+                      });
+                    } catch {}
+                  }
+                }
+              }
+              if (newRules && newRules.length > 0) {
+                const persistedRules: RecurringTransaction[] = [];
+                for (const rule of newRules) {
+                  try {
+                    const res = await fetch(`${API_BASE}/recurring-transactions`, {
+                      method: 'POST',
+                      headers: { 'Content-Type': 'application/json', ...sessionHeaders() },
+                      credentials: 'include',
+                      body: JSON.stringify({ ...rule, userId }),
+                      signal: controller.signal,
+                    });
+                    if (res.ok) {
+                      const resJson = await res.json();
+                      if (resJson?.data) {
+                        persistedRules.push(resJson.data);
+                      }
+                    }
+                  } catch {}
+                }
+                const finalRules = updatedRecurring
+                  .filter((r) => !newRules.some((nr) => nr.id === r.id))
+                  .concat(persistedRules);
+                setRecurringList(finalRules);
+              } else {
+                setRecurringList(updatedRecurring);
+              }
+            } else {
+              setRecurringList(updatedRecurring);
+            }
           }),
-          read<AccountOption[]>('accounts', setDbAccounts),
+          read<AccountOption[]>('accounts', (data) => {
+            const allNodes = [...(rawGraphRef.current?.nodes ?? []), ...(graphRef.current?.nodes ?? [])];
+            const activeDebts = new Set(
+              allNodes
+                .filter((n) => n.nodeType === 'DEBT' && !n.archived && !n.disabled)
+                .map((n) => n.name.trim().toLowerCase()),
+            );
+
+            const orphanedAccounts = data.filter((a) => {
+              const lower = a.name.trim().toLowerCase();
+              if (lower === 'checking' || lower === 'checking account' || lower === 'savings') return false;
+              if (activeDebts.has(lower)) return false;
+              return true;
+            });
+
+            if (!isDemo && orphanedAccounts.length > 0) {
+              for (const orphan of orphanedAccounts) {
+                if (orphan.id) {
+                  void fetch(`${API_BASE}/accounts/${orphan.id}`, {
+                    method: 'DELETE',
+                    headers: sessionHeaders(),
+                    credentials: 'include',
+                    signal: controller.signal,
+                  }).catch(() => {});
+                }
+              }
+            }
+
+            const validAccounts = data.filter((a) => !orphanedAccounts.some((o) => o.id === a.id));
+            setDbAccounts(validAccounts);
+          }),
         ]);
         if (controller.signal.aborted) return false;
         if (results.some((result) => result.status === 'rejected')) {
@@ -532,6 +700,8 @@ export function BudgetingTab({
             'Some budgeting data could not be refreshed. Previous values have been kept.',
           );
         }
+        isInitialLoaded.current = true;
+        lastSyncedGraph.current = graphRef.current;
         // Requested market quotes only on entry or explicit refresh, avoiding downloads after every edit.
         if (includePrices) await refreshCurrentPrices(loadedStocks, controller.signal, forcePrices);
         return !controller.signal.aborted;
@@ -554,8 +724,12 @@ export function BudgetingTab({
   );
 
   const isSelfUpdate = useRef(false);
+  const isInitialLoaded = useRef(false);
+  const lastSyncedGraph = useRef<GraphData | null>(null);
 
   useEffect(() => {
+    isInitialLoaded.current = false;
+    lastSyncedGraph.current = null;
     // Only load budgeting data without re-fetching live market prices on tab entry
     void loadData(false);
     return () => {
@@ -578,33 +752,129 @@ export function BudgetingTab({
 
   // Automatically synchronize active graph flow nodes (Income, Expense, Debt) into recurring transactions
   useEffect(() => {
+    // Only sync if initial budgeting data has been loaded and graph actually changed
+    if (!isInitialLoaded.current) return;
     if (!graph?.nodes?.length) return;
+    if (lastSyncedGraph.current === graph) return;
+    lastSyncedGraph.current = graph;
+
     setRecurringList((prevList) => {
-      const { updatedRecurring, hasChanges } = syncGraphNodesToRecurring(graph, prevList);
+      const { updatedRecurring, hasChanges, newRules, removedDuplicates } = syncGraphNodesToRecurring(
+        graph,
+        prevList,
+      );
       if (!hasChanges) return prevList;
+      if (isDemo) {
+        const budgetStorageKey = `finapp-budget-v1:demo:${userId || 1}`;
+        void (async () => {
+          try {
+            const saved =
+              (await decryptFromDemoStorage<Record<string, unknown>>(
+                budgetStorageKey,
+                localStorage.getItem(budgetStorageKey)
+              )) || {};
+            saved.recurring = updatedRecurring;
+            localStorage.setItem(budgetStorageKey, await encryptForDemoStorage(budgetStorageKey, saved));
+          } catch {}
+        })();
+        return updatedRecurring;
+      }
+      // For signed-in users, clean up duplicates and save graph-generated new rules to PostgreSQL
+      if (removedDuplicates && removedDuplicates.length > 0) {
+        for (const dup of removedDuplicates) {
+          if (dup.id) {
+            void fetch(`${API_BASE}/recurring-transactions/${dup.id}`, {
+              method: 'DELETE',
+              headers: sessionHeaders(),
+              credentials: 'include',
+            }).catch(() => {});
+          }
+        }
+      }
+      if (newRules && newRules.length > 0) {
+        const existingRules = updatedRecurring.filter((r) => !newRules.some((nr) => nr.id === r.id));
+        void (async () => {
+          for (const rule of newRules) {
+            try {
+              const res = await fetch(`${API_BASE}/recurring-transactions`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', ...sessionHeaders() },
+                credentials: 'include',
+                body: JSON.stringify({ ...rule, userId }),
+              });
+              if (res.ok) {
+                const resJson = await res.json();
+                if (resJson?.data) {
+                  setRecurringList((cur) => {
+                    if (cur.some((r) => r.id === resJson.data.id)) return cur;
+                    return [...cur, resJson.data];
+                  });
+                }
+              }
+            } catch (err) {
+              console.error('Failed to save recurring rule to database:', err);
+            }
+          }
+        })();
+        return existingRules;
+      }
       return updatedRecurring;
     });
   }, [graph, isDemo, userId]);
 
-  // Derived account options from both backend accounts and graph nodes
-  const availableAccounts: string[] = Array.from(
-    new Set([
-      ...dbAccounts.map((a) =>
-        a.name.trim().toLowerCase() === 'checking account' ? 'Checking' : a.name,
-      ),
-      ...(graph?.nodes
-        ?.filter(
-          (n) =>
-            ['CHECKING', 'SAVINGS', 'BROKERAGE', 'DEBT'].includes(n.nodeType) && !n.archived,
-        )
-        .map((n) => (n.name.trim().toLowerCase() === 'checking account' ? 'Checking' : n.name)) ??
-        []),
-      'Checking',
-      'Savings',
-    ]),
-  )
-    .filter(Boolean)
-    .filter((acc) => acc.trim().toLowerCase() !== 'checking account');
+  // Automatically clean up any dbAccounts if their loan was deleted/archived in the scenario graph
+  useEffect(() => {
+    if (dbAccounts.length === 0) return;
+    const allNodes = [...(rawGraph?.nodes ?? []), ...(graph?.nodes ?? [])];
+    const activeDebts = new Set(
+      allNodes
+        .filter((n) => n.nodeType === 'DEBT' && !n.archived && !n.disabled)
+        .map((n) => n.name.trim().toLowerCase()),
+    );
+
+    const orphanedAccounts = dbAccounts.filter((a) => {
+      const lower = a.name.trim().toLowerCase();
+      if (lower === 'checking' || lower === 'checking account' || lower === 'savings') return false;
+      if (activeDebts.has(lower)) return false;
+      return true;
+    });
+
+    if (orphanedAccounts.length > 0) {
+      if (!isDemo && userId) {
+        for (const orphan of orphanedAccounts) {
+          if (orphan.id) {
+            void fetch(`${API_BASE}/accounts/${orphan.id}`, {
+              method: 'DELETE',
+              headers: sessionHeaders(),
+              credentials: 'include',
+            }).catch(() => {});
+          }
+        }
+      }
+      setDbAccounts((prev) => prev.filter((a) => !orphanedAccounts.some((o) => o.id === a.id)));
+    }
+  }, [rawGraph, graph, dbAccounts, isDemo, userId]);
+
+  // Derived account options strictly: Checking, Savings, and active loans
+  const availableAccounts = useMemo(() => {
+    return getAvailableBudgetAccounts(graph);
+  }, [graph]);
+
+  // Ensure transaction draft account stays valid when an account or loan is deleted
+  useEffect(() => {
+    if (
+      transDraft.accountName &&
+      !availableAccounts.some(
+        (a) => a.toLowerCase() === transDraft.accountName?.trim().toLowerCase(),
+      )
+    ) {
+      setTransDraft((prev) => ({
+        ...prev,
+        accountName: availableAccounts[0] || 'Checking',
+        accountId: undefined,
+      }));
+    }
+  }, [availableAccounts, transDraft.accountName]);
 
   // --- Transaction Handlers ---
   const handleOpenAddTransaction = () => {
@@ -637,10 +907,12 @@ export function BudgetingTab({
       return;
     }
 
+    let syncResult: ReturnType<typeof syncScenarioTransactionToGraph> | null = null;
     let syncStatusMsg = '';
-    if (onUpdateGraph && graph) {
+    const baseInitial = rawGraph || graph;
+    if (onUpdateGraph && baseInitial) {
       const prevTxn = editingTransId ? transactions.find((t) => t.id === editingTransId) : null;
-      let baseGraph = graph;
+      let baseGraph = baseInitial;
       if (prevTxn) {
         const reverseTxn = {
           kind: prevTxn.kind === 'income' ? 'expense' : 'income',
@@ -656,9 +928,8 @@ export function BudgetingTab({
         }
       }
 
-      const syncResult = syncScenarioTransactionToGraph(baseGraph, transDraft);
+      syncResult = syncScenarioTransactionToGraph(baseGraph, transDraft);
       if (syncResult) {
-        onUpdateGraph(syncResult.updatedGraph);
         if (syncResult.isNew) {
           syncStatusMsg = ` Created ${syncResult.matchedNode.name} node with balance ${dollars(syncResult.newBalance)} (Net Worth updated).`;
         } else if (syncResult.matchedNode.nodeType === 'DEBT') {
@@ -667,6 +938,9 @@ export function BudgetingTab({
           syncStatusMsg = ` Added ${dollars(transDraft.amount)} to ${syncResult.matchedNode.name} balance (Net Worth +${dollars(transDraft.amount)}).`;
         } else {
           syncStatusMsg = ` Deducted ${dollars(transDraft.amount)} from ${syncResult.matchedNode.name} balance (Net Worth -${dollars(transDraft.amount)}).`;
+        }
+        if (syncResult.insufficientFunds) {
+          syncStatusMsg += ` (Account overdraft: ${dollars(syncResult.newBalance)}).`;
         }
       }
     }
@@ -697,10 +971,17 @@ export function BudgetingTab({
       }
       setTransactions(updated);
       try {
-        const saved = JSON.parse(localStorage.getItem(budgetStorageKey) || '{}');
+        const saved =
+          (await decryptFromDemoStorage<Record<string, unknown>>(
+            budgetStorageKey,
+            localStorage.getItem(budgetStorageKey)
+          )) || {};
         saved.transactions = updated;
-        localStorage.setItem(budgetStorageKey, JSON.stringify(saved));
+        localStorage.setItem(budgetStorageKey, await encryptForDemoStorage(budgetStorageKey, saved));
       } catch {}
+      if (syncResult && onUpdateGraph) {
+        onUpdateGraph(syncResult.updatedGraph);
+      }
       setStatusMessage({
         type: 'success',
         text: (editingTransId ? 'Transaction updated successfully.' : 'Transaction recorded.') + syncStatusMsg,
@@ -733,6 +1014,10 @@ export function BudgetingTab({
         throw new Error(errJson.message || 'Failed to save transaction');
       }
 
+      if (syncResult && onUpdateGraph) {
+        onUpdateGraph(syncResult.updatedGraph);
+      }
+
       setStatusMessage({
         type: 'success',
         text: (editingTransId ? 'Transaction updated successfully.' : 'Transaction recorded.') + syncStatusMsg,
@@ -750,7 +1035,9 @@ export function BudgetingTab({
   const handleDeleteTransaction = async (id: number): Promise<void> => {
     if (!window.confirm('Delete this transaction?')) return;
     const transToDelete = transactions.find((t) => t.id === id);
-    if (transToDelete && onUpdateGraph && graph) {
+    let reverseSync: ReturnType<typeof syncScenarioTransactionToGraph> | null = null;
+    const baseGraph = rawGraph || graph;
+    if (transToDelete && onUpdateGraph && baseGraph) {
       const reverseTxn = {
         kind: transToDelete.kind === 'income' ? 'expense' : 'income',
         accountName: transToDelete.accountName || 'Checking',
@@ -759,10 +1046,7 @@ export function BudgetingTab({
         categoryName: transToDelete.categoryName,
         isReversal: true,
       };
-      const reverseSync = syncScenarioTransactionToGraph(graph, reverseTxn);
-      if (reverseSync) {
-        onUpdateGraph(reverseSync.updatedGraph);
-      }
+      reverseSync = syncScenarioTransactionToGraph(baseGraph, reverseTxn);
     }
 
     if (isDemo) {
@@ -770,10 +1054,17 @@ export function BudgetingTab({
       const updated = transactions.filter((t) => t.id !== id);
       setTransactions(updated);
       try {
-        const saved = JSON.parse(localStorage.getItem(budgetStorageKey) || '{}');
+        const saved =
+          (await decryptFromDemoStorage<Record<string, unknown>>(
+            budgetStorageKey,
+            localStorage.getItem(budgetStorageKey)
+          )) || {};
         saved.transactions = updated;
-        localStorage.setItem(budgetStorageKey, JSON.stringify(saved));
+        localStorage.setItem(budgetStorageKey, await encryptForDemoStorage(budgetStorageKey, saved));
       } catch {}
+      if (reverseSync && onUpdateGraph) {
+        onUpdateGraph(reverseSync.updatedGraph);
+      }
       setStatusMessage({ type: 'success', text: 'Transaction deleted.' });
       if (editingTransId === id) {
         setShowTransForm(false);
@@ -788,16 +1079,22 @@ export function BudgetingTab({
         headers: sessionHeaders(),
         credentials: 'include',
       });
-      if (!res.ok) throw new Error('Delete failed');
+      if (!res.ok) {
+        const errJson = await res.json().catch(() => ({}));
+        throw new Error(errJson.message || 'Failed to delete transaction');
+      }
+      if (reverseSync && onUpdateGraph) {
+        onUpdateGraph(reverseSync.updatedGraph);
+      }
       setStatusMessage({ type: 'success', text: 'Transaction deleted.' });
       if (editingTransId === id) {
         setShowTransForm(false);
         setEditingTransId(null);
       }
       loadData();
-    } catch (err) {
-      console.error('Delete failed:', err);
-      setStatusMessage({ type: 'error', text: 'Failed to delete transaction.' });
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : 'Error deleting transaction';
+      setStatusMessage({ type: 'error', text: msg });
     }
   };
 
@@ -1263,9 +1560,10 @@ export function BudgetingTab({
 
     // Automatically synchronize to graph scenario node
     let activeRecurDraft = { ...recurDraft };
-    if (onUpdateGraph && graph) {
-      const graphSync = syncRecurringToGraphNode(graph, activeRecurDraft);
-      onUpdateGraph(graphSync.updatedGraph);
+    let graphSync: ReturnType<typeof syncRecurringToGraphNode> | null = null;
+    const baseGraph = rawGraph || graph;
+    if (onUpdateGraph && baseGraph) {
+      graphSync = syncRecurringToGraphNode(baseGraph, activeRecurDraft);
       if (
         graphSync.affectedNode &&
         !activeRecurDraft.notes?.includes(`[node-id:${graphSync.affectedNode.id}]`)
@@ -1287,12 +1585,17 @@ export function BudgetingTab({
       }
       setRecurringList(updated);
       try {
-        const saved = JSON.parse(localStorage.getItem(budgetStorageKey) || '{}');
-        if (saved && typeof saved === 'object' && 'recurring' in saved) {
-          delete saved.recurring;
-        }
-        localStorage.setItem(budgetStorageKey, JSON.stringify(saved));
+        const saved =
+          (await decryptFromDemoStorage<Record<string, unknown>>(
+            budgetStorageKey,
+            localStorage.getItem(budgetStorageKey)
+          )) || {};
+        saved.recurring = updated;
+        localStorage.setItem(budgetStorageKey, await encryptForDemoStorage(budgetStorageKey, saved));
       } catch {}
+      if (graphSync && onUpdateGraph) {
+        onUpdateGraph(graphSync.updatedGraph);
+      }
       setStatusMessage({
         type: 'success',
         text: editingRecurId ? 'Recurring rule updated.' : 'Recurring rule created.',
@@ -1320,6 +1623,10 @@ export function BudgetingTab({
         throw new Error(errJson.message || 'Failed to save recurring template');
       }
 
+      if (graphSync && onUpdateGraph) {
+        onUpdateGraph(graphSync.updatedGraph);
+      }
+
       setStatusMessage({
         type: 'success',
         text: editingRecurId ? 'Recurring rule updated.' : 'Recurring rule created.',
@@ -1337,10 +1644,26 @@ export function BudgetingTab({
   const handleDeleteRecurring = async (id: number): Promise<void> => {
     if (!window.confirm('Delete this recurring rule?')) return;
     const itemToDelete = recurringList.find((r) => r.id === id);
-    if (itemToDelete && onUpdateGraph && graph) {
-      const graphSync = syncRecurringDeletionToGraph(graph, itemToDelete);
-      if (graphSync) {
-        onUpdateGraph(graphSync.updatedGraph);
+    let graphSync: ReturnType<typeof syncRecurringDeletionToGraph> | null = null;
+    const baseGraph = rawGraph || graph;
+    if (itemToDelete && onUpdateGraph && baseGraph) {
+      graphSync = syncRecurringDeletionToGraph(baseGraph, itemToDelete);
+    }
+
+    if (itemToDelete) {
+      const acctName = (itemToDelete.accountName || '').trim();
+      const matchingDbAccount = dbAccounts.find(
+        (a) => a.name.trim().toLowerCase() === acctName.toLowerCase(),
+      );
+      if (matchingDbAccount) {
+        setDbAccounts((prev) => prev.filter((a) => a.id !== matchingDbAccount.id));
+        if (!isDemo && matchingDbAccount.id) {
+          void fetch(`${API_BASE}/accounts/${matchingDbAccount.id}`, {
+            method: 'DELETE',
+            headers: sessionHeaders(),
+            credentials: 'include',
+          }).catch(() => {});
+        }
       }
     }
 
@@ -1349,10 +1672,17 @@ export function BudgetingTab({
       const updated = recurringList.filter((r) => r.id !== id);
       setRecurringList(updated);
       try {
-        const saved = JSON.parse(localStorage.getItem(budgetStorageKey) || '{}');
-        saved.recurringIds = updated.map((r) => r.id);
-        localStorage.setItem(budgetStorageKey, JSON.stringify(saved));
+        const saved =
+          (await decryptFromDemoStorage<Record<string, unknown>>(
+            budgetStorageKey,
+            localStorage.getItem(budgetStorageKey)
+          )) || {};
+        saved.recurring = updated;
+        localStorage.setItem(budgetStorageKey, await encryptForDemoStorage(budgetStorageKey, saved));
       } catch {}
+      if (graphSync && onUpdateGraph) {
+        onUpdateGraph(graphSync.updatedGraph);
+      }
       setStatusMessage({ type: 'success', text: 'Recurring rule deleted.' });
       return;
     }
@@ -1364,6 +1694,9 @@ export function BudgetingTab({
         credentials: 'include',
       });
       if (!res.ok) throw new Error('Delete failed');
+      if (graphSync && onUpdateGraph) {
+        onUpdateGraph(graphSync.updatedGraph);
+      }
       setStatusMessage({ type: 'success', text: 'Recurring rule deleted.' });
       loadData();
     } catch (err) {
@@ -1417,10 +1750,20 @@ export function BudgetingTab({
     }
 
     if (isDemo) {
+      const budgetStorageKey = `finapp-budget-v1:demo:${userId || 1}`;
       let nextId = Math.max(0, ...recurringList.map((r) => r.id || 0)) + 1;
       const created = newTemplates.map((t) => ({ ...t, id: nextId++ } as RecurringTransaction));
       const updated = [...created, ...recurringList];
       setRecurringList(updated);
+      try {
+        const saved =
+          (await decryptFromDemoStorage<Record<string, unknown>>(
+            budgetStorageKey,
+            localStorage.getItem(budgetStorageKey)
+          )) || {};
+        saved.recurring = updated;
+        localStorage.setItem(budgetStorageKey, await encryptForDemoStorage(budgetStorageKey, saved));
+      } catch {}
       setStatusMessage({
         type: 'success',
         text: `Imported ${created.length} salary template(s) into recurring transactions.`,
@@ -1464,6 +1807,15 @@ export function BudgetingTab({
       const created = newTemplates.map((t) => ({ ...t, id: nextId++ } as RecurringTransaction));
       const updated = [...created, ...recurringList];
       setRecurringList(updated);
+      try {
+        const saved =
+          (await decryptFromDemoStorage<Record<string, unknown>>(
+            budgetStorageKey,
+            localStorage.getItem(budgetStorageKey)
+          )) || {};
+        saved.recurring = updated;
+        localStorage.setItem(budgetStorageKey, await encryptForDemoStorage(budgetStorageKey, saved));
+      } catch {}
       setStatusMessage({
         type: 'success',
         text: `Imported ${created.length} debt payment template(s) into recurring transactions.`,

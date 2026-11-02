@@ -3,7 +3,12 @@ import { ArchetypeGraph } from './graphs';
 import type { View } from './finance';
 import { demoProfile, API_BASE } from './finance';
 import { endSession, sessionHeaders } from './session';
-import { notifyPortfolioUpdated } from './portfolio';
+import {
+  DEFAULT_DEMO_HOLDINGS,
+  notifyPortfolioUpdated,
+  parseLocalHoldings,
+  saveLocalHoldings,
+} from './portfolio';
 import { useTheme } from './useTheme';
 // Defined navigation labels in one place so the sidebar and breadcrumb were
 // derived from the same selected view rather than separate UI state.
@@ -41,6 +46,45 @@ export default function App() {
           notifyPortfolioUpdated();
         })
         .catch(() => {});
+    } else if (demo) {
+      const storageKey = `finapp-holdings-v1:demo:${initialDemoProfile || 1}`;
+      const localHoldings = parseLocalHoldings(storageKey);
+      const holdingsToRefresh =
+        localHoldings.length > 0
+          ? localHoldings
+          : (DEFAULT_DEMO_HOLDINGS[initialDemoProfile || 1] || DEFAULT_DEMO_HOLDINGS[1]);
+      const tickers = Array.from(
+        new Set(holdingsToRefresh.map((h) => h.symbol.trim().toUpperCase())),
+      ).filter(Boolean);
+      if (tickers.length > 0) {
+        Promise.allSettled(
+          tickers.map(async (ticker) => {
+            const res = await fetch(`${API_BASE}/market/stocks/${encodeURIComponent(ticker)}`);
+            if (!res.ok) return null;
+            const data = await res.json().catch(() => null);
+            return data && typeof data.latest_price === 'number'
+              ? { ticker, price: data.latest_price }
+              : null;
+          }),
+        )
+          .then((results) => {
+            const priceMap: Record<string, number> = {};
+            results.forEach((r) => {
+              if (r.status === 'fulfilled' && r.value) {
+                priceMap[r.value.ticker] = r.value.price;
+              }
+            });
+            if (Object.keys(priceMap).length > 0) {
+              const updated = holdingsToRefresh.map((h) => {
+                const p = priceMap[h.symbol.toUpperCase()];
+                return p !== undefined ? { ...h, lastPrice: p } : h;
+              });
+              saveLocalHoldings(storageKey, updated);
+              notifyPortfolioUpdated();
+            }
+          })
+          .catch(() => {});
+      }
     }
   }, [demo, userId]);
   if (!demo && !userId) return null;

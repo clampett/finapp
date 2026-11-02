@@ -6,6 +6,7 @@ import { sessionHeaders } from './session';
 import { NumberField } from './components/NumberField';
 import { changeAccount, changeCategory, changeKind } from './budgeting-drafts';
 import {
+  PORTFOLIO_UPDATED_EVENT,
   notifyPortfolioUpdated,
   loadUnifiedHoldings,
   addStockUnified,
@@ -242,7 +243,7 @@ export function BudgetingTab({
 
   // Refresh current market prices for all tracked stocks
   const refreshCurrentPrices = useCallback(
-    async (stockList: Stock[], signal: AbortSignal, force = false) => {
+    async (stockList: Stock[], signal?: AbortSignal, force = false) => {
       if (!force && Date.now() - lastQuoteRefresh.current < 60000) {
         return;
       }
@@ -255,7 +256,7 @@ export function BudgetingTab({
       const results = await Promise.allSettled(
         tickers.map(async (ticker) => {
           const res = await fetch(`${API_BASE}/market/stocks/${encodeURIComponent(ticker)}`, {
-            signal,
+            ...(signal ? { signal } : {}),
             headers: sessionHeaders(),
             credentials: 'include',
           });
@@ -268,37 +269,39 @@ export function BudgetingTab({
         }),
       );
 
-    const priceMap: Record<string, number> = {};
-    results.forEach((r) => {
-      if (r.status === 'fulfilled' && r.value) {
-        priceMap[r.value.ticker] = r.value.price;
-      }
-    });
-
-    if (!signal.aborted && Object.keys(priceMap).length > 0) {
-      setCurrentPrices((prev) => ({ ...prev, ...priceMap }));
-
-      // Keep database last_price synced if stale
-      stockList.forEach((s) => {
-        const sym = s.ticker.trim().toUpperCase();
-        const livePrice = priceMap[sym];
-        if (livePrice !== undefined && s.id && Number(s.lastPrice) !== livePrice) {
-          fetch(`${API_BASE}/stocks/${s.id}`, {
-            signal,
-            method: 'PUT',
-            headers: { 'Content-Type': 'application/json', ...sessionHeaders() },
-            credentials: 'include',
-            body: JSON.stringify({
-              ticker: s.ticker,
-              companyName: s.companyName,
-              exchange: s.exchange,
-              lastPrice: livePrice,
-            }),
-          }).catch(() => {});
+      const priceMap: Record<string, number> = {};
+      results.forEach((r) => {
+        if (r.status === 'fulfilled' && r.value) {
+          priceMap[r.value.ticker] = r.value.price;
         }
       });
-    }
-  }, []);
+
+      if (!signal?.aborted && Object.keys(priceMap).length > 0) {
+        setCurrentPrices((prev) => ({ ...prev, ...priceMap }));
+
+        // Keep database last_price synced if stale
+        stockList.forEach((s) => {
+          const sym = s.ticker.trim().toUpperCase();
+          const livePrice = priceMap[sym];
+          if (livePrice !== undefined && s.id && Number(s.lastPrice) !== livePrice) {
+            fetch(`${API_BASE}/stocks/${s.id}`, {
+              ...(signal ? { signal } : {}),
+              method: 'PUT',
+              headers: { 'Content-Type': 'application/json', ...sessionHeaders() },
+              credentials: 'include',
+              body: JSON.stringify({
+                ticker: s.ticker,
+                companyName: s.companyName,
+                exchange: s.exchange,
+                lastPrice: livePrice,
+              }),
+            }).catch(() => {});
+          }
+        });
+      }
+    },
+    [],
+  );
 
   // Stock Buy/Sell trade modal
   const [tradeModal, setTradeModal] = useState<{
@@ -527,8 +530,11 @@ export function BudgetingTab({
     [userId, isDemo, refreshCurrentPrices],
   );
 
+  const isSelfUpdate = useRef(false);
+
   useEffect(() => {
-    void loadData(true);
+    // Only load budgeting data without re-fetching live market prices on tab entry
+    void loadData(false);
     return () => {
       activeLoad.current?.abort();
       activeLoad.current = null;
@@ -536,6 +542,16 @@ export function BudgetingTab({
       activeGeneration.current = null;
     };
   }, [userId, isDemo, loadData]);
+
+  // Synchronize stocks when prices are updated at login or page refresh
+  useEffect(() => {
+    const handlePortfolioUpdated = () => {
+      if (isSelfUpdate.current) return;
+      void loadData(false);
+    };
+    window.addEventListener(PORTFOLIO_UPDATED_EVENT, handlePortfolioUpdated);
+    return () => window.removeEventListener(PORTFOLIO_UPDATED_EVENT, handlePortfolioUpdated);
+  }, [loadData]);
 
   // Automatically synchronize active graph flow nodes (Income, Expense, Debt) into recurring transactions
   useEffect(() => {
@@ -776,6 +792,10 @@ export function BudgetingTab({
     setStockDraft(initialStock);
     setQuotePrice(null);
     setShowStockForm(true);
+    // Refresh current stock prices when trying to add a new stock
+    if (stocks.length > 0) {
+      void refreshCurrentPrices(stocks, undefined, true);
+    }
   };
 
   const handleEditStock = (s: Stock) => {
@@ -1384,7 +1404,11 @@ export function BudgetingTab({
     const storageKey = `finapp-holdings-v1:${isDemo ? 'demo' : 'user'}:${userId || 1}`;
     if (totalPortfolioValue >= 0) {
       if (saveStoredPortfolioValue(storageKey, totalPortfolioValue)) {
+        isSelfUpdate.current = true;
         notifyPortfolioUpdated();
+        queueMicrotask(() => {
+          isSelfUpdate.current = false;
+        });
       }
     }
   }, [totalPortfolioValue, isDemo, userId]);

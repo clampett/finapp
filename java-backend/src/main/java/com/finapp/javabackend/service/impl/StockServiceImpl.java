@@ -370,7 +370,113 @@ public class StockServiceImpl implements StockService {
         }
 
         stock.setUpdatedAt(OffsetDateTime.now());
-        return EntityDtoMapper.toDto(stockRepository.save(stock));
+        Stock savedStock = stockRepository.save(stock);
+
+        if (recurringTransactionRepository != null) {
+            String divDesc = savedStock.getTicker() + " Dividend";
+            List<RecurringTransaction> userRecurring = recurringTransactionRepository.findByUserId(userId);
+            RecurringTransaction existing = userRecurring.stream()
+                .filter(r -> divDesc.equalsIgnoreCase(r.getDescription()))
+                .findFirst()
+                .orElse(null);
+
+            if (Boolean.TRUE.equals(savedStock.getPaysDividend())
+                    && savedStock.getDividendPerShare() != null
+                    && savedStock.getDividendPerShare().compareTo(BigDecimal.ZERO) > 0) {
+
+                // Compute total shares owned from transactions
+                BigDecimal totalShares = BigDecimal.ZERO;
+                if (stockTransactionRepository != null) {
+                    List<StockTransaction> txns = stockTransactionRepository.findByUserIdAndStockId(userId, stockId);
+                    for (StockTransaction t : txns) {
+                        if (t.getType() == StockTxnType.buy) {
+                            totalShares = totalShares.add(t.getQuantity() != null ? t.getQuantity() : BigDecimal.ZERO);
+                        } else if (t.getType() == StockTxnType.sell) {
+                            totalShares = totalShares.subtract(t.getQuantity() != null ? t.getQuantity() : BigDecimal.ZERO);
+                        }
+                    }
+                }
+
+                if (totalShares.compareTo(BigDecimal.ZERO) > 0) {
+                    BigDecimal payoutAmount = totalShares
+                        .multiply(savedStock.getDividendPerShare())
+                        .setScale(2, RoundingMode.HALF_UP);
+
+                    RecurrenceFrequency recFreq;
+                    int intervalCount = 1;
+                    DividendFrequency divFreq = savedStock.getDividendFrequency();
+                    if (divFreq != null) {
+                        switch (divFreq) {
+                            case monthly -> recFreq = RecurrenceFrequency.monthly;
+                            case semiannual -> {
+                                recFreq = RecurrenceFrequency.monthly;
+                                intervalCount = 6;
+                            }
+                            case annual -> recFreq = RecurrenceFrequency.yearly;
+                            case quarterly, irregular -> recFreq = RecurrenceFrequency.quarterly;
+                            default -> recFreq = RecurrenceFrequency.quarterly;
+                        }
+                    } else {
+                        recFreq = RecurrenceFrequency.quarterly;
+                    }
+
+                    if (existing != null) {
+                        existing.setAmount(payoutAmount);
+                        existing.setFrequency(recFreq);
+                        existing.setIntervalCount(intervalCount);
+                        existing.setIsActive(true);
+                        existing.setUpdatedAt(OffsetDateTime.now());
+                        recurringTransactionRepository.save(existing);
+                    } else {
+                        Category divCat = null;
+                        if (categoryRepository != null) {
+                            divCat = categoryRepository
+                                .findByUserIdAndKindAndName(userId, TransactionKind.income, "Dividends")
+                                .orElseGet(() -> {
+                                    Category newCat = new Category();
+                                    newCat.setUser(stock.getUser());
+                                    newCat.setName("Dividends");
+                                    newCat.setKind(TransactionKind.income);
+                                    newCat.setCreatedAt(OffsetDateTime.now());
+                                    return categoryRepository.save(newCat);
+                                });
+                        }
+
+                        RecurringTransaction recurring = new RecurringTransaction();
+                        recurring.setUser(stock.getUser());
+                        recurring.setKind(TransactionKind.income);
+                        recurring.setCategory(divCat);
+                        recurring.setDescription(divDesc);
+                        recurring.setAmount(payoutAmount);
+                        recurring.setFrequency(recFreq);
+                        recurring.setIntervalCount(intervalCount);
+                        recurring.setStartDate(LocalDate.now());
+                        recurring.setNextDueDate(RecurringTransactionServiceImpl.calculateNextDate(LocalDate.now(), recFreq, intervalCount));
+                        recurring.setIsActive(Boolean.TRUE);
+                        recurring.setNotes(String.format(
+                            "Auto-generated dividend for %s (%s shares @ $%s/%s)",
+                            savedStock.getTicker(),
+                            totalShares,
+                            savedStock.getDividendPerShare(),
+                            savedStock.getDividendFrequency() != null ? savedStock.getDividendFrequency() : "quarterly"
+                        ));
+                        recurring.setCreatedAt(OffsetDateTime.now());
+                        recurring.setUpdatedAt(OffsetDateTime.now());
+                        recurringTransactionRepository.save(recurring);
+                    }
+                } else if (existing != null) {
+                    existing.setIsActive(false);
+                    existing.setUpdatedAt(OffsetDateTime.now());
+                    recurringTransactionRepository.save(existing);
+                }
+            } else if (existing != null) {
+                existing.setIsActive(false);
+                existing.setUpdatedAt(OffsetDateTime.now());
+                recurringTransactionRepository.save(existing);
+            }
+        }
+
+        return EntityDtoMapper.toDto(savedStock);
     }
 
     @Override
@@ -380,6 +486,15 @@ public class StockServiceImpl implements StockService {
             .orElseThrow(() ->
                 new ResponseStatusException(HttpStatus.NOT_FOUND, "Stock not found")
             );
+        if (recurringTransactionRepository != null) {
+            String divDesc = stock.getTicker() + " Dividend";
+            List<RecurringTransaction> userRecurring = recurringTransactionRepository.findByUserId(userId);
+            for (RecurringTransaction r : userRecurring) {
+                if (divDesc.equalsIgnoreCase(r.getDescription())) {
+                    recurringTransactionRepository.delete(r);
+                }
+            }
+        }
         stockRepository.delete(stock);
     }
 

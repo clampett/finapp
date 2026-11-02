@@ -133,7 +133,9 @@ export function holdingsToSynthetic(
     lastPrice: h.lastPrice ?? 100,
     sharesOwned: h.shares,
     purchasePrice: h.lastPrice ?? 100,
-    paysDividend: false,
+    paysDividend: Boolean(h.paysDividend),
+    dividendFrequency: h.dividendFrequency ?? null,
+    dividendPerShare: h.dividendPerShare ?? null,
   }));
 
   const positions: StockPosition[] = holdings.map((h, idx) => {

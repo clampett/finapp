@@ -249,27 +249,33 @@ export function Investing({
     }
   }
 
-  function setShares(sym: string, raw: string) {
+  async function setShares(sym: string, raw: string) {
     const value = Number(raw);
     const newShares = Number.isFinite(value) && value >= 0 ? value : 0;
     const currentHolding = holdings.find((h) => h.symbol === sym);
     const currentShares = currentHolding?.shares ?? 0;
     const quote = quotes[sym];
     const price = isQuote(quote) ? quote.latest_price : currentHolding?.lastPrice ?? 100;
+    const previousHoldings = holdings;
 
     setHoldings((current) =>
       current.map((h) => (h.symbol === sym ? { ...h, shares: newShares } : h)),
     );
-    void updateSharesUnified({
-      storageKey,
-      userId,
-      demo,
-      symbol: sym,
-      currentShares,
-      newShares,
-      price,
-      stockId: currentHolding?.stockId,
-    });
+    try {
+      await updateSharesUnified({
+        storageKey,
+        userId,
+        demo,
+        symbol: sym,
+        currentShares,
+        newShares,
+        price,
+        stockId: currentHolding?.stockId,
+      });
+    } catch (err) {
+      setHoldings(previousHoldings);
+      setMessage(err instanceof Error ? err.message : `Could not update shares for ${sym}.`);
+    }
   }
 
   async function removeHolding(sym: string) {
@@ -277,14 +283,20 @@ export function Investing({
     requests.current.get(sym)?.abort();
     requests.current.delete(sym);
     const target = holdings.find((h) => h.symbol === sym);
+    const previousHoldings = holdings;
     setHoldings((current) => current.filter((h) => h.symbol !== sym));
-    await removeStockUnified({
-      storageKey,
-      userId,
-      demo,
-      symbol: sym,
-      stockId: target?.stockId,
-    });
+    try {
+      await removeStockUnified({
+        storageKey,
+        userId,
+        demo,
+        symbol: sym,
+        stockId: target?.stockId,
+      });
+    } catch (err) {
+      setHoldings(previousHoldings);
+      setMessage(err instanceof Error ? err.message : `Could not remove ${sym}.`);
+    }
   }
 
   const rows = holdings.map((h) => ({

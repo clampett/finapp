@@ -114,8 +114,10 @@ export function createSalaryRecurringTemplates(
     const alreadyExists = existingRecurring.some(
       (r) =>
         r.kind === 'income' &&
-        (r.description.toLowerCase().includes(node.name.toLowerCase()) ||
-          r.notes?.includes(`scenario income node #${node.id}`)),
+        (r.notes?.includes(`[node-id:${node.id}]`) ||
+          r.notes?.includes(`scenario income node #${node.id}`) ||
+          r.description.toLowerCase().includes(node.name.toLowerCase()) ||
+          node.name.toLowerCase().includes(r.description.toLowerCase())),
     );
     if (!alreadyExists) {
       newTemplates.push({
@@ -128,7 +130,7 @@ export function createSalaryRecurringTemplates(
         startDate: today,
         nextDueDate: today,
         isActive: true,
-        notes: `Imported from scenario income node #${node.id}`,
+        notes: `[node-id:${node.id}] Imported from scenario income node #${node.id}`,
       });
     }
   }
@@ -149,9 +151,11 @@ export function createDebtRecurringTemplates(
     const alreadyExists = existingRecurring.some(
       (r) =>
         r.kind === 'expense' &&
-        (r.description.toLowerCase().includes(node.name.toLowerCase()) ||
-          r.accountName?.toLowerCase() === node.name.toLowerCase() ||
-          r.notes?.includes(`scenario debt node #${node.id}`)),
+        (r.notes?.includes(`[node-id:${node.id}]`) ||
+          r.notes?.includes(`scenario debt node #${node.id}`) ||
+          r.description.toLowerCase().includes(node.name.toLowerCase()) ||
+          node.name.toLowerCase().includes(r.description.toLowerCase()) ||
+          r.accountName?.toLowerCase() === node.name.toLowerCase()),
     );
     if (!alreadyExists) {
       newTemplates.push({
@@ -165,7 +169,7 @@ export function createDebtRecurringTemplates(
         startDate: today,
         nextDueDate: today,
         isActive: true,
-        notes: `Contractual monthly payment for scenario debt node #${node.id} (${node.interestRateApr}% APR)`,
+        notes: `[node-id:${node.id}] Contractual monthly payment for scenario debt node #${node.id} (${node.interestRateApr}% APR)`,
       });
     }
   }
@@ -188,6 +192,8 @@ export function syncScenarioTransactionToGraph(
   matchedNode: GraphNode;
   newBalance: number;
   isNew?: boolean;
+  insufficientFunds?: boolean;
+  overdraft?: boolean;
 } | null {
   if (!graph || !Array.isArray(graph.nodes)) {
     return null;
@@ -289,7 +295,7 @@ export function syncScenarioTransactionToGraph(
     // If cash account was the specified transaction account, deduct payment from cash account
     const activeCashNode = cashNode;
     if (activeCashNode && activeCashNode.id !== matchedDebt.id) {
-      const newCashBalance = Math.max(0, activeCashNode.amountOrBalance - amount);
+      const newCashBalance = activeCashNode.amountOrBalance - amount;
       updatedNodes = updatedNodes.map((n) =>
         n.id === activeCashNode.id ? { ...n, amountOrBalance: newCashBalance } : n,
       );
@@ -365,7 +371,7 @@ export function syncScenarioTransactionToGraph(
   }
 
   const delta = isIncome ? amount : -amount;
-  const newBalance = Math.max(0, cashNode.amountOrBalance + delta);
+  const newBalance = cashNode.amountOrBalance + delta;
   const updatedNodes = graph.nodes.map((n) =>
     n.id === cashNode.id ? { ...n, amountOrBalance: newBalance } : n,
   );
@@ -374,31 +380,133 @@ export function syncScenarioTransactionToGraph(
     matchedNode: cashNode,
     newBalance,
     isNew: false,
+    insufficientFunds: newBalance < 0,
+    overdraft: newBalance < 0,
   };
+}
+
+export function recurringToMonthlyAmount(
+  amount: number,
+  frequency: RecurringTransactionItem['frequency'] = 'monthly',
+  intervalCount: number = 1,
+): number {
+  const count = Math.max(1, intervalCount || 1);
+  const base = Number(amount) || 0;
+  if (base <= 0) return 0;
+
+  switch (frequency) {
+    case 'daily':
+      return Math.round(((base * 365) / (12 * count)) * 100) / 100;
+    case 'weekly':
+      return Math.round(((base * 52) / (12 * count)) * 100) / 100;
+    case 'biweekly':
+      return Math.round(((base * 26) / (12 * count)) * 100) / 100;
+    case 'monthly':
+      return Math.round((base / count) * 100) / 100;
+    case 'quarterly':
+      return Math.round(((base * 4) / (12 * count)) * 100) / 100;
+    case 'yearly':
+      return Math.round((base / (12 * count)) * 100) / 100;
+    default:
+      return Math.round((base / count) * 100) / 100;
+  }
+}
+
+export function monthlyToRecurringAmount(
+  monthlyAmount: number,
+  frequency: RecurringTransactionItem['frequency'] = 'monthly',
+  intervalCount: number = 1,
+): number {
+  const count = Math.max(1, intervalCount || 1);
+  const base = Number(monthlyAmount) || 0;
+  if (base <= 0) return 0;
+
+  switch (frequency) {
+    case 'daily':
+      return Math.round(((base * 12 * count) / 365) * 100) / 100;
+    case 'weekly':
+      return Math.round(((base * 12 * count) / 52) * 100) / 100;
+    case 'biweekly':
+      return Math.round(((base * 12 * count) / 26) * 100) / 100;
+    case 'monthly':
+      return Math.round(base * count * 100) / 100;
+    case 'quarterly':
+      return Math.round(((base * 12 * count) / 4) * 100) / 100;
+    case 'yearly':
+      return Math.round(base * 12 * count * 100) / 100;
+    default:
+      return Math.round(base * count * 100) / 100;
+  }
+}
+
+export function isRecurringActive(
+  recur: Partial<RecurringTransactionItem>,
+  today = new Date().toISOString().split('T')[0],
+): boolean {
+  if (recur.isActive === false) return false;
+  if (recur.startDate && today < recur.startDate) return false;
+  if (recur.endDate && today > recur.endDate) return false;
+  return true;
 }
 
 /**
  * Automatically syncs active scenario flow nodes (INCOME, EXPENSE, DEBT) into recurring transactions.
- * Returns the updated recurring list and a boolean flag indicating if any addition or update was made.
+ * Returns the updated recurring list, a boolean flag indicating if any addition or update was made,
+ * and any newly created recurring rules.
  */
 export function syncGraphNodesToRecurring(
   graph: GraphData,
   existingRecurring: RecurringTransactionItem[],
   today = new Date().toISOString().split('T')[0],
-): { updatedRecurring: RecurringTransactionItem[]; hasChanges: boolean } {
+): {
+  updatedRecurring: RecurringTransactionItem[];
+  hasChanges: boolean;
+  newRules: RecurringTransactionItem[];
+  removedDuplicates: RecurringTransactionItem[];
+} {
   if (!graph?.nodes?.length) {
-    return { updatedRecurring: existingRecurring, hasChanges: false };
+    return {
+      updatedRecurring: existingRecurring,
+      hasChanges: false,
+      newRules: [],
+      removedDuplicates: [],
+    };
   }
 
   const archivedNodeIds = new Set(graph.nodes.filter((n) => n.archived).map((n) => n.id));
   const activeNodes = graph.nodes.filter((n) => !n.archived);
+  const activeNodeIds = new Set(activeNodes.map((n) => n.id));
+  const activeNodeNames = new Set(activeNodes.map((n) => n.name.trim().toLowerCase()));
   let changed = false;
+  const newRules: RecurringTransactionItem[] = [];
+  const removedDuplicates: RecurringTransactionItem[] = [];
 
-  // Filter out recurring transactions that belong to archived nodes
+  // Filter out recurring transactions that belong to archived or deleted nodes
   let updated = existingRecurring.filter((r) => {
-    if (!r.notes) return true;
-    for (const archivedId of archivedNodeIds) {
-      if (r.notes.includes(`[node-id:${archivedId}]`)) {
+    if (r.notes) {
+      const match = r.notes.match(/\[node-id:([^\]]+)\]/);
+      if (match) {
+        const nodeId = match[1];
+        if (!activeNodeIds.has(nodeId) || archivedNodeIds.has(nodeId)) {
+          changed = true;
+          return false;
+        }
+      }
+      for (const archivedId of archivedNodeIds) {
+        if (
+          r.notes.includes(`scenario income node #${archivedId}`) ||
+          r.notes.includes(`scenario debt node #${archivedId}`)
+        ) {
+          changed = true;
+          return false;
+        }
+      }
+    }
+    // If it's a debt recurring transaction, ensure the corresponding debt node is still active
+    if (r.categoryName?.toLowerCase() === 'debt' || r.description?.toLowerCase().endsWith(' payment')) {
+      const acct = (r.accountName || '').trim().toLowerCase();
+      const descName = (r.description || '').replace(/\s+payment$/i, '').trim().toLowerCase();
+      if ((acct && !activeNodeNames.has(acct)) || (descName && !activeNodeNames.has(descName))) {
         changed = true;
         return false;
       }
@@ -407,6 +515,7 @@ export function syncGraphNodesToRecurring(
   });
 
   let nextId = Math.max(0, ...updated.map((r) => r.id || 0)) + 1;
+  const matchedRuleIndices = new Set<number>();
 
   for (const node of activeNodes) {
     if (!['INCOME', 'EXPENSE', 'DEBT'].includes(node.nodeType)) continue;
@@ -415,43 +524,76 @@ export function syncGraphNodesToRecurring(
     const isDebt = node.nodeType === 'DEBT';
     const expectedKind: 'income' | 'expense' = isIncome ? 'income' : 'expense';
     const expectedAmount = isDebt
-      ? Math.round(debtPayment(node, graph) * 100) / 100
+      ? Math.round(debtPayment(node, graph, true) * 100) / 100
       : node.nodeType === 'EXPENSE'
-        ? Math.round(expenseAmount(node, graph) * 100) / 100
+        ? Math.round(expenseAmount(node, graph, true) * 100) / 100
         : Number(node.amountOrBalance);
 
     if (expectedAmount <= 0) continue;
 
     const expectedDesc = isDebt ? `${node.name} Payment` : node.name;
+    const shouldBeActive = !node.disabled;
 
-    const matchIndex = updated.findIndex(
-      (r) =>
-        r.notes?.includes(`[node-id:${node.id}]`) ||
+    const isMatch = (r: RecurringTransactionItem) =>
+      Boolean(
+        (node.id && r.notes?.includes(`[node-id:${node.id}]`)) ||
+        (node.id && r.notes?.includes(`scenario income node #${node.id}`)) ||
+        (node.id && r.notes?.includes(`scenario debt node #${node.id}`)) ||
         r.description.trim().toLowerCase() === node.name.trim().toLowerCase() ||
         (isDebt &&
           r.description.trim().toLowerCase() === `${node.name.trim().toLowerCase()} payment`) ||
         (isIncome &&
           r.description.trim().toLowerCase() === `${node.name.trim().toLowerCase()} paycheck`),
-    );
+      );
 
-    if (matchIndex >= 0) {
+    const matchingIndices: number[] = [];
+    updated.forEach((r, idx) => {
+      if (!matchedRuleIndices.has(idx) && isMatch(r)) {
+        matchingIndices.push(idx);
+      }
+    });
+
+    if (matchingIndices.length > 0) {
+      const matchIndex = matchingIndices[0];
+      matchedRuleIndices.add(matchIndex);
       const existing = updated[matchIndex];
+      const existingMonthly = recurringToMonthlyAmount(
+        existing.amount,
+        existing.frequency,
+        existing.intervalCount,
+      );
       if (
-        Number(existing.amount) !== expectedAmount ||
+        Math.abs(existingMonthly - expectedAmount) > 0.01 ||
         existing.kind !== expectedKind ||
+        existing.isActive !== shouldBeActive ||
         !existing.notes?.includes(`[node-id:${node.id}]`)
       ) {
+        const updatedAmount = monthlyToRecurringAmount(
+          expectedAmount,
+          existing.frequency,
+          existing.intervalCount,
+        );
         updated[matchIndex] = {
           ...existing,
           description: existing.description || expectedDesc,
-          amount: expectedAmount,
+          amount: updatedAmount,
           kind: expectedKind,
+          isActive: shouldBeActive,
           notes: `[node-id:${node.id}] Scenario ${typeLabel(node.nodeType)}: ${node.name}`,
         };
         changed = true;
       }
+
+      // If duplicate rules exist matching this node, collect them for removal
+      if (matchingIndices.length > 1) {
+        for (let i = 1; i < matchingIndices.length; i++) {
+          matchedRuleIndices.add(matchingIndices[i]);
+          removedDuplicates.push(updated[matchingIndices[i]]);
+        }
+        changed = true;
+      }
     } else {
-      updated.push({
+      const newRule: RecurringTransactionItem = {
         id: nextId++,
         kind: expectedKind,
         accountName: isDebt ? node.name : 'Checking',
@@ -462,14 +604,46 @@ export function syncGraphNodesToRecurring(
         intervalCount: 1,
         startDate: today,
         nextDueDate: today,
-        isActive: true,
+        isActive: shouldBeActive,
         notes: `[node-id:${node.id}] Scenario ${typeLabel(node.nodeType)}: ${node.name}`,
-      });
+      };
+      updated.push(newRule);
+      newRules.push(newRule);
       changed = true;
     }
   }
 
-  return { updatedRecurring: updated, hasChanges: changed };
+  // Remove any duplicate node rules that were identified
+  if (removedDuplicates.length > 0) {
+    const dupSet = new Set(removedDuplicates);
+    updated = updated.filter((r) => !dupSet.has(r));
+  }
+
+  // Deduplicate any exact duplicate recurring transactions across the list
+  const seenIds = new Set<number>();
+  const seenKeys = new Set<string>();
+  const deduped: RecurringTransactionItem[] = [];
+  for (const r of updated) {
+    if (r.id !== undefined && r.id !== null) {
+      if (seenIds.has(r.id)) {
+        changed = true;
+        removedDuplicates.push(r);
+        continue;
+      }
+      seenIds.add(r.id);
+    }
+    const key = `${r.kind}:${r.description.trim().toLowerCase()}:${r.amount}:${r.frequency}:${r.intervalCount}:${r.notes || ''}`;
+    if (seenKeys.has(key)) {
+      changed = true;
+      removedDuplicates.push(r);
+      continue;
+    }
+    seenKeys.add(key);
+    deduped.push(r);
+  }
+  updated = deduped;
+
+  return { updatedRecurring: updated, hasChanges: changed, newRules, removedDuplicates };
 }
 
 /**
@@ -481,7 +655,14 @@ export function syncRecurringToGraphNode(
   recur: Partial<RecurringTransactionItem>,
 ): { updatedGraph: GraphData; affectedNode: GraphNode; isNew: boolean } {
   const desc = (recur.description || '').trim();
-  const amount = Number(recur.amount || 0);
+  const rawAmount = Number(recur.amount || 0);
+  const monthlyAmount = recurringToMonthlyAmount(
+    rawAmount,
+    recur.frequency,
+    recur.intervalCount,
+  );
+  const isActive = isRecurringActive(recur);
+  const disabled = !isActive;
   const isIncome = recur.kind === 'income';
   const isDebt =
     recur.categoryName?.trim().toLowerCase() === 'debt' ||
@@ -500,41 +681,45 @@ export function syncRecurringToGraphNode(
   );
 
   if (existingNode) {
+    const isExistingDebt = existingNode.nodeType === 'DEBT' || isDebt;
     const cleanName =
-      desc.endsWith(' Payment') && isDebt ? desc.replace(/ Payment$/i, '') : desc;
-    const updatedNodes = graph.nodes.map((n) =>
-      n.id === existingNode.id
-        ? {
-            ...n,
-            archived: false,
-            name: cleanName,
-            amountOrBalance: amount,
-            nodeType: expectedType,
-          }
-        : n,
-    );
+      desc.endsWith(' Payment') && isExistingDebt ? desc.replace(/ Payment$/i, '') : desc;
+    const hasIncomingEdges = graph.edges.some((e) => e.targetNodeId === existingNode.id);
+
+    // If debt, preserve the outstanding principal (n.amountOrBalance), and update minPayment / incoming edge flows.
+    // If not debt, assign the monthly equivalent amount to amountOrBalance.
+    const updatedNodes = graph.nodes.map((n) => {
+      if (n.id !== existingNode.id) return n;
+      return {
+        ...n,
+        archived: false,
+        disabled,
+        name: cleanName,
+        amountOrBalance: isExistingDebt ? n.amountOrBalance : monthlyAmount,
+        minPayment: isExistingDebt
+          ? (n.minPayment != null || !hasIncomingEdges ? monthlyAmount : n.minPayment)
+          : n.minPayment,
+        nodeType: isExistingDebt ? 'DEBT' : expectedType,
+      };
+    });
 
     // Update edge flow if matching edge exists
     const updatedEdges = graph.edges.map((e) => {
       if (
         (expectedType === 'INCOME' && e.sourceNodeId === existingNode.id) ||
-        ((expectedType === 'EXPENSE' || expectedType === 'DEBT') &&
+        ((expectedType === 'EXPENSE' || expectedType === 'DEBT' || isExistingDebt) &&
           e.targetNodeId === existingNode.id)
       ) {
-        return { ...e, monthlyFixedFlow: amount };
+        return { ...e, monthlyFixedFlow: monthlyAmount, percentageFlow: null };
       }
       return e;
     });
 
+    const targetUpdatedNode = updatedNodes.find((n) => n.id === existingNode.id)!;
+
     return {
       updatedGraph: { ...graph, nodes: updatedNodes, edges: updatedEdges },
-      affectedNode: {
-        ...existingNode,
-        archived: false,
-        name: cleanName,
-        amountOrBalance: amount,
-        nodeType: expectedType,
-      },
+      affectedNode: targetUpdatedNode,
       isNew: false,
     };
   }
@@ -547,8 +732,10 @@ export function syncRecurringToGraphNode(
     id: newNodeId,
     name: cleanName,
     nodeType: expectedType,
-    amountOrBalance: amount,
+    amountOrBalance: isDebt ? 0 : monthlyAmount,
+    minPayment: isDebt ? monthlyAmount : undefined,
     interestRateApr: isDebt ? 5 : 0,
+    disabled,
     position: placeNewNode(graph.nodes, initialPos),
   };
 
@@ -563,7 +750,7 @@ export function syncRecurringToGraphNode(
         id: edgeId,
         sourceNodeId: newNode.id,
         targetNodeId: checkingNode.id,
-        monthlyFixedFlow: amount,
+        monthlyFixedFlow: monthlyAmount,
         percentageFlow: null,
       });
     } else {
@@ -571,7 +758,7 @@ export function syncRecurringToGraphNode(
         id: edgeId,
         sourceNodeId: checkingNode.id,
         targetNodeId: newNode.id,
-        monthlyFixedFlow: amount,
+        monthlyFixedFlow: monthlyAmount,
         percentageFlow: null,
       });
     }
@@ -593,13 +780,16 @@ export function syncRecurringDeletionToGraph(
   deletedRecur: Partial<RecurringTransactionItem>,
 ): { updatedGraph: GraphData; removedNode: GraphNode } | null {
   const desc = (deletedRecur.description || '').trim().toLowerCase();
+  const acct = (deletedRecur.accountName || '').trim().toLowerCase();
 
   const matchedNode = graph.nodes.find(
     (n) =>
       !n.archived &&
       ((deletedRecur.notes && deletedRecur.notes.includes(`[node-id:${n.id}]`)) ||
         n.name.trim().toLowerCase() === desc ||
-        `${n.name.trim().toLowerCase()} payment` === desc),
+        `${n.name.trim().toLowerCase()} payment` === desc ||
+        (n.nodeType === 'DEBT' && acct && n.name.trim().toLowerCase() === acct) ||
+        (n.nodeType === 'DEBT' && desc && desc.includes(n.name.trim().toLowerCase()))),
   );
 
   if (!matchedNode) return null;
@@ -613,4 +803,49 @@ export function syncRecurringDeletionToGraph(
     removedNode: matchedNode,
   };
 }
+
+export interface AccountOptionLike {
+  id?: number;
+  name: string;
+  type?: string;
+}
+
+/**
+ * Returns available accounts for budgeting transactions and recurring rules.
+ * Strictly limited to:
+ * 1. "Checking"
+ * 2. "Savings"
+ * 3. Active loans (DEBT nodes in scenario graph that are not archived and not disabled)
+ * Phantom or deleted accounts are never included.
+ */
+export function getAvailableBudgetAccounts(
+  graph?: GraphData | null,
+  _dbAccounts?: AccountOptionLike[],
+  _rawGraph?: GraphData | null,
+  _deletedAccountNames?: string[],
+): string[] {
+  // Collect active debt nodes (loans)
+  const activeDebtNodes = (graph?.nodes ?? []).filter(
+    (n) => n.nodeType === 'DEBT' && !n.archived && !n.disabled,
+  );
+
+  const activeLoanNames: string[] = [];
+  for (const node of activeDebtNodes) {
+    const trimmed = (node.name || '').trim();
+    const lower = trimmed.toLowerCase();
+    if (
+      trimmed &&
+      lower !== 'checking' &&
+      lower !== 'savings' &&
+      lower !== 'checking account'
+    ) {
+      if (!activeLoanNames.some((name) => name.toLowerCase() === lower)) {
+        activeLoanNames.push(trimmed);
+      }
+    }
+  }
+
+  return ['Checking', 'Savings', ...activeLoanNames];
+}
+
 

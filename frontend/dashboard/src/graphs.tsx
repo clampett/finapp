@@ -646,6 +646,7 @@ export function ArchetypeGraph({
               ) : view === 'budgeting' ? (
                 <BudgetingTab
                   graph={live}
+                  rawGraph={graph}
                   userId={userId}
                   demo={demo}
                   portfolioValue={portfolioValue}
@@ -966,6 +967,7 @@ export function ArchetypeGraph({
           <SimulationModal
             onAssumptionsChange={(assumptions) => update({ ...graph, assumptions })}
             graphData={simulationGraph}
+            scope={scope}
             scopeLabel={`${scope === 'all' ? 'All active nodes' : scope === 'connected' ? 'Connected selection' : 'Selected nodes only'} · ${simulationGraph.nodes.length} nodes · ${simulationGraph.edges.length} connections`}
             simulationType={simType}
             onClose={closeSimulation}

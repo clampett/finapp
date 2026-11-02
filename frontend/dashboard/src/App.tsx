@@ -48,11 +48,11 @@ export default function App() {
         .catch(() => {});
     } else if (demo) {
       const storageKey = `finapp-holdings-v1:demo:${initialDemoProfile || 1}`;
-      const localHoldings = parseLocalHoldings(storageKey);
+      const rawStorage = typeof localStorage !== 'undefined' ? localStorage.getItem(storageKey) : null;
       const holdingsToRefresh =
-        localHoldings.length > 0
-          ? localHoldings
-          : (DEFAULT_DEMO_HOLDINGS[initialDemoProfile || 1] || DEFAULT_DEMO_HOLDINGS[1]);
+        rawStorage === null
+          ? (DEFAULT_DEMO_HOLDINGS[initialDemoProfile || 1] || DEFAULT_DEMO_HOLDINGS[1])
+          : parseLocalHoldings(storageKey);
       const tickers = Array.from(
         new Set(holdingsToRefresh.map((h) => h.symbol.trim().toUpperCase())),
       ).filter(Boolean);
@@ -86,7 +86,7 @@ export default function App() {
           .catch(() => {});
       }
     }
-  }, [demo, userId]);
+  }, [demo, userId, initialDemoProfile]);
   if (!demo && !userId) return null;
   return (
     <div className="flex min-h-dvh max-[760px]:block">

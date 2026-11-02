@@ -36,6 +36,76 @@ interface BudgetingTabProps {
   onUpdateGraph?: (next: GraphData) => void;
 }
 
+const DEMO_BUDGET_ENC_PREFIX = 'enc:v1:';
+
+const toB64 = (bytes: Uint8Array): string => btoa(String.fromCharCode(...bytes));
+const fromB64 = (b64: string): Uint8Array =>
+  Uint8Array.from(atob(b64), (c) => c.charCodeAt(0));
+
+const getDemoStorageSecret = (storageKey: string): string => {
+  const existing = sessionStorage.getItem(`${storageKey}:k`);
+  if (existing) return existing;
+  const generated = `${storageKey}:${crypto.randomUUID()}`;
+  sessionStorage.setItem(`${storageKey}:k`, generated);
+  return generated;
+};
+
+const deriveDemoCryptoKey = async (storageKey: string): Promise<CryptoKey> => {
+  const enc = new TextEncoder();
+  const baseKey = await crypto.subtle.importKey(
+    'raw',
+    enc.encode(getDemoStorageSecret(storageKey)),
+    'PBKDF2',
+    false,
+    ['deriveKey']
+  );
+  return crypto.subtle.deriveKey(
+    {
+      name: 'PBKDF2',
+      salt: enc.encode(storageKey),
+      iterations: 100000,
+      hash: 'SHA-256',
+    },
+    baseKey,
+    { name: 'AES-GCM', length: 256 },
+    false,
+    ['encrypt', 'decrypt']
+  );
+};
+
+const encryptForDemoStorage = async (storageKey: string, payload: unknown): Promise<string> => {
+  const key = await deriveDemoCryptoKey(storageKey);
+  const iv = crypto.getRandomValues(new Uint8Array(12));
+  const data = new TextEncoder().encode(JSON.stringify(payload));
+  const cipher = await crypto.subtle.encrypt({ name: 'AES-GCM', iv }, key, data);
+  return `${DEMO_BUDGET_ENC_PREFIX}${toB64(iv)}:${toB64(new Uint8Array(cipher))}`;
+};
+
+const decryptFromDemoStorage = async <T,>(storageKey: string, raw: string | null): Promise<T | null> => {
+  if (!raw) return null;
+  if (!raw.startsWith(DEMO_BUDGET_ENC_PREFIX)) {
+    try {
+      return JSON.parse(raw) as T;
+    } catch {
+      return null;
+    }
+  }
+  const body = raw.slice(DEMO_BUDGET_ENC_PREFIX.length);
+  const [ivB64, dataB64] = body.split(':');
+  if (!ivB64 || !dataB64) return null;
+  try {
+    const key = await deriveDemoCryptoKey(storageKey);
+    const plain = await crypto.subtle.decrypt(
+      { name: 'AES-GCM', iv: fromB64(ivB64) },
+      key,
+      fromB64(dataB64)
+    );
+    return JSON.parse(new TextDecoder().decode(plain)) as T;
+  } catch {
+    return null;
+  }
+};
+
 export type TransactionKind = 'income' | 'expense';
 export type StockTxnType = 'buy' | 'sell' | 'dividend' | 'split';
 export type RecurrenceFrequency =
@@ -1400,9 +1470,13 @@ export function BudgetingTab({
       setRecurringList(updated);
       try {
         const saved = JSON.parse(localStorage.getItem(budgetStorageKey) || '{}');
-        saved.recurring = updated;
+        const saved =
+          (await decryptFromDemoStorage<Record<string, unknown>>(
+            budgetStorageKey,
+            localStorage.getItem(budgetStorageKey)
+          )) || {};
         localStorage.setItem(budgetStorageKey, JSON.stringify(saved));
-      } catch {}
+        localStorage.setItem(budgetStorageKey, await encryptForDemoStorage(budgetStorageKey, saved));
       if (graphSync && onUpdateGraph) {
         onUpdateGraph(graphSync.updatedGraph);
       }
@@ -1480,9 +1554,13 @@ export function BudgetingTab({
       setRecurringList(updated);
       try {
         const saved = JSON.parse(localStorage.getItem(budgetStorageKey) || '{}');
-        localStorage.setItem(budgetStorageKey, JSON.stringify(saved));
+        const saved =
+          (await decryptFromDemoStorage<Record<string, unknown>>(
+            budgetStorageKey,
+            localStorage.getItem(budgetStorageKey)
+          )) || {};
       } catch {}
-      setStatusMessage({
+        localStorage.setItem(budgetStorageKey, await encryptForDemoStorage(budgetStorageKey, saved));
         type: 'success',
         text: `Imported ${created.length} salary template(s) into recurring transactions.`,
       });

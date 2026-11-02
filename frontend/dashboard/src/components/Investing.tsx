@@ -249,17 +249,23 @@ export function Investing({
     }
   }
 
-  async function setShares(sym: string, raw: string) {
+  async function setShares(sym: string, raw: string, stockId?: number) {
     const value = Number(raw);
     const newShares = Number.isFinite(value) && value >= 0 ? value : 0;
-    const currentHolding = holdings.find((h) => h.symbol === sym);
+    const currentHolding = stockId !== undefined
+      ? holdings.find((h) => h.stockId === stockId)
+      : holdings.find((h) => h.symbol === sym);
     const currentShares = currentHolding?.shares ?? 0;
     const quote = quotes[sym];
     const price = isQuote(quote) ? quote.latest_price : currentHolding?.lastPrice ?? 100;
     const previousHoldings = holdings;
 
     setHoldings((current) =>
-      current.map((h) => (h.symbol === sym ? { ...h, shares: newShares } : h)),
+      current.map((h) =>
+        (stockId !== undefined ? h.stockId === stockId : h.symbol === sym)
+          ? { ...h, shares: newShares }
+          : h,
+      ),
     );
     try {
       await updateSharesUnified({
@@ -270,7 +276,7 @@ export function Investing({
         currentShares,
         newShares,
         price,
-        stockId: currentHolding?.stockId,
+        stockId: currentHolding?.stockId ?? stockId,
       });
     } catch (err) {
       setHoldings(previousHoldings);
@@ -278,20 +284,31 @@ export function Investing({
     }
   }
 
-  async function removeHolding(sym: string) {
-    reserved.current.delete(sym);
-    requests.current.get(sym)?.abort();
-    requests.current.delete(sym);
-    const target = holdings.find((h) => h.symbol === sym);
+  async function removeHolding(sym: string, stockId?: number) {
+    const target = stockId !== undefined
+      ? holdings.find((h) => h.stockId === stockId)
+      : holdings.find((h) => h.symbol === sym);
+    const otherLotsForSym = holdings.filter(
+      (h) => h.symbol === sym && (stockId !== undefined ? h.stockId !== stockId : false),
+    );
+    if (otherLotsForSym.length === 0) {
+      reserved.current.delete(sym);
+      requests.current.get(sym)?.abort();
+      requests.current.delete(sym);
+    }
     const previousHoldings = holdings;
-    setHoldings((current) => current.filter((h) => h.symbol !== sym));
+    setHoldings((current) =>
+      stockId !== undefined
+        ? current.filter((h) => h.stockId !== stockId)
+        : current.filter((h) => h.symbol !== sym),
+    );
     try {
       await removeStockUnified({
         storageKey,
         userId,
         demo,
         symbol: sym,
-        stockId: target?.stockId,
+        stockId: target?.stockId ?? stockId,
       });
     } catch (err) {
       setHoldings(previousHoldings);
@@ -418,11 +435,11 @@ export function Investing({
               </tr>
             </thead>
             <tbody>
-              {rows.map(({ symbol: sym, shares, state, lastPrice }) => {
+              {rows.map(({ symbol: sym, shares, state, lastPrice, stockId }, index) => {
                 const quote = isQuote(state) ? state : null;
                 const problem = errorOf(state);
                 return (
-                  <tr key={sym}>
+                  <tr key={stockId ?? `${sym}-${index}`}>
                     <td className="p-[13px_20px] border-t border-(--ui-border-263147) text-text max-[760px]:p-[11px_14px]">
                       <strong>{sym}</strong>
                       {quote?.name && <small className="text-(--ui-text-8b9ab1)"> {quote.name}</small>}
@@ -437,7 +454,7 @@ export function Investing({
                         defaultValue={shares}
                         className="text-xs min-w-0 border border-border rounded-lg bg-(--ui-surface-101722) text-(--ui-text-edf2fa) px-2.75 py-1.5"
                         style={{ width: '5.5rem' }}
-                        onChange={(event) => setShares(sym, event.target.value)}
+                        onChange={(event) => setShares(sym, event.target.value, stockId)}
                       />
                     </td>
                     <td className="p-[13px_20px] border-t border-(--ui-border-263147) text-text max-[760px]:p-[11px_14px]">{quote ? dollars(quote.latest_price) : lastPrice ? dollars(lastPrice) : problem ? '—' : 'Loading…'}</td>
@@ -454,7 +471,7 @@ export function Investing({
                       {percent(quote?.cagr)}
                       {quote?.stats_start_date && quote.stats_end_date && (
                         <small className="text-(--ui-text-8b9ab1)" style={{ display: 'block' }}>
-                          {quote.stats_start_date} to {quote.stats_end_date}
+                           {quote.stats_start_date} to {quote.stats_end_date}
                         </small>
                       )}
                     </td>
@@ -475,7 +492,7 @@ export function Investing({
                         type="button"
                         className="inline-flex items-center justify-center gap-1.75 whitespace-nowrap rounded-[7px] px-3.25 py-2.25 text-[11px] font-medium min-h-8.5 cursor-pointer text-coral border border-(--ui-border-633246) bg-(--ui-surface-2b1b28) hover:bg-(--ui-surface-hover-3d2034)"
                         onClick={() => {
-                          void removeHolding(sym);
+                          void removeHolding(sym, stockId);
                         }}
                       >
                         Remove

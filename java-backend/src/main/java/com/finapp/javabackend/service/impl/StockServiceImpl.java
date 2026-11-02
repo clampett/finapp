@@ -139,15 +139,15 @@ public class StockServiceImpl implements StockService {
         if (ticker == null) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Ticker cannot be null");
         }
-        Stock stock = stockRepository
-            .findByUserIdAndTicker(userId, ticker.trim().toUpperCase())
-            .orElseThrow(() ->
-                new ResponseStatusException(
-                    HttpStatus.NOT_FOUND,
-                    "Stock with ticker " + ticker + " not found"
-                )
+        List<Stock> stocks = stockRepository
+            .findByUserIdAndTicker(userId, ticker.trim().toUpperCase());
+        if (stocks.isEmpty()) {
+            throw new ResponseStatusException(
+                HttpStatus.NOT_FOUND,
+                "Stock with ticker " + ticker + " not found"
             );
-        return EntityDtoMapper.toDto(stock);
+        }
+        return EntityDtoMapper.toDto(stocks.get(0));
     }
 
     @Override
@@ -156,12 +156,6 @@ public class StockServiceImpl implements StockService {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Stock ticker is required");
         }
         String ticker = request.ticker().trim().toUpperCase();
-        if (stockRepository.existsByUserIdAndTicker(userId, ticker)) {
-            throw new ResponseStatusException(
-                HttpStatus.CONFLICT,
-                "Stock with ticker " + ticker + " already exists for this user"
-            );
-        }
 
         User user = userRepository
             .findById(userId)
@@ -308,15 +302,6 @@ public class StockServiceImpl implements StockService {
 
         if (request.ticker() != null && !request.ticker().trim().isEmpty()) {
             String ticker = request.ticker().trim().toUpperCase();
-            if (
-                !ticker.equals(stock.getTicker()) &&
-                stockRepository.existsByUserIdAndTicker(userId, ticker)
-            ) {
-                throw new ResponseStatusException(
-                    HttpStatus.CONFLICT,
-                    "Stock with ticker " + ticker + " already exists for this user"
-                );
-            }
             stock.setTicker(ticker);
         }
 
@@ -488,10 +473,15 @@ public class StockServiceImpl implements StockService {
             );
         if (recurringTransactionRepository != null) {
             String divDesc = stock.getTicker() + " Dividend";
-            List<RecurringTransaction> userRecurring = recurringTransactionRepository.findByUserId(userId);
-            for (RecurringTransaction r : userRecurring) {
-                if (divDesc.equalsIgnoreCase(r.getDescription())) {
-                    recurringTransactionRepository.delete(r);
+            List<Stock> remainingSameTicker = stockRepository.findByUserIdAndTicker(userId, stock.getTicker());
+            boolean anotherPaysDividend = remainingSameTicker.stream()
+                .anyMatch(s -> !s.getId().equals(stockId) && Boolean.TRUE.equals(s.getPaysDividend()));
+            if (!anotherPaysDividend) {
+                List<RecurringTransaction> userRecurring = recurringTransactionRepository.findByUserId(userId);
+                for (RecurringTransaction r : userRecurring) {
+                    if (divDesc.equalsIgnoreCase(r.getDescription())) {
+                        recurringTransactionRepository.delete(r);
+                    }
                 }
             }
         }

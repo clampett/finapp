@@ -9,7 +9,6 @@ import java.time.OffsetDateTime;
 
 @Entity
 @Table(name = "stocks", uniqueConstraints = {
-        @UniqueConstraint(columnNames = {"user_id", "ticker"}),
         @UniqueConstraint(columnNames = {"id", "user_id"})
 })
 public class Stock {

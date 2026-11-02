@@ -146,14 +146,16 @@ public class StockTransactionServiceImpl implements StockTransactionService {
         }
         if (ticker != null && !ticker.trim().isEmpty()) {
             String symbol = ticker.trim().toUpperCase();
-            return stockRepository.findByUserIdAndTicker(userId, symbol).orElseGet(() -> {
-                Stock created = new Stock();
-                created.setUser(user);
-                created.setTicker(symbol);
-                created.setCreatedAt(OffsetDateTime.now());
-                created.setUpdatedAt(OffsetDateTime.now());
-                return stockRepository.save(created);
-            });
+            List<Stock> stocks = stockRepository.findByUserIdAndTicker(userId, symbol);
+            if (!stocks.isEmpty()) {
+                return stocks.get(0);
+            }
+            Stock created = new Stock();
+            created.setUser(user);
+            created.setTicker(symbol);
+            created.setCreatedAt(OffsetDateTime.now());
+            created.setUpdatedAt(OffsetDateTime.now());
+            return stockRepository.save(created);
         }
         throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Stock ID or ticker is required");
     }

@@ -1180,6 +1180,7 @@ export function BudgetingTab({
       const finalPrice =
         currentPrice || Number(stockDraft.purchasePrice || stockDraft.lastPrice) || 100;
       const shares = Number(stockDraft.sharesOwned || 1);
+      const purchasePrice = Number(stockDraft.purchasePrice ?? stockDraft.lastPrice ?? finalPrice);
 
       await addStockUnified({
         storageKey,
@@ -1188,10 +1189,12 @@ export function BudgetingTab({
         symbol: ticker,
         companyName,
         price: finalPrice,
+        purchasePrice,
         shares,
         paysDividend,
         dividendFrequency: paysDividend ? dividendFrequency : null,
         dividendPerShare: paysDividend ? dividendPerShare : null,
+        stockId: editingStockId ?? undefined,
       });
 
       // Automatically sync recurring dividend income transaction if paysDividend and shares > 0
@@ -1206,7 +1209,14 @@ export function BudgetingTab({
       const intervalCount = dividendFrequency === 'semiannual' ? 6 : 1;
 
       if (paysDividend && dividendPerShare && dividendPerShare > 0 && shares > 0) {
-        const totalPayout = Math.round(shares * dividendPerShare * 100) / 100;
+        const otherLots = stocks.filter(
+          (s) => s.ticker.toUpperCase() === ticker && s.id !== editingStockId,
+        );
+        const totalTickerShares = otherLots.reduce((sum, s) => {
+          const pos = positions.find((p) => p.stockId === s.id);
+          return sum + (pos ? Number(pos.sharesOwned || 0) : Number(s.sharesOwned || 0));
+        }, shares);
+        const totalPayout = Math.round(totalTickerShares * dividendPerShare * 100) / 100;
         if (totalPayout > 0) {
           const existing = recurringList.find(
             (r) => r.description.toLowerCase() === divDesc.toLowerCase(),
@@ -1221,7 +1231,7 @@ export function BudgetingTab({
                     frequency: recFreq,
                     intervalCount,
                     isActive: true,
-                    notes: `Auto-generated dividend for ${ticker} (${shares} shares @ $${dividendPerShare}/${dividendFrequency || 'quarterly'})`,
+                    notes: `Auto-generated dividend for ${ticker} (${totalTickerShares} shares @ $${dividendPerShare}/${dividendFrequency || 'quarterly'})`,
                   }
                 : r,
             );
@@ -1238,7 +1248,7 @@ export function BudgetingTab({
               startDate: new Date().toISOString().split('T')[0],
               nextDueDate: new Date().toISOString().split('T')[0],
               isActive: true,
-              notes: `Auto-generated dividend for ${ticker} (${shares} shares @ $${dividendPerShare}/${dividendFrequency || 'quarterly'})`,
+              notes: `Auto-generated dividend for ${ticker} (${totalTickerShares} shares @ $${dividendPerShare}/${dividendFrequency || 'quarterly'})`,
             };
             updatedRecur = [newRecurring, ...recurringList];
           }
@@ -1253,17 +1263,22 @@ export function BudgetingTab({
           dividendCreatedNote = ` with recurring dividend income (${dollars(totalPayout)}/${dividendFrequency || 'quarterly'})`;
         }
       } else if (editingStockId) {
-        const existing = recurringList.find(
-          (r) => r.description.toLowerCase() === divDesc.toLowerCase(),
+        const otherPayingLot = stocks.find(
+          (s) => s.ticker.toUpperCase() === ticker && s.id !== editingStockId && s.paysDividend,
         );
-        if (existing) {
-          const updatedRecur = recurringList.filter((r) => r.id !== existing.id);
-          setRecurringList(updatedRecur);
-          try {
-            const saved = JSON.parse(localStorage.getItem(budgetStorageKey) || '{}');
-            saved.recurring = updatedRecur;
-            localStorage.setItem(budgetStorageKey, JSON.stringify(saved));
-          } catch {}
+        if (!otherPayingLot) {
+          const existing = recurringList.find(
+            (r) => r.description.toLowerCase() === divDesc.toLowerCase(),
+          );
+          if (existing) {
+            const updatedRecur = recurringList.filter((r) => r.id !== existing.id);
+            setRecurringList(updatedRecur);
+            try {
+              const saved = JSON.parse(localStorage.getItem(budgetStorageKey) || '{}');
+              saved.recurring = updatedRecur;
+              localStorage.setItem(budgetStorageKey, JSON.stringify(saved));
+            } catch {}
+          }
         }
       }
 
@@ -1422,6 +1437,7 @@ export function BudgetingTab({
           userId: userId || 1,
           demo: true,
           symbol: stock.ticker,
+          stockId: id,
         });
       }
       setStatusMessage({ type: 'success', text: 'Stock deleted.' });
@@ -1493,6 +1509,7 @@ export function BudgetingTab({
         currentShares,
         newShares,
         price: tradeModal.price,
+        stockId: tradeModal.stockId,
       });
       setStatusMessage({
         type: 'success',
@@ -1803,6 +1820,7 @@ export function BudgetingTab({
     }
 
     if (isDemo) {
+      const budgetStorageKey = `finapp-budget-v1:demo:${userId || 1}`;
       let nextId = Math.max(0, ...recurringList.map((r) => r.id || 0)) + 1;
       const created = newTemplates.map((t) => ({ ...t, id: nextId++ } as RecurringTransaction));
       const updated = [...created, ...recurringList];
@@ -3423,10 +3441,34 @@ export function BudgetingTab({
                       : shares * purchasedPrice;
                     const totalDiv = pos ? pos.totalDividends : 0;
 
+                    const sameTickerStocks = stocks.filter(
+                      (s) => s.ticker?.toUpperCase() === sym,
+                    );
+                    const isMultiLot = sameTickerStocks.length > 1;
+                    const lotIndex =
+                      sameTickerStocks.findIndex((s) => s.id === stock.id) + 1;
+
                     return (
                       <tr key={stock.id} style={{ borderBottom: '1px solid var(--ui-paint-1f2737)' }}>
                         <td style={{ padding: '10px 12px', fontWeight: 700, color: 'var(--ui-paint-38bdf8)' }}>
-                          {stock.ticker}
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                            <span>{stock.ticker}</span>
+                            {isMultiLot && (
+                              <span
+                                style={{
+                                  fontSize: '10px',
+                                  fontWeight: 600,
+                                  background: 'rgba(56, 189, 248, 0.15)',
+                                  color: 'var(--ui-paint-38bdf8)',
+                                  padding: '1px 5px',
+                                  borderRadius: '4px',
+                                  border: '1px solid rgba(56, 189, 248, 0.3)',
+                                }}
+                              >
+                                Lot #{lotIndex}
+                              </span>
+                            )}
+                          </div>
                         </td>
                         <td style={{ padding: '10px 12px', color: 'var(--ui-paint-cbd5e1)' }}>
                           {stock.companyName || '—'}

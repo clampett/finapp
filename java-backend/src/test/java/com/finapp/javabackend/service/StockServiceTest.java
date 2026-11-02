@@ -68,7 +68,6 @@ class StockServiceTest {
 
     @Test
     void createStock_success() {
-        when(stockRepository.existsByUserIdAndTicker(3L, "AAPL")).thenReturn(false);
         when(userRepository.findById(3L)).thenReturn(Optional.of(user));
         when(stockRepository.save(any(Stock.class))).thenAnswer(i -> {
             Stock s = i.getArgument(0);
@@ -101,7 +100,6 @@ class StockServiceTest {
 
     @Test
     void createStock_withPurchasePriceAndCurrentPrice_setsBothCorrectly() {
-        when(stockRepository.existsByUserIdAndTicker(3L, "NVDA")).thenReturn(false);
         when(userRepository.findById(3L)).thenReturn(Optional.of(user));
         when(stockRepository.save(any(Stock.class))).thenAnswer(i -> {
             Stock s = i.getArgument(0);
@@ -137,22 +135,54 @@ class StockServiceTest {
     }
 
     @Test
-    void createStock_duplicateTicker_throwsConflict() {
-        when(stockRepository.existsByUserIdAndTicker(3L, "AAPL")).thenReturn(true);
+    void createStock_duplicateTicker_allowed() {
+        when(userRepository.findById(3L)).thenReturn(Optional.of(user));
+        when(stockRepository.save(any(Stock.class))).thenAnswer(i -> {
+            Stock s = i.getArgument(0);
+            s.setId(99L);
+            return s;
+        });
 
         CreateStockRequest req = new CreateStockRequest(
-            "aapl",
-            null,
+            "AAPL",
+            "Apple Second Lot",
             null,
             false,
             null,
             null,
-            null,
-            null,
-            3L
+            new BigDecimal("210.00"),
+            new BigDecimal("5"),
+            3L,
+            new BigDecimal("205.00")
         );
 
-        assertThrows(ResponseStatusException.class, () -> stockService.createStock(3L, req));
+        StockDTO dto = stockService.createStock(3L, req);
+        assertNotNull(dto);
+        assertEquals(99L, dto.id());
+        assertEquals("AAPL", dto.ticker());
+        assertEquals("Apple Second Lot", dto.companyName());
+    }
+
+    @Test
+    void getStockByTicker_withMultipleLots_returnsFirst() {
+        Stock s1 = new Stock();
+        s1.setId(10L);
+        s1.setUser(user);
+        s1.setTicker("AAPL");
+        s1.setCompanyName("Apple Lot 1");
+
+        Stock s2 = new Stock();
+        s2.setId(20L);
+        s2.setUser(user);
+        s2.setTicker("AAPL");
+        s2.setCompanyName("Apple Lot 2");
+
+        when(stockRepository.findByUserIdAndTicker(3L, "AAPL")).thenReturn(java.util.List.of(s1, s2));
+
+        StockDTO dto = stockService.getStockByTicker(3L, "AAPL");
+        assertNotNull(dto);
+        assertEquals(10L, dto.id());
+        assertEquals("Apple Lot 1", dto.companyName());
     }
 
     @Test
@@ -244,7 +274,6 @@ class StockServiceTest {
 
     @Test
     void createStock_withDividendAndShares_createsRecurringIncomeTransaction() {
-        when(stockRepository.existsByUserIdAndTicker(3L, "KO")).thenReturn(false);
         when(userRepository.findById(3L)).thenReturn(Optional.of(user));
         when(stockRepository.save(any(Stock.class))).thenAnswer(i -> {
             Stock s = i.getArgument(0);
@@ -284,7 +313,6 @@ class StockServiceTest {
 
     @Test
     void createStock_withMonthlyDividend_setsMonthlyRecurrence() {
-        when(stockRepository.existsByUserIdAndTicker(3L, "O")).thenReturn(false);
         when(userRepository.findById(3L)).thenReturn(Optional.of(user));
         when(stockRepository.save(any(Stock.class))).thenAnswer(i -> {
             Stock s = i.getArgument(0);
@@ -319,7 +347,6 @@ class StockServiceTest {
 
     @Test
     void createStock_withSemiannualDividend_setsIntervalCount6() {
-        when(stockRepository.existsByUserIdAndTicker(3L, "BOND")).thenReturn(false);
         when(userRepository.findById(3L)).thenReturn(Optional.of(user));
         when(stockRepository.save(any(Stock.class))).thenAnswer(i -> {
             Stock s = i.getArgument(0);
@@ -352,7 +379,6 @@ class StockServiceTest {
 
     @Test
     void createStock_withZeroShares_doesNotCreateRecurringTransaction() {
-        when(stockRepository.existsByUserIdAndTicker(3L, "AAPL")).thenReturn(false);
         when(userRepository.findById(3L)).thenReturn(Optional.of(user));
         when(stockRepository.save(any(Stock.class))).thenAnswer(i -> {
             Stock s = i.getArgument(0);
@@ -379,7 +405,6 @@ class StockServiceTest {
 
     @Test
     void createStock_withoutDividend_doesNotCreateRecurringTransaction() {
-        when(stockRepository.existsByUserIdAndTicker(3L, "TSLA")).thenReturn(false);
         when(userRepository.findById(3L)).thenReturn(Optional.of(user));
         when(stockRepository.save(any(Stock.class))).thenAnswer(i -> {
             Stock s = i.getArgument(0);

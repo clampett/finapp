@@ -1051,3 +1051,97 @@ test('portfolio: addStockUnified preserves dividend information', async () => {
   assert.equal(holding.dividendFrequency, 'quarterly');
   assert.equal(holding.dividendPerShare, 0.27);
 });
+
+test('portfolio: multiple stock lots per ticker can be added and managed independently', async () => {
+  const {
+    addStockUnified,
+    parseLocalHoldings,
+    updateSharesUnified,
+    removeStockUnified,
+    holdingsToSynthetic,
+  } = runtime.module.exports;
+
+  const storageKey = 'test-multi-lot-storage';
+  runtime.localStorage.data[storageKey] = JSON.stringify([]);
+
+  // 1. Buy first lot of AAPL: 5 shares at $150
+  const lot1 = await addStockUnified({
+    storageKey,
+    demo: true,
+    symbol: 'AAPL',
+    companyName: 'Apple Inc.',
+    price: 150,
+    purchasePrice: 150,
+    shares: 5,
+  });
+
+  assert.equal(lot1.symbol, 'AAPL');
+  assert.equal(lot1.shares, 5);
+  assert.equal(lot1.purchasePrice, 150);
+  assert.ok(lot1.stockId != null);
+
+  // 2. Buy second lot of AAPL on another day at a different price: 10 shares at $175
+  const lot2 = await addStockUnified({
+    storageKey,
+    demo: true,
+    symbol: 'AAPL',
+    companyName: 'Apple Inc.',
+    price: 175,
+    purchasePrice: 175,
+    shares: 10,
+  });
+
+  assert.equal(lot2.symbol, 'AAPL');
+  assert.equal(lot2.shares, 10);
+  assert.equal(lot2.purchasePrice, 175);
+  assert.notEqual(lot1.stockId, lot2.stockId, 'Each lot must have a unique stockId');
+
+  // Verify both lots exist in storage
+  const holdings = parseLocalHoldings(storageKey);
+  assert.equal(holdings.length, 2, 'Both lots must be retained in holdings');
+  assert.equal(holdings[0].symbol, 'AAPL');
+  assert.equal(holdings[0].shares, 5);
+  assert.equal(holdings[0].purchasePrice, 150);
+  assert.equal(holdings[1].symbol, 'AAPL');
+  assert.equal(holdings[1].shares, 10);
+  assert.equal(holdings[1].purchasePrice, 175);
+
+  // 3. Synthetic conversion computes correct distinct cost bases
+  const { positions } = holdingsToSynthetic(holdings, 1);
+  assert.equal(positions.length, 2);
+  assert.equal(positions[0].stockId, lot1.stockId);
+  assert.equal(positions[0].avgCostPerShare, 150);
+  assert.equal(positions[0].costBasis, 750); // 5 * 150
+  assert.equal(positions[1].stockId, lot2.stockId);
+  assert.equal(positions[1].avgCostPerShare, 175);
+  assert.equal(positions[1].costBasis, 1750); // 10 * 175
+
+  // 4. Update shares on lot 2 only (e.g. partial sell 2 shares -> 8 shares)
+  await updateSharesUnified({
+    storageKey,
+    demo: true,
+    symbol: 'AAPL',
+    currentShares: 10,
+    newShares: 8,
+    price: 175,
+    stockId: lot2.stockId,
+  });
+
+  const updatedHoldings = parseLocalHoldings(storageKey);
+  assert.equal(updatedHoldings[0].shares, 5, 'Lot 1 shares must remain unchanged');
+  assert.equal(updatedHoldings[1].shares, 8, 'Lot 2 shares must be updated to 8');
+
+  // 5. Delete lot 1 only
+  await removeStockUnified({
+    storageKey,
+    demo: true,
+    symbol: 'AAPL',
+    stockId: lot1.stockId,
+  });
+
+  const afterDelete = parseLocalHoldings(storageKey);
+  assert.equal(afterDelete.length, 1, 'Only one lot should remain');
+  assert.equal(afterDelete[0].stockId, lot2.stockId);
+  assert.equal(afterDelete[0].shares, 8);
+  assert.equal(afterDelete[0].purchasePrice, 175);
+});

@@ -559,14 +559,6 @@ export function BudgetingTab({
     setRecurringList((prevList) => {
       const { updatedRecurring, hasChanges } = syncGraphNodesToRecurring(graph, prevList);
       if (!hasChanges) return prevList;
-      if (isDemo) {
-        const budgetStorageKey = `finapp-budget-v1:demo:${userId || 1}`;
-        try {
-          const saved = JSON.parse(localStorage.getItem(budgetStorageKey) || '{}');
-          saved.recurring = updatedRecurring;
-          localStorage.setItem(budgetStorageKey, JSON.stringify(saved));
-        } catch {}
-      }
       return updatedRecurring;
     });
   }, [graph, isDemo, userId]);
@@ -1251,16 +1243,10 @@ export function BudgetingTab({
     }
 
     if (isDemo) {
-      const budgetStorageKey = `finapp-budget-v1:demo:${userId || 1}`;
       let nextId = Math.max(0, ...recurringList.map((r) => r.id || 0)) + 1;
       const created = newTemplates.map((t) => ({ ...t, id: nextId++ } as RecurringTransaction));
       const updated = [...created, ...recurringList];
       setRecurringList(updated);
-      try {
-        const saved = JSON.parse(localStorage.getItem(budgetStorageKey) || '{}');
-        saved.recurring = updated;
-        localStorage.setItem(budgetStorageKey, JSON.stringify(saved));
-      } catch {}
       setStatusMessage({
         type: 'success',
         text: `Imported ${created.length} salary template(s) into recurring transactions.`,

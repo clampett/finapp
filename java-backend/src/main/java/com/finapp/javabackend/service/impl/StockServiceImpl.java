@@ -5,16 +5,24 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.finapp.javabackend.dto.CreateStockRequest;
 import com.finapp.javabackend.dto.StockDTO;
 import com.finapp.javabackend.dto.UpdateStockRequest;
+import com.finapp.javabackend.model.entity.Category;
+import com.finapp.javabackend.model.entity.RecurringTransaction;
 import com.finapp.javabackend.model.entity.Stock;
 import com.finapp.javabackend.model.entity.StockTransaction;
 import com.finapp.javabackend.model.entity.User;
+import com.finapp.javabackend.model.enums.DividendFrequency;
+import com.finapp.javabackend.model.enums.RecurrenceFrequency;
 import com.finapp.javabackend.model.enums.StockTxnType;
+import com.finapp.javabackend.model.enums.TransactionKind;
+import com.finapp.javabackend.repository.CategoryRepository;
+import com.finapp.javabackend.repository.RecurringTransactionRepository;
 import com.finapp.javabackend.repository.StockRepository;
 import com.finapp.javabackend.repository.StockTransactionRepository;
 import com.finapp.javabackend.repository.UserRepository;
 import com.finapp.javabackend.service.StockService;
 import com.finapp.javabackend.service.mapper.EntityDtoMapper;
 import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.net.URI;
 import java.nio.charset.StandardCharsets;
 import java.time.Duration;
@@ -39,6 +47,8 @@ public class StockServiceImpl implements StockService {
     private final StockRepository stockRepository;
     private final StockTransactionRepository stockTransactionRepository;
     private final UserRepository userRepository;
+    private final RecurringTransactionRepository recurringTransactionRepository;
+    private final CategoryRepository categoryRepository;
     private final RestTemplate restTemplate;
     private final String pythonBaseUrl;
     private final ObjectMapper objectMapper;
@@ -53,6 +63,27 @@ public class StockServiceImpl implements StockService {
             stockTransactionRepository,
             userRepository,
             null,
+            null,
+            null,
+            "http://localhost:5000",
+            new ObjectMapper()
+        );
+    }
+
+    public StockServiceImpl(
+        StockRepository stockRepository,
+        StockTransactionRepository stockTransactionRepository,
+        UserRepository userRepository,
+        RecurringTransactionRepository recurringTransactionRepository,
+        CategoryRepository categoryRepository
+    ) {
+        this(
+            stockRepository,
+            stockTransactionRepository,
+            userRepository,
+            recurringTransactionRepository,
+            categoryRepository,
+            null,
             "http://localhost:5000",
             new ObjectMapper()
         );
@@ -63,6 +94,8 @@ public class StockServiceImpl implements StockService {
         StockRepository stockRepository,
         StockTransactionRepository stockTransactionRepository,
         UserRepository userRepository,
+        @Autowired(required = false) RecurringTransactionRepository recurringTransactionRepository,
+        @Autowired(required = false) CategoryRepository categoryRepository,
         @Autowired(required = false) RestTemplateBuilder builder,
         @Value("${python.service.url:http://localhost:5000}") String pythonServiceUrl,
         @Autowired(required = false) ObjectMapper objectMapper
@@ -70,6 +103,8 @@ public class StockServiceImpl implements StockService {
         this.stockRepository = stockRepository;
         this.stockTransactionRepository = stockTransactionRepository;
         this.userRepository = userRepository;
+        this.recurringTransactionRepository = recurringTransactionRepository;
+        this.categoryRepository = categoryRepository;
         this.restTemplate =
             builder != null
                 ? builder
@@ -190,6 +225,74 @@ public class StockServiceImpl implements StockService {
             txn.setCreatedAt(OffsetDateTime.now());
             txn.setUpdatedAt(OffsetDateTime.now());
             stockTransactionRepository.save(txn);
+        }
+
+        // Auto-generate recurring dividend income transaction if stock pays dividends and shares > 0
+        if (recurringTransactionRepository != null
+                && Boolean.TRUE.equals(savedStock.getPaysDividend())
+                && savedStock.getDividendPerShare() != null
+                && savedStock.getDividendPerShare().compareTo(BigDecimal.ZERO) > 0
+                && request.sharesOwned() != null
+                && request.sharesOwned().compareTo(BigDecimal.ZERO) > 0) {
+            BigDecimal payoutAmount = request.sharesOwned()
+                .multiply(savedStock.getDividendPerShare())
+                .setScale(2, RoundingMode.HALF_UP);
+
+            if (payoutAmount.compareTo(BigDecimal.ZERO) > 0) {
+                RecurrenceFrequency recFreq;
+                int intervalCount = 1;
+                DividendFrequency divFreq = savedStock.getDividendFrequency();
+                if (divFreq != null) {
+                    switch (divFreq) {
+                        case monthly -> recFreq = RecurrenceFrequency.monthly;
+                        case semiannual -> {
+                            recFreq = RecurrenceFrequency.monthly;
+                            intervalCount = 6;
+                        }
+                        case annual -> recFreq = RecurrenceFrequency.yearly;
+                        case quarterly, irregular -> recFreq = RecurrenceFrequency.quarterly;
+                        default -> recFreq = RecurrenceFrequency.quarterly;
+                    }
+                } else {
+                    recFreq = RecurrenceFrequency.quarterly;
+                }
+
+                Category divCat = null;
+                if (categoryRepository != null) {
+                    divCat = categoryRepository
+                        .findByUserIdAndKindAndName(userId, TransactionKind.income, "Dividends")
+                        .orElseGet(() -> {
+                            Category newCat = new Category();
+                            newCat.setUser(user);
+                            newCat.setName("Dividends");
+                            newCat.setKind(TransactionKind.income);
+                            newCat.setCreatedAt(OffsetDateTime.now());
+                            return categoryRepository.save(newCat);
+                        });
+                }
+
+                RecurringTransaction recurring = new RecurringTransaction();
+                recurring.setUser(user);
+                recurring.setKind(TransactionKind.income);
+                recurring.setCategory(divCat);
+                recurring.setDescription(ticker + " Dividend");
+                recurring.setAmount(payoutAmount);
+                recurring.setFrequency(recFreq);
+                recurring.setIntervalCount(intervalCount);
+                recurring.setStartDate(LocalDate.now());
+                recurring.setNextDueDate(RecurringTransactionServiceImpl.calculateNextDate(LocalDate.now(), recFreq, intervalCount));
+                recurring.setIsActive(Boolean.TRUE);
+                recurring.setNotes(String.format(
+                    "Auto-generated dividend for %s (%s shares @ $%s/%s)",
+                    ticker,
+                    request.sharesOwned(),
+                    savedStock.getDividendPerShare(),
+                    savedStock.getDividendFrequency() != null ? savedStock.getDividendFrequency() : "quarterly"
+                ));
+                recurring.setCreatedAt(OffsetDateTime.now());
+                recurring.setUpdatedAt(OffsetDateTime.now());
+                recurringTransactionRepository.save(recurring);
+            }
         }
 
         return EntityDtoMapper.toDto(savedStock);

@@ -614,3 +614,23 @@ test('end-to-end interconnected system: multi-step budgeting, investing, and dyn
   assert.equal(t.assets, 33000);
   assert.equal(t.netWorth, 25000);
 });
+
+test('portfolio: addStockUnified preserves dividend information', async () => {
+  const { addStockUnified } = runtime.module.exports;
+  const holding = await addStockUnified({
+    storageKey: 'test-div-storage',
+    demo: true,
+    symbol: 'AAPL',
+    companyName: 'Apple Inc.',
+    price: 180,
+    shares: 10,
+    paysDividend: true,
+    dividendFrequency: 'quarterly',
+    dividendPerShare: 0.27,
+  });
+  assert.equal(holding.symbol, 'AAPL');
+  assert.equal(holding.shares, 10);
+  assert.equal(holding.paysDividend, true);
+  assert.equal(holding.dividendFrequency, 'quarterly');
+  assert.equal(holding.dividendPerShare, 0.27);
+});

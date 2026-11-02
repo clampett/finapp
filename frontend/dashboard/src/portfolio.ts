@@ -7,6 +7,9 @@ export interface Holding {
   stockId?: number;
   companyName?: string | null;
   lastPrice?: number;
+  paysDividend?: boolean;
+  dividendFrequency?: string | null;
+  dividendPerShare?: number | null;
 }
 
 export interface Stock {
@@ -217,6 +220,9 @@ export async function addStockUnified({
   companyName,
   price,
   shares = 1,
+  paysDividend = false,
+  dividendFrequency = null,
+  dividendPerShare = null,
 }: {
   storageKey: string;
   userId?: number;
@@ -225,6 +231,9 @@ export async function addStockUnified({
   companyName?: string | null;
   price: number;
   shares?: number;
+  paysDividend?: boolean;
+  dividendFrequency?: string | null;
+  dividendPerShare?: number | null;
 }): Promise<Holding> {
   const sym = symbol.trim().toUpperCase();
   const current = parseLocalHoldings(storageKey);
@@ -243,7 +252,9 @@ export async function addStockUnified({
           lastPrice: price,
           purchasePrice: price,
           sharesOwned: shares,
-          paysDividend: false,
+          paysDividend,
+          dividendFrequency: paysDividend ? dividendFrequency : null,
+          dividendPerShare: paysDividend ? dividendPerShare : null,
         }),
       });
       if (res.ok) {
@@ -263,6 +274,9 @@ export async function addStockUnified({
       stockId: newStockId,
       companyName: companyName || sym,
       lastPrice: price,
+      paysDividend,
+      dividendFrequency: paysDividend ? dividendFrequency : null,
+      dividendPerShare: paysDividend ? dividendPerShare : null,
     },
   ];
   saveLocalHoldings(storageKey, updated);

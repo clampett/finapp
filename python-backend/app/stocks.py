@@ -59,6 +59,143 @@ def normalize_symbol(raw: str) -> str:
     return symbol
 
 
+def _fetch_ticker_dividend_data(symbol: str):
+    import yfinance as yf
+
+    ticker = yf.Ticker(symbol)
+    divs = getattr(ticker, "dividends", None)
+    info = getattr(ticker, "info", {})
+    return divs, info
+
+
+def get_dividend_info(symbol: str, latest_price: float = 0.0) -> dict:
+    try:
+        divs, info = _fetch_ticker_dividend_data(symbol)
+        if divs is not None and not divs.empty:
+            valid_divs = divs[divs > 0]
+            if not valid_divs.empty:
+                last_date = valid_divs.index[-1]
+                last_dt = (
+                    last_date.to_pydatetime()
+                    if hasattr(last_date, "to_pydatetime")
+                    else last_date
+                )
+                if last_dt.tzinfo is not None:
+                    last_dt = last_dt.astimezone(timezone.utc)
+                else:
+                    last_dt = last_dt.replace(tzinfo=timezone.utc)
+
+                now = datetime.now(timezone.utc)
+                if (now - last_dt).days <= 550:
+                    latest_payout = round(float(valid_divs.iloc[-1]), 4)
+                    one_year_ago = now - timedelta(days=370)
+                    last_year_payouts = [
+                        d
+                        for d in valid_divs.index
+                        if (
+                            d.to_pydatetime().astimezone(timezone.utc)
+                            if (hasattr(d, "to_pydatetime") and d.tzinfo)
+                            else d.replace(tzinfo=timezone.utc)
+                        )
+                        >= one_year_ago
+                    ]
+                    count = len(last_year_payouts)
+
+                    if count >= 10:
+                        freq = "monthly"
+                        rate = round(latest_payout * 12, 4)
+                    elif count in (3, 4, 5):
+                        freq = "quarterly"
+                        rate = round(latest_payout * 4, 4)
+                    elif count == 2:
+                        freq = "semiannual"
+                        rate = round(latest_payout * 2, 4)
+                    elif count == 1:
+                        freq = "annual"
+                        rate = round(latest_payout, 4)
+                    else:
+                        if len(valid_divs) >= 2:
+                            diffs = [
+                                (valid_divs.index[i] - valid_divs.index[i - 1]).days
+                                for i in range(max(1, len(valid_divs) - 4), len(valid_divs))
+                            ]
+                            median_days = sum(diffs) / len(diffs) if diffs else 90
+                            if median_days <= 45:
+                                freq = "monthly"
+                                rate = round(latest_payout * 12, 4)
+                            elif median_days <= 120:
+                                freq = "quarterly"
+                                rate = round(latest_payout * 4, 4)
+                            elif median_days <= 220:
+                                freq = "semiannual"
+                                rate = round(latest_payout * 2, 4)
+                            else:
+                                freq = "annual"
+                                rate = round(latest_payout, 4)
+                        else:
+                            freq = "quarterly"
+                            rate = round(latest_payout * 4, 4)
+
+                    div_yield = (
+                        round((rate / latest_price) * 100, 2) if latest_price > 0 else None
+                    )
+                    return {
+                        "pays_dividend": True,
+                        "dividend_per_share": latest_payout,
+                        "dividend_frequency": freq,
+                        "dividend_rate": rate,
+                        "dividend_yield": div_yield,
+                    }
+
+        if info and isinstance(info, dict):
+            rate = info.get("dividendRate")
+            last_val = info.get("lastDividendValue")
+            yield_val = info.get("dividendYield") or info.get("trailingAnnualDividendYield")
+            if rate and float(rate) > 0:
+                rate_f = float(rate)
+                per_share = (
+                    float(last_val)
+                    if last_val and float(last_val) > 0
+                    else round(rate_f / 4, 4)
+                )
+                ratio = rate_f / per_share if per_share > 0 else 4
+                if 10.5 <= ratio <= 13.5:
+                    freq = "monthly"
+                elif 1.8 <= ratio <= 2.5:
+                    freq = "semiannual"
+                elif 0.8 <= ratio <= 1.2:
+                    freq = "annual"
+                else:
+                    freq = "quarterly"
+
+                y_pct = (
+                    round(float(yield_val) * 100, 2)
+                    if yield_val
+                    else (
+                        round((rate_f / latest_price) * 100, 2)
+                        if latest_price > 0
+                        else None
+                    )
+                )
+                return {
+                    "pays_dividend": True,
+                    "dividend_per_share": round(per_share, 4),
+                    "dividend_frequency": freq,
+                    "dividend_rate": round(rate_f, 4),
+                    "dividend_yield": y_pct,
+                }
+    except Exception:
+        pass
+
+    return {
+        "pays_dividend": False,
+        "dividend_per_share": None,
+        "dividend_frequency": None,
+        "dividend_rate": None,
+        "dividend_yield": None,
+    }
+
+
 def lookup_stock(raw_symbol: str) -> dict:
     symbol = normalize_symbol(raw_symbol)
     now = datetime.now(timezone.utc)
@@ -89,6 +226,9 @@ def lookup_stock(raw_symbol: str) -> dict:
     else:  # a recent listing: show the price, but don't annualize a few weeks
         stats = {"cagr": None, "expected_annual_return": None, "annual_volatility": None}
 
+    latest_price = round(float(prices.iloc[-1]), 2)
+    div_info = get_dividend_info(symbol, latest_price)
+
     recent = prices.tail(HISTORY_POINTS)
     return {
         "symbol": symbol,
@@ -96,8 +236,9 @@ def lookup_stock(raw_symbol: str) -> dict:
         "currency": prices.attrs["currency"],
         "stats_start_date": stats.get("start_date"),
         "stats_end_date": stats.get("end_date"),
-        "latest_price": round(float(prices.iloc[-1]), 2),
+        "latest_price": latest_price,
         "latest_date": prices.index[-1].date().isoformat(),
+        **div_info,
         **{key: stats[key] for key in ("cagr", "expected_annual_return", "annual_volatility")},
         "history": [
             {"date": day.date().isoformat(), "close": round(float(close), 2)}

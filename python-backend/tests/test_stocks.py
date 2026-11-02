@@ -45,6 +45,7 @@ def market(tmp_path, monkeypatch):
     monkeypatch.setattr(price_cache, "_download", fake_download)
     monkeypatch.setattr(price_cache, "_now", lambda: state["now"])
     monkeypatch.setattr(stocks, "_unknown_until", {})
+    monkeypatch.setattr(stocks, "_fetch_ticker_dividend_data", lambda sym: (pd.Series(dtype=float), {}))
     return state
 
 
@@ -231,3 +232,69 @@ def test_cached_currency_survives_an_outage(market):
     result = stocks.lookup_stock("AAPL")
     assert result["currency"] == "USD"
     assert result["latest_price"] > 0
+
+
+def test_quarterly_dividend_detection(market, monkeypatch):
+    dates = pd.date_range("2026-01-15", periods=4, freq="90D", tz=timezone.utc)
+    div_series = pd.Series([0.27, 0.27, 0.27, 0.27], index=dates)
+    monkeypatch.setattr(
+        stocks,
+        "_fetch_ticker_dividend_data",
+        lambda sym: (div_series, {"dividendRate": 1.08, "dividendYield": 0.015}),
+    )
+    result = stocks.lookup_stock("AAPL")
+    assert result["pays_dividend"] is True
+    assert result["dividend_per_share"] == 0.27
+    assert result["dividend_frequency"] == "quarterly"
+    assert result["dividend_rate"] == 1.08
+    assert result["dividend_yield"] is not None
+
+
+def test_monthly_dividend_detection(market, monkeypatch):
+    dates = pd.date_range("2025-11-01", periods=12, freq="30D", tz=timezone.utc)
+    div_series = pd.Series([0.25] * 12, index=dates)
+    monkeypatch.setattr(
+        stocks,
+        "_fetch_ticker_dividend_data",
+        lambda sym: (div_series, {}),
+    )
+    result = stocks.lookup_stock("O")
+    assert result["pays_dividend"] is True
+    assert result["dividend_per_share"] == 0.25
+    assert result["dividend_frequency"] == "monthly"
+    assert result["dividend_rate"] == 3.0
+
+
+def test_non_dividend_stock(market, monkeypatch):
+    monkeypatch.setattr(
+        stocks,
+        "_fetch_ticker_dividend_data",
+        lambda sym: (pd.Series(dtype=float), {}),
+    )
+    result = stocks.lookup_stock("TSLA")
+    assert result["pays_dividend"] is False
+    assert result["dividend_per_share"] is None
+    assert result["dividend_frequency"] is None
+
+
+def test_dividend_fallback_to_info(market, monkeypatch):
+    monkeypatch.setattr(
+        stocks,
+        "_fetch_ticker_dividend_data",
+        lambda sym: (pd.Series(dtype=float), {"dividendRate": 2.00, "lastDividendValue": 0.50}),
+    )
+    result = stocks.lookup_stock("XYZ")
+    assert result["pays_dividend"] is True
+    assert result["dividend_per_share"] == 0.50
+    assert result["dividend_frequency"] == "quarterly"
+    assert result["dividend_rate"] == 2.00
+
+
+def test_dividend_exception_handled_gracefully(market, monkeypatch):
+    def broken_fetch(sym):
+        raise RuntimeError("network failure")
+
+    monkeypatch.setattr(stocks, "_fetch_ticker_dividend_data", broken_fetch)
+    result = stocks.lookup_stock("AAPL")
+    assert result["pays_dividend"] is False
+

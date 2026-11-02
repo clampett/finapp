@@ -1116,7 +1116,9 @@ export function BudgetingTab({
       setRecurringList(updated);
       try {
         const saved = JSON.parse(localStorage.getItem(budgetStorageKey) || '{}');
-        saved.recurring = updated;
+        if (saved && typeof saved === 'object' && 'recurring' in saved) {
+          delete saved.recurring;
+        }
         localStorage.setItem(budgetStorageKey, JSON.stringify(saved));
       } catch {}
       setStatusMessage({

@@ -181,6 +181,7 @@ export function syncScenarioTransactionToGraph(
     description?: string;
     amount: number;
     categoryName?: string | null;
+    isReversal?: boolean;
   },
 ): {
   updatedGraph: GraphData;
@@ -188,11 +189,15 @@ export function syncScenarioTransactionToGraph(
   newBalance: number;
   isNew?: boolean;
 } | null {
+  if (!graph || !Array.isArray(graph.nodes)) {
+    return null;
+  }
   if (!transaction.amount || Number(transaction.amount) <= 0) {
     return null;
   }
   const amount = Number(transaction.amount);
   const isIncome = transaction.kind === 'income';
+  const isReversal = Boolean(transaction.isReversal);
   const desc = (transaction.description || '').trim();
   const descLower = desc.toLowerCase();
   const acct = (transaction.accountName || '').trim();
@@ -201,13 +206,14 @@ export function syncScenarioTransactionToGraph(
   const catLower = cat.toLowerCase();
 
   // Find cash account node matching accountName if explicitly targeted
-  const cashNode = graph.nodes.find(
+  let cashNode = graph.nodes.find(
     (n) =>
       !n.archived &&
       ['CHECKING', 'SAVINGS'].includes(n.nodeType) &&
       (n.name.trim().toLowerCase() === acctLower ||
         (acctLower === 'checking' && n.nodeType === 'CHECKING') ||
         (acctLower === 'savings' && n.nodeType === 'SAVINGS') ||
+        (acctLower && n.name.toLowerCase().includes(acctLower)) ||
         (!acct && n.nodeType === 'CHECKING')),
   );
 
@@ -220,9 +226,9 @@ export function syncScenarioTransactionToGraph(
         (n.nodeType === 'CHECKING' || n.name.toLowerCase().includes('checking')),
     );
 
-  // 1. Debt check: Is this a payment to a known debt account?
+  // 1. Debt check: Is this a payment to a known debt account, or reversing one?
   const isDebt =
-    !isIncome &&
+    (!isIncome || isReversal) &&
     (catLower === 'debt' ||
       acctLower.includes('loan') ||
       acctLower.includes('card') ||
@@ -247,9 +253,30 @@ export function syncScenarioTransactionToGraph(
             (descLower && n.name.trim().toLowerCase() === descLower)),
       );
 
-  // If debt node matched and transaction is income without a separate description, debt accounts cannot accept income deposits
-  if (matchedDebt && isIncome && (!desc || descLower === matchedDebt.name.toLowerCase())) {
+  // If debt node matched and transaction is income without a reversal or separate description, debt accounts cannot accept income deposits
+  if (matchedDebt && isIncome && !isReversal && (!desc || descLower === matchedDebt.name.toLowerCase())) {
     return null;
+  }
+
+  // Handle reversing a previous debt payment (restores debt balance and reimburses cash)
+  if (matchedDebt && isReversal && isIncome) {
+    const newBalance = matchedDebt.amountOrBalance + amount;
+    let updatedNodes = graph.nodes.map((n) =>
+      n.id === matchedDebt.id ? { ...n, amountOrBalance: newBalance } : n,
+    );
+    const activeCashNode = cashNode;
+    if (activeCashNode && activeCashNode.id !== matchedDebt.id) {
+      const newCashBalance = activeCashNode.amountOrBalance + amount;
+      updatedNodes = updatedNodes.map((n) =>
+        n.id === activeCashNode.id ? { ...n, amountOrBalance: newCashBalance } : n,
+      );
+    }
+    return {
+      updatedGraph: { ...graph, nodes: updatedNodes },
+      matchedNode: matchedDebt,
+      newBalance,
+      isNew: false,
+    };
   }
 
   // If existing DEBT node is paid down
@@ -260,10 +287,11 @@ export function syncScenarioTransactionToGraph(
     );
 
     // If cash account was the specified transaction account, deduct payment from cash account
-    if (cashNode && cashNode.id !== matchedDebt.id) {
-      const newCashBalance = Math.max(0, cashNode.amountOrBalance - amount);
+    const activeCashNode = cashNode;
+    if (activeCashNode && activeCashNode.id !== matchedDebt.id) {
+      const newCashBalance = Math.max(0, activeCashNode.amountOrBalance - amount);
       updatedNodes = updatedNodes.map((n) =>
-        n.id === cashNode.id ? { ...n, amountOrBalance: newCashBalance } : n,
+        n.id === activeCashNode.id ? { ...n, amountOrBalance: newCashBalance } : n,
       );
     }
 
@@ -298,22 +326,55 @@ export function syncScenarioTransactionToGraph(
     };
   }
 
-  // 2. Adjust cash account balance for single, non-recurring transactions (e.g. grocery trip, coffee, dining)
-  if (cashNode) {
-    const delta = isIncome ? amount : -amount;
-    const newBalance = Math.max(0, cashNode.amountOrBalance + delta);
-    const updatedNodes = graph.nodes.map((n) =>
-      n.id === cashNode.id ? { ...n, amountOrBalance: newBalance } : n,
+  // 2. Adjust cash account balance for single, non-recurring transactions (e.g. grocery trip, coffee, dining, freelance income)
+  // If specific cashNode not matched yet, try broader matching among active nodes
+  if (!cashNode && acct) {
+    cashNode = graph.nodes.find(
+      (n) =>
+        !n.archived &&
+        ['CHECKING', 'SAVINGS'].includes(n.nodeType) &&
+        (n.name.toLowerCase().includes(acctLower) || acctLower.includes(n.name.toLowerCase())),
     );
+  }
+
+  // Fallback to any active CHECKING node, then any active SAVINGS node
+  if (!cashNode) {
+    cashNode =
+      graph.nodes.find((n) => !n.archived && n.nodeType === 'CHECKING') ||
+      graph.nodes.find((n) => !n.archived && n.nodeType === 'SAVINGS');
+  }
+
+  // If no cash node exists at all in the graph, create a CHECKING node so net worth reflects point-in-time transactions
+  if (!cashNode) {
+    const newId = `node-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`;
+    const initialBalance = isIncome ? amount : 0;
+    const createdNode: GraphNode = {
+      id: newId,
+      name: acct || 'Checking Account',
+      nodeType: 'CHECKING',
+      amountOrBalance: initialBalance,
+      interestRateApr: 0,
+      position: placeNewNode(graph.nodes, { x: 300, y: 150 }),
+    };
     return {
-      updatedGraph: { ...graph, nodes: updatedNodes },
-      matchedNode: cashNode,
-      newBalance,
-      isNew: false,
+      updatedGraph: { ...graph, nodes: [...graph.nodes, createdNode] },
+      matchedNode: createdNode,
+      newBalance: initialBalance,
+      isNew: true,
     };
   }
 
-  return null;
+  const delta = isIncome ? amount : -amount;
+  const newBalance = Math.max(0, cashNode.amountOrBalance + delta);
+  const updatedNodes = graph.nodes.map((n) =>
+    n.id === cashNode.id ? { ...n, amountOrBalance: newBalance } : n,
+  );
+  return {
+    updatedGraph: { ...graph, nodes: updatedNodes },
+    matchedNode: cashNode,
+    newBalance,
+    isNew: false,
+  };
 }
 
 /**

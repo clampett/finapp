@@ -3,6 +3,7 @@ import { ArchetypeGraph } from './graphs';
 import type { View } from './finance';
 import { demoProfile, API_BASE } from './finance';
 import { endSession, sessionHeaders } from './session';
+import { notifyPortfolioUpdated } from './portfolio';
 import { useTheme } from './useTheme';
 // Defined navigation labels in one place so the sidebar and breadcrumb were
 // derived from the same selected view rather than separate UI state.
@@ -35,7 +36,11 @@ export default function App() {
         method: 'POST',
         headers: sessionHeaders(),
         credentials: 'include',
-      }).catch(() => {});
+      })
+        .then(() => {
+          notifyPortfolioUpdated();
+        })
+        .catch(() => {});
     }
   }, [demo, userId]);
   if (!demo && !userId) return null;

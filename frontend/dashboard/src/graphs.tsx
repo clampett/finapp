@@ -18,7 +18,7 @@ import { BudgetControls } from './components/BudgetControls';
 import { DashboardTab } from './DashboardTab';
 import { Investing } from './components/Investing';
 import { clearSession, sessionHeaders } from './session';
-import { PORTFOLIO_UPDATED_EVENT, getStoredPortfolioValue } from './portfolio';
+import { PORTFOLIO_UPDATED_EVENT, getStoredPortfolioValue, loadUnifiedHoldings } from './portfolio';
 import { lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type { FormEvent } from 'react';
 import {
@@ -55,14 +55,38 @@ export function ArchetypeGraph({
     getStoredPortfolioValue(holdingsKey),
   );
 
+  const refreshPortfolio = useCallback(
+    async (signal?: AbortSignal) => {
+      try {
+        const { holdings } = await loadUnifiedHoldings(holdingsKey, userId, demo, signal);
+        if (signal?.aborted) return;
+        const total = holdings.reduce(
+          (sum, h) => sum + (h.shares || 0) * (h.lastPrice || 0),
+          0,
+        );
+        setPortfolioValue(total);
+      } catch {
+        /* Fall back to stored value */
+        setPortfolioValue(getStoredPortfolioValue(holdingsKey));
+      }
+    },
+    [holdingsKey, userId, demo],
+  );
+
   useEffect(() => {
+    const controller = new AbortController();
+    void refreshPortfolio(controller.signal);
+
     const handlePortfolioChange = () => {
       setPortfolioValue(getStoredPortfolioValue(holdingsKey));
+      void refreshPortfolio();
     };
-    handlePortfolioChange();
     window.addEventListener(PORTFOLIO_UPDATED_EVENT, handlePortfolioChange);
-    return () => window.removeEventListener(PORTFOLIO_UPDATED_EVENT, handlePortfolioChange);
-  }, [holdingsKey]);
+    return () => {
+      controller.abort();
+      window.removeEventListener(PORTFOLIO_UPDATED_EVENT, handlePortfolioChange);
+    };
+  }, [holdingsKey, refreshPortfolio]);
   // Partitioned browser drafts by demo/user and profile ID so editing one
   // example never overwrote a different account's local scenario.
   const [history, setHistory] = useState(() => newHistory({ nodes: [], edges: [] }));
@@ -620,7 +644,13 @@ export function ArchetypeGraph({
                 goalsStorageKey={`${storageKey}:goals`}
               />
               ) : view === 'budgeting' ? (
-                <BudgetingTab graph={live} userId={userId} demo={demo} onUpdateGraph={update} />
+                <BudgetingTab
+                  graph={live}
+                  userId={userId}
+                  demo={demo}
+                  portfolioValue={portfolioValue}
+                  onUpdateGraph={update}
+                />
               ) : view === 'graph' ? (
                 <Canvas
                   toolbar={toolbar}

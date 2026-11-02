@@ -1,12 +1,11 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import type { FormEvent } from 'react';
 import type { GraphData } from './finance';
-import { API_BASE, dollars, debtPayment, expenseAmount, colors } from './finance';
+import { API_BASE, dollars, debtPayment, expenseAmount, colors, totals } from './finance';
 import { sessionHeaders } from './session';
 import { NumberField } from './components/NumberField';
 import { changeAccount, changeCategory, changeKind } from './budgeting-drafts';
 import {
-  PORTFOLIO_UPDATED_EVENT,
   notifyPortfolioUpdated,
   loadUnifiedHoldings,
   addStockUnified,
@@ -30,6 +29,7 @@ interface BudgetingTabProps {
   graph: GraphData;
   userId?: number;
   demo?: boolean;
+  portfolioValue?: number;
   onUpdateGraph?: (next: GraphData) => void;
 }
 
@@ -141,6 +141,7 @@ export function BudgetingTab({
   graph,
   userId: propUserId,
   demo,
+  portfolioValue: propPortfolioValue,
   onUpdateGraph,
 }: BudgetingTabProps) {
   const sessionUserId =
@@ -235,28 +236,37 @@ export function BudgetingTab({
     };
   }, [stockDraft.ticker, showStockForm]);
 
-  // Refresh current market prices for all tracked stocks
-  const refreshCurrentPrices = useCallback(async (stockList: Stock[], signal: AbortSignal) => {
-    const tickers = Array.from(new Set(stockList.map((s) => s.ticker.trim().toUpperCase()))).filter(
-      Boolean,
-    );
-    if (tickers.length === 0) return;
+  const lastQuoteRefresh = useRef<number>(0);
+  const graphRef = useRef(graph);
+  graphRef.current = graph;
 
-    const results = await Promise.allSettled(
-      tickers.map(async (ticker) => {
-        const res = await fetch(`${API_BASE}/market/stocks/${encodeURIComponent(ticker)}`, {
-          signal,
-          headers: sessionHeaders(),
-          credentials: 'include',
-        });
-        if (!res.ok) throw new Error('Not found');
-        const data = await res.json();
-        if (data && typeof data.latest_price === 'number') {
-          return { ticker, price: data.latest_price };
-        }
-        throw new Error('Invalid price data');
-      }),
-    );
+  // Refresh current market prices for all tracked stocks
+  const refreshCurrentPrices = useCallback(
+    async (stockList: Stock[], signal: AbortSignal, force = false) => {
+      if (!force && Date.now() - lastQuoteRefresh.current < 60000) {
+        return;
+      }
+      const tickers = Array.from(new Set(stockList.map((s) => s.ticker.trim().toUpperCase()))).filter(
+        Boolean,
+      );
+      if (tickers.length === 0) return;
+      lastQuoteRefresh.current = Date.now();
+
+      const results = await Promise.allSettled(
+        tickers.map(async (ticker) => {
+          const res = await fetch(`${API_BASE}/market/stocks/${encodeURIComponent(ticker)}`, {
+            signal,
+            headers: sessionHeaders(),
+            credentials: 'include',
+          });
+          if (!res.ok) throw new Error('Not found');
+          const data = await res.json().catch(() => null);
+          if (data && typeof data.latest_price === 'number') {
+            return { ticker, price: data.latest_price };
+          }
+          throw new Error('Invalid price data');
+        }),
+      );
 
     const priceMap: Record<string, number> = {};
     results.forEach((r) => {
@@ -318,7 +328,7 @@ export function BudgetingTab({
 
   // Load all budgeting and stock data from API or demo storage
   const loadData = useCallback(
-    async (includePrices = false) => {
+    async (includePrices = false, forcePrices = false) => {
       // Demo mode or unauthenticated fallback
       if (isDemo) {
         activeLoad.current?.abort();
@@ -420,7 +430,7 @@ export function BudgetingTab({
             ];
           }
 
-          const syncedDemoRecur = syncGraphNodesToRecurring(graph, demoRecur).updatedRecurring;
+          const syncedDemoRecur = syncGraphNodesToRecurring(graphRef.current, demoRecur).updatedRecurring;
           try {
             localStorage.setItem(
               budgetStorageKey,
@@ -430,7 +440,7 @@ export function BudgetingTab({
 
           setTransactions(demoTxns);
           setRecurringList(syncedDemoRecur);
-          if (includePrices) await refreshCurrentPrices(loadedStocks, controller.signal);
+          if (includePrices) await refreshCurrentPrices(loadedStocks, controller.signal, forcePrices);
           return true;
         } finally {
           if (activeLoad.current === controller) {
@@ -456,9 +466,24 @@ export function BudgetingTab({
             credentials: 'include',
             signal: controller.signal,
           });
-          if (!response.ok) throw new Error(`Could not refresh ${path}.`);
-          const json = await response.json();
-          if (!Array.isArray(json.data)) throw new Error(`Invalid response for ${path}.`);
+          if (controller.signal.aborted) return;
+          if (!response.ok) {
+            let errorMsg = `Could not refresh ${path}.`;
+            try {
+              const errJson = await response.json();
+              if (errJson?.message) errorMsg = errJson.message;
+            } catch {
+              // Ignore non-json body
+            }
+            throw new Error(errorMsg);
+          }
+          let json: any = null;
+          try {
+            json = await response.json();
+          } catch {
+            throw new Error(`Invalid response for ${path}.`);
+          }
+          if (!Array.isArray(json?.data)) throw new Error(`Invalid response for ${path}.`);
           if (!controller.signal.aborted) apply(json.data);
         };
         const results = await Promise.allSettled([
@@ -469,19 +494,20 @@ export function BudgetingTab({
           }),
           read<StockPosition[]>('positions', setPositions),
           read<RecurringTransaction[]>('recurring-transactions', (data) => {
-            const synced = syncGraphNodesToRecurring(graph, data).updatedRecurring;
+            const synced = syncGraphNodesToRecurring(graphRef.current, data).updatedRecurring;
             setRecurringList(synced);
           }),
           read<AccountOption[]>('accounts', setDbAccounts),
         ]);
         if (controller.signal.aborted) return false;
         if (results.some((result) => result.status === 'rejected')) {
+          if (controller.signal.aborted) return false;
           throw new Error(
             'Some budgeting data could not be refreshed. Previous values have been kept.',
           );
         }
         // Requested market quotes only on entry or explicit refresh, avoiding downloads after every edit.
-        if (includePrices) await refreshCurrentPrices(loadedStocks, controller.signal);
+        if (includePrices) await refreshCurrentPrices(loadedStocks, controller.signal, forcePrices);
         return !controller.signal.aborted;
       } catch (err) {
         if (controller.signal.aborted) return false;
@@ -498,7 +524,7 @@ export function BudgetingTab({
         }
       }
     },
-    [userId, isDemo, graph, refreshCurrentPrices],
+    [userId, isDemo, refreshCurrentPrices],
   );
 
   useEffect(() => {
@@ -509,15 +535,7 @@ export function BudgetingTab({
       activeGeneration.current?.abort();
       activeGeneration.current = null;
     };
-  }, [loadData]);
-
-  useEffect(() => {
-    const handlePortfolioUpdate = () => {
-      void loadData(false);
-    };
-    window.addEventListener(PORTFOLIO_UPDATED_EVENT, handlePortfolioUpdate);
-    return () => window.removeEventListener(PORTFOLIO_UPDATED_EVENT, handlePortfolioUpdate);
-  }, [loadData]);
+  }, [userId, isDemo, loadData]);
 
   // Automatically synchronize active graph flow nodes (Income, Expense, Debt) into recurring transactions
   useEffect(() => {
@@ -589,16 +607,35 @@ export function BudgetingTab({
     }
 
     let syncStatusMsg = '';
-    if (onUpdateGraph) {
-      const syncResult = syncScenarioTransactionToGraph(graph, transDraft);
+    if (onUpdateGraph && graph) {
+      const prevTxn = editingTransId ? transactions.find((t) => t.id === editingTransId) : null;
+      let baseGraph = graph;
+      if (prevTxn) {
+        const reverseTxn = {
+          kind: prevTxn.kind === 'income' ? 'expense' : 'income',
+          accountName: prevTxn.accountName || 'Checking',
+          description: prevTxn.description,
+          amount: prevTxn.amount,
+          categoryName: prevTxn.categoryName,
+          isReversal: true,
+        };
+        const reverseResult = syncScenarioTransactionToGraph(baseGraph, reverseTxn);
+        if (reverseResult) {
+          baseGraph = reverseResult.updatedGraph;
+        }
+      }
+
+      const syncResult = syncScenarioTransactionToGraph(baseGraph, transDraft);
       if (syncResult) {
         onUpdateGraph(syncResult.updatedGraph);
         if (syncResult.isNew) {
-          syncStatusMsg = ` Created ${syncResult.matchedNode.name} node and connected cash flow (${dollars(syncResult.newBalance)}/mo).`;
+          syncStatusMsg = ` Created ${syncResult.matchedNode.name} node with balance ${dollars(syncResult.newBalance)} (Net Worth updated).`;
         } else if (syncResult.matchedNode.nodeType === 'DEBT') {
           syncStatusMsg = ` Paid down ${syncResult.matchedNode.name} to ${dollars(syncResult.newBalance)}.`;
+        } else if (transDraft.kind === 'income') {
+          syncStatusMsg = ` Added ${dollars(transDraft.amount)} to ${syncResult.matchedNode.name} balance (Net Worth +${dollars(transDraft.amount)}).`;
         } else {
-          syncStatusMsg = ` Updated ${syncResult.matchedNode.name} flow to ${dollars(syncResult.newBalance)}/mo.`;
+          syncStatusMsg = ` Deducted ${dollars(transDraft.amount)} from ${syncResult.matchedNode.name} balance (Net Worth -${dollars(transDraft.amount)}).`;
         }
       }
     }
@@ -686,7 +723,10 @@ export function BudgetingTab({
       const reverseTxn = {
         kind: transToDelete.kind === 'income' ? 'expense' : 'income',
         accountName: transToDelete.accountName || 'Checking',
+        description: transToDelete.description,
         amount: transToDelete.amount,
+        categoryName: transToDelete.categoryName,
+        isReversal: true,
       };
       const reverseSync = syncScenarioTransactionToGraph(graph, reverseTxn);
       if (reverseSync) {
@@ -1335,6 +1375,11 @@ export function BudgetingTab({
           return sum + Number(s.sharesOwned || 0) * Number(currentPrice);
         }, 0);
 
+  const activePortfolioValue =
+    propPortfolioValue !== undefined ? propPortfolioValue : totalPortfolioValue;
+  const currentTotals = totals(graph, activePortfolioValue);
+  const currentNetWorth = currentTotals.netWorth;
+
   useEffect(() => {
     const storageKey = `finapp-holdings-v1:${isDemo ? 'demo' : 'user'}:${userId || 1}`;
     if (totalPortfolioValue >= 0) {
@@ -1443,6 +1488,33 @@ export function BudgetingTab({
           marginBottom: '1rem',
         }}
       >
+        <div
+          style={{
+            background: 'var(--ui-paint-161d2b)',
+            border: '1px solid var(--ui-paint-283347)',
+            borderRadius: '8px',
+            padding: '1rem',
+          }}
+        >
+          <span style={{ fontSize: '12px', color: 'var(--ui-paint-8f9db3)', textTransform: 'uppercase' }}>
+            Overall Net Worth
+          </span>
+          <div
+            style={{
+              fontSize: '1.5rem',
+              fontWeight: 600,
+              color: currentNetWorth < 0 ? 'var(--ui-paint-f87171)' : 'var(--ui-paint-4ade80)',
+              marginTop: '4px',
+            }}
+          >
+            {dollars(currentNetWorth)}
+          </div>
+          <div style={{ fontSize: '11px', color: '#8f9db3', marginTop: '4px' }}>
+            Assets: <strong style={{ color: '#cbd5e1' }}>{dollars(currentTotals.assets)}</strong> • Debt:{' '}
+            <strong style={{ color: '#cbd5e1' }}>{dollars(currentTotals.debt)}</strong>
+          </div>
+        </div>
+
         <div
           style={{
             background: 'var(--ui-paint-161d2b)',
@@ -1753,7 +1825,7 @@ export function BudgetingTab({
         <button
           type="button"
           onClick={() => {
-            if (!activeLoad.current) void loadData(true);
+            if (!activeLoad.current) void loadData(true, true);
           }}
           disabled={!userId}
           aria-busy={refreshing}

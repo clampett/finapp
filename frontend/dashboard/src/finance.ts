@@ -223,10 +223,7 @@ export type OverviewMode = 'assets' | 'budget' | 'debt';
 export function overviewBreakdown(graph: GraphData, mode: OverviewMode, portfolioValue = 0) {
   graph = activeGraph(graph);
   const t = totals(graph, portfolioValue);
-  const nodeInvestments = graph.nodes
-    .filter((node) => !node.disabled && node.nodeType === 'INVESTMENT')
-    .reduce((sum, node) => sum + node.amountOrBalance, 0);
-  const totalInvestments = nodeInvestments + (portfolioValue > 0 ? portfolioValue : 0);
+  
   // Kept balance-sheet amounts separate from monthly flows; never encoded a
   // liability or shortfall as a negative pie wedge or counted transfers twice.
   const items =
@@ -248,9 +245,7 @@ export function overviewBreakdown(graph: GraphData, mode: OverviewMode, portfoli
           },
           {
             label: 'Investments',
-            value: graph.nodes
-              .filter((node) => node.nodeType === 'INVESTMENT')
-              .reduce((sum, node) => sum + node.amountOrBalance, 0),
+            value: t.totalInvestments,
             color: 'var(--ui-paint-a78bfa)',
           },
         ]

@@ -337,6 +337,74 @@ test('budgeting-bridge: syncScenarioTransactionToGraph updates cash account bala
   assert.equal(expenseResult.updatedGraph.edges.length, 0);
 });
 
+test('budgeting-bridge: one-time transactions affect overall net worth (+500 on income, -150 on expense, reversal on delete)', () => {
+  const scenario = {
+    nodes: [
+      { id: 'c1', name: 'Checking Account', nodeType: 'CHECKING', amountOrBalance: 2000, interestRateApr: 0 },
+      { id: 'd1', name: 'Credit Card', nodeType: 'DEBT', amountOrBalance: 1000, interestRateApr: 18 },
+    ],
+    edges: [],
+  };
+
+  const initialNetWorth = totals(scenario).netWorth;
+  assert.equal(initialNetWorth, 1000); // 2000 - 1000
+
+  // 1. Record an income transaction for $500 -> net worth rises by $500
+  const incomeSync = syncScenarioTransactionToGraph(scenario, {
+    kind: 'income',
+    description: 'Freelance Design',
+    amount: 500,
+    accountName: 'Checking',
+  });
+  assert.ok(incomeSync);
+  const netWorthAfterIncome = totals(incomeSync.updatedGraph).netWorth;
+  assert.equal(netWorthAfterIncome, 1500);
+  assert.equal(netWorthAfterIncome, initialNetWorth + 500);
+
+  // 2. Record an expense transaction for $200 -> net worth decreases by $200
+  const expenseSync = syncScenarioTransactionToGraph(incomeSync.updatedGraph, {
+    kind: 'expense',
+    description: 'Dining Out',
+    amount: 200,
+    accountName: 'Checking',
+  });
+  assert.ok(expenseSync);
+  const netWorthAfterExpense = totals(expenseSync.updatedGraph).netWorth;
+  assert.equal(netWorthAfterExpense, 1300);
+
+  // 3. Deleting the $200 expense reverses it -> net worth rises back by $200 to 1500
+  const reverseExpense = syncScenarioTransactionToGraph(expenseSync.updatedGraph, {
+    kind: 'income',
+    description: 'Dining Out',
+    amount: 200,
+    accountName: 'Checking',
+    isReversal: true,
+  });
+  assert.ok(reverseExpense);
+  assert.equal(totals(reverseExpense.updatedGraph).netWorth, 1500);
+
+  // 4. Deleting the $500 income reverses it -> net worth drops back to initial 1000
+  const reverseIncome = syncScenarioTransactionToGraph(reverseExpense.updatedGraph, {
+    kind: 'expense',
+    description: 'Freelance Design',
+    amount: 500,
+    accountName: 'Checking',
+    isReversal: true,
+  });
+  assert.ok(reverseIncome);
+  assert.equal(totals(reverseIncome.updatedGraph).netWorth, initialNetWorth);
+
+  // 5. Fallback: Recording income to 'Savings' when no savings node exists falls back to checking or creates cash node
+  const savingsIncome = syncScenarioTransactionToGraph(scenario, {
+    kind: 'income',
+    description: 'Gift',
+    amount: 300,
+    accountName: 'Savings',
+  });
+  assert.ok(savingsIncome);
+  assert.equal(totals(savingsIncome.updatedGraph).netWorth, initialNetWorth + 300);
+});
+
 test('budgeting-bridge: syncGraphNodesToRecurring automatically synchronizes scenario flow nodes into recurring transactions', () => {
   const graph = {
     nodes: [

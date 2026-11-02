@@ -221,10 +221,21 @@ export async function authRequest(
     body: JSON.stringify(body),
     signal: AbortSignal.timeout(15000),
   });
-  const data = await response.json();
+  let data: { message?: string; error?: string; userId?: number; sessionToken?: string } = {};
+  const contentType = response.headers.get('content-type') || '';
+  if (contentType.includes('application/json')) {
+    try {
+      data = await response.json();
+    } catch {
+      data = {};
+    }
+  } else {
+    const text = await response.text().catch(() => '');
+    data = { message: text || response.statusText };
+  }
   if (!response.ok)
     throw new AuthError(
-      data.message || 'The request could not be completed. Please try again.',
+      data.message || data.error || 'The request could not be completed. Please try again.',
       response.status,
       data.userId,
     );

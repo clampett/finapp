@@ -31,7 +31,16 @@ function isSafeLocalRedirectTarget(target) {
 
 app.use(
   '/api',
-  rateLimit({ windowMs: 60 * 1000, limit: 120, standardHeaders: 'draft-7', legacyHeaders: false }),
+  rateLimit({
+    windowMs: 60 * 1000,
+    limit: 600,
+    standardHeaders: 'draft-7',
+    legacyHeaders: false,
+    message: {
+      error: 'Too many requests, please try again later.',
+      message: 'Too many requests, please try again later.',
+    },
+  }),
   createApiProxy(process.env.FINAPP_API_UPSTREAM || 'http://127.0.0.1:8081'),
 );
 

@@ -15,6 +15,7 @@ import {
   addStockUnified,
   loadUnifiedHoldings,
   parseLocalHoldings,
+  saveLocalHoldings,
   removeStockUnified,
   updateSharesUnified,
   saveStoredPortfolioValue,
@@ -119,7 +120,18 @@ export function Investing({
             setQuotes((cur) => ({ ...cur, [sym]: 'loading' }));
             fetchQuote(sym, reqCtrl.signal)
               .then((quote) => {
-                if (!reqCtrl.signal.aborted) setQuotes((cur) => ({ ...cur, [sym]: quote }));
+                if (!reqCtrl.signal.aborted) {
+                  setQuotes((cur) => ({ ...cur, [sym]: quote }));
+                  setHoldings((curHoldings) => {
+                    const updated = curHoldings.map((h) =>
+                      h.symbol === sym
+                        ? { ...h, lastPrice: quote.latest_price, companyName: quote.name || h.companyName }
+                        : h,
+                    );
+                    saveLocalHoldings(storageKey, updated);
+                    return updated;
+                  });
+                }
               })
               .catch((err) => {
                 if (!reqCtrl.signal.aborted)
@@ -153,7 +165,18 @@ export function Investing({
               setQuotes((cur) => ({ ...cur, [sym]: 'loading' }));
               fetchQuote(sym, reqCtrl.signal)
                 .then((quote) => {
-                  if (!reqCtrl.signal.aborted) setQuotes((cur) => ({ ...cur, [sym]: quote }));
+                  if (!reqCtrl.signal.aborted) {
+                    setQuotes((cur) => ({ ...cur, [sym]: quote }));
+                    setHoldings((curHoldings) => {
+                      const updated = curHoldings.map((h) =>
+                        h.symbol === sym
+                          ? { ...h, lastPrice: quote.latest_price, companyName: quote.name || h.companyName }
+                          : h,
+                      );
+                      saveLocalHoldings(storageKey, updated);
+                      return updated;
+                    });
+                  }
                 })
                 .catch(() => {})
                 .finally(() => {
@@ -268,18 +291,18 @@ export function Investing({
     ...h,
     state: quotes[h.symbol] as QuoteState | undefined,
   }));
-  const total = rows.reduce(
-    (sum, { shares, state }) => sum + (isQuote(state) ? state.latest_price * shares : 0),
-    0,
-  );
+  const total = rows.reduce((sum, { shares, state, lastPrice }) => {
+    const price = isQuote(state) ? state.latest_price : Number(lastPrice || 0);
+    return sum + price * shares;
+  }, 0);
 
   useEffect(() => {
-    if (total >= 0) {
+    if (total > 0 || holdings.length === 0) {
       if (saveStoredPortfolioValue(storageKey, total)) {
         notifyPortfolioUpdated();
       }
     }
-  }, [total, storageKey]);
+  }, [total, storageKey, holdings.length]);
   const activeSymbol =
     selected && holdings.some((h) => h.symbol === selected)
       ? selected
@@ -383,7 +406,7 @@ export function Investing({
               </tr>
             </thead>
             <tbody>
-              {rows.map(({ symbol: sym, shares, state }) => {
+              {rows.map(({ symbol: sym, shares, state, lastPrice }) => {
                 const quote = isQuote(state) ? state : null;
                 const problem = errorOf(state);
                 return (
@@ -405,8 +428,8 @@ export function Investing({
                         onChange={(event) => setShares(sym, event.target.value)}
                       />
                     </td>
-                    <td className="p-[13px_20px] border-t border-(--ui-border-263147) text-text max-[760px]:p-[11px_14px]">{quote ? dollars(quote.latest_price) : problem ? '—' : 'Loading…'}</td>
-                    <td className="p-[13px_20px] border-t border-(--ui-border-263147) text-text max-[760px]:p-[11px_14px]">{quote ? dollars(quote.latest_price * shares) : '—'}</td>
+                    <td className="p-[13px_20px] border-t border-(--ui-border-263147) text-text max-[760px]:p-[11px_14px]">{quote ? dollars(quote.latest_price) : lastPrice ? dollars(lastPrice) : problem ? '—' : 'Loading…'}</td>
+                    <td className="p-[13px_20px] border-t border-(--ui-border-263147) text-text max-[760px]:p-[11px_14px]">{quote ? dollars(quote.latest_price * shares) : lastPrice ? dollars(lastPrice * shares) : '—'}</td>
                     <td
                       className={`p-[13px_20px] border-t border-(--ui-border-263147) text-text max-[760px]:p-[11px_14px] ${
                         quote && quote.cagr !== null

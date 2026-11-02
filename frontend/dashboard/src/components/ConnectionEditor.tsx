@@ -22,14 +22,14 @@ export function ConnectionEditor({
   const percent = draft.percentageFlow != null;
   const target = graph.nodes.find((node) => node.id === draft.targetNodeId);
   return (
-    <aside className="w-71.25 border border-[#334055] rounded-[11px] p-4.75 bg-[#151d2b] shrink-0 max-md:w-full">
+    <aside className="w-71.25 border border-[color:var(--ui-border-334055)] rounded-[11px] p-4.75 bg-[var(--ui-surface-151d2b)] shrink-0 max-md:w-full">
       <div className="flex items-center justify-between gap-4">
         <div>
-          <div className="text-[9px] text-[#a9b7ce] tracking-[1.7px] font-semibold mb-2.5 max-md:mb-1.25">MONTHLY ROUTE</div>
+          <div className="text-[9px] text-[color:var(--ui-text-a9b7ce)] tracking-[1.7px] font-semibold mb-2.5 max-md:mb-1.25">MONTHLY ROUTE</div>
           <h3 className="text-[15px] font-semibold text-text m-0">{isNew ? 'New connection' : 'Edit connection'}</h3>
         </div>
         <button
-          className="p-0 leading-none bg-[#1d2737] hover:bg-[#263346] border border-[#334057] rounded-[7px] grid place-items-center w-7.5 h-7.5 text-[20px] text-[#a5b5cd] hover:text-white shrink-0 cursor-pointer"
+          className="p-0 leading-none bg-[var(--ui-surface-1d2737)] hover:bg-[var(--ui-surface-hover-263346)] border border-[color:var(--ui-border-334057)] rounded-[7px] grid place-items-center w-7.5 h-7.5 text-[20px] text-[color:var(--ui-text-a5b5cd)] hover:text-white shrink-0 cursor-pointer"
           aria-label="Close connection editor"
           title="Close"
           onClick={onClose}
@@ -44,10 +44,10 @@ export function ConnectionEditor({
           onSave(draft);
         }}
       >
-        <label className="flex flex-col gap-1.75 text-[11px] text-[#a9b6cc]">
+        <label className="flex flex-col gap-1.75 text-[11px] text-[color:var(--ui-text-a9b6cc)]">
           From
           <select
-            className="w-full text-xs min-w-0 border border-border rounded-lg bg-[#101722] text-[#edf2fa] px-2.75 py-2.5 cursor-pointer"
+            className="w-full text-xs min-w-0 border border-border rounded-lg bg-[var(--ui-surface-101722)] text-[color:var(--ui-text-edf2fa)] px-2.75 py-2.5 cursor-pointer"
             value={draft.sourceNodeId}
             onChange={(event) => setDraft({ ...draft, sourceNodeId: event.target.value })}
           >
@@ -58,10 +58,10 @@ export function ConnectionEditor({
             ))}
           </select>
         </label>
-        <label className="flex flex-col gap-1.75 text-[11px] text-[#a9b6cc]">
+        <label className="flex flex-col gap-1.75 text-[11px] text-[color:var(--ui-text-a9b6cc)]">
           To
           <select
-            className="w-full text-xs min-w-0 border border-border rounded-lg bg-[#101722] text-[#edf2fa] px-2.75 py-2.5 cursor-pointer"
+            className="w-full text-xs min-w-0 border border-border rounded-lg bg-[var(--ui-surface-101722)] text-[color:var(--ui-text-edf2fa)] px-2.75 py-2.5 cursor-pointer"
             value={draft.targetNodeId}
             onChange={(event) => setDraft({ ...draft, targetNodeId: event.target.value })}
           >
@@ -72,10 +72,10 @@ export function ConnectionEditor({
             ))}
           </select>
         </label>
-        <label className="flex flex-col gap-1.75 text-[11px] text-[#a9b6cc]">
+        <label className="flex flex-col gap-1.75 text-[11px] text-[color:var(--ui-text-a9b6cc)]">
           Flow type
           <select
-            className="w-full text-xs min-w-0 border border-border rounded-lg bg-[#101722] text-[#edf2fa] px-2.75 py-2.5 cursor-pointer"
+            className="w-full text-xs min-w-0 border border-border rounded-lg bg-[var(--ui-surface-101722)] text-[color:var(--ui-text-edf2fa)] px-2.75 py-2.5 cursor-pointer"
             value={percent ? 'percent' : 'fixed'}
             onChange={(event) =>
               setDraft({
@@ -89,7 +89,7 @@ export function ConnectionEditor({
             <option value="percent">Percentage</option>
           </select>
         </label>
-        <label className="flex flex-col gap-1.75 text-[11px] text-[#a9b6cc]">
+        <label className="flex flex-col gap-1.75 text-[11px] text-[color:var(--ui-text-a9b6cc)]">
           {percent ? 'Percentage (%)' : 'Monthly amount ($)'}
           <NumberField
             type="number"
@@ -108,7 +108,7 @@ export function ConnectionEditor({
             }
           />
         </label>
-        <p className="text-[#8b9ab1] text-[11px] leading-normal m-0">
+        <p className="text-[color:var(--ui-text-8b9ab1)] text-[11px] leading-normal m-0">
           {target?.nodeType === 'EXPENSE'
             ? 'Incoming routes from income/checking replace this expense’s default amount. Percentages use household take-home income.'
             : target?.nodeType === 'DEBT'
@@ -120,13 +120,13 @@ export function ConnectionEditor({
         {draft.sourceNodeId === draft.targetNodeId && (
           <p className="text-xs text-coral m-0" role="alert">Choose two different nodes.</p>
         )}
-        <button className="inline-flex items-center justify-center gap-1.75 whitespace-nowrap rounded-[7px] px-3.25 py-2.25 text-[11px] font-medium min-h-8.5 cursor-pointer bg-primary text-primary-fg border border-primary hover:bg-[#cbbafa] disabled:opacity-40 disabled:cursor-not-allowed" disabled={draft.sourceNodeId === draft.targetNodeId}>
+        <button className="inline-flex items-center justify-center gap-1.75 whitespace-nowrap rounded-[7px] px-3.25 py-2.25 text-[11px] font-medium min-h-8.5 cursor-pointer bg-primary text-primary-fg border border-primary hover:bg-[var(--ui-surface-hover-cbbafa)] disabled:opacity-40 disabled:cursor-not-allowed" disabled={draft.sourceNodeId === draft.targetNodeId}>
           Apply connection
         </button>
-        <button type="button" className="inline-flex items-center justify-center gap-1.75 whitespace-nowrap rounded-[7px] px-3.25 py-2.25 text-[11px] font-medium min-h-8.5 cursor-pointer text-coral border border-[#633246] bg-[#2b1b28] hover:bg-[#3d2034]" onClick={onDelete}>
+        <button type="button" className="inline-flex items-center justify-center gap-1.75 whitespace-nowrap rounded-[7px] px-3.25 py-2.25 text-[11px] font-medium min-h-8.5 cursor-pointer text-coral border border-[color:var(--ui-border-633246)] bg-[var(--ui-surface-2b1b28)] hover:bg-[var(--ui-surface-hover-3d2034)]" onClick={onDelete}>
           {isNew ? 'Discard connection' : 'Remove connection'}
         </button>
-        <small className="text-[10px] text-[#7d91ac] leading-[1.6]">
+        <small className="text-[10px] text-[color:var(--ui-text-7d91ac)] leading-[1.6]">
           Changes update the graph and the next simulation. Undo restores a removed connection.
         </small>
       </form>

@@ -65,30 +65,30 @@ export const ForecastChart = memo(function ForecastChart({
   return (
     <div className="h-full flex flex-col">
       <div className="flex gap-3.25 flex-wrap items-center my-[7px_15px]">
-        <div className="inline-flex border border-[#334459] rounded-[7px] p-0.75 bg-[#101824]" aria-label="Chart time range">
-          <button className={`border-0 rounded-sm text-[10px] bg-transparent p-[7px_10px] cursor-pointer transition-colors ${!early ? 'selected bg-[#29443e] text-[#c4f1df] font-medium' : 'text-[#8ea4bd] hover:text-[#edf2fa]'}`} onClick={() => setEarly(false)}>
+        <div className="inline-flex border border-[color:var(--ui-border-334459)] rounded-[7px] p-0.75 bg-[var(--ui-surface-101824)]" aria-label="Chart time range">
+          <button className={`border-0 rounded-sm text-[10px] bg-transparent p-[7px_10px] cursor-pointer transition-colors ${!early ? 'selected bg-[var(--ui-surface-29443e)] text-[color:var(--ui-text-c4f1df)] font-medium' : 'text-[color:var(--ui-text-8ea4bd)] hover:text-[color:var(--ui-text-edf2fa)]'}`} onClick={() => setEarly(false)}>
             Full horizon
           </button>
-          <button className={`border-0 rounded-sm text-[10px] bg-transparent p-[7px_10px] cursor-pointer transition-colors ${early ? 'selected bg-[#29443e] text-[#c4f1df] font-medium' : 'text-[#8ea4bd] hover:text-[#edf2fa]'}`} onClick={() => setEarly(true)}>
+          <button className={`border-0 rounded-sm text-[10px] bg-transparent p-[7px_10px] cursor-pointer transition-colors ${early ? 'selected bg-[var(--ui-surface-29443e)] text-[color:var(--ui-text-c4f1df)] font-medium' : 'text-[color:var(--ui-text-8ea4bd)] hover:text-[color:var(--ui-text-edf2fa)]'}`} onClick={() => setEarly(true)}>
             First 5 years
           </button>
         </div>
-        <label className="inline-flex gap-1.5 items-center text-[10px] text-[#a6b7ce] cursor-pointer">
-          <input className="accent-[#8bd8ba] w-3 h-3 cursor-pointer" type="checkbox" checked={samples} onChange={(e) => setSamples(e.target.checked)} />{' '}
+        <label className="inline-flex gap-1.5 items-center text-[10px] text-[color:var(--ui-text-a6b7ce)] cursor-pointer">
+          <input className="accent-[var(--ui-paint-8bd8ba)] w-3 h-3 cursor-pointer" type="checkbox" checked={samples} onChange={(e) => setSamples(e.target.checked)} />{' '}
           Sample paths
         </label>
-        <label className="inline-flex gap-1.5 items-center text-[10px] text-[#a6b7ce] cursor-pointer">
+        <label className="inline-flex gap-1.5 items-center text-[10px] text-[color:var(--ui-text-a6b7ce)] cursor-pointer">
           <input
-            className="accent-[#8bd8ba] w-3 h-3 cursor-pointer"
+            className="accent-[var(--ui-paint-8bd8ba)] w-3 h-3 cursor-pointer"
             type="checkbox"
             checked={reference}
             onChange={(e) => setReference(e.target.checked)}
           />{' '}
           Cashflow reference
         </label>
-        <label className="inline-flex gap-1.5 items-center text-[10px] text-[#a6b7ce] cursor-pointer" title="Compresses large balances while keeping negative values and zero">
+        <label className="inline-flex gap-1.5 items-center text-[10px] text-[color:var(--ui-text-a6b7ce)] cursor-pointer" title="Compresses large balances while keeping negative values and zero">
           <input
-            className="accent-[#8bd8ba] w-3 h-3 cursor-pointer"
+            className="accent-[var(--ui-paint-8bd8ba)] w-3 h-3 cursor-pointer"
             type="checkbox"
             checked={compressed}
             onChange={(e) => setCompressed(e.target.checked)}
@@ -108,32 +108,32 @@ export const ForecastChart = memo(function ForecastChart({
           >
             <defs>
               <linearGradient id={`${id}-band`} x1="0" y1="0" x2="0" y2="1">
-                <stop offset="0%" stopColor="#b8a3fa" stopOpacity={0.22} />
-                <stop offset="100%" stopColor="#778cdd" stopOpacity={0.03} />
+                <stop offset="0%" stopColor="var(--ui-paint-b8a3fa)" stopOpacity={0.22} />
+                <stop offset="100%" stopColor="var(--ui-paint-778cdd)" stopOpacity={0.03} />
               </linearGradient>
               <linearGradient id={`${id}-median`} x1="0" y1="0" x2="0" y2="1">
-                <stop offset={offset} stopColor="#7de0bc" />
-                <stop offset={offset} stopColor="#ff879b" />
+                <stop offset={offset} stopColor="var(--ui-paint-7de0bc)" />
+                <stop offset={offset} stopColor="var(--ui-paint-ff879b)" />
               </linearGradient>
               <linearGradient id={`${id}-fill`} x1="0" y1="0" x2="0" y2="1">
-                <stop offset={offset} stopColor="#65d8b0" stopOpacity={0.1} />
-                <stop offset={offset} stopColor="#ff718c" stopOpacity={0.12} />
+                <stop offset={offset} stopColor="var(--ui-paint-65d8b0)" stopOpacity={0.1} />
+                <stop offset={offset} stopColor="var(--ui-paint-ff718c)" stopOpacity={0.12} />
               </linearGradient>
             </defs>
             {min < 0 && (
               <ReferenceArea
                 y1={domain[0]}
                 y2={0}
-                fill="#ff6b88"
+                fill="var(--ui-paint-ff6b88)"
                 fillOpacity={0.045}
                 stroke="none"
               />
             )}
-            <CartesianGrid strokeDasharray="3 7" stroke="#29364a" vertical={false} />
+            <CartesianGrid strokeDasharray="3 7" stroke="var(--ui-paint-29364a)" vertical={false} />
             <XAxis
               dataKey="year"
               tickFormatter={(v) => `Y${v}`}
-              tick={{ fill: '#91a3bd', fontSize: 11 }}
+              tick={{ fill: 'var(--ui-paint-91a3bd)', fontSize: 11 }}
               minTickGap={22}
               axisLine={false}
               tickLine={false}
@@ -144,19 +144,19 @@ export const ForecastChart = memo(function ForecastChart({
               scale={compressed ? scale : 'linear'}
               tickFormatter={(v) => money(v, true)}
               width={82}
-              tick={{ fill: '#91a3bd', fontSize: 11 }}
+              tick={{ fill: 'var(--ui-paint-91a3bd)', fontSize: 11 }}
               axisLine={false}
               tickLine={false}
               allowDataOverflow
             />
             <ReferenceLine
               y={0}
-              stroke="#9caec5"
+              stroke="var(--ui-paint-9caec5)"
               strokeWidth={1.3}
               label={{
                 value: '$0 · net worth breakeven',
                 position: 'insideTopRight',
-                fill: '#a6b7ce',
+                fill: 'var(--ui-paint-a6b7ce)',
                 fontSize: 10,
               }}
             />
@@ -165,10 +165,10 @@ export const ForecastChart = memo(function ForecastChart({
                 if (!active || !payload?.length) return null;
                 const point = payload[0]?.payload as ForecastPoint;
                 return (
-                  <div className="p-[13px_15px] bg-[#1c2638] border border-[#47536d] rounded-[9px] shadow-[0_10px_30px_#0005] min-w-57.5 text-[11px]">
-                    <strong className="block text-[11px] text-[#d9e3f3] mb-3">
+                  <div className="p-[13px_15px] bg-[var(--ui-surface-1c2638)] border border-[color:var(--ui-border-47536d)] rounded-[9px] shadow-[0_10px_30px_var(--ui-shadow-0005)] min-w-57.5 text-[11px]">
+                    <strong className="block text-[11px] text-[color:var(--ui-text-d9e3f3)] mb-3">
                       Year {point.year}{' '}
-                      <small className="text-[9px] text-[#8095ae] font-normal ml-2.5">{realDollars ? 'today’s dollars' : 'nominal dollars'}</small>
+                      <small className="text-[9px] text-[color:var(--ui-text-8095ae)] font-normal ml-2.5">{realDollars ? 'today’s dollars' : 'nominal dollars'}</small>
                     </strong>
                     {(['p90', 'p50', 'p10'] as const).map((key, i) => (
                       <div key={key} className="flex justify-between gap-5.5 mt-2.5">
@@ -179,12 +179,12 @@ export const ForecastChart = memo(function ForecastChart({
                       </div>
                     ))}
                     {reference && (
-                      <div className="border-t border-[#344357] pt-2.25 mt-2.5 flex justify-between gap-5.5">
+                      <div className="border-t border-[color:var(--ui-border-344357)] pt-2.25 mt-2.5 flex justify-between gap-5.5">
                         <span>Cashflow reference</span>
                         <b className="font-semibold text-text">{dollars(point.reference)}</b>
                       </div>
                     )}
-                    {point.p50 < 0 && <p className="mt-2 text-[#e6a6b2] text-[10px] m-0">Median liabilities still exceed assets.</p>}
+                    {point.p50 < 0 && <p className="mt-2 text-[color:var(--ui-text-e6a6b2)] text-[10px] m-0">Median liabilities still exceed assets.</p>}
                   </div>
                 );
               }}
@@ -204,7 +204,7 @@ export const ForecastChart = memo(function ForecastChart({
                 <Line
                   key={i}
                   dataKey={`path_${i}`}
-                  stroke="#829bc0"
+                  stroke="var(--ui-paint-829bc0)"
                   strokeOpacity={0.27}
                   strokeWidth={0.8}
                   dot={false}
@@ -216,7 +216,7 @@ export const ForecastChart = memo(function ForecastChart({
             {reference && (
               <Line
                 dataKey="reference"
-                stroke="#a6b2c8"
+                stroke="var(--ui-paint-a6b2c8)"
                 strokeDasharray="5 5"
                 strokeWidth={1.3}
                 dot={false}
@@ -225,14 +225,14 @@ export const ForecastChart = memo(function ForecastChart({
             )}
             <Line
               dataKey="p90"
-              stroke="#a4a3f6"
+              stroke="var(--ui-paint-a4a3f6)"
               strokeWidth={1.5}
               dot={false}
               isAnimationActive={false}
             />
             <Line
               dataKey="p10"
-              stroke="#ee8ea8"
+              stroke="var(--ui-paint-ee8ea8)"
               strokeWidth={1.5}
               dot={false}
               isAnimationActive={false}
@@ -244,15 +244,15 @@ export const ForecastChart = memo(function ForecastChart({
               strokeLinecap="round"
               strokeLinejoin="round"
               dot={false}
-              activeDot={{ r: 5, fill: '#e9f6ff', stroke: '#10212c', strokeWidth: 2 }}
+              activeDot={{ r: 5, fill: 'var(--ui-paint-e9f6ff)', stroke: 'var(--ui-paint-10212c)', strokeWidth: 2 }}
               isAnimationActive={false}
             />
           </ComposedChart>
         </ResponsiveContainer>
       </div>
-      <div className="flex justify-between flex-wrap gap-2 text-[#839ab3] text-[9px] p-[9px_8px_2px]">
+      <div className="flex justify-between flex-wrap gap-2 text-[color:var(--ui-text-839ab3)] text-[9px] p-[9px_8px_2px]">
         <span>
-          <i className="inline-block w-3.75 h-1.75 mr-1.75 bg-[#8a7eb445] border border-[#9480c07a] rounded-xs align-middle" /> Middle 80% of simulated outcomes
+          <i className="inline-block w-3.75 h-1.75 mr-1.75 bg-[var(--ui-surface-8a7eb445)] border border-[color:var(--ui-border-9480c07a)] rounded-xs align-middle" /> Middle 80% of simulated outcomes
         </span>
         <span>
           {compressed ? 'Compressed distances · signs retained' : 'Linear dollar scale'} ·{' '}

@@ -31,12 +31,39 @@ function applyTheme(theme: 'light' | 'dark') {
   const label = `Switch to ${theme === 'dark' ? 'light' : 'dark'} theme`;
   themeButton?.setAttribute('aria-label', label);
   themeButton?.setAttribute('title', label);
+  themeButton?.setAttribute('aria-pressed', String(theme === 'light'));
+  document
+    .querySelector('meta[name="theme-color"]')
+    ?.setAttribute('content', theme === 'light' ? '#f3f4f7' : '#0c1018');
 }
-applyTheme(storage.get('user-theme') === 'light' ? 'light' : 'dark');
+const systemTheme = matchMedia('(prefers-color-scheme: light)');
+const preferredTheme = storage.get('user-theme');
+applyTheme(
+  preferredTheme === 'light' || preferredTheme === 'dark'
+    ? preferredTheme
+    : systemTheme.matches
+      ? 'light'
+      : 'dark',
+);
 themeButton?.addEventListener('click', () => {
   const theme = doc.dataset.theme === 'dark' ? 'light' : 'dark';
   applyTheme(theme);
   storage.set('user-theme', theme);
+});
+// Synchronized open public tabs without replacing a preference explicitly selected by the user.
+window.addEventListener('storage', (event) => {
+  if (event.key === 'user-theme') {
+    applyTheme(
+      event.newValue === 'light' || event.newValue === 'dark'
+        ? event.newValue
+        : systemTheme.matches
+          ? 'light'
+          : 'dark',
+    );
+  }
+});
+systemTheme.addEventListener('change', (event) => {
+  if (!storage.get('user-theme')) applyTheme(event.matches ? 'light' : 'dark');
 });
 const menu = document.getElementById('site-navigation');
 // Synchronized the mobile menu's visible state and accessibility attributes,

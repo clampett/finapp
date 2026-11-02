@@ -90,3 +90,19 @@ The retained hosted supervisor can be checked separately with `python -m black -
 PowerShell formatting uses the optional PSScriptAnalyzer module and the committed settings. Normalize line endings before invoking its formatter. Existing scripts can be syntax-checked with PowerShell's parser without running Docker or launching the application.
 
 Java tests run with `./mvnw.cmd test` from `java-backend`. The application-context test needs PostgreSQL; use a disposable database for isolated checks rather than creating more test accounts in the regular development database.
+
+## Public website pages
+
+The public website is authored in `frontend/landing/pages`. The home page keeps the interactive profile preview; `/features`, `/how-it-works`, `/scenarios`, and `/faq` are separate static pages with descriptions and accessible SVG diagrams based on the current model. Diagram captions distinguish conceptual illustrations from actual simulated results. Express serves these clean routes and their `.html` redirects automatically from the existing static-page allowlist.
+
+`frontend/landing/src/css/style.css` contains the shared Tailwind tokens and imports `public.css` for the public website layouts, illustrations, and responsive theme control. The dashboard styles are separate. `theme-init.ts` is loaded synchronously before the stylesheet on every public page, including authentication and 404 pages. It restores `user-theme` from localStorage, or follows the device preference until a choice is saved. `main.ts` handles the switch, accessible labels, cross-tab updates, and system-preference changes. Storage access remains optional so restricted browsers still load the pages.
+
+Build with `npm run build --prefix ./frontend`. Theme behavior can be checked with `node --test frontend/test/landing-theme.test.js`. The public pages need no external image service, font CDN, or paid resource.
+
+### Dashboard appearance
+
+`frontend/dashboard/src/useTheme.ts` controls the header's sun/moon switch and shares the public pages' `user-theme` preference. The dashboard HTML restores this preference before styles paint. The hook follows changes made in other tabs and uses the device preference until an explicit choice has been saved. Appearance stays usable if storage is blocked.
+
+`theme.css` defines the light semantic colors and canvas interaction states. `theme-palette.css` preserves the existing dark component colors and provides light equivalents for surfaces, labels, borders, chart paints, and shadows. Component utilities and SVG presentation values reference these variables so a theme change updates charts without rebuilding the scenario or requesting a new simulation. Prefer semantic utilities such as `bg-surface`, `text-muted`, and `border-border` for new UI. If a distinct legacy paint is needed, supply both dark and light variable values.
+
+Run `node --test frontend/test/dashboard-theme.test.js` to check saved preferences, cross-tab updates, blocked storage, listener cleanup, and visual variable coverage.

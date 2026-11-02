@@ -43,11 +43,11 @@ export function CanvasToolbar({
   tool: CanvasTool;
   onToolChange: (tool: CanvasTool) => void;
 }) {
-  const toolBtnClass = "w-[34px] h-[34px] max-xs:w-[29px] max-xs:h-[32px] min-h-0 p-0 grid place-items-center border-0 rounded-[7px] bg-transparent text-[#a8bbd2] cursor-pointer leading-none transition-colors duration-150 hover:not-disabled:bg-[#2b3d52] hover:not-disabled:text-[#f0f7ff] aria-pressed:bg-[#29443f] aria-pressed:text-[#89e5c8] disabled:opacity-30 disabled:cursor-default focus-visible:outline-2 focus-visible:outline-[#9be5d0] focus-visible:outline-offset-2";
-  const toolAccentBtnClass = "w-[34px] h-[34px] max-xs:w-[29px] max-xs:h-[32px] min-h-0 p-0 grid place-items-center border-0 rounded-[7px] bg-[#b6a3ef] text-[#1a1530] hover:not-disabled:bg-[#d0c1fb] hover:not-disabled:text-[#171024] cursor-pointer leading-none transition-colors duration-150 disabled:opacity-30 disabled:cursor-default focus-visible:outline-2 focus-visible:outline-[#9be5d0] focus-visible:outline-offset-2";
+  const toolBtnClass = "w-[34px] h-[34px] max-xs:w-[29px] max-xs:h-[32px] min-h-0 p-0 grid place-items-center border-0 rounded-[7px] bg-transparent text-[color:var(--ui-text-a8bbd2)] cursor-pointer leading-none transition-colors duration-150 hover:not-disabled:bg-[var(--ui-surface-hover-2b3d52)] hover:not-disabled:text-[color:var(--ui-text-f0f7ff)] aria-pressed:bg-[var(--ui-surface-29443f)] aria-pressed:text-[color:var(--ui-text-89e5c8)] disabled:opacity-30 disabled:cursor-default focus-visible:outline-2 focus-visible:outline-[var(--ui-border-9be5d0)] focus-visible:outline-offset-2";
+  const toolAccentBtnClass = "w-[34px] h-[34px] max-xs:w-[29px] max-xs:h-[32px] min-h-0 p-0 grid place-items-center border-0 rounded-[7px] bg-[var(--ui-surface-b6a3ef)] text-[color:var(--ui-text-1a1530)] hover:not-disabled:bg-[var(--ui-surface-hover-d0c1fb)] hover:not-disabled:text-[color:var(--ui-text-171024)] cursor-pointer leading-none transition-colors duration-150 disabled:opacity-30 disabled:cursor-default focus-visible:outline-2 focus-visible:outline-[var(--ui-border-9be5d0)] focus-visible:outline-offset-2";
 
   return (
-    <div className="flex items-center gap-0.75 p-1.25 bg-[#152031ed] border border-[#34485c] rounded-xl shadow-[0_8px_25px_#0005,inset_0_1px_#ffffff06] backdrop-blur-[18px] max-xs:flex-wrap max-xs:gap-px" role="toolbar" aria-label="Node canvas tools">
+    <div className="flex items-center gap-0.75 p-1.25 bg-[var(--ui-surface-152031ed)] border border-[color:var(--ui-border-34485c)] rounded-xl shadow-[0_8px_25px_var(--ui-shadow-0005),inset_0_1px_var(--ui-shadow-ffffff06)] backdrop-blur-[18px] max-xs:flex-wrap max-xs:gap-px" role="toolbar" aria-label="Node canvas tools">
       <button
         className={toolBtnClass}
         aria-label="Undo last graph edit"
@@ -66,7 +66,7 @@ export function CanvasToolbar({
       >
         <CanvasIcon name="redo" />
       </button>
-      <span className="w-px h-4.75 mx-1 bg-[#35445a]" />
+      <span className="w-px h-4.75 mx-1 bg-[var(--ui-surface-35445a)]" />
       {canvasAvailable && (
         <>
           <button
@@ -115,7 +115,7 @@ export function CanvasToolbar({
       >
         <CanvasIcon name="add" />
       </button>
-      <span className="w-px h-4.75 mx-1 bg-[#35445a]" />
+      <span className="w-px h-4.75 mx-1 bg-[var(--ui-surface-35445a)]" />
       {canvasAvailable && (
         <>
           <button
@@ -138,26 +138,26 @@ export function CanvasToolbar({
         </>
       )}
       <details className="relative group">
-        <summary className="w-8.5 h-8.5 max-xs:w-7.25 max-xs:h-8 min-h-0 p-0 grid place-items-center border-0 rounded-[7px] bg-transparent text-[#a8bbd2] cursor-pointer leading-none transition-colors duration-150 hover:bg-[#2b3d52] hover:text-[#f0f7ff] group-open:bg-[#2b3d52] group-open:text-[#f0f7ff] list-none select-none [&::-webkit-details-marker]:hidden" aria-label="More canvas actions" title="More actions">
+        <summary className="w-8.5 h-8.5 max-xs:w-7.25 max-xs:h-8 min-h-0 p-0 grid place-items-center border-0 rounded-[7px] bg-transparent text-[color:var(--ui-text-a8bbd2)] cursor-pointer leading-none transition-colors duration-150 hover:bg-[var(--ui-surface-hover-2b3d52)] hover:text-[color:var(--ui-text-f0f7ff)] group-open:bg-[var(--ui-surface-2b3d52)] group-open:text-[color:var(--ui-text-f0f7ff)] list-none select-none [&::-webkit-details-marker]:hidden" aria-label="More canvas actions" title="More actions">
           <CanvasIcon name="more" />
         </summary>
         <div
-          className="absolute top-[calc(100%+12px)] -right-1.25 w-55 p-1.5 border border-[#3c4d65] rounded-xl bg-float shadow-[0_18px_50px_#0009] z-20"
+          className="absolute top-[calc(100%+12px)] -right-1.25 w-55 p-1.5 border border-[color:var(--ui-border-3c4d65)] rounded-xl bg-float shadow-[0_18px_50px_var(--ui-shadow-0009)] z-20"
           onClick={(event) => event.currentTarget.closest('details')?.removeAttribute('open')}
         >
-          <button className="flex items-center gap-3 p-[11px_12px] border-0 rounded-[7px] w-full bg-transparent text-left text-xs text-[#d3dfec] hover:bg-[#2b3c51] cursor-pointer focus-visible:outline-2 focus-visible:outline-[#9be5d0] focus-visible:outline-offset-2" aria-label="Restore removed nodes" onClick={onRestore}>
+          <button className="flex items-center gap-3 p-[11px_12px] border-0 rounded-[7px] w-full bg-transparent text-left text-xs text-[color:var(--ui-text-d3dfec)] hover:bg-[var(--ui-surface-hover-2b3c51)] cursor-pointer focus-visible:outline-2 focus-visible:outline-[var(--ui-border-9be5d0)] focus-visible:outline-offset-2" aria-label="Restore removed nodes" onClick={onRestore}>
             <CanvasIcon name="restore" />
-            Restore nodes <span className="ml-auto text-[#8de3c8]">{removed}</span>
+            Restore nodes <span className="ml-auto text-[color:var(--ui-text-8de3c8)]">{removed}</span>
           </button>
-          <button className="flex items-center gap-3 p-[11px_12px] border-0 rounded-[7px] w-full bg-transparent text-left text-xs text-[#d3dfec] hover:bg-[#2b3c51] cursor-pointer focus-visible:outline-2 focus-visible:outline-[#9be5d0] focus-visible:outline-offset-2" aria-label="Import scenario" onClick={onImport}>
+          <button className="flex items-center gap-3 p-[11px_12px] border-0 rounded-[7px] w-full bg-transparent text-left text-xs text-[color:var(--ui-text-d3dfec)] hover:bg-[var(--ui-surface-hover-2b3c51)] cursor-pointer focus-visible:outline-2 focus-visible:outline-[var(--ui-border-9be5d0)] focus-visible:outline-offset-2" aria-label="Import scenario" onClick={onImport}>
             <CanvasIcon name="import" />
             Import scenario
           </button>
-          <button className="flex items-center gap-3 p-[11px_12px] border-0 rounded-[7px] w-full bg-transparent text-left text-xs text-[#d3dfec] hover:bg-[#2b3c51] cursor-pointer focus-visible:outline-2 focus-visible:outline-[#9be5d0] focus-visible:outline-offset-2" aria-label="Export scenario" onClick={onExport}>
+          <button className="flex items-center gap-3 p-[11px_12px] border-0 rounded-[7px] w-full bg-transparent text-left text-xs text-[color:var(--ui-text-d3dfec)] hover:bg-[var(--ui-surface-hover-2b3c51)] cursor-pointer focus-visible:outline-2 focus-visible:outline-[var(--ui-border-9be5d0)] focus-visible:outline-offset-2" aria-label="Export scenario" onClick={onExport}>
             <CanvasIcon name="export" />
             Export scenario
           </button>
-          <button className="flex items-center gap-3 p-[11px_12px] border-0 rounded-[7px] w-full bg-transparent text-left text-xs text-[#d3dfec] hover:bg-[#2b3c51] cursor-pointer focus-visible:outline-2 focus-visible:outline-[#9be5d0] focus-visible:outline-offset-2 disabled:opacity-30 disabled:cursor-not-allowed" aria-label="Reset scenario" onClick={onReset} disabled={!canReset}>
+          <button className="flex items-center gap-3 p-[11px_12px] border-0 rounded-[7px] w-full bg-transparent text-left text-xs text-[color:var(--ui-text-d3dfec)] hover:bg-[var(--ui-surface-hover-2b3c51)] cursor-pointer focus-visible:outline-2 focus-visible:outline-[var(--ui-border-9be5d0)] focus-visible:outline-offset-2 disabled:opacity-30 disabled:cursor-not-allowed" aria-label="Reset scenario" onClick={onReset} disabled={!canReset}>
             <CanvasIcon name="reset" />
             Reset scenario
           </button>

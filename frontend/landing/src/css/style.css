@@ -1,4 +1,5 @@
 @import 'tailwindcss';
+@import './public.css';
 @source "../../pages";
 
 @theme {
@@ -36,24 +37,26 @@
   --mint: #85e0bb;
   --coral: #fb8296;
   --blue: #7db9fa;
+  --amber: #d6a74e;
   --shadow: #0005;
 }
 
 [data-theme='light'] {
   color-scheme: light;
-  --background: #f5f7fb;
-  --foreground: #526079;
+  --background: #f3f4f7;
+  --foreground: #536176;
   --card: #ffffff;
-  --primary: #6650a8;
+  --primary: #6544ad;
   --primary-foreground: #ffffff;
-  --muted: #e9edf6;
-  --border: #d7deeb;
-  --text_color: #1a2438;
-  --header: #f5f7fbee;
-  --mint: #197858;
+  --muted: #e9edf4;
+  --border: #d4dae4;
+  --text_color: #1e293b;
+  --header: #f8f9fcf2;
+  --mint: #087559;
   --coral: #b33353;
   --blue: #285d9d;
-  --shadow: #2234570d;
+  --amber: #8a600e;
+  --shadow: #263c5b0e;
 }
 
 * {
@@ -75,7 +78,7 @@
 .sample-node.income .node-amount { fill: var(--mint); }
 .sample-node.checking .node-amount { fill: var(--blue); }
 .sample-node.investment .node-amount { fill: var(--primary); }
-.sample-node.expense .node-amount { fill: #d6a74e; }
+.sample-node.expense .node-amount { fill: var(--amber); }
 .sample-node.debt .node-amount { fill: var(--coral); }
 
 summary::-webkit-details-marker { display: none; }

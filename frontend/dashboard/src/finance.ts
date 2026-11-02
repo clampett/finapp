@@ -142,12 +142,12 @@ export const money = (value: number, compact = false) =>
   }).format(value);
 export const types: NodeType[] = ['INCOME', 'CHECKING', 'SAVINGS', 'INVESTMENT', 'DEBT', 'EXPENSE'];
 export const colors: Record<NodeType, string> = {
-  INCOME: '#34d399',
-  CHECKING: '#60a5fa',
-  SAVINGS: '#22d3ee',
-  INVESTMENT: '#a78bfa',
-  DEBT: '#fb7185',
-  EXPENSE: '#fbbf24',
+  INCOME: 'var(--ui-paint-34d399)',
+  CHECKING: 'var(--ui-paint-60a5fa)',
+  SAVINGS: 'var(--ui-paint-22d3ee)',
+  INVESTMENT: 'var(--ui-paint-a78bfa)',
+  DEBT: 'var(--ui-paint-fb7185)',
+  EXPENSE: 'var(--ui-paint-fbbf24)',
 };
 export const typeLabel = (type: NodeType) => type.charAt(0) + type.slice(1).toLowerCase();
 export function debtPayment(node: GraphNode, graph: GraphData, ignoreDisabled = false): number {
@@ -237,20 +237,21 @@ export function overviewBreakdown(graph: GraphData, mode: OverviewMode, portfoli
             value: graph.nodes
               .filter((node) => !node.disabled && node.nodeType === 'CHECKING')
               .reduce((sum, node) => sum + node.amountOrBalance, 0),
-            color: '#60a5fa',
+            color: 'var(--ui-paint-60a5fa)',
           },
           {
             label: 'Savings',
             value: graph.nodes
               .filter((node) => !node.disabled && node.nodeType === 'SAVINGS')
               .reduce((sum, node) => sum + node.amountOrBalance, 0),
-            color: '#22d3ee',
+            color: 'var(--ui-paint-22d3ee)',
           },
           {
-            label:
-              portfolioValue > 0 && nodeInvestments > 0 ? 'Investments & Stocks' : 'Investments',
-            value: totalInvestments,
-            color: '#a78bfa',
+            label: 'Investments',
+            value: graph.nodes
+              .filter((node) => node.nodeType === 'INVESTMENT')
+              .reduce((sum, node) => sum + node.amountOrBalance, 0),
+            color: 'var(--ui-paint-a78bfa)',
           },
         ]
       : mode === 'debt'
@@ -259,15 +260,15 @@ export function overviewBreakdown(graph: GraphData, mode: OverviewMode, portfoli
             .map((node, index) => ({
               label: node.name,
               value: node.amountOrBalance,
-              color: ['#fb7185', '#fbbf24', '#b69dfa', '#59c9c1', '#7baaf5'][index % 5],
+              color: ['var(--ui-paint-fb7185)', 'var(--ui-paint-fbbf24)', 'var(--ui-paint-b69dfa)', 'var(--ui-paint-59c9c1)', 'var(--ui-paint-7baaf5)'][index % 5],
             }))
         : [
-            { label: 'Estimated taxes', value: t.taxes, color: '#a78bfa' },
-            { label: 'Living expenses', value: t.expenses, color: '#fbbf24' },
-            { label: 'Loan payments', value: t.payments, color: '#fb7185' },
-            { label: 'Scheduled investing', value: t.plannedInvestment, color: '#60a5fa' },
-            { label: 'Scheduled savings', value: t.plannedSavings, color: '#22d3ee' },
-            { label: 'Unassigned cash', value: t.unassigned, color: '#6ed9b5' },
+            { label: 'Estimated taxes', value: t.taxes, color: 'var(--ui-paint-a78bfa)' },
+            { label: 'Living expenses', value: t.expenses, color: 'var(--ui-paint-fbbf24)' },
+            { label: 'Loan payments', value: t.payments, color: 'var(--ui-paint-fb7185)' },
+            { label: 'Scheduled investing', value: t.plannedInvestment, color: 'var(--ui-paint-60a5fa)' },
+            { label: 'Scheduled savings', value: t.plannedSavings, color: 'var(--ui-paint-22d3ee)' },
+            { label: 'Unassigned cash', value: t.unassigned, color: 'var(--ui-paint-6ed9b5)' },
           ];
   const positive = items.filter((item) => item.value > 0);
   return {

@@ -21,8 +21,11 @@ public class GraphController {
     }
 
     @PostMapping
-    public ResponseEntity<ApiResponse<GraphDTO>> saveGraph(@RequestBody GraphDTO graphDTO) {
-        GraphDTO saved = graphService.saveGraph(graphDTO);
+    public ResponseEntity<ApiResponse<GraphDTO>> saveGraph(@RequestBody GraphDTO graphDTO, Authentication authentication) {
+        if (authentication == null || !(authentication.getPrincipal() instanceof SessionUser user)) {
+            throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Sign in to save your graph.");
+        }
+        GraphDTO saved = graphService.saveGraph(user.id(), graphDTO);
         return ResponseEntity.ok(ApiResponse.success(saved, "Graph persisted successfully"));
     }
 

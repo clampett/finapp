@@ -62,8 +62,7 @@ public class SecurityConfig {
                         "/api/v1/market/stocks/{symbol}"
                     )
                     .permitAll()
-                    // The UI edits browser drafts. The old bulk-save endpoint
-                    // has no ownership checks and must not be exposed publicly.
+                    // Kept the bulk-write route disabled while the UI edits browser drafts.
                     .requestMatchers(HttpMethod.POST, "/api/v1/graph")
                     .denyAll()
                     .anyRequest()

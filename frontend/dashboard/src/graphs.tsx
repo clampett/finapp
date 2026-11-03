@@ -18,7 +18,7 @@ import { BudgetControls } from './components/BudgetControls';
 import { DashboardTab } from './DashboardTab';
 import { Investing } from './components/Investing';
 import { clearSession, sessionHeaders } from './session';
-import { PORTFOLIO_UPDATED_EVENT, getStoredPortfolioValue, loadUnifiedHoldings } from './portfolio';
+import { PORTFOLIO_UPDATED_EVENT, getStoredPortfolioValue, loadUnifiedHoldings, projectedDividendFlows } from './portfolio';
 import { lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type { FormEvent } from 'react';
 import {
@@ -56,6 +56,8 @@ export function ArchetypeGraph({
     getStoredPortfolioValue(holdingsKey),
   );
 
+  const [dividendFlows, setDividendFlows] = useState<ReturnType<typeof projectedDividendFlows>>([]);
+
   const refreshPortfolio = useCallback(
     async (signal?: AbortSignal) => {
       try {
@@ -66,6 +68,7 @@ export function ArchetypeGraph({
           0,
         );
         setPortfolioValue(total);
+        setDividendFlows(projectedDividendFlows(holdings));
       } catch {
         /* Fall back to stored value */
         setPortfolioValue(getStoredPortfolioValue(holdingsKey));
@@ -976,6 +979,9 @@ export function ArchetypeGraph({
             simulationType={simType}
             onClose={closeSimulation}
             portfolioValue={portfolioValue}
+            dividendFlows={dividendFlows}
+            userId={userId}
+            demo={demo}
           />
         </Suspense>
       )}

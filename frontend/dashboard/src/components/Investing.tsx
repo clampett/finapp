@@ -34,6 +34,9 @@ interface Quote {
   cagr: number | null;
   expected_annual_return: number | null;
   annual_volatility: number | null;
+  pays_dividend?: boolean;
+  dividend_frequency?: string | null;
+  dividend_per_share?: number | null;
   history: { date: string; close: number }[];
 }
 
@@ -206,12 +209,11 @@ export function Investing({
   async function addSymbol(raw: string) {
     const sym = raw.trim().toUpperCase();
     if (!sym) return;
-    if (requests.current.has(sym)) return;
-    if (reserved.current.has(sym)) {
-      setMessage(`${sym} is already in your holdings or is being loaded.`);
+    if (requests.current.has(sym)) {
+      setMessage(`${sym} is already being loaded.`);
       return;
     }
-    if (reserved.current.size >= MAX_HOLDINGS) {
+    if (holdings.length >= MAX_HOLDINGS) {
       setMessage(`You can track up to ${MAX_HOLDINGS} stocks.`);
       return;
     }
@@ -235,11 +237,17 @@ export function Investing({
         companyName: quote.name,
         price: quote.latest_price,
         shares: 1,
+        // Retained detected dividend metadata for the portfolio forecast.
+        paysDividend: quote.pays_dividend,
+        dividendFrequency: quote.dividend_frequency,
+        dividendPerShare: quote.dividend_per_share,
       });
-      setHoldings((current) => [...current.filter((h) => h.symbol !== sym), newHolding]);
+      setHoldings((current) => [...current, newHolding]);
       if (intent === selectionIntent.current) setSelected(sym);
     } catch (err) {
-      reserved.current.delete(sym);
+      if (!holdings.some((h) => h.symbol === sym)) {
+        reserved.current.delete(sym);
+      }
       if (controller.signal.aborted) return;
       setMessage(err instanceof Error ? err.message : `Could not add ${sym}.`);
     } finally {
@@ -249,12 +257,13 @@ export function Investing({
     }
   }
 
-  // Recorded the completed share edit as one trade after blur or Enter.
-  async function setShares(sym: string, raw: string) {
+  async function setShares(sym: string, raw: string, stockId?: number) {
     const value = Number(raw);
     if (!raw.trim() || !Number.isFinite(value) || value < 0) return;
     const newShares = value;
-    const currentHolding = holdings.find((h) => h.symbol === sym);
+    const currentHolding = stockId !== undefined
+      ? holdings.find((h) => h.stockId === stockId)
+      : holdings.find((h) => h.symbol === sym);
     const currentShares = currentHolding?.shares ?? 0;
     if (currentShares === newShares) return;
     const quote = quotes[sym];
@@ -266,7 +275,11 @@ export function Investing({
     const previousHoldings = holdings;
 
     setHoldings((current) =>
-      current.map((h) => (h.symbol === sym ? { ...h, shares: newShares } : h)),
+      current.map((h) =>
+        (stockId !== undefined ? h.stockId === stockId : h.symbol === sym)
+          ? { ...h, shares: newShares }
+          : h,
+      ),
     );
     try {
       await updateSharesUnified({
@@ -277,7 +290,7 @@ export function Investing({
         currentShares,
         newShares,
         price,
-        stockId: currentHolding?.stockId,
+        stockId: currentHolding?.stockId ?? stockId,
       });
     } catch (err) {
       setHoldings(previousHoldings);
@@ -285,20 +298,31 @@ export function Investing({
     }
   }
 
-  async function removeHolding(sym: string) {
-    reserved.current.delete(sym);
-    requests.current.get(sym)?.abort();
-    requests.current.delete(sym);
-    const target = holdings.find((h) => h.symbol === sym);
+  async function removeHolding(sym: string, stockId?: number) {
+    const target = stockId !== undefined
+      ? holdings.find((h) => h.stockId === stockId)
+      : holdings.find((h) => h.symbol === sym);
+    const otherLotsForSym = holdings.filter(
+      (h) => h.symbol === sym && (stockId !== undefined ? h.stockId !== stockId : false),
+    );
+    if (otherLotsForSym.length === 0) {
+      reserved.current.delete(sym);
+      requests.current.get(sym)?.abort();
+      requests.current.delete(sym);
+    }
     const previousHoldings = holdings;
-    setHoldings((current) => current.filter((h) => h.symbol !== sym));
+    setHoldings((current) =>
+      stockId !== undefined
+        ? current.filter((h) => h.stockId !== stockId)
+        : current.filter((h) => h.symbol !== sym),
+    );
     try {
       await removeStockUnified({
         storageKey,
         userId,
         demo,
         symbol: sym,
-        stockId: target?.stockId,
+        stockId: target?.stockId ?? stockId,
       });
     } catch (err) {
       setHoldings(previousHoldings);
@@ -425,11 +449,11 @@ export function Investing({
               </tr>
             </thead>
             <tbody>
-              {rows.map(({ symbol: sym, shares, state, lastPrice }) => {
+              {rows.map(({ symbol: sym, shares, state, lastPrice, stockId }, index) => {
                 const quote = isQuote(state) ? state : null;
                 const problem = errorOf(state);
                 return (
-                  <tr key={sym}>
+                  <tr key={stockId ?? `${sym}-${index}`}>
                     <td className="p-[13px_20px] border-t border-(--ui-border-263147) text-text max-[760px]:p-[11px_14px]">
                       <strong>{sym}</strong>
                       {quote?.name && <small className="text-(--ui-text-8b9ab1)"> {quote.name}</small>}
@@ -445,6 +469,7 @@ export function Investing({
                         defaultValue={shares}
                         className="text-xs min-w-0 border border-border rounded-lg bg-(--ui-surface-101722) text-(--ui-text-edf2fa) px-2.75 py-1.5"
                         style={{ width: '5.5rem' }}
+                        onChange={(event) => setShares(sym, event.target.value, stockId)}
                         onBlur={(event) => {
                           const value = event.currentTarget.value;
                           event.currentTarget.value = String(shares);
@@ -469,7 +494,7 @@ export function Investing({
                       {percent(quote?.cagr)}
                       {quote?.stats_start_date && quote.stats_end_date && (
                         <small className="text-(--ui-text-8b9ab1)" style={{ display: 'block' }}>
-                          {quote.stats_start_date} to {quote.stats_end_date}
+                           {quote.stats_start_date} to {quote.stats_end_date}
                         </small>
                       )}
                     </td>
@@ -490,7 +515,7 @@ export function Investing({
                         type="button"
                         className="inline-flex items-center justify-center gap-1.75 whitespace-nowrap rounded-[7px] px-3.25 py-2.25 text-[11px] font-medium min-h-8.5 cursor-pointer text-coral border border-(--ui-border-633246) bg-(--ui-surface-2b1b28) hover:bg-(--ui-surface-hover-3d2034)"
                         onClick={() => {
-                          void removeHolding(sym);
+                          void removeHolding(sym, stockId);
                         }}
                       >
                         Remove

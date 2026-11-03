@@ -286,6 +286,11 @@ public class RecurringTransactionServiceImpl implements RecurringTransactionServ
         RecurringTransaction recurring,
         LocalDate target
     ) {
+        // Skipped estimates saved by earlier builds without deleting rules or transaction history.
+        if (recurring.getNotes() != null && recurring.getNotes().startsWith("Auto-generated dividend for ")) {
+            return List.of();
+        }
+
         List<TransactionDTO> result = new ArrayList<>();
 
         while (

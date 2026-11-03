@@ -36,10 +36,18 @@ interface BudgetingTabProps {
   onUpdateGraph?: (next: GraphData) => void;
 }
 
-const DEMO_BUDGET_ENC_PREFIX = 'enc:v1:';
+export const DEMO_BUDGET_ENC_PREFIX = 'enc:v1:';
 
-const toB64 = (bytes: Uint8Array): string => btoa(String.fromCharCode(...bytes));
-const fromB64 = (b64: string): Uint8Array<ArrayBuffer> => {
+export const toB64 = (bytes: Uint8Array): string => {
+  let binary = '';
+  const len = bytes.byteLength;
+  for (let i = 0; i < len; i++) {
+    binary += String.fromCharCode(bytes[i]);
+  }
+  return btoa(binary);
+};
+
+export const fromB64 = (b64: string): Uint8Array<ArrayBuffer> => {
   const binary = atob(b64);
   const bytes = new Uint8Array(new ArrayBuffer(binary.length));
   for (let i = 0; i < binary.length; i++) {
@@ -48,16 +56,29 @@ const fromB64 = (b64: string): Uint8Array<ArrayBuffer> => {
   return bytes;
 };
 
-// Reused the original session key when migrating a saved demo budget to browser-wide storage.
-const getDemoStorageSecret = (storageKey: string): string => {
-  const key = storageKey + ":k";
-  const existing = localStorage.getItem(key) ?? sessionStorage.getItem(key);
-  const generated = existing ?? crypto.randomUUID();
-  localStorage.setItem(key, generated);
+export const getDemoStorageSecret = (storageKey: string): string => {
+  const encKey = `${storageKey}:k`;
+  let existing: string | null = null;
+  try {
+    existing = localStorage.getItem(encKey) || sessionStorage.getItem(encKey);
+  } catch {}
+  if (existing) {
+    try {
+      sessionStorage.setItem(encKey, existing);
+    } catch {}
+    return existing;
+  }
+  const generated = `${storageKey}:${crypto.randomUUID()}`;
+  try {
+    localStorage.setItem(encKey, generated);
+  } catch {}
+  try {
+    sessionStorage.setItem(encKey, generated);
+  } catch {}
   return generated;
 };
 
-const deriveDemoCryptoKey = async (storageKey: string): Promise<CryptoKey> => {
+export const deriveDemoCryptoKey = async (storageKey: string): Promise<CryptoKey> => {
   const enc = new TextEncoder();
   const baseKey = await crypto.subtle.importKey(
     'raw',
@@ -80,7 +101,7 @@ const deriveDemoCryptoKey = async (storageKey: string): Promise<CryptoKey> => {
   );
 };
 
-const encryptForDemoStorage = async (storageKey: string, payload: unknown): Promise<string> => {
+export const encryptForDemoStorage = async (storageKey: string, payload: unknown): Promise<string> => {
   const key = await deriveDemoCryptoKey(storageKey);
   const iv = crypto.getRandomValues(new Uint8Array(12));
   const data = new TextEncoder().encode(JSON.stringify(payload));
@@ -88,7 +109,7 @@ const encryptForDemoStorage = async (storageKey: string, payload: unknown): Prom
   return `${DEMO_BUDGET_ENC_PREFIX}${toB64(iv)}:${toB64(new Uint8Array(cipher))}`;
 };
 
-const decryptFromDemoStorage = async <T,>(storageKey: string, raw: string | null): Promise<T | null> => {
+export const decryptFromDemoStorage = async <T,>(storageKey: string, raw: string | null): Promise<T | null> => {
   if (!raw) return null;
   if (!raw.startsWith(DEMO_BUDGET_ENC_PREFIX)) {
     try {
@@ -113,7 +134,7 @@ const decryptFromDemoStorage = async <T,>(storageKey: string, raw: string | null
     );
     return JSON.parse(new TextDecoder().decode(plain)) as T;
   } catch {
-    throw new Error("The saved demo budget could not be decrypted.");
+    return null;
   }
 };
 
@@ -266,14 +287,23 @@ export function BudgetingTab({
   const [currentPrices, setCurrentPrices] = useState<Record<string, number>>({});
   const [quotePrice, setQuotePrice] = useState<number | null>(null);
   const [fetchingQuote, setFetchingQuote] = useState(false);
+  const [detectedDividend, setDetectedDividend] = useState<{
+    pays: boolean;
+    perShare: number;
+    frequency: string;
+    yieldPct: number | null;
+    rate: number | null;
+  } | null>(null);
 
   // Debounce-fetch live market quote when typing ticker in stock form
   useEffect(() => {
     if (!showStockForm) return;
+    if (editingStockId != null) return;
     const sym = stockDraft.ticker.trim().toUpperCase();
     if (!sym || sym.length < 1) {
       const timer = setTimeout(() => {
         setQuotePrice(null);
+        setDetectedDividend(null);
         setFetchingQuote(false);
       }, 0);
       return () => clearTimeout(timer);
@@ -294,21 +324,35 @@ export function BudgetingTab({
           if (data && typeof data.latest_price === 'number') {
             setQuotePrice(data.latest_price);
             setCurrentPrices((prev) => ({ ...prev, [sym]: data.latest_price }));
-            if (data.name) {
-              setStockDraft((prev) => ({
-                ...prev,
-                companyName: prev.companyName ? prev.companyName : data.name,
-              }));
-            }
+            const hasDiv = Boolean(data.pays_dividend);
+            const perShare = typeof data.dividend_per_share === 'number' ? data.dividend_per_share : 0;
+            const freq = data.dividend_frequency || 'quarterly';
+            setDetectedDividend({
+              pays: hasDiv,
+              perShare,
+              frequency: freq,
+              yieldPct: data.dividend_yield ?? null,
+              rate: data.dividend_rate ?? null,
+            });
+            setStockDraft((prev) => ({
+              ...prev,
+              companyName: prev.companyName ? prev.companyName : data.name,
+              paysDividend: hasDiv,
+              dividendFrequency: hasDiv ? freq : prev.dividendFrequency,
+              dividendPerShare: hasDiv ? perShare : prev.dividendPerShare,
+            }));
           } else {
             setQuotePrice(null);
+            setDetectedDividend(null);
           }
         } else {
           setQuotePrice(null);
+          setDetectedDividend(null);
         }
       } catch (err: unknown) {
         if ((err as Error)?.name !== 'AbortError') {
           setQuotePrice(null);
+          setDetectedDividend(null);
         }
       } finally {
         setFetchingQuote(false);
@@ -319,7 +363,7 @@ export function BudgetingTab({
       clearTimeout(timer);
       controller.abort();
     };
-  }, [stockDraft.ticker, showStockForm]);
+  }, [stockDraft.ticker, showStockForm, editingStockId]);
 
   const lastQuoteRefresh = useRef<number>(0);
   const graphRef = useRef(graph);
@@ -930,6 +974,7 @@ export function BudgetingTab({
     setEditingStockId(null);
     setStockDraft(initialStock);
     setQuotePrice(null);
+    setDetectedDividend(null);
     setShowStockForm(true);
     // Refresh current stock prices when trying to add a new stock
     if (stocks.length > 0) {
@@ -953,6 +998,17 @@ export function BudgetingTab({
       sharesOwned: pos ? pos.sharesOwned : (s.sharesOwned ?? 0),
     });
     setQuotePrice(livePrice);
+    setDetectedDividend(
+      s.paysDividend
+        ? {
+            pays: true,
+            perShare: Number(s.dividendPerShare || 0),
+            frequency: s.dividendFrequency || 'quarterly',
+            yieldPct: null,
+            rate: null,
+          }
+        : null,
+    );
     setShowStockForm(true);
   };
 
@@ -968,6 +1024,11 @@ export function BudgetingTab({
       const storageKey = `finapp-holdings-v1:demo:${userId || 1}`;
       let currentPrice: number | null = quotePrice;
       let companyName = stockDraft.companyName?.trim() || null;
+      let paysDividend = Boolean(stockDraft.paysDividend);
+      let dividendFrequency = stockDraft.dividendFrequency || 'quarterly';
+      let dividendPerShare =
+        stockDraft.dividendPerShare != null ? Number(stockDraft.dividendPerShare) : null;
+
       if (currentPrice == null) {
         try {
           const res = await fetch(`${API_BASE}/market/stocks/${encodeURIComponent(ticker)}`);
@@ -976,12 +1037,21 @@ export function BudgetingTab({
             if (data && typeof data.latest_price === 'number') {
               currentPrice = data.latest_price;
               if (!companyName && data.name) companyName = data.name;
+              if (data.pays_dividend && !paysDividend) {
+                paysDividend = true;
+                dividendFrequency = data.dividend_frequency || 'quarterly';
+                dividendPerShare = data.dividend_per_share ?? 0;
+              }
             }
           }
         } catch {}
       }
+
       const finalPrice =
         currentPrice || Number(stockDraft.purchasePrice || stockDraft.lastPrice) || 100;
+      const shares = Number(stockDraft.sharesOwned || 1);
+      const purchasePrice = Number(stockDraft.purchasePrice ?? stockDraft.lastPrice ?? finalPrice);
+
       await addStockUnified({
         storageKey,
         userId: userId || 1,
@@ -989,26 +1059,37 @@ export function BudgetingTab({
         symbol: ticker,
         companyName,
         price: finalPrice,
-        shares: Number(stockDraft.sharesOwned || 1),
+        purchasePrice,
+        shares,
+        paysDividend,
+        dividendFrequency: paysDividend ? dividendFrequency : null,
+        dividendPerShare: paysDividend ? dividendPerShare : null,
+        stockId: editingStockId ?? undefined,
       });
+
       setStatusMessage({
         type: 'success',
         text: editingStockId
-          ? 'Stock updated successfully.'
+          ? `Stock ${ticker} updated. Current price: ${dollars(finalPrice)}.`
           : `Stock ${ticker} added. Current price: ${dollars(finalPrice)}.`,
       });
       setShowStockForm(false);
       setEditingStockId(null);
       setStockDraft(initialStock);
+      setDetectedDividend(null);
       setQuotePrice(null);
       void loadData();
       return;
     }
 
     try {
-      // 1. Fetch current price through java-backend -> python-backend
+      // 1. Fetch current price and dividend data through java-backend -> python-backend if not already loaded
       let currentPrice: number | null = quotePrice;
       let companyName = stockDraft.companyName?.trim() || null;
+      let paysDividend = Boolean(stockDraft.paysDividend);
+      let dividendFrequency = stockDraft.dividendFrequency || 'quarterly';
+      let dividendPerShare =
+        stockDraft.dividendPerShare != null ? Number(stockDraft.dividendPerShare) : null;
 
       if (currentPrice == null) {
         try {
@@ -1023,6 +1104,11 @@ export function BudgetingTab({
               if (!companyName && data.name) {
                 companyName = data.name;
               }
+              if (data.pays_dividend && !paysDividend) {
+                paysDividend = true;
+                dividendFrequency = data.dividend_frequency || 'quarterly';
+                dividendPerShare = data.dividend_per_share ?? 0;
+              }
             }
           }
         } catch {
@@ -1033,6 +1119,7 @@ export function BudgetingTab({
       const purchasePrice = Number(stockDraft.purchasePrice ?? stockDraft.lastPrice) || 0;
       const finalLastPrice =
         currentPrice != null && currentPrice > 0 ? currentPrice : purchasePrice;
+      const shares = Number(stockDraft.sharesOwned) || 0;
 
       const endpoint = editingStockId
         ? `${API_BASE}/stocks/${editingStockId}`
@@ -1043,13 +1130,11 @@ export function BudgetingTab({
         companyName,
         exchange: stockDraft.exchange?.trim() || null,
         // Included opening holdings only for creation; detail edits preserved the trade ledger.
-        ...(!editingStockId
-          ? { purchasePrice, sharesOwned: Number(stockDraft.sharesOwned) || 0 }
-          : {}),
+        ...(!editingStockId ? { purchasePrice, sharesOwned: shares } : {}),
         lastPrice: finalLastPrice,
-        paysDividend: Boolean(stockDraft.paysDividend),
-        dividendFrequency: stockDraft.paysDividend ? stockDraft.dividendFrequency : null,
-        dividendPerShare: stockDraft.paysDividend ? Number(stockDraft.dividendPerShare) : null,
+        paysDividend,
+        dividendFrequency: paysDividend ? dividendFrequency : null,
+        dividendPerShare: paysDividend ? dividendPerShare : null,
       };
 
       const res = await fetch(endpoint, {
@@ -1071,15 +1156,44 @@ export function BudgetingTab({
         }));
       }
 
+      // If editing in live database mode and shares were adjusted, record balancing trade
+      if (editingStockId) {
+        const originalPos = positions.find((p) => p.stockId === editingStockId);
+        const originalShares = originalPos ? Number(originalPos.sharesOwned) : 0;
+        const delta = shares - originalShares;
+        if (delta !== 0) {
+          try {
+            await fetch(`${API_BASE}/stock-transactions`, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json', ...sessionHeaders() },
+              credentials: 'include',
+              body: JSON.stringify({
+                userId,
+                stockId: editingStockId,
+                type: delta > 0 ? 'buy' : 'sell',
+                quantity: Math.abs(delta),
+                pricePerShare: purchasePrice > 0 ? purchasePrice : finalLastPrice,
+                accountName: availableAccounts[0] || 'Brokerage',
+                transactionDate: new Date().toISOString().split('T')[0],
+                notes: 'Position adjusted via edit',
+              }),
+            });
+          } catch (e) {
+            console.error('Failed to adjust stock transaction position:', e);
+          }
+        }
+      }
+
       setStatusMessage({
         type: 'success',
         text: editingStockId
-          ? 'Stock updated successfully.'
+          ? `Stock ${ticker} updated. Current price: ${dollars(finalLastPrice)}.`
           : `Stock ${ticker} added. Current price: ${dollars(finalLastPrice)}.`,
       });
       setShowStockForm(false);
       setEditingStockId(null);
       setStockDraft(initialStock);
+      setDetectedDividend(null);
       setQuotePrice(null);
       notifyPortfolioUpdated();
       loadData();
@@ -1100,7 +1214,9 @@ export function BudgetingTab({
           userId: userId || 1,
           demo: true,
           symbol: stock.ticker,
+          stockId: id,
         });
+
       }
       setStatusMessage({ type: 'success', text: 'Stock deleted.' });
       if (editingStockId === id) {
@@ -1171,6 +1287,7 @@ export function BudgetingTab({
         currentShares,
         newShares,
         price: tradeModal.price,
+        stockId: tradeModal.stockId,
       });
       setStatusMessage({
         type: 'success',
@@ -2509,8 +2626,7 @@ export function BudgetingTab({
               </h4>
               {editingStockId && (
                 <p className="text-(--ui-text-8b9ab1) text-[11px]">
-                  Current holdings are shown for reference. Use Buy or Sell to record position
-                  changes; editing stock details preserves your purchase history.
+                  Modify your stock details, dividend settings, or position holdings below.
                 </p>
               )}
               <form
@@ -2553,7 +2669,6 @@ export function BudgetingTab({
                     step="0.01"
                     required
                     value={String(stockDraft.purchasePrice ?? stockDraft.lastPrice ?? '')}
-                    readOnly={Boolean(editingStockId)}
                     onChange={(e) =>
                       setStockDraft((prev) => ({ ...prev, purchasePrice: Number(e.target.value) }))
                     }
@@ -2576,7 +2691,6 @@ export function BudgetingTab({
                     step="0.0001"
                     required
                     value={String(stockDraft.sharesOwned ?? 0)}
-                    readOnly={Boolean(editingStockId)}
                     onChange={(e) =>
                       setStockDraft((prev) => ({ ...prev, sharesOwned: Number(e.target.value) }))
                     }
@@ -2643,6 +2757,52 @@ export function BudgetingTab({
                   />
                 </label>
 
+                {detectedDividend && (
+                  <div
+                    style={{
+                      gridColumn: '1 / -1',
+                      padding: '8px 12px',
+                      borderRadius: '6px',
+                      fontSize: '12px',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '8px',
+                      background: detectedDividend.pays
+                        ? 'rgba(74, 222, 128, 0.12)'
+                        : 'rgba(148, 163, 184, 0.10)',
+                      border: `1px solid ${
+                        detectedDividend.pays ? 'rgba(74, 222, 128, 0.3)' : 'rgba(148, 163, 184, 0.2)'
+                      }`,
+                      color: detectedDividend.pays
+                        ? 'var(--ui-paint-4ade80)'
+                        : '#94a3b8',
+                    }}
+                  >
+                    {detectedDividend.pays ? (
+                      <>
+                        <span>✓</span>
+                        <span>
+                          <strong>Dividend detected:</strong> ${detectedDividend.perShare.toFixed(4)}
+                          /share ({detectedDividend.frequency})
+                          {detectedDividend.yieldPct != null &&
+                            ` • ~${detectedDividend.yieldPct}% yield`}
+                          {Number(stockDraft.sharesOwned || 0) > 0 && (
+                            <span style={{ color: '#cbd5e1', marginLeft: '6px' }}>
+                              → {dollars(Number(stockDraft.sharesOwned) * detectedDividend.perShare)}/
+                              {detectedDividend.frequency} recurring income
+                            </span>
+                          )}
+                        </span>
+                      </>
+                    ) : (
+                      <>
+                        <span>ℹ</span>
+                        <span>No dividend distributions detected for this security.</span>
+                      </>
+                    )}
+                  </div>
+                )}
+
                 <div
                   style={{
                     display: 'flex',
@@ -2662,9 +2822,28 @@ export function BudgetingTab({
                   />
                   <label
                     htmlFor="paysDividendCheckbox"
-                    style={{ fontSize: '13px', cursor: 'pointer' }}
+                    style={{
+                      fontSize: '13px',
+                      cursor: 'pointer',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '6px',
+                    }}
                   >
                     Pays Dividends
+                    {detectedDividend?.pays && (
+                      <span
+                        style={{
+                          fontSize: '11px',
+                          color: 'var(--ui-paint-4ade80)',
+                          background: 'rgba(74, 222, 128, 0.15)',
+                          borderRadius: '4px',
+                          padding: '1px 6px',
+                        }}
+                      >
+                        Auto-detected
+                      </span>
+                    )}
                   </label>
                 </div>
 
@@ -2728,6 +2907,32 @@ export function BudgetingTab({
                         }}
                       />
                     </label>
+
+                    {stockDraft.dividendFrequency !== "irregular" &&
+                      Number(stockDraft.sharesOwned || 0) > 0 &&
+                      Number(stockDraft.dividendPerShare || 0) > 0 && (
+                        <div
+                          style={{
+                            gridColumn: '1 / -1',
+                            fontSize: '12px',
+                            color: 'var(--ui-paint-93c5fd)',
+                            background: 'rgba(59, 130, 246, 0.1)',
+                            padding: '6px 10px',
+                            borderRadius: '4px',
+                            border: '1px solid rgba(59, 130, 246, 0.2)',
+                          }}
+                        >
+                          Estimated dividend income of{' '}
+                          <strong>
+                            {dollars(
+                              (Number(stockDraft.sharesOwned) || 0) *
+                                (Number(stockDraft.dividendPerShare) || 0),
+                            )}
+                            /{stockDraft.dividendFrequency || 'quarterly'}
+                          </strong>{' '}
+                          is included in full portfolio forecasts that use editable price returns. Record payouts as income after you receive them.
+                        </div>
+                      )}
                   </>
                 )}
 
@@ -2974,10 +3179,34 @@ export function BudgetingTab({
                       : shares * purchasedPrice;
                     const totalDiv = pos ? pos.totalDividends : 0;
 
+                    const sameTickerStocks = stocks.filter(
+                      (s) => s.ticker?.toUpperCase() === sym,
+                    );
+                    const isMultiLot = sameTickerStocks.length > 1;
+                    const lotIndex =
+                      sameTickerStocks.findIndex((s) => s.id === stock.id) + 1;
+
                     return (
                       <tr key={stock.id} style={{ borderBottom: '1px solid var(--ui-paint-1f2737)' }}>
                         <td style={{ padding: '10px 12px', fontWeight: 700, color: 'var(--ui-paint-38bdf8)' }}>
-                          {stock.ticker}
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                            <span>{stock.ticker}</span>
+                            {isMultiLot && (
+                              <span
+                                style={{
+                                  fontSize: '10px',
+                                  fontWeight: 600,
+                                  background: 'rgba(56, 189, 248, 0.15)',
+                                  color: 'var(--ui-paint-38bdf8)',
+                                  padding: '1px 5px',
+                                  borderRadius: '4px',
+                                  border: '1px solid rgba(56, 189, 248, 0.3)',
+                                }}
+                              >
+                                Lot #{lotIndex}
+                              </span>
+                            )}
+                          </div>
                         </td>
                         <td style={{ padding: '10px 12px', color: 'var(--ui-paint-cbd5e1)' }}>
                           {stock.companyName || '—'}
@@ -3117,7 +3346,7 @@ export function BudgetingTab({
               {scenarioSalary.nodes.length > 0 && (
                 <button
                   type="button"
-                  className="inline-flex items-center justify-center gap-1 whitespace-nowrap rounded-[7px] px-3 py-2 text-[11px] font-medium min-h-8.5 cursor-pointer bg-transparent text-[var(--color-mint)] border border-[var(--color-mint)]/40 hover:bg-[var(--color-mint)]/10 transition-colors"
+                  className="inline-flex items-center justify-center gap-1 whitespace-nowrap rounded-[7px] px-3 py-2 text-[11px] font-medium min-h-8.5 cursor-pointer bg-transparent text-mint border border-mint/40 hover:bg-mint/10 transition-colors"
                   onClick={handleImportScenarioSalary}
                   title="Import scenario salary node as monthly recurring income"
                 >
@@ -3127,7 +3356,7 @@ export function BudgetingTab({
               {scenarioDebts.nodes.length > 0 && (
                 <button
                   type="button"
-                  className="inline-flex items-center justify-center gap-1 whitespace-nowrap rounded-[7px] px-3 py-2 text-[11px] font-medium min-h-8.5 cursor-pointer bg-transparent text-[var(--color-coral)] border border-[var(--color-coral)]/40 hover:bg-[var(--color-coral)]/10 transition-colors"
+                  className="inline-flex items-center justify-center gap-1 whitespace-nowrap rounded-[7px] px-3 py-2 text-[11px] font-medium min-h-8.5 cursor-pointer bg-transparent text-coral border border-coral/40 hover:bg-coral/10 transition-colors"
                   onClick={handleImportScenarioDebts}
                   title="Import scenario debt payments as monthly recurring obligations"
                 >

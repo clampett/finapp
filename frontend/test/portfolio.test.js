@@ -1030,3 +1030,194 @@ test('budgeting-bridge: syncRecurringDeletionToGraph requires an explicit link a
   const updatedChecking = result.updatedGraph.nodes.find((n) => n.id === 'chk1');
   assert.equal(Boolean(updatedChecking.archived), false, 'Checking node must not be archived');
 });
+
+test('portfolio: addStockUnified preserves dividend information', async () => {
+  const { addStockUnified } = runtime.module.exports;
+  const holding = await addStockUnified({
+    storageKey: 'test-div-storage',
+    demo: true,
+    symbol: 'AAPL',
+    companyName: 'Apple Inc.',
+    price: 180,
+    shares: 10,
+    paysDividend: true,
+    dividendFrequency: 'quarterly',
+    dividendPerShare: 0.27,
+  });
+  assert.equal(holding.symbol, 'AAPL');
+  assert.equal(holding.shares, 10);
+  assert.equal(holding.paysDividend, true);
+  assert.equal(holding.dividendFrequency, 'quarterly');
+  assert.equal(holding.dividendPerShare, 0.27);
+});
+
+test('portfolio: multiple stock lots per ticker can be added and managed independently', async () => {
+  const {
+    addStockUnified,
+    parseLocalHoldings,
+    updateSharesUnified,
+    removeStockUnified,
+    holdingsToSynthetic,
+  } = runtime.module.exports;
+
+  const storageKey = 'test-multi-lot-storage';
+  runtime.localStorage.data[storageKey] = JSON.stringify([]);
+
+  // 1. Buy first lot of AAPL: 5 shares at $150
+  const lot1 = await addStockUnified({
+    storageKey,
+    demo: true,
+    symbol: 'AAPL',
+    companyName: 'Apple Inc.',
+    price: 150,
+    purchasePrice: 150,
+    shares: 5,
+  });
+
+  assert.equal(lot1.symbol, 'AAPL');
+  assert.equal(lot1.shares, 5);
+  assert.equal(lot1.purchasePrice, 150);
+  assert.ok(lot1.stockId != null);
+
+  // 2. Buy second lot of AAPL on another day at a different price: 10 shares at $175
+  const lot2 = await addStockUnified({
+    storageKey,
+    demo: true,
+    symbol: 'AAPL',
+    companyName: 'Apple Inc.',
+    price: 175,
+    purchasePrice: 175,
+    shares: 10,
+  });
+
+  assert.equal(lot2.symbol, 'AAPL');
+  assert.equal(lot2.shares, 10);
+  assert.equal(lot2.purchasePrice, 175);
+  assert.notEqual(lot1.stockId, lot2.stockId, 'Each lot must have a unique stockId');
+
+  // Verify both lots exist in storage
+  const holdings = parseLocalHoldings(storageKey);
+  assert.equal(holdings.length, 2, 'Both lots must be retained in holdings');
+  assert.equal(holdings[0].symbol, 'AAPL');
+  assert.equal(holdings[0].shares, 5);
+  assert.equal(holdings[0].purchasePrice, 150);
+  assert.equal(holdings[1].symbol, 'AAPL');
+  assert.equal(holdings[1].shares, 10);
+  assert.equal(holdings[1].purchasePrice, 175);
+
+  // 3. Synthetic conversion computes correct distinct cost bases
+  const { positions } = holdingsToSynthetic(holdings, 1);
+  assert.equal(positions.length, 2);
+  assert.equal(positions[0].stockId, lot1.stockId);
+  assert.equal(positions[0].avgCostPerShare, 150);
+  assert.equal(positions[0].costBasis, 750); // 5 * 150
+  assert.equal(positions[1].stockId, lot2.stockId);
+  assert.equal(positions[1].avgCostPerShare, 175);
+  assert.equal(positions[1].costBasis, 1750); // 10 * 175
+
+  // 4. Update shares on lot 2 only (e.g. partial sell 2 shares -> 8 shares)
+  await updateSharesUnified({
+    storageKey,
+    demo: true,
+    symbol: 'AAPL',
+    currentShares: 10,
+    newShares: 8,
+    price: 175,
+    stockId: lot2.stockId,
+  });
+
+  const updatedHoldings = parseLocalHoldings(storageKey);
+  assert.equal(updatedHoldings[0].shares, 5, 'Lot 1 shares must remain unchanged');
+  assert.equal(updatedHoldings[1].shares, 8, 'Lot 2 shares must be updated to 8');
+
+  // 5. Delete lot 1 only
+  await removeStockUnified({
+    storageKey,
+    demo: true,
+    symbol: 'AAPL',
+    stockId: lot1.stockId,
+  });
+
+  const afterDelete = parseLocalHoldings(storageKey);
+  assert.equal(afterDelete.length, 1, 'Only one lot should remain');
+  assert.equal(afterDelete[0].stockId, lot2.stockId);
+  assert.equal(afterDelete[0].shares, 8);
+  assert.equal(afterDelete[0].purchasePrice, 175);
+});
+
+test('demo-storage: encrypt and decrypt roundtrip preserves budget data and recovers across session resets', async () => {
+  const budgetRuntime = {
+    module: { exports: {} },
+    process: { env: { NODE_ENV: 'test' } },
+    crypto: globalThis.crypto,
+    TextEncoder,
+    TextDecoder,
+    btoa,
+    atob,
+    localStorage: {
+      data: {},
+      getItem(k) { return this.data[k] !== undefined ? this.data[k] : null; },
+      setItem(k, v) { this.data[k] = String(v); },
+    },
+    sessionStorage: {
+      data: {},
+      getItem(k) { return this.data[k] !== undefined ? this.data[k] : null; },
+      setItem(k, v) { this.data[k] = String(v); },
+    },
+  };
+
+  vm.runInNewContext(
+    buildSync({
+      entryPoints: [path.join(__dirname, '../dashboard/src/BudgetingTab.tsx')],
+      bundle: true,
+      write: false,
+      platform: 'node',
+      format: 'cjs',
+      define: { 'import.meta.env.VITE_API_URL': '""' },
+      loader: { '.tsx': 'tsx', '.ts': 'ts' },
+    }).outputFiles[0].text,
+    budgetRuntime,
+  );
+
+  const { encryptForDemoStorage, decryptFromDemoStorage, DEMO_BUDGET_ENC_PREFIX } = budgetRuntime.module.exports;
+  const storageKey = 'finapp-budget-v1:demo:1';
+  const originalPayload = {
+    transactions: [{ id: 1, amount: 50, description: 'Groceries' }],
+    recurring: [{ id: 10, amount: 200, description: 'AAPL Dividend' }],
+  };
+
+  // 1. Encrypt and verify format
+  const encrypted = await encryptForDemoStorage(storageKey, originalPayload);
+  assert.ok(encrypted.startsWith(DEMO_BUDGET_ENC_PREFIX), 'Must start with enc:v1: prefix');
+
+  // 2. Decrypt in same session
+  const decrypted = await decryptFromDemoStorage(storageKey, encrypted);
+  assert.deepEqual(JSON.parse(JSON.stringify(decrypted)), originalPayload, 'Decrypted payload must match original');
+
+  // 3. Backward compatibility: raw JSON string decrypts cleanly
+  const plaintextJson = JSON.stringify({ transactions: [], recurring: [] });
+  const fromPlaintext = await decryptFromDemoStorage(storageKey, plaintextJson);
+  assert.deepEqual(JSON.parse(JSON.stringify(fromPlaintext)), { transactions: [], recurring: [] });
+
+  // 4. Persistence across tab/session restarts: wipe sessionStorage completely
+  budgetRuntime.sessionStorage.data = {};
+  const afterTabClose = await decryptFromDemoStorage(storageKey, encrypted);
+  assert.deepEqual(JSON.parse(JSON.stringify(afterTabClose)), originalPayload, 'Must decrypt successfully even after sessionStorage is wiped');
+
+  // 5. Corrupted or invalid payload returns null safely
+  const corrupted = await decryptFromDemoStorage(storageKey, `${DEMO_BUDGET_ENC_PREFIX}bad:data`);
+  assert.equal(corrupted, null, 'Corrupted payload must return null without throwing');
+});
+
+test("dividend forecasts reflect current shares across independent lots", () => {
+  const { projectedDividendFlows } = runtime.module.exports;
+  const lot = { symbol: "KO", paysDividend: true, dividendFrequency: "quarterly", dividendPerShare: 0.5 };
+  const flows = projectedDividendFlows([
+    { ...lot, stockId: 1, shares: 10 },
+    { ...lot, stockId: 2, shares: 4 },
+    { ...lot, stockId: 3, shares: 0 },
+    { ...lot, stockId: 4, shares: 5, dividendFrequency: "irregular" },
+  ]);
+  assert.equal(flows.length, 2);
+  assert.equal(flows.reduce((total, flow) => total + flow.amount, 0), 7);
+});

@@ -23,6 +23,10 @@ import { BudgetControls } from './components/BudgetControls';
 import { ForecastChart } from './simulation/ForecastChart';
 import { ForecastInsights } from './simulation/ForecastInsights';
 import { SimulationGuide } from './simulation/SimulationGuide';
+import { sessionHeaders } from './session';
+import type { projectedDividendFlows } from './portfolio';
+import { decryptFromDemoStorage } from './BudgetingTab';
+import type { RecurringTransactionItem } from './budgeting-bridge';
 export type ForecastPoint = {
   year: number;
   p10: number;
@@ -128,6 +132,10 @@ export function SimulationModal({
   scopeLabel,
   scope,
   portfolioValue = 0,
+  dividendFlows,
+  userId,
+  demo,
+  recurringTransactions,
 }: {
   graphData: GraphData;
   simulationType: SimulationType;
@@ -136,6 +144,10 @@ export function SimulationModal({
   scopeLabel?: string;
   scope?: 'all' | 'selected' | 'connected';
   portfolioValue?: number;
+  dividendFlows?: ReturnType<typeof projectedDividendFlows>;
+  userId?: number;
+  demo?: boolean;
+  recurringTransactions?: RecurringTransactionItem[];
 }) {
   const [forecast, setForecast] = useState<SimulationResult | null>(null);
   const [strategy, setStrategy] = useState<'avalanche' | 'snowball'>('avalanche');
@@ -154,6 +166,51 @@ export function SimulationModal({
   const [fee, setFee] = useState(0);
   const [borrowingApr, setBorrowingApr] = useState(12);
   const [target, setTarget] = useState(500000);
+  const [recurringList, setRecurringList] = useState<RecurringTransactionItem[]>(
+    () => recurringTransactions || [],
+  );
+
+  useEffect(() => {
+    if (recurringTransactions && recurringTransactions.length > 0) {
+      setRecurringList(recurringTransactions);
+      return;
+    }
+    const controller = new AbortController();
+    (async () => {
+      try {
+        if (typeof window === 'undefined') return;
+        const params = new URLSearchParams(window.location?.search || '');
+        const isDemo = demo ?? (params.get('demo') === 'true');
+        const profile = userId || Number(params.get('profile')) || 1;
+        const uid = userId || Number(sessionStorage.getItem('finapp_user_id')) || 0;
+        if (isDemo) {
+          const budgetKey = `finapp-budget-v1:demo:${profile}`;
+          const raw = localStorage.getItem(budgetKey);
+          const parsed = await decryptFromDemoStorage<{ recurring?: RecurringTransactionItem[] }>(
+            budgetKey,
+            raw,
+          );
+          if (!controller.signal.aborted && parsed?.recurring && Array.isArray(parsed.recurring)) {
+            setRecurringList(parsed.recurring);
+          }
+        } else if (uid) {
+          const res = await fetch(`${API_BASE}/recurring-transactions`, {
+            headers: sessionHeaders(),
+            credentials: 'include',
+            signal: controller.signal,
+          });
+          if (res.ok) {
+            const response = await res.json();
+            // Unwrapped the API envelope before accepting saved recurring rules.
+            if (!controller.signal.aborted && Array.isArray(response.data)) {
+              setRecurringList(response.data);
+            }
+          }
+        }
+      } catch {}
+    })();
+    return () => controller.abort();
+  }, [demo, userId, recurringTransactions]);
   const settings = assumptionsFor(graphData);
   const isSelectedScope =
     scope != null
@@ -262,6 +319,8 @@ export function SimulationModal({
               type: n.nodeType,
               balance: n.amountOrBalance,
               apr: n.interestRateApr,
+              ...(n.frequency ? { frequency: n.frequency } : {}),
+              ...(n.intervalCount ? { interval_count: n.intervalCount } : {}),
               ...(n.minPayment != null ? { min_payment: n.minPayment } : {}),
             })),
             ...(effectivePortfolioValue > 0
@@ -275,6 +334,27 @@ export function SimulationModal({
                   },
                 ]
               : []),
+          ],
+          // Kept unrelated account flows outside simulations of selected nodes.
+          recurring_transactions: isSelectedScope ? [] : [
+            ...recurringList
+              .filter((rule) => !rule.notes?.startsWith("Auto-generated dividend for "))
+              .map((rule) => ({
+                id: rule.id,
+                kind: rule.kind,
+                amount: rule.amount,
+                frequency: rule.frequency,
+                interval_count: rule.intervalCount || 1,
+                is_active: rule.isActive !== false,
+                start_date: rule.startDate,
+                end_date: rule.endDate,
+                description: rule.description,
+                category_name: rule.categoryName,
+                account_name: rule.accountName,
+                notes: rule.notes,
+              })),
+            // Excluded separate estimates when adjusted market history already included dividends.
+            ...(marketSource === "manual" ? dividendFlows ?? [] : []),
           ],
           edges: scenarioEdges.map((e) => ({
             source: e.sourceNodeId,
@@ -347,6 +427,9 @@ export function SimulationModal({
     borrowingApr,
     target,
     effectivePortfolioValue,
+    recurringList,
+    dividendFlows,
+    isSelectedScope,
   ]);
   // Prepared the P10-P90 envelope from year-specific quantiles; these bounds
   // represented a distribution, not one continuous bull or bear market path.
@@ -641,7 +724,7 @@ export function SimulationModal({
                       onChange={(e) => setMarketSource(e.target.value as 'historical' | 'manual')}
                     >
                       <option value="historical">Free historical calibration</option>
-                      <option value="manual">Editable return assumptions</option>
+                      <option value="manual">Editable price return assumptions</option>
                     </select>
                   </label>
                   <label className="flex flex-col gap-2 text-[11px] text-(--ui-text-b9c5d9) mt-4.25">
@@ -679,9 +762,11 @@ export function SimulationModal({
                       </label>
                     )}
                     <label className="flex flex-col gap-2 text-[11px] text-(--ui-text-b9c5d9) mt-4.25">
-                      {marketSource === 'historical' && returnMode === 'observed'
-                        ? 'Fallback annual return (%)'
-                        : 'Forward expected return (%)'}
+                      {marketSource === 'manual'
+                        ? 'Annual price return (%)'
+                        : returnMode === 'observed'
+                          ? 'Fallback annual return (%)'
+                          : 'Forward expected return (%)'}
                       <NumberField
                         type="number"
                         min={-50}

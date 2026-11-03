@@ -7,6 +7,22 @@ export interface Holding {
   stockId?: number;
   companyName?: string | null;
   lastPrice?: number;
+  purchasePrice?: number;
+  paysDividend?: boolean;
+  dividendFrequency?: string | null;
+  dividendPerShare?: number | null;
+}
+
+// Derived forecast income from current lots, so trades never left a saved schedule stale.
+export function projectedDividendFlows(holdings: Holding[]) {
+  return holdings.flatMap((holding) => {
+    const amount = holding.shares * Number(holding.dividendPerShare);
+    const cadence = holding.dividendFrequency;
+    if (!holding.paysDividend || !Number.isFinite(amount) || amount <= 0) return [];
+    // Excluded irregular distributions because no reliable cadence was available.
+    if (cadence !== "monthly" && cadence !== "quarterly" && cadence !== "semiannual" && cadence !== "annual") return [];
+    return [{ kind: "income", amount, frequency: cadence, interval_count: 1 }];
+  });
 }
 
 export interface Stock {
@@ -47,18 +63,18 @@ export function notifyPortfolioUpdated() {
 
 export const DEFAULT_DEMO_HOLDINGS: Record<number, Holding[]> = {
   1: [
-    { symbol: 'SPY', shares: 2, companyName: 'SPDR S&P 500 ETF Trust', lastPrice: 580 },
-    { symbol: 'AAPL', shares: 3, companyName: 'Apple Inc.', lastPrice: 230 },
+    { symbol: 'SPY', shares: 2, companyName: 'SPDR S&P 500 ETF Trust', lastPrice: 580, purchasePrice: 580, stockId: 1 },
+    { symbol: 'AAPL', shares: 3, companyName: 'Apple Inc.', lastPrice: 230, purchasePrice: 230, stockId: 2 },
   ],
   2: [
-    { symbol: 'VTI', shares: 150, companyName: 'Vanguard Total Stock Market ETF', lastPrice: 280 },
-    { symbol: 'MSFT', shares: 40, companyName: 'Microsoft Corporation', lastPrice: 425 },
-    { symbol: 'AAPL', shares: 50, companyName: 'Apple Inc.', lastPrice: 230 },
+    { symbol: 'VTI', shares: 150, companyName: 'Vanguard Total Stock Market ETF', lastPrice: 280, purchasePrice: 280, stockId: 1 },
+    { symbol: 'MSFT', shares: 40, companyName: 'Microsoft Corporation', lastPrice: 425, purchasePrice: 425, stockId: 2 },
+    { symbol: 'AAPL', shares: 50, companyName: 'Apple Inc.', lastPrice: 230, purchasePrice: 230, stockId: 3 },
   ],
   3: [
-    { symbol: 'VOO', shares: 200, companyName: 'Vanguard S&P 500 ETF', lastPrice: 530 },
-    { symbol: 'QQQ', shares: 80, companyName: 'Invesco QQQ Trust', lastPrice: 490 },
-    { symbol: 'NVDA', shares: 40, companyName: 'NVIDIA Corporation', lastPrice: 140 },
+    { symbol: 'VOO', shares: 200, companyName: 'Vanguard S&P 500 ETF', lastPrice: 530, purchasePrice: 530, stockId: 1 },
+    { symbol: 'QQQ', shares: 80, companyName: 'Invesco QQQ Trust', lastPrice: 490, purchasePrice: 490, stockId: 2 },
+    { symbol: 'NVDA', shares: 40, companyName: 'NVIDIA Corporation', lastPrice: 140, purchasePrice: 140, stockId: 3 },
   ],
 };
 
@@ -129,20 +145,23 @@ export function holdingsToSynthetic(
     companyName: h.companyName ?? null,
     lastPrice: h.lastPrice ?? 0,
     sharesOwned: h.shares,
-    purchasePrice: h.lastPrice ?? 0,
-    paysDividend: false,
+    purchasePrice: h.purchasePrice ?? h.lastPrice ?? 0,
+    paysDividend: Boolean(h.paysDividend),
+    dividendFrequency: h.dividendFrequency ?? null,
+    dividendPerShare: h.dividendPerShare ?? null,
   }));
 
   const positions: StockPosition[] = holdings.map((h, idx) => {
     const price = h.lastPrice ?? 0;
+    const purchased = h.purchasePrice ?? price;
     return {
       stockId: h.stockId ?? idx + 1,
       userId,
       ticker: h.symbol,
       companyName: h.companyName ?? null,
       sharesOwned: h.shares,
-      costBasis: Number((h.shares * price).toFixed(2)),
-      avgCostPerShare: price,
+      costBasis: Number((h.shares * purchased).toFixed(2)),
+      avgCostPerShare: purchased,
       lastPrice: price,
       marketValue: Number((h.shares * price).toFixed(2)),
     };
@@ -174,18 +193,26 @@ export async function loadUnifiedHoldings(
           ? positionsJson.data
           : [];
 
-        const holdings: Holding[] = stocks.map((s) => {
+        const holdings: Holding[] = stocks.map((s, idx) => {
           const sym = s.ticker.toUpperCase();
           const match = positions.find(
-            (p) => p.stockId === s.id || p.ticker?.toUpperCase() === sym,
-          );
+            (p) => p.stockId === s.id,
+          ) || (s.id == null ? positions.find((p) => p.ticker?.toUpperCase() === sym) : undefined);
           const shares = match ? Number(match.sharesOwned || 0) : Number(s.sharesOwned || 0);
+          const purchasePrice =
+            match?.avgCostPerShare != null && Number(match.avgCostPerShare) > 0
+              ? Number(match.avgCostPerShare)
+              : Number(s.purchasePrice ?? s.lastPrice ?? 0);
           return {
             symbol: sym,
             shares: Number.isFinite(shares) ? shares : 0,
-            stockId: s.id,
+            stockId: s.id ?? idx + 1,
             companyName: s.companyName,
             lastPrice: Number(match?.lastPrice ?? s.lastPrice ?? 0),
+            purchasePrice,
+            paysDividend: Boolean(s.paysDividend),
+            dividendFrequency: s.dividendFrequency ?? null,
+            dividendPerShare: s.dividendPerShare ?? null,
           };
         });
 
@@ -227,7 +254,12 @@ export async function addStockUnified({
   symbol,
   companyName,
   price,
+  purchasePrice,
   shares = 1,
+  paysDividend = false,
+  dividendFrequency = null,
+  dividendPerShare = null,
+  stockId,
 }: {
   storageKey: string;
   userId?: number;
@@ -235,52 +267,111 @@ export async function addStockUnified({
   symbol: string;
   companyName?: string | null;
   price: number;
+  purchasePrice?: number;
   shares?: number;
+  paysDividend?: boolean;
+  dividendFrequency?: string | null;
+  dividendPerShare?: number | null;
+  stockId?: number;
 }): Promise<Holding> {
   const sym = symbol.trim().toUpperCase();
   const current = parseLocalHoldings(storageKey);
-  let newStockId: number | undefined;
+  let newStockId: number | undefined = stockId;
+  const finalPurchasePrice = purchasePrice ?? price;
 
   if (!demo && userId && userId > 0) {
-    const res = await fetch(`${API_BASE}/stocks`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', ...sessionHeaders() },
-      credentials: 'include',
-      body: JSON.stringify({
-        userId,
-        ticker: sym,
-        companyName: companyName || sym,
-        lastPrice: price,
-        purchasePrice: price,
-        sharesOwned: shares,
-        paysDividend: false,
-      }),
-    });
-    if (!res.ok) {
-      let msg = `Server rejected stock creation (HTTP ${res.status})`;
-      try {
-        const json = await res.json();
-        if (json?.message) msg = json.message;
-      } catch {}
-      throw new Error(msg);
+    if (stockId) {
+      const res = await fetch(`${API_BASE}/stocks/${stockId}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json', ...sessionHeaders() },
+        credentials: 'include',
+        body: JSON.stringify({
+          ticker: sym,
+          companyName: companyName || sym,
+          lastPrice: price,
+          paysDividend,
+          dividendFrequency: paysDividend ? dividendFrequency : null,
+          dividendPerShare: paysDividend ? dividendPerShare : null,
+        }),
+      });
+      if (!res.ok) {
+        let msg = `Server rejected stock update (HTTP ${res.status})`;
+        try {
+          const json = await res.json();
+          if (json?.message) msg = json.message;
+        } catch {}
+        throw new Error(msg);
+      }
+    } else {
+      const res = await fetch(`${API_BASE}/stocks`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', ...sessionHeaders() },
+        credentials: 'include',
+        body: JSON.stringify({
+          userId,
+          ticker: sym,
+          companyName: companyName || sym,
+          lastPrice: price,
+          purchasePrice: finalPurchasePrice,
+          sharesOwned: shares,
+          paysDividend,
+          dividendFrequency: paysDividend ? dividendFrequency : null,
+          dividendPerShare: paysDividend ? dividendPerShare : null,
+        }),
+      });
+      if (!res.ok) {
+        let msg = `Server rejected stock creation (HTTP ${res.status})`;
+        try {
+          const json = await res.json();
+          if (json?.message) msg = json.message;
+        } catch {}
+        throw new Error(msg);
+      }
+      const json = await res.json().catch(() => ({}));
+      newStockId = json?.data?.id;
     }
-    const json = await res.json().catch(() => ({}));
-    newStockId = json?.data?.id;
   }
 
-  const updated: Holding[] = [
-    ...current.filter((h) => h.symbol !== sym),
-    {
+  let updated: Holding[];
+  if (stockId) {
+    const hasExplicitId = current.some((h) => h.stockId === stockId);
+    updated = current.map((h, idx) =>
+      (hasExplicitId ? h.stockId === stockId : (h.stockId ?? idx + 1) === stockId)
+        ? {
+            ...h,
+            symbol: sym,
+            shares,
+            stockId: h.stockId ?? stockId,
+            companyName: companyName || sym,
+            lastPrice: price,
+            purchasePrice: finalPurchasePrice,
+            paysDividend,
+            dividendFrequency: paysDividend ? dividendFrequency : null,
+            dividendPerShare: paysDividend ? dividendPerShare : null,
+          }
+        : h,
+    );
+  } else {
+    if (!newStockId) {
+      newStockId = Math.max(0, ...current.map((h) => h.stockId || 0)) + 1;
+    }
+    const newHolding: Holding = {
       symbol: sym,
       shares,
       stockId: newStockId,
       companyName: companyName || sym,
       lastPrice: price,
-    },
-  ];
+      purchasePrice: finalPurchasePrice,
+      paysDividend,
+      dividendFrequency: paysDividend ? dividendFrequency : null,
+      dividendPerShare: paysDividend ? dividendPerShare : null,
+    };
+    updated = [...current, newHolding];
+  }
+
   saveLocalHoldings(storageKey, updated);
   notifyPortfolioUpdated();
-  return updated[updated.length - 1];
+  return updated.find((h) => h.stockId === newStockId) || updated[updated.length - 1];
 }
 
 export async function updateSharesUnified({
@@ -331,7 +422,11 @@ export async function updateSharesUnified({
   }
 
   const current = parseLocalHoldings(storageKey);
-  const updated = current.map((h) => (h.symbol === sym ? { ...h, shares: newShares } : h));
+  const updated = current.map((h) =>
+    (stockId !== undefined ? h.stockId === stockId : h.symbol === sym)
+      ? { ...h, shares: newShares }
+      : h,
+  );
   saveLocalHoldings(storageKey, updated);
   notifyPortfolioUpdated();
 }
@@ -368,7 +463,10 @@ export async function removeStockUnified({
   }
 
   const current = parseLocalHoldings(storageKey);
-  const updated = current.filter((h) => h.symbol !== sym);
+  const updated =
+    stockId !== undefined
+      ? current.filter((h) => h.stockId !== stockId)
+      : current.filter((h) => h.symbol !== sym);
   saveLocalHoldings(storageKey, updated);
   notifyPortfolioUpdated();
 }

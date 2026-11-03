@@ -108,6 +108,115 @@ class ForecastTests(unittest.TestCase):
         self.assertAlmostEqual(result["monte_carlo"][-1]["p50"], 100 / 1.025)
         self.assertAlmostEqual(result["metrics"]["no_growth_baseline"], 100 / 1.025)
 
+    def test_non_monthly_income_and_expense_frequencies(self):
+        # Biweekly income: $2000 biweekly -> ~$4333.33/month
+        # Yearly expense: $12000 yearly -> $1000/month
+        nodes = [
+            node("INCOME", 2000, frequency="biweekly", interval_count=1, id="inc-1"),
+            node("EXPENSE", 12000, frequency="yearly", interval_count=1, id="exp-1"),
+            node("CHECKING", 1000, id="chk-1"),
+        ]
+        result = self.simulate(nodes, "monte_carlo", investment_rate=0, years=1)
+        self.assertAlmostEqual(result["metrics"]["monthly_income"], 4333.33, places=1)
+        self.assertAlmostEqual(result["metrics"]["monthly_expenses"], 1000.0, places=1)
+        # Expected monthly surplus is roughly 4333.33 - 1000 = 3333.33
+        self.assertAlmostEqual(result["metrics"]["monthly_surplus"], 3333.33, places=1)
+        # Net worth after 12 months with 0% extra investment and 0 return should grow by 12 * surplus
+        expected_end = 1000 + 3333.33 * 12
+        self.assertAlmostEqual(result["monte_carlo"][-1]["p50"], expected_end, delta=50)
+
+    def test_recurring_transactions_integrated_into_all_simulations(self):
+        nodes = [
+            node("CHECKING", 500, id="chk-1"),
+            node("DEBT", 5000, 10, id="debt-1", min_payment=100),
+        ]
+        recurring = [
+            dict(
+                id="rec-1",
+                kind="income",
+                amount=1000,
+                frequency="weekly",
+                interval_count=1,
+                is_active=True,
+                description="Freelance Weekly",
+            ),
+            dict(
+                id="rec-2",
+                kind="expense",
+                amount=300,
+                frequency="quarterly",
+                interval_count=1,
+                is_active=True,
+                description="Car Insurance",
+            ),
+        ]
+        # Weekly $1000 -> ~$4333.33/mo
+        # Quarterly $300 -> $100/mo
+        # Minimums -> $100/mo
+        for sim_type in ("monte_carlo", "markov", "debt"):
+            result = self.simulate(
+                nodes,
+                sim_type,
+                investment_rate=0,
+                years=1,
+                recurring_transactions=recurring,
+            )
+            self.assertAlmostEqual(result["metrics"]["monthly_income"], 4333.33, places=1)
+            self.assertAlmostEqual(result["metrics"]["monthly_expenses"], 100.0, places=1)
+            self.assertAlmostEqual(result["metrics"]["monthly_surplus"], 4333.33 - 100.0 - 100.0, places=1)
+
+    def test_linked_recurring_transactions_avoid_double_counting(self):
+        nodes = [
+            node("INCOME", 3000, id="inc-1", name="Salary"),
+            node("CHECKING", 1000, id="chk-1"),
+        ]
+        recurring = [
+            # Explicitly linked via notes
+            dict(
+                id="rec-1",
+                kind="income",
+                amount=3000,
+                frequency="monthly",
+                is_active=True,
+                notes="[node-id:inc-1] Salary node",
+            ),
+            # Matching description
+            dict(
+                id="rec-2",
+                kind="income",
+                amount=3000,
+                frequency="monthly",
+                is_active=True,
+                description="Salary",
+            ),
+        ]
+        result = self.simulate(
+            nodes,
+            "monte_carlo",
+            investment_rate=0,
+            years=1,
+            recurring_transactions=recurring,
+        )
+        # Income should remain 3000, not 6000 or 9000
+        self.assertAlmostEqual(result["metrics"]["monthly_income"], 3000.0, places=2)
+
+    def test_process_and_simulate_supports_non_monthly_frequencies(self):
+        from app.simulation import process_and_simulate
+
+        nodes = [
+            dict(id="1", name="Weekly Pay", type="INCOME", balance=500, frequency="weekly"),
+            dict(id="2", name="Annual Sub", type="EXPENSE", balance=1200, frequency="yearly"),
+            dict(id="3", name="Checking", type="CHECKING", balance=2000),
+        ]
+        # Weekly $500 -> ~$2166.67/mo
+        # Annual $1200 -> $100/mo
+        # Net cash flow = ~2066.67/mo
+        res = process_and_simulate(nodes, investment_rate=50, annual_return=0.0, annual_volatility=0.0, years=1, seed=42)
+        # Year 0 balance is 2000
+        self.assertEqual(res[0]["p50"], 2000.0)
+        # Year 1 balance should be 2000 + 12 * (2066.67 * 0.5) = 2000 + 12400 = 14400
+        self.assertAlmostEqual(res[1]["p50"], 2000 + (2166.67 - 100) * 0.5 * 12, delta=20)
+
     def test_invalid_payloads_rejected(self):
         for change in [
             dict(investment_rate=101),

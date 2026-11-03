@@ -221,14 +221,42 @@ public class StockServiceImpl implements StockService {
             stockTransactionRepository.save(txn);
         }
 
-        // Auto-generate recurring dividend income transaction if stock pays dividends and shares > 0
+        // Auto-generate or update recurring dividend income transaction if stock pays dividends and shares > 0
         if (recurringTransactionRepository != null
                 && Boolean.TRUE.equals(savedStock.getPaysDividend())
                 && savedStock.getDividendPerShare() != null
                 && savedStock.getDividendPerShare().compareTo(BigDecimal.ZERO) > 0
                 && request.sharesOwned() != null
                 && request.sharesOwned().compareTo(BigDecimal.ZERO) > 0) {
-            BigDecimal payoutAmount = request.sharesOwned()
+            String divDesc = ticker + " Dividend";
+            List<RecurringTransaction> userRecurring = recurringTransactionRepository.findByUserId(userId);
+            RecurringTransaction existing = userRecurring != null ? userRecurring.stream()
+                .filter(r -> divDesc.equalsIgnoreCase(r.getDescription()))
+                .findFirst()
+                .orElse(null) : null;
+
+            BigDecimal totalTickerShares = request.sharesOwned();
+            if (stockRepository != null && stockTransactionRepository != null) {
+                List<Stock> otherSameTicker = stockRepository.findByUserIdAndTicker(userId, ticker);
+                if (otherSameTicker != null) {
+                    for (Stock s : otherSameTicker) {
+                        if (!s.getId().equals(savedStock.getId())) {
+                            List<StockTransaction> sTxns = stockTransactionRepository.findByUserIdAndStockId(userId, s.getId());
+                            if (sTxns != null) {
+                                for (StockTransaction st : sTxns) {
+                                    if (st.getType() == StockTxnType.buy) {
+                                        totalTickerShares = totalTickerShares.add(st.getQuantity() != null ? st.getQuantity() : BigDecimal.ZERO);
+                                    } else if (st.getType() == StockTxnType.sell) {
+                                        totalTickerShares = totalTickerShares.subtract(st.getQuantity() != null ? st.getQuantity() : BigDecimal.ZERO);
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+
+            BigDecimal payoutAmount = totalTickerShares
                 .multiply(savedStock.getDividendPerShare())
                 .setScale(2, RoundingMode.HALF_UP);
 
@@ -251,41 +279,57 @@ public class StockServiceImpl implements StockService {
                     recFreq = RecurrenceFrequency.quarterly;
                 }
 
-                Category divCat = null;
-                if (categoryRepository != null) {
-                    divCat = categoryRepository
-                        .findByUserIdAndKindAndName(userId, TransactionKind.income, "Dividends")
-                        .orElseGet(() -> {
-                            Category newCat = new Category();
-                            newCat.setUser(user);
-                            newCat.setName("Dividends");
-                            newCat.setKind(TransactionKind.income);
-                            newCat.setCreatedAt(OffsetDateTime.now());
-                            return categoryRepository.save(newCat);
-                        });
-                }
+                if (existing != null) {
+                    existing.setAmount(payoutAmount);
+                    existing.setFrequency(recFreq);
+                    existing.setIntervalCount(intervalCount);
+                    existing.setIsActive(true);
+                    existing.setNotes(String.format(
+                        "Auto-generated dividend for %s (%s shares @ $%s/%s)",
+                        ticker,
+                        totalTickerShares,
+                        savedStock.getDividendPerShare(),
+                        savedStock.getDividendFrequency() != null ? savedStock.getDividendFrequency() : "quarterly"
+                    ));
+                    existing.setUpdatedAt(OffsetDateTime.now());
+                    recurringTransactionRepository.save(existing);
+                } else {
+                    Category divCat = null;
+                    if (categoryRepository != null) {
+                        divCat = categoryRepository
+                            .findByUserIdAndKindAndName(userId, TransactionKind.income, "Dividends")
+                            .orElseGet(() -> {
+                                Category newCat = new Category();
+                                newCat.setUser(user);
+                                newCat.setName("Dividends");
+                                newCat.setKind(TransactionKind.income);
+                                newCat.setCreatedAt(OffsetDateTime.now());
+                                return categoryRepository.save(newCat);
+                            });
+                    }
 
-                RecurringTransaction recurring = new RecurringTransaction();
-                recurring.setUser(user);
-                recurring.setKind(TransactionKind.income);
-                recurring.setCategory(divCat);
-                recurring.setDescription(ticker + " Dividend");
-                recurring.setAmount(payoutAmount);
-                recurring.setFrequency(recFreq);
-                recurring.setIntervalCount(intervalCount);
-                recurring.setStartDate(LocalDate.now());
-                recurring.setNextDueDate(RecurringTransactionServiceImpl.calculateNextDate(LocalDate.now(), recFreq, intervalCount));
-                recurring.setIsActive(Boolean.TRUE);
-                recurring.setNotes(String.format(
-                    "Auto-generated dividend for %s (%s shares @ $%s/%s)",
-                    ticker,
-                    request.sharesOwned(),
-                    savedStock.getDividendPerShare(),
-                    savedStock.getDividendFrequency() != null ? savedStock.getDividendFrequency() : "quarterly"
-                ));
-                recurring.setCreatedAt(OffsetDateTime.now());
-                recurring.setUpdatedAt(OffsetDateTime.now());
-                recurringTransactionRepository.save(recurring);
+                    RecurringTransaction recurring = new RecurringTransaction();
+                    recurring.setUser(user);
+                    recurring.setKind(TransactionKind.income);
+                    recurring.setCategory(divCat);
+                    recurring.setDescription(divDesc);
+                    recurring.setAmount(payoutAmount);
+                    recurring.setFrequency(recFreq);
+                    recurring.setIntervalCount(intervalCount);
+                    recurring.setStartDate(LocalDate.now());
+                    recurring.setNextDueDate(RecurringTransactionServiceImpl.calculateNextDate(LocalDate.now(), recFreq, intervalCount));
+                    recurring.setIsActive(Boolean.TRUE);
+                    recurring.setNotes(String.format(
+                        "Auto-generated dividend for %s (%s shares @ $%s/%s)",
+                        ticker,
+                        totalTickerShares,
+                        savedStock.getDividendPerShare(),
+                        savedStock.getDividendFrequency() != null ? savedStock.getDividendFrequency() : "quarterly"
+                    ));
+                    recurring.setCreatedAt(OffsetDateTime.now());
+                    recurring.setUpdatedAt(OffsetDateTime.now());
+                    recurringTransactionRepository.save(recurring);
+                }
             }
         }
 
@@ -369,15 +413,24 @@ public class StockServiceImpl implements StockService {
                     && savedStock.getDividendPerShare() != null
                     && savedStock.getDividendPerShare().compareTo(BigDecimal.ZERO) > 0) {
 
-                // Compute total shares owned from transactions
+                // Compute total shares owned from transactions across all dividend-paying lots of this ticker
                 BigDecimal totalShares = BigDecimal.ZERO;
-                if (stockTransactionRepository != null) {
-                    List<StockTransaction> txns = stockTransactionRepository.findByUserIdAndStockId(userId, stockId);
-                    for (StockTransaction t : txns) {
-                        if (t.getType() == StockTxnType.buy) {
-                            totalShares = totalShares.add(t.getQuantity() != null ? t.getQuantity() : BigDecimal.ZERO);
-                        } else if (t.getType() == StockTxnType.sell) {
-                            totalShares = totalShares.subtract(t.getQuantity() != null ? t.getQuantity() : BigDecimal.ZERO);
+                if (stockRepository != null && stockTransactionRepository != null) {
+                    List<Stock> payingSameTicker = stockRepository.findByUserIdAndTicker(userId, savedStock.getTicker());
+                    if (payingSameTicker != null) {
+                        for (Stock s : payingSameTicker) {
+                            if (Boolean.TRUE.equals(s.getPaysDividend())) {
+                                List<StockTransaction> txns = stockTransactionRepository.findByUserIdAndStockId(userId, s.getId());
+                                if (txns != null) {
+                                    for (StockTransaction t : txns) {
+                                        if (t.getType() == StockTxnType.buy) {
+                                            totalShares = totalShares.add(t.getQuantity() != null ? t.getQuantity() : BigDecimal.ZERO);
+                                        } else if (t.getType() == StockTxnType.sell) {
+                                            totalShares = totalShares.subtract(t.getQuantity() != null ? t.getQuantity() : BigDecimal.ZERO);
+                                        }
+                                    }
+                                }
+                            }
                         }
                     }
                 }
@@ -455,9 +508,50 @@ public class StockServiceImpl implements StockService {
                     recurringTransactionRepository.save(existing);
                 }
             } else if (existing != null) {
-                existing.setIsActive(false);
-                existing.setUpdatedAt(OffsetDateTime.now());
-                recurringTransactionRepository.save(existing);
+                List<Stock> remainingPaying = stockRepository != null
+                    ? stockRepository.findByUserIdAndTicker(userId, savedStock.getTicker()).stream()
+                        .filter(s -> !s.getId().equals(stockId) && Boolean.TRUE.equals(s.getPaysDividend()))
+                        .toList()
+                    : List.of();
+                if (remainingPaying.isEmpty()) {
+                    existing.setIsActive(false);
+                    existing.setUpdatedAt(OffsetDateTime.now());
+                    recurringTransactionRepository.save(existing);
+                } else if (stockTransactionRepository != null) {
+                    BigDecimal remainingShares = BigDecimal.ZERO;
+                    for (Stock s : remainingPaying) {
+                        List<StockTransaction> sTxns = stockTransactionRepository.findByUserIdAndStockId(userId, s.getId());
+                        if (sTxns != null) {
+                            for (StockTransaction st : sTxns) {
+                                if (st.getType() == StockTxnType.buy) {
+                                    remainingShares = remainingShares.add(st.getQuantity() != null ? st.getQuantity() : BigDecimal.ZERO);
+                                } else if (st.getType() == StockTxnType.sell) {
+                                    remainingShares = remainingShares.subtract(st.getQuantity() != null ? st.getQuantity() : BigDecimal.ZERO);
+                                }
+                            }
+                        }
+                    }
+                    Stock samplePaying = remainingPaying.get(0);
+                    BigDecimal divPerShare = samplePaying.getDividendPerShare() != null ? samplePaying.getDividendPerShare() : BigDecimal.ZERO;
+                    BigDecimal remainingPayout = remainingShares.multiply(divPerShare).setScale(2, RoundingMode.HALF_UP);
+                    if (remainingPayout.compareTo(BigDecimal.ZERO) > 0) {
+                        existing.setAmount(remainingPayout);
+                        existing.setNotes(String.format(
+                            "Auto-generated dividend for %s (%s shares @ $%s/%s)",
+                            savedStock.getTicker(),
+                            remainingShares,
+                            divPerShare,
+                            samplePaying.getDividendFrequency() != null ? samplePaying.getDividendFrequency() : "quarterly"
+                        ));
+                        existing.setIsActive(true);
+                        existing.setUpdatedAt(OffsetDateTime.now());
+                        recurringTransactionRepository.save(existing);
+                    } else {
+                        existing.setIsActive(false);
+                        existing.setUpdatedAt(OffsetDateTime.now());
+                        recurringTransactionRepository.save(existing);
+                    }
+                }
             }
         }
 
@@ -474,14 +568,54 @@ public class StockServiceImpl implements StockService {
         if (recurringTransactionRepository != null) {
             String divDesc = stock.getTicker() + " Dividend";
             List<Stock> remainingSameTicker = stockRepository.findByUserIdAndTicker(userId, stock.getTicker());
-            boolean anotherPaysDividend = remainingSameTicker.stream()
-                .anyMatch(s -> !s.getId().equals(stockId) && Boolean.TRUE.equals(s.getPaysDividend()));
-            if (!anotherPaysDividend) {
-                List<RecurringTransaction> userRecurring = recurringTransactionRepository.findByUserId(userId);
-                for (RecurringTransaction r : userRecurring) {
-                    if (divDesc.equalsIgnoreCase(r.getDescription())) {
-                        recurringTransactionRepository.delete(r);
+            List<Stock> remainingPayingLots = remainingSameTicker != null ? remainingSameTicker.stream()
+                .filter(s -> !s.getId().equals(stockId) && Boolean.TRUE.equals(s.getPaysDividend()))
+                .toList() : List.of();
+
+            List<RecurringTransaction> userRecurring = recurringTransactionRepository.findByUserId(userId);
+            RecurringTransaction existing = userRecurring != null ? userRecurring.stream()
+                .filter(r -> divDesc.equalsIgnoreCase(r.getDescription()))
+                .findFirst()
+                .orElse(null) : null;
+
+            if (remainingPayingLots.isEmpty()) {
+                if (userRecurring != null) {
+                    for (RecurringTransaction r : userRecurring) {
+                        if (divDesc.equalsIgnoreCase(r.getDescription())) {
+                            recurringTransactionRepository.delete(r);
+                        }
                     }
+                }
+            } else if (existing != null && stockTransactionRepository != null) {
+                BigDecimal remainingShares = BigDecimal.ZERO;
+                for (Stock s : remainingPayingLots) {
+                    List<StockTransaction> sTxns = stockTransactionRepository.findByUserIdAndStockId(userId, s.getId());
+                    if (sTxns != null) {
+                        for (StockTransaction st : sTxns) {
+                            if (st.getType() == StockTxnType.buy) {
+                                remainingShares = remainingShares.add(st.getQuantity() != null ? st.getQuantity() : BigDecimal.ZERO);
+                            } else if (st.getType() == StockTxnType.sell) {
+                                remainingShares = remainingShares.subtract(st.getQuantity() != null ? st.getQuantity() : BigDecimal.ZERO);
+                            }
+                        }
+                    }
+                }
+                Stock samplePaying = remainingPayingLots.get(0);
+                BigDecimal divPerShare = samplePaying.getDividendPerShare() != null ? samplePaying.getDividendPerShare() : BigDecimal.ZERO;
+                BigDecimal remainingPayout = remainingShares.multiply(divPerShare).setScale(2, RoundingMode.HALF_UP);
+                if (remainingPayout.compareTo(BigDecimal.ZERO) > 0) {
+                    existing.setAmount(remainingPayout);
+                    existing.setNotes(String.format(
+                        "Auto-generated dividend for %s (%s shares @ $%s/%s)",
+                        stock.getTicker(),
+                        remainingShares,
+                        divPerShare,
+                        samplePaying.getDividendFrequency() != null ? samplePaying.getDividendFrequency() : "quarterly"
+                    ));
+                    existing.setUpdatedAt(OffsetDateTime.now());
+                    recurringTransactionRepository.save(existing);
+                } else {
+                    recurringTransactionRepository.delete(existing);
                 }
             }
         }

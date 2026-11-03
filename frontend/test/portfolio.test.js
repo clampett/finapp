@@ -1145,3 +1145,67 @@ test('portfolio: multiple stock lots per ticker can be added and managed indepen
   assert.equal(afterDelete[0].shares, 8);
   assert.equal(afterDelete[0].purchasePrice, 175);
 });
+
+test('demo-storage: encrypt and decrypt roundtrip preserves budget data and recovers across session resets', async () => {
+  const budgetRuntime = {
+    module: { exports: {} },
+    process: { env: { NODE_ENV: 'test' } },
+    crypto: globalThis.crypto,
+    TextEncoder,
+    TextDecoder,
+    btoa,
+    atob,
+    localStorage: {
+      data: {},
+      getItem(k) { return this.data[k] !== undefined ? this.data[k] : null; },
+      setItem(k, v) { this.data[k] = String(v); },
+    },
+    sessionStorage: {
+      data: {},
+      getItem(k) { return this.data[k] !== undefined ? this.data[k] : null; },
+      setItem(k, v) { this.data[k] = String(v); },
+    },
+  };
+
+  vm.runInNewContext(
+    buildSync({
+      entryPoints: [path.join(__dirname, '../dashboard/src/BudgetingTab.tsx')],
+      bundle: true,
+      write: false,
+      platform: 'node',
+      format: 'cjs',
+      define: { 'import.meta.env.VITE_API_URL': '""' },
+      loader: { '.tsx': 'tsx', '.ts': 'ts' },
+    }).outputFiles[0].text,
+    budgetRuntime,
+  );
+
+  const { encryptForDemoStorage, decryptFromDemoStorage, DEMO_BUDGET_ENC_PREFIX } = budgetRuntime.module.exports;
+  const storageKey = 'finapp-budget-v1:demo:1';
+  const originalPayload = {
+    transactions: [{ id: 1, amount: 50, description: 'Groceries' }],
+    recurring: [{ id: 10, amount: 200, description: 'AAPL Dividend' }],
+  };
+
+  // 1. Encrypt and verify format
+  const encrypted = await encryptForDemoStorage(storageKey, originalPayload);
+  assert.ok(encrypted.startsWith(DEMO_BUDGET_ENC_PREFIX), 'Must start with enc:v1: prefix');
+
+  // 2. Decrypt in same session
+  const decrypted = await decryptFromDemoStorage(storageKey, encrypted);
+  assert.deepEqual(JSON.parse(JSON.stringify(decrypted)), originalPayload, 'Decrypted payload must match original');
+
+  // 3. Backward compatibility: raw JSON string decrypts cleanly
+  const plaintextJson = JSON.stringify({ transactions: [], recurring: [] });
+  const fromPlaintext = await decryptFromDemoStorage(storageKey, plaintextJson);
+  assert.deepEqual(JSON.parse(JSON.stringify(fromPlaintext)), { transactions: [], recurring: [] });
+
+  // 4. Persistence across tab/session restarts: wipe sessionStorage completely
+  budgetRuntime.sessionStorage.data = {};
+  const afterTabClose = await decryptFromDemoStorage(storageKey, encrypted);
+  assert.deepEqual(JSON.parse(JSON.stringify(afterTabClose)), originalPayload, 'Must decrypt successfully even after sessionStorage is wiped');
+
+  // 5. Corrupted or invalid payload returns null safely
+  const corrupted = await decryptFromDemoStorage(storageKey, `${DEMO_BUDGET_ENC_PREFIX}bad:data`);
+  assert.equal(corrupted, null, 'Corrupted payload must return null without throwing');
+});

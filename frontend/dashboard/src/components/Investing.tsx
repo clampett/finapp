@@ -206,12 +206,11 @@ export function Investing({
   async function addSymbol(raw: string) {
     const sym = raw.trim().toUpperCase();
     if (!sym) return;
-    if (requests.current.has(sym)) return;
-    if (reserved.current.has(sym)) {
-      setMessage(`${sym} is already in your holdings or is being loaded.`);
+    if (requests.current.has(sym)) {
+      setMessage(`${sym} is already being loaded.`);
       return;
     }
-    if (reserved.current.size >= MAX_HOLDINGS) {
+    if (holdings.length >= MAX_HOLDINGS) {
       setMessage(`You can track up to ${MAX_HOLDINGS} stocks.`);
       return;
     }
@@ -236,10 +235,12 @@ export function Investing({
         price: quote.latest_price,
         shares: 1,
       });
-      setHoldings((current) => [...current.filter((h) => h.symbol !== sym), newHolding]);
+      setHoldings((current) => [...current, newHolding]);
       if (intent === selectionIntent.current) setSelected(sym);
     } catch (err) {
-      reserved.current.delete(sym);
+      if (!holdings.some((h) => h.symbol === sym)) {
+        reserved.current.delete(sym);
+      }
       if (controller.signal.aborted) return;
       setMessage(err instanceof Error ? err.message : `Could not add ${sym}.`);
     } finally {

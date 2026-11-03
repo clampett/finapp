@@ -36,10 +36,18 @@ interface BudgetingTabProps {
   onUpdateGraph?: (next: GraphData) => void;
 }
 
-const DEMO_BUDGET_ENC_PREFIX = 'enc:v1:';
+export const DEMO_BUDGET_ENC_PREFIX = 'enc:v1:';
 
-const toB64 = (bytes: Uint8Array): string => btoa(String.fromCharCode(...bytes));
-const fromB64 = (b64: string): Uint8Array<ArrayBuffer> => {
+export const toB64 = (bytes: Uint8Array): string => {
+  let binary = '';
+  const len = bytes.byteLength;
+  for (let i = 0; i < len; i++) {
+    binary += String.fromCharCode(bytes[i]);
+  }
+  return btoa(binary);
+};
+
+export const fromB64 = (b64: string): Uint8Array<ArrayBuffer> => {
   const binary = atob(b64);
   const bytes = new Uint8Array(new ArrayBuffer(binary.length));
   for (let i = 0; i < binary.length; i++) {
@@ -48,15 +56,29 @@ const fromB64 = (b64: string): Uint8Array<ArrayBuffer> => {
   return bytes;
 };
 
-const getDemoStorageSecret = (storageKey: string): string => {
-  const existing = sessionStorage.getItem(`${storageKey}:k`);
-  if (existing) return existing;
+export const getDemoStorageSecret = (storageKey: string): string => {
+  const encKey = `${storageKey}:k`;
+  let existing: string | null = null;
+  try {
+    existing = localStorage.getItem(encKey) || sessionStorage.getItem(encKey);
+  } catch {}
+  if (existing) {
+    try {
+      sessionStorage.setItem(encKey, existing);
+    } catch {}
+    return existing;
+  }
   const generated = `${storageKey}:${crypto.randomUUID()}`;
-  sessionStorage.setItem(`${storageKey}:k`, generated);
+  try {
+    localStorage.setItem(encKey, generated);
+  } catch {}
+  try {
+    sessionStorage.setItem(encKey, generated);
+  } catch {}
   return generated;
 };
 
-const deriveDemoCryptoKey = async (storageKey: string): Promise<CryptoKey> => {
+export const deriveDemoCryptoKey = async (storageKey: string): Promise<CryptoKey> => {
   const enc = new TextEncoder();
   const baseKey = await crypto.subtle.importKey(
     'raw',
@@ -79,7 +101,7 @@ const deriveDemoCryptoKey = async (storageKey: string): Promise<CryptoKey> => {
   );
 };
 
-const encryptForDemoStorage = async (storageKey: string, payload: unknown): Promise<string> => {
+export const encryptForDemoStorage = async (storageKey: string, payload: unknown): Promise<string> => {
   const key = await deriveDemoCryptoKey(storageKey);
   const iv = crypto.getRandomValues(new Uint8Array(12));
   const data = new TextEncoder().encode(JSON.stringify(payload));
@@ -87,7 +109,7 @@ const encryptForDemoStorage = async (storageKey: string, payload: unknown): Prom
   return `${DEMO_BUDGET_ENC_PREFIX}${toB64(iv)}:${toB64(new Uint8Array(cipher))}`;
 };
 
-const decryptFromDemoStorage = async <T,>(storageKey: string, raw: string | null): Promise<T | null> => {
+export const decryptFromDemoStorage = async <T,>(storageKey: string, raw: string | null): Promise<T | null> => {
   if (!raw) return null;
   if (!raw.startsWith(DEMO_BUDGET_ENC_PREFIX)) {
     try {
@@ -337,7 +359,7 @@ export function BudgetingTab({
       clearTimeout(timer);
       controller.abort();
     };
-  }, [stockDraft.ticker, showStockForm]);
+  }, [stockDraft.ticker, showStockForm, editingStockId]);
 
   const lastQuoteRefresh = useRef<number>(0);
   const graphRef = useRef(graph);
@@ -1255,30 +1277,61 @@ export function BudgetingTab({
           setRecurringList(updatedRecur);
 
           try {
-            const saved = JSON.parse(localStorage.getItem(budgetStorageKey) || '{}');
+            const saved =
+              (await decryptFromDemoStorage<Record<string, unknown>>(
+                budgetStorageKey,
+                localStorage.getItem(budgetStorageKey),
+              )) || {};
             saved.recurring = updatedRecur;
-            localStorage.setItem(budgetStorageKey, JSON.stringify(saved));
+            localStorage.setItem(
+              budgetStorageKey,
+              await encryptForDemoStorage(budgetStorageKey, saved),
+            );
           } catch {}
 
           dividendCreatedNote = ` with recurring dividend income (${dollars(totalPayout)}/${dividendFrequency || 'quarterly'})`;
         }
       } else if (editingStockId) {
-        const otherPayingLot = stocks.find(
+        const remainingPayingLots = stocks.filter(
           (s) => s.ticker.toUpperCase() === ticker && s.id !== editingStockId && s.paysDividend,
         );
-        if (!otherPayingLot) {
-          const existing = recurringList.find(
-            (r) => r.description.toLowerCase() === divDesc.toLowerCase(),
-          );
-          if (existing) {
-            const updatedRecur = recurringList.filter((r) => r.id !== existing.id);
-            setRecurringList(updatedRecur);
-            try {
-              const saved = JSON.parse(localStorage.getItem(budgetStorageKey) || '{}');
-              saved.recurring = updatedRecur;
-              localStorage.setItem(budgetStorageKey, JSON.stringify(saved));
-            } catch {}
+        const existing = recurringList.find(
+          (r) => r.description.toLowerCase() === divDesc.toLowerCase(),
+        );
+        if (existing) {
+          let updatedRecur: RecurringTransaction[];
+          if (remainingPayingLots.length === 0) {
+            updatedRecur = recurringList.filter((r) => r.id !== existing.id);
+          } else {
+            const remainingShares = remainingPayingLots.reduce((sum, s) => {
+              const pos = positions.find((p) => p.stockId === s.id);
+              return sum + (pos ? Number(pos.sharesOwned || 0) : Number(s.sharesOwned || 0));
+            }, 0);
+            const remainingDivPerShare = Number(remainingPayingLots[0].dividendPerShare || 0);
+            const remainingPayout = Math.round(remainingShares * remainingDivPerShare * 100) / 100;
+            updatedRecur = recurringList.map((r) =>
+              r.id === existing.id
+                ? {
+                    ...r,
+                    amount: remainingPayout,
+                    notes: `Auto-generated dividend for ${ticker} (${remainingShares} shares @ $${remainingDivPerShare}/${remainingPayingLots[0].dividendFrequency || 'quarterly'})`,
+                  }
+                : r,
+            );
           }
+          setRecurringList(updatedRecur);
+          try {
+            const saved =
+              (await decryptFromDemoStorage<Record<string, unknown>>(
+                budgetStorageKey,
+                localStorage.getItem(budgetStorageKey),
+              )) || {};
+            saved.recurring = updatedRecur;
+            localStorage.setItem(
+              budgetStorageKey,
+              await encryptForDemoStorage(budgetStorageKey, saved),
+            );
+          } catch {}
         }
       }
 
@@ -1430,6 +1483,7 @@ export function BudgetingTab({
     if (!window.confirm('Delete this stock and associated history?')) return;
     if (isDemo) {
       const storageKey = `finapp-holdings-v1:demo:${userId || 1}`;
+      const budgetStorageKey = `finapp-budget-v1:demo:${userId || 1}`;
       const stock = stocks.find((s) => s.id === id);
       if (stock) {
         await removeStockUnified({
@@ -1439,6 +1493,52 @@ export function BudgetingTab({
           symbol: stock.ticker,
           stockId: id,
         });
+
+        if (stock.paysDividend) {
+          const sym = stock.ticker.toUpperCase();
+          const divDesc = `${sym} Dividend`;
+          const remainingPayingLots = stocks.filter(
+            (s) => s.ticker.toUpperCase() === sym && s.id !== id && s.paysDividend,
+          );
+          const existing = recurringList.find(
+            (r) => r.description.toLowerCase() === divDesc.toLowerCase(),
+          );
+          if (existing) {
+            let updatedRecur: RecurringTransaction[];
+            if (remainingPayingLots.length === 0) {
+              updatedRecur = recurringList.filter((r) => r.id !== existing.id);
+            } else {
+              const remainingShares = remainingPayingLots.reduce((sum, s) => {
+                const pos = positions.find((p) => p.stockId === s.id);
+                return sum + (pos ? Number(pos.sharesOwned || 0) : Number(s.sharesOwned || 0));
+              }, 0);
+              const remainingDivPerShare = Number(remainingPayingLots[0].dividendPerShare || 0);
+              const remainingPayout = Math.round(remainingShares * remainingDivPerShare * 100) / 100;
+              updatedRecur = recurringList.map((r) =>
+                r.id === existing.id
+                  ? {
+                      ...r,
+                      amount: remainingPayout,
+                      notes: `Auto-generated dividend for ${sym} (${remainingShares} shares @ $${remainingDivPerShare}/${remainingPayingLots[0].dividendFrequency || 'quarterly'})`,
+                    }
+                  : r,
+              );
+            }
+            setRecurringList(updatedRecur);
+            try {
+              const saved =
+                (await decryptFromDemoStorage<Record<string, unknown>>(
+                  budgetStorageKey,
+                  localStorage.getItem(budgetStorageKey),
+                )) || {};
+              saved.recurring = updatedRecur;
+              localStorage.setItem(
+                budgetStorageKey,
+                await encryptForDemoStorage(budgetStorageKey, saved),
+              );
+            } catch {}
+          }
+        }
       }
       setStatusMessage({ type: 'success', text: 'Stock deleted.' });
       if (editingStockId === id) {

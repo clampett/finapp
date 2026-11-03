@@ -282,7 +282,12 @@ def test_markov_and_monte_carlo_shared_marginal_assumptions():
     assert logs.var() == pytest.approx(0.15**2 / 12, abs=0.00005)
 
 
-def test_long_history_calibration_used_completed_months():
+def test_long_history_calibration_used_completed_months(monkeypatch):
+    monkeypatch.setattr(
+        pd.Timestamp,
+        "now",
+        classmethod(lambda cls, tz=None: pd.Timestamp("2026-10-15", tz=tz)),
+    )
     dates = pd.bdate_range("1993-01-01", "2026-10-10")
     prices = pd.Series(100 * np.exp(np.arange(len(dates)) * 0.0002), index=dates)
     market = calibrate_prices(prices)

@@ -314,12 +314,14 @@ export async function addStockUnified({
 
   let updated: Holding[];
   if (stockId) {
-    updated = current.map((h) =>
-      h.stockId === stockId
+    const hasExplicitId = current.some((h) => h.stockId === stockId);
+    updated = current.map((h, idx) =>
+      (hasExplicitId ? h.stockId === stockId : (h.stockId ?? idx + 1) === stockId)
         ? {
             ...h,
             symbol: sym,
             shares,
+            stockId: h.stockId ?? stockId,
             companyName: companyName || sym,
             lastPrice: price,
             purchasePrice: finalPurchasePrice,

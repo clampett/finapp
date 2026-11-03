@@ -3516,7 +3516,7 @@ export function BudgetingTab({
               {scenarioSalary.nodes.length > 0 && (
                 <button
                   type="button"
-                  className="inline-flex items-center justify-center gap-1 whitespace-nowrap rounded-[7px] px-3 py-2 text-[11px] font-medium min-h-8.5 cursor-pointer bg-transparent text-[var(--color-mint)] border border-[var(--color-mint)]/40 hover:bg-[var(--color-mint)]/10 transition-colors"
+                  className="inline-flex items-center justify-center gap-1 whitespace-nowrap rounded-[7px] px-3 py-2 text-[11px] font-medium min-h-8.5 cursor-pointer bg-transparent text-mint border border-mint/40 hover:bg-mint/10 transition-colors"
                   onClick={handleImportScenarioSalary}
                   title="Import scenario salary node as monthly recurring income"
                 >
@@ -3526,7 +3526,7 @@ export function BudgetingTab({
               {scenarioDebts.nodes.length > 0 && (
                 <button
                   type="button"
-                  className="inline-flex items-center justify-center gap-1 whitespace-nowrap rounded-[7px] px-3 py-2 text-[11px] font-medium min-h-8.5 cursor-pointer bg-transparent text-[var(--color-coral)] border border-[var(--color-coral)]/40 hover:bg-[var(--color-coral)]/10 transition-colors"
+                  className="inline-flex items-center justify-center gap-1 whitespace-nowrap rounded-[7px] px-3 py-2 text-[11px] font-medium min-h-8.5 cursor-pointer bg-transparent text-coral border border-coral/40 hover:bg-coral/10 transition-colors"
                   onClick={handleImportScenarioDebts}
                   title="Import scenario debt payments as monthly recurring obligations"
                 >

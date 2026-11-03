@@ -1,8 +1,8 @@
 import { NumberField } from './NumberField';
 import { useState } from 'react';
 import type { FormEvent } from 'react';
-import { debtPayment, expenseAmount, types } from '../finance';
-import type { GraphData, GraphNode } from '../finance';
+import { debtPayment, expenseAmount, money, recurringToMonthlyAmount, types } from '../finance';
+import type { GraphData, GraphNode, RecurrenceFrequency } from '../finance';
 
 export function AccountEditor({
   node,
@@ -100,9 +100,33 @@ export function AccountEditor({
             ))}
           </select>
         </label>
+        {['INCOME', 'EXPENSE'].includes(draft.nodeType) && (
+          <label className="flex flex-col gap-1.75 text-[11px] text-(--ui-text-a9b6cc)">
+            Frequency
+            <select
+              className="w-full text-xs min-w-0 border border-border rounded-lg bg-(--ui-surface-101722) text-(--ui-text-edf2fa) px-2.75 py-2.5 cursor-pointer"
+              value={draft.frequency || 'monthly'}
+              onChange={(e) =>
+                setDraft({
+                  ...draft,
+                  frequency: e.target.value as RecurrenceFrequency,
+                })
+              }
+            >
+              <option value="daily">Daily</option>
+              <option value="weekly">Weekly</option>
+              <option value="biweekly">Bi-weekly (every 2 weeks)</option>
+              <option value="monthly">Monthly</option>
+              <option value="quarterly">Quarterly</option>
+              <option value="yearly">Yearly / Annual</option>
+            </select>
+          </label>
+        )}
         <label className="flex flex-col gap-1.75 text-[11px] text-(--ui-text-a9b6cc)">
           {['INCOME', 'EXPENSE'].includes(draft.nodeType)
-            ? 'Monthly amount ($)'
+            ? draft.frequency && draft.frequency !== 'monthly'
+              ? `${draft.frequency.charAt(0).toUpperCase() + draft.frequency.slice(1)} amount ($)`
+              : 'Monthly amount ($)'
             : 'Current balance ($)'}
           <NumberField
             type="number"
@@ -114,6 +138,13 @@ export function AccountEditor({
             disabled={expenseRoutes.length > 0}
             onChange={(e) => setDraft({ ...draft, amountOrBalance: Number(e.target.value) })}
           />
+          {['INCOME', 'EXPENSE'].includes(draft.nodeType) &&
+            draft.frequency &&
+            draft.frequency !== 'monthly' && (
+              <small className="text-[10px] text-[#7d91ac] leading-normal block">
+                Monthly equivalent: {money(recurringToMonthlyAmount(draft.amountOrBalance, draft.frequency, draft.intervalCount))}/month
+              </small>
+            )}
         </label>
         {expenseRoutes.length > 0 && (
           <div className="p-[12px_16px] text-xs rounded-lg mb-3.5 flex gap-3.5 items-center justify-between leading-relaxed bg-(--ui-surface-192332) border border-(--ui-border-2e3e54) text-(--ui-text-a9b8cc)">

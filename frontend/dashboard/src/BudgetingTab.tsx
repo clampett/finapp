@@ -134,7 +134,7 @@ export const decryptFromDemoStorage = async <T,>(storageKey: string, raw: string
     );
     return JSON.parse(new TextDecoder().decode(plain)) as T;
   } catch {
-    throw new Error("The saved demo budget could not be decrypted.");
+    return null;
   }
 };
 

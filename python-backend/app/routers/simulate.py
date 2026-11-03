@@ -1,9 +1,16 @@
 from typing import Literal
+import re
 from fastapi import APIRouter
 from pydantic import BaseModel, Field, ConfigDict, model_validator
 from app.debt_waterfall import DebtItem, simulate_debt_waterfall
 from app.projection import project_household
-from app.cashflow import saving_plan, monthly_budget, expense_total
+from app.cashflow import (
+    saving_plan,
+    monthly_budget,
+    expense_total,
+    recurring_to_monthly,
+    node_monthly_amount,
+)
 from app.market_model import get_market_model
 
 router = APIRouter()
@@ -19,6 +26,20 @@ class NodeInput(BaseModel):
     balance: float = Field(ge=-1e12, le=1e12)
     apr: float = Field(default=0, ge=0, le=100)
     min_payment: float | None = Field(default=None, ge=0, le=1e9)
+    frequency: (
+        Literal[
+            "daily",
+            "weekly",
+            "biweekly",
+            "monthly",
+            "quarterly",
+            "semiannual",
+            "yearly",
+            "annual",
+        ]
+        | None
+    ) = "monthly"
+    interval_count: int | None = Field(default=1, ge=1, le=365)
 
 
     # Matched the browser by permitting signed balances only on cash accounts.
@@ -27,6 +48,31 @@ class NodeInput(BaseModel):
         if self.balance < 0 and self.type not in ("CHECKING", "SAVINGS"):
             raise ValueError("Only cash accounts can have a negative balance")
         return self
+
+
+class RecurringTransactionInput(BaseModel):
+    model_config = ConfigDict(allow_inf_nan=False)
+    id: str | int | None = None
+    kind: Literal["income", "expense", "INCOME", "EXPENSE"]
+    amount: float = Field(ge=0, le=1e12)
+    frequency: Literal[
+        "daily",
+        "weekly",
+        "biweekly",
+        "monthly",
+        "quarterly",
+        "semiannual",
+        "yearly",
+        "annual",
+    ] = "monthly"
+    interval_count: int = Field(default=1, ge=1, le=365)
+    is_active: bool = True
+    start_date: str | None = None
+    end_date: str | None = None
+    description: str | None = None
+    category_name: str | None = None
+    account_name: str | None = None
+    notes: str | None = None
 
 
 class EdgeInput(BaseModel):
@@ -59,6 +105,9 @@ class SimulationRequest(BaseModel):
     target: float = Field(default=500000, ge=0, le=1e12)
     nodes: list[NodeInput] = Field(max_length=200)
     edges: list[EdgeInput] = Field(default_factory=list, max_length=500)
+    recurring_transactions: list[RecurringTransactionInput] = Field(
+        default_factory=list, max_length=500
+    )
 
     @model_validator(mode="after")
     def unique_nodes(self):
@@ -79,10 +128,47 @@ class SimulationRequest(BaseModel):
 
 @router.post("/api/simulate")
 def run_simulation(payload: SimulationRequest):
-    # Interpreted income and expense node values as monthly flows, while account
-    # and debt values were treated as balances rather than recurring contributions.
-    income = sum(n.balance for n in payload.nodes if n.type == "INCOME")
+    # Interpreted income and expense node values as monthly flows, taking into account
+    # any non-monthly recurrence frequencies (e.g. bi-weekly, weekly, quarterly, yearly),
+    # while account and debt values were treated as balances.
+    income = sum(node_monthly_amount(n) for n in payload.nodes if n.type == "INCOME")
     expenses = expense_total(payload.nodes, payload.edges, payload.income_basis, payload.tax_rate)
+
+    # Process recurring transactions that are not already represented by a scenario node
+    node_ids = {n.id for n in payload.nodes}
+    node_names = {n.name.strip().lower() for n in payload.nodes}
+    recurring_income = 0.0
+    recurring_expenses = 0.0
+    recurring_debt_payment = 0.0
+
+    for r in payload.recurring_transactions:
+        if not r.is_active:
+            continue
+        linked_node_id = None
+        if r.notes:
+            m = re.search(r"\[node-id:([^\]]+)\]", r.notes)
+            if m:
+                linked_node_id = m.group(1)
+        if (linked_node_id and linked_node_id in node_ids) or (str(r.id) in node_ids):
+            continue
+        if r.description and r.description.strip().lower() in node_names:
+            continue
+
+        monthly_val = recurring_to_monthly(r.amount, r.frequency, r.interval_count)
+        kind = r.kind.lower()
+        if kind == "income":
+            recurring_income += monthly_val
+        elif kind == "expense":
+            is_debt = (r.category_name and r.category_name.strip().lower() == "debt") or (
+                r.account_name and any(kw in r.account_name.lower() for kw in ("loan", "card"))
+            )
+            if is_debt:
+                recurring_debt_payment += monthly_val
+            else:
+                recurring_expenses += monthly_val
+
+    income += recurring_income
+    expenses += recurring_expenses
     debts = []
     for n in payload.nodes:
         if n.type != "DEBT":
@@ -114,7 +200,7 @@ def run_simulation(payload: SimulationRequest):
         debts.append(DebtItem(n.id, n.name, n.balance, n.apr / 100, minimum))
     # Converted percentage APR to decimal APR above; the debt engine performed
     # the remaining annual-to-monthly conversion before accruing interest.
-    minimums = sum(d.min_payment for d in debts if d.balance > 0)
+    minimums = sum(d.min_payment for d in debts if d.balance > 0) + recurring_debt_payment
     plan = saving_plan(payload.nodes, payload.edges)
     budget = monthly_budget(
         income,

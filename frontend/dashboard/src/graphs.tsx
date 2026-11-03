@@ -976,6 +976,8 @@ export function ArchetypeGraph({
             simulationType={simType}
             onClose={closeSimulation}
             portfolioValue={portfolioValue}
+            userId={userId}
+            demo={demo}
           />
         </Suspense>
       )}

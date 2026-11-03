@@ -446,3 +446,40 @@ test("overdrawn cash validates and appears as a liability without hiding positiv
   assert.equal(finance.overviewBreakdown(graph, "debt").total, 50);
   assert.throws(() => finance.parseGraph({ ...graph, nodes: [{ ...graph.nodes[0], nodeType: "DEBT" }] }));
 });
+
+test('non-monthly frequencies on income and expense nodes convert accurately to monthly equivalents', () => {
+  const graph = finance.parseGraph({
+    nodes: [
+      { id: 'inc-biweekly', name: 'Biweekly Paycheck', nodeType: 'INCOME', amountOrBalance: 2000, interestRateApr: 0, frequency: 'biweekly', intervalCount: 1 },
+      { id: 'inc-weekly', name: 'Weekly Gig', nodeType: 'INCOME', amountOrBalance: 500, interestRateApr: 0, frequency: 'weekly', intervalCount: 1 },
+      { id: 'exp-yearly', name: 'Annual Insurance', nodeType: 'EXPENSE', amountOrBalance: 1200, interestRateApr: 0, frequency: 'yearly', intervalCount: 1 },
+      { id: 'exp-quarterly', name: 'Quarterly Utility', nodeType: 'EXPENSE', amountOrBalance: 300, interestRateApr: 0, frequency: 'quarterly', intervalCount: 1 },
+      { id: 'chk', name: 'Checking', nodeType: 'CHECKING', amountOrBalance: 1000, interestRateApr: 0 },
+    ],
+    edges: [],
+    assumptions: { incomeBasis: 'net', taxRate: 0, incomeGrowth: 0, expenseGrowth: 0 },
+  });
+
+  // Biweekly $2,000 = (2000 * 26) / 12 = $4,333.33/mo
+  // Weekly $500 = (500 * 52) / 12 = $2,166.67/mo
+  // Total income = 4333.33 + 2166.67 = $6,500.00/mo
+  // Yearly $1,200 = 1200 / 12 = $100.00/mo
+  // Quarterly $300 = (300 * 4) / 12 = $100.00/mo
+  // Total expenses = $200.00/mo
+  const t = finance.totals(graph);
+  assert.equal(t.income, 6500);
+  assert.equal(t.expenses, 200);
+  assert.equal(t.surplus, 6300);
+
+  // Individual expenseAmount
+  const annualExp = graph.nodes.find((n) => n.id === 'exp-yearly');
+  assert.equal(finance.expenseAmount(annualExp, graph), 100);
+
+  const quarterlyExp = graph.nodes.find((n) => n.id === 'exp-quarterly');
+  assert.equal(finance.expenseAmount(quarterlyExp, graph), 100);
+
+  // parseGraph preserves frequency and intervalCount
+  assert.equal(annualExp.frequency, 'yearly');
+  assert.equal(annualExp.intervalCount, 1);
+  assert.equal(graph.nodes.find((n) => n.id === 'inc-biweekly').frequency, 'biweekly');
+});

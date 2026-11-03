@@ -17,6 +17,8 @@ import { historyShortcut } from './ui-platform';
 import { BudgetControls } from './components/BudgetControls';
 import { DashboardTab } from './DashboardTab';
 import { Investing } from './components/Investing';
+import SettingsTab from './components/SettingsTab';
+import type { UserProfile } from './components/SettingsTab';
 import { clearSession, sessionHeaders } from './session';
 import { PORTFOLIO_UPDATED_EVENT, getStoredPortfolioValue, loadUnifiedHoldings } from './portfolio';
 import { lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState } from 'react';
@@ -44,11 +46,19 @@ export function ArchetypeGraph({
   demo,
   view,
   search,
+  userProfile,
+  onUpdateProfile,
+  activeTheme,
+  onSelectTheme,
 }: {
   userId: number;
   demo: boolean;
   view: View;
   search: string;
+  userProfile?: UserProfile;
+  onUpdateProfile?: (updated: UserProfile) => void;
+  activeTheme?: 'light' | 'dark';
+  onSelectTheme?: (theme: 'light' | 'dark' | 'system') => void;
 }) {
   const storageKey = `finapp-scenario-v2:${demo ? 'demo' : 'user'}:${userId}`;
   const holdingsKey = `finapp-holdings-v1:${demo ? 'demo' : 'user'}:${userId}`;
@@ -532,7 +542,9 @@ export function ArchetypeGraph({
                   ? 'Monthly cash flow'
                   : view === 'budgeting'
                     ? 'Budgeting & transactions'
-                    : 'Savings & investments'}
+                    : view === 'investing'
+                      ? 'Savings & investments'
+                      : 'Account settings'}
           </h2>
           <p className="text-sm text-muted mt-2 mb-0 leading-relaxed">
             {view === "graph" ? live.nodes.length + " nodes · " + live.edges.length + " connections · " +
@@ -540,7 +552,8 @@ export function ArchetypeGraph({
               view === "overview" ? "See your balances, monthly plan, and progress toward your goals." :
               view === "cashflow" ? "Review monthly inflows and commitments. Toggle individual flows to explore what changes." :
               view === "budgeting" ? "Record what happened and manage the schedules that repeat." :
-              "Track stock holdings and review the savings and investments in your scenario."}
+              view === "investing" ? "Track stock holdings and review the savings and investments in your scenario." :
+              "Personalize your display name, profile picture, and website theme."}
           </p>
         </div>
       </div>
@@ -654,6 +667,21 @@ export function ArchetypeGraph({
                   demo={demo}
                   portfolioValue={portfolioValue}
                   onUpdateGraph={update}
+                />
+              ) : view === 'settings' ? (
+                <SettingsTab
+                  userId={userId}
+                  demo={demo}
+                  profile={
+                    userProfile || {
+                      username: demo ? 'demo' : 'user',
+                      displayName: 'User',
+                      profilePicture: null,
+                    }
+                  }
+                  onUpdateProfile={onUpdateProfile || (() => {})}
+                  activeTheme={activeTheme || 'dark'}
+                  onSelectTheme={onSelectTheme || (() => {})}
                 />
               ) : view === 'graph' ? (
                 <Canvas

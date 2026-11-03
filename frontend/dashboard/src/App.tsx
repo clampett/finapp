@@ -10,6 +10,15 @@ import {
   saveLocalHoldings,
 } from './portfolio';
 import { useTheme } from './useTheme';
+import { getInitials } from './components/SettingsTab';
+import type { UserProfile } from './components/SettingsTab';
+
+const DEMO_PROFILES: Record<number, UserProfile> = {
+  1: { username: 'alex_grad', displayName: 'Alex Rivera (Recent Grad)', profilePicture: null },
+  2: { username: 'the_millers', displayName: 'The Miller Family', profilePicture: null },
+  3: { username: 'jordan_fire', displayName: 'Jordan Vance (FIRE Strategist)', profilePicture: null },
+};
+
 // Defined navigation labels in one place so the sidebar and breadcrumb were
 // derived from the same selected view rather than separate UI state.
 const views: {
@@ -22,9 +31,10 @@ const views: {
   { id: 'cashflow', label: 'Cash flow', icon: '⇄' },
   { id: 'budgeting', label: 'Budgeting', icon: '▤' },
   { id: 'investing', label: 'Investments', icon: '↗' },
+  { id: 'settings', label: 'Settings', icon: '⚙' },
 ];
 export default function App() {
-  const { theme, toggleTheme } = useTheme();
+  const { theme, selectTheme } = useTheme();
   const params = new URLSearchParams(location.search);
   const demo = params.get('demo') === 'true';
   const initialDemoProfile = demoProfile(params.get('profile'));
@@ -34,10 +44,55 @@ export default function App() {
   const [profile, setProfile] = useState(demo ? initialDemoProfile : userId);
   const [view, setView] = useState<View>('overview');
   const [search, setSearch] = useState('');
+  const [userProfile, setUserProfile] = useState<UserProfile>(() => {
+    if (demo) {
+      try {
+        const saved = localStorage.getItem(`finapp-demo-profile:${initialDemoProfile || 1}`);
+        if (saved) return JSON.parse(saved);
+      } catch {}
+      return DEMO_PROFILES[initialDemoProfile || 1] || DEMO_PROFILES[2];
+    }
+    return {
+      id: userId,
+      username: 'user' + userId,
+      displayName: 'User ' + userId,
+      profilePicture: null,
+    };
+  });
   // Reset the page position before the newly selected tab was painted.
   useLayoutEffect(() => {
     window.scrollTo({ top: 0, behavior: 'instant' });
   }, [view]);
+  useEffect(() => {
+    if (demo) {
+      try {
+        const saved = localStorage.getItem(`finapp-demo-profile:${profile}`);
+        if (saved) {
+          setUserProfile(JSON.parse(saved));
+          return;
+        }
+      } catch {}
+      setUserProfile(DEMO_PROFILES[profile] || DEMO_PROFILES[2]);
+    } else if (userId) {
+      fetch(`${API_BASE}/users/me`, {
+        headers: sessionHeaders(),
+        credentials: 'include',
+      })
+        .then((res) => (res.ok ? res.json() : null))
+        .then((body) => {
+          if (body?.data) {
+            setUserProfile({
+              id: body.data.id,
+              username: body.data.username,
+              email: body.data.email,
+              displayName: body.data.displayName || body.data.username,
+              profilePicture: body.data.profilePicture || null,
+            });
+          }
+        })
+        .catch(() => {});
+    }
+  }, [demo, profile, userId]);
   useEffect(() => {
     if (!demo && !userId) location.replace('/login');
     if (!demo && userId) {
@@ -153,18 +208,38 @@ export default function App() {
             )}
           </label>}
           <button
-            className="workspace-theme-switch"
             type="button"
-            aria-label={`Switch to ${theme === 'dark' ? 'light' : 'dark'} theme`}
-            title={`Switch to ${theme === 'dark' ? 'light' : 'dark'} theme`}
-            aria-pressed={theme === 'light'}
-            onClick={toggleTheme}
+            className={`flex items-center gap-2 p-1 pl-1 pr-2.5 rounded-full cursor-pointer transition-all border ${
+              view === 'settings'
+                ? 'bg-hover-bg border-brand ring-1 ring-brand'
+                : 'border-border bg-surface hover:bg-hover-bg hover:border-muted'
+            }`}
+            aria-label="User profile and settings"
+            title="User profile and settings"
+            onClick={() => {
+              setSearch('');
+              setView('settings');
+            }}
           >
-            {theme === 'dark' ? (
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" aria-hidden="true"><circle cx="12" cy="12" r="4" /><path d="M12 2v2m0 16v2M2 12h2m16 0h2M5 5l1.5 1.5m11 11L19 19M5 19l1.5-1.5m11-11L19 5" /></svg>
+            {userProfile.profilePicture ? (
+              <div className="w-7 h-7 rounded-full overflow-hidden shrink-0 flex items-center justify-center bg-raised">
+                <img
+                  src={userProfile.profilePicture}
+                  alt={userProfile.displayName || 'Profile'}
+                  className="w-full h-full object-cover"
+                />
+              </div>
             ) : (
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" aria-hidden="true"><path d="M20.5 14A8.5 8.5 0 0 1 10 3.5 8.5 8.5 0 1 0 20.5 14Z" /></svg>
+              <div
+                className="w-7 h-7 rounded-full bg-brand/15 text-brand border border-brand/30 flex items-center justify-center font-bold text-[11px] uppercase shrink-0"
+                aria-hidden="true"
+              >
+                {getInitials(userProfile.displayName || userProfile.username || 'U')}
+              </div>
             )}
+            <span className="text-xs font-medium text-text max-[760px]:hidden max-w-32 truncate">
+              {userProfile.displayName || userProfile.username || 'Profile'}
+            </span>
           </button>
           <button
             className="inline-flex items-center justify-center gap-1.75 whitespace-nowrap rounded-[7px] px-3.25 py-2.25 font-medium text-[11px] min-h-8.5 cursor-pointer bg-transparent border border-transparent text-(--ui-text-a4b2c9) hover:bg-(--ui-surface-hover-232f43) hover:text-text"
@@ -215,6 +290,10 @@ export default function App() {
           demo={demo}
           view={view}
           search={search}
+          userProfile={userProfile}
+          onUpdateProfile={setUserProfile}
+          activeTheme={theme}
+          onSelectTheme={selectTheme}
         />
       </main>
     </div>

@@ -22,6 +22,7 @@ export function useTheme() {
     // Applied the same browser preference used by public pages without changing
     // scenario state, chart data, or the selected workspace tab.
     document.documentElement.dataset.theme = theme;
+    if (document.documentElement.style) document.documentElement.style.colorScheme = theme;
     document
       .querySelector('meta[name="theme-color"]')
       ?.setAttribute('content', theme === 'light' ? '#f3f4f7' : '#0c1018');
@@ -34,7 +35,12 @@ export function useTheme() {
       }
     };
     const systemChanged = () => {
-      if (!savedTheme()) setTheme(deviceTheme());
+      if (!savedTheme()) {
+        const next = deviceTheme();
+        setTheme(next);
+        document.documentElement.dataset.theme = next;
+        if (document.documentElement.style) document.documentElement.style.colorScheme = next;
+      }
     };
     window.addEventListener('storage', changed);
     system.addEventListener('change', systemChanged);
@@ -53,5 +59,27 @@ export function useTheme() {
     }
     setTheme(next);
   };
-  return { theme, toggleTheme };
+  const selectTheme = (choice: 'light' | 'dark' | 'system') => {
+    if (choice === 'system') {
+      try {
+        localStorage.removeItem(preferenceKey);
+      } catch {
+        /* Kept selection in memory */
+      }
+      const dev = deviceTheme();
+      document.documentElement.dataset.theme = dev;
+      if (document.documentElement.style) document.documentElement.style.colorScheme = dev;
+      setTheme(dev);
+    } else {
+      try {
+        localStorage.setItem(preferenceKey, choice);
+      } catch {
+        /* Kept selection in memory */
+      }
+      document.documentElement.dataset.theme = choice;
+      if (document.documentElement.style) document.documentElement.style.colorScheme = choice;
+      setTheme(choice);
+    }
+  };
+  return { theme, toggleTheme, selectTheme };
 }

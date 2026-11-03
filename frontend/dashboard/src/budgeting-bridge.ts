@@ -454,6 +454,7 @@ export function syncGraphNodesToRecurring(
     updatedRecurring[index] = rule;
     updatedRules.push(rule);
   };
+  // Matched explicit links in both the current and older note formats.
   const linkedNodeId = (rule: RecurringTransactionItem) =>
     rule.notes?.match(/\[node-id:([^\]]+)\]/)?.[1] ??
     rule.notes?.match(/scenario (?:income|debt) node #([^\s]+)/)?.[1];
@@ -478,6 +479,7 @@ export function syncGraphNodesToRecurring(
 
     if (matching.length === 1) {
       const { rule, index } = matching[0];
+      // Paused linked rules when their planned amount was zero or their schedule had ended.
       const active = !node.disabled && amount > 0 && (!rule.endDate || today <= rule.endDate);
       const nextAmount = amount > 0 ? monthlyToRecurringAmount(amount, rule.frequency, rule.intervalCount) : rule.amount;
       if (rule.isActive !== active || Number(rule.amount) !== nextAmount || rule.kind !== kind) {

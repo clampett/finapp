@@ -435,6 +435,7 @@ test('turning on and off payments affects Net worth, Take-home income, monthly c
   assert.equal(parsedExpense.disabled, true);
 });
 
+// Checked that imported overdrafts reached the debt chart without reducing positive assets.
 test("overdrawn cash validates and appears as a liability without hiding positive assets", () => {
   const graph = finance.parseGraph({ nodes: [
     { id: "checking", name: "Checking", nodeType: "CHECKING", amountOrBalance: -50 },

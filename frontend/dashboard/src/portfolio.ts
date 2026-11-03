@@ -207,6 +207,7 @@ export async function loadUnifiedHoldings(
   } else {
     localHoldings = parseLocalHoldings(storageKey);
     if (demo) {
+      // Filled missing demo quotes from matching samples while retaining saved prices.
       const seeded = DEFAULT_DEMO_HOLDINGS[userId || 2] ?? DEFAULT_DEMO_HOLDINGS[2];
       localHoldings = localHoldings.map((holding) => ({
         ...holding,

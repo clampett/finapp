@@ -283,6 +283,7 @@ def test_markov_and_monte_carlo_shared_marginal_assumptions():
 
 
 def test_long_history_calibration_used_completed_months(monkeypatch):
+    # Fixed the clock so the completed-month check stayed independent of the test date.
     fixed_now = pd.Timestamp("2026-10-10", tz="UTC")
     monkeypatch.setattr(pd.Timestamp, "now", lambda tz=None: fixed_now.tz_convert(tz))
     dates = pd.bdate_range("1993-01-01", "2026-10-10")

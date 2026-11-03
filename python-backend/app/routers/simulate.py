@@ -21,6 +21,7 @@ class NodeInput(BaseModel):
     min_payment: float | None = Field(default=None, ge=0, le=1e9)
 
 
+    # Matched the browser by permitting signed balances only on cash accounts.
     @model_validator(mode="after")
     def validate_balance(self):
         if self.balance < 0 and self.type not in ("CHECKING", "SAVINGS"):

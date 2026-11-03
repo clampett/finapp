@@ -185,6 +185,7 @@ export function totals(graph: GraphData, portfolioValue = 0) {
     graph.nodes
       .filter((n) => !n.disabled && types.includes(n.nodeType))
       .reduce((s, n) => s + n.amountOrBalance, 0);
+  // Separated overdrawn balances from positive cash so assets and debt reconciled with net worth.
   const cashNodes = graph.nodes.filter((node) => !node.disabled && ['CHECKING', 'SAVINGS'].includes(node.nodeType));
   const overdraft = cashNodes.reduce((total, node) => total + Math.max(0, -node.amountOrBalance), 0);
   const income = sum(['INCOME']),
@@ -313,6 +314,7 @@ export function parseGraph(value: unknown): GraphData {
       id: String(n.id),
       name: n.name.trim(),
       nodeType: n.nodeType,
+      // Allowed a negative balance only on cash accounts.
       amountOrBalance: number(n.amountOrBalance, 1e12, n.nodeType === "CHECKING" || n.nodeType === "SAVINGS" ? -1e12 : 0),
       interestRateApr: number(n.interestRateApr ?? 0, 100),
       ...(n.archived === true ? { archived: true } : {}),

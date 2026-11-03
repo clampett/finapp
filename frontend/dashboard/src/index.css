@@ -256,6 +256,9 @@ summary::-webkit-details-marker {
 }
 
 /* Applied each tab accent to its introduction using the workspace theme tokens. */
+/* Separated tab panels from the top bar when no overview or demo row preceded them. */
+header + .workspace-tab-content { padding-block-start: clamp(1rem, 2.4vw, 1.75rem); }
+
 .workspace-tab-intro {
   --tab-accent: var(--color-primary);
   margin-bottom: 1.25rem;

@@ -146,7 +146,7 @@ export function ArchetypeGraph({
         }
         if (!response.ok)
           throw new Error(
-            `Could not load accounts (${response.status}). Check that the Java backend is running.`,
+            `We couldn’t load your accounts right now. Please try again.`,
           );
         const body = await response.json();
         if (!body.success)
@@ -295,7 +295,7 @@ export function ArchetypeGraph({
     if (
       original &&
       window.confirm(
-        'Reset this scenario to the server profile? Your local edits will be replaced.',
+        'Restore the original scenario? This replaces your edits in this browser.',
       )
     ) {
       update(structuredClone(original));
@@ -520,7 +520,7 @@ export function ArchetypeGraph({
     </>
   );
   return (
-    <div className="px-8 pb-4.5 max-[1100px]:px-5.5 max-[1100px]:pb-4.5 max-[760px]:px-4 max-[760px]:pb-4 2xl:px-11 fullscreen:bg-[var(--ui-surface-0c1018)] fullscreen:w-full fullscreen:h-full fullscreen:overflow-auto fullscreen:p-6 max-[650px]:fullscreen:p-3">
+    <div className="workspace-tab-content px-8 pb-4.5 max-[1100px]:px-5.5 max-[1100px]:pb-4.5 max-[760px]:px-4 max-[760px]:pb-4 2xl:px-11 fullscreen:bg-[var(--ui-surface-0c1018)] fullscreen:w-full fullscreen:h-full fullscreen:overflow-auto fullscreen:p-6 max-[650px]:fullscreen:p-3">
       <div className={"workspace-tab-intro workspace-tab-" + view}>
         <div>
           <h2 className="text-[clamp(18px,2vw,24px)] font-semibold tracking-[-0.5px] text-text m-0">
@@ -577,6 +577,7 @@ export function ArchetypeGraph({
           ))}
         </div>
       )}
+      {/* Kept scenario imports with the graph editor. */}
       {view === "graph" && <input
         ref={importRef}
         type="file"
@@ -758,6 +759,7 @@ export function ArchetypeGraph({
                   )}
                 </section>
               )}
+              {/* Kept simulation controls with the scenario they use. */}
               {view === "graph" && <div className="border border-(--ui-border-30384e) rounded-[11px] bg-linear-to-r from-(--ui-surface-1a1b2c) to-(--ui-surface-151b29) mt-3.75 p-[21px_22px] flex flex-col items-stretch gap-4.5">
                 <div>
                   <div className="text-[8px] text-(--ui-text-b5a4e3) mb-1.75 font-semibold tracking-wider">LOOK AHEAD</div>

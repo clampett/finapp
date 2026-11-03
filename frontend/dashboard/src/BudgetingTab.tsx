@@ -48,6 +48,7 @@ const fromB64 = (b64: string): Uint8Array<ArrayBuffer> => {
   return bytes;
 };
 
+// Reused the original session key when migrating a saved demo budget to browser-wide storage.
 const getDemoStorageSecret = (storageKey: string): string => {
   const key = storageKey + ":k";
   const existing = localStorage.getItem(key) ?? sessionStorage.getItem(key);
@@ -96,6 +97,7 @@ const decryptFromDemoStorage = async <T,>(storageKey: string, raw: string | null
       return null;
     }
   }
+  // Stopped before writing defaults when the saved budget could not be unlocked.
   if (!localStorage.getItem(storageKey + ":k") && !sessionStorage.getItem(storageKey + ":k")) {
     throw new Error("Open the tab that saved this demo budget to recover its original key.");
   }
@@ -611,6 +613,7 @@ export function BudgetingTab({
             }
             if (!controller.signal.aborted) setRecurringList(saved);
           })),
+          // Loaded saved accounts independently of the browser’s scenario nodes.
           read<AccountOption[]>("accounts", setDbAccounts),
         ]);
         if (controller.signal.aborted) return false;
@@ -630,7 +633,7 @@ export function BudgetingTab({
         console.error('Failed to load budgeting data:', err);
         setStatusMessage({
           type: 'error',
-          text: err instanceof Error ? err.message : 'Could not load data from backend.',
+          text: err instanceof Error ? err.message : 'We couldn’t load your budget. Please try again.',
         });
         return false;
       } finally {
@@ -1385,6 +1388,7 @@ export function BudgetingTab({
       });
       if (!res.ok) throw new Error('Generation failed');
       const json = await res.json();
+      // Applied only newly generated transactions to the scenario balances.
       const occurrences: Transaction[] = Array.isArray(json.data) ? json.data : [];
       const count = occurrences.length;
       const currentGraph = rawGraphRef.current ?? graphRef.current;

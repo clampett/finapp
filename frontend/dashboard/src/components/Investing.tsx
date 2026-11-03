@@ -62,7 +62,7 @@ async function fetchQuote(symbol: string, signal?: AbortSignal): Promise<Quote> 
   // Rejected unverified currencies, including responses from an outdated backend.
   if (body?.currency !== 'USD') {
     throw new Error(
-      'This stock needs a verified USD quote. Update the Python backend and try again.',
+      'A verified USD price is unavailable for this stock. Try another symbol.',
     );
   }
   return body as Quote;
@@ -249,6 +249,7 @@ export function Investing({
     }
   }
 
+  // Recorded the completed share edit as one trade after blur or Enter.
   async function setShares(sym: string, raw: string) {
     const value = Number(raw);
     if (!raw.trim() || !Number.isFinite(value) || value < 0) return;

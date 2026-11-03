@@ -461,14 +461,14 @@ test('budgeting-bridge: syncGraphNodesToRecurring automatically synchronizes sce
   const updatedSalary = sync3.updatedRecurring.find((r) => r.description === 'Salary');
   assert.equal(updatedSalary.amount, 6000);
 
-  // 4. Archiving node removes it from recurring list
+  // 4. Archiving a node pauses its saved rule without removing history
   const archivedGraph = {
     ...modifiedGraph,
     nodes: modifiedGraph.nodes.map((n) => (n.id === 'rent1' ? { ...n, archived: true } : n)),
   };
   const sync4 = syncGraphNodesToRecurring(archivedGraph, sync3.updatedRecurring);
   assert.equal(sync4.hasChanges, true);
-  assert.equal(sync4.updatedRecurring.find((r) => r.description === 'Rent'), undefined);
+  assert.equal(sync4.updatedRules.find((r) => r.description === 'Rent').isActive, false);
 });
 
 test('budgeting-bridge: syncRecurringToGraphNode automatically adds/updates nodes and edges in graph scenario', () => {
@@ -599,9 +599,9 @@ test('end-to-end interconnected system: multi-step budgeting, investing, and dyn
   assert.ok(debtSync);
   scenario = debtSync.updatedGraph;
   t = totals(scenario, portfolioVal);
-  // Debt reduced to 8000. Net worth = 31000 - 8000 = 23000.
+  // Paid 2000 from checking, preserving net worth as principal fell by the same amount.
   assert.equal(t.debt, 8000);
-  assert.equal(t.netWorth, 23000);
+  assert.equal(t.netWorth, 21000);
 
   // Step 5: User logs $1,000 living expenses from Checking
   const expenseSync = syncScenarioTransactionToGraph(scenario, {
@@ -612,16 +612,16 @@ test('end-to-end interconnected system: multi-step budgeting, investing, and dyn
   assert.ok(expenseSync);
   scenario = expenseSync.updatedGraph;
   t = totals(scenario, portfolioVal);
-  // Checking reduced from 11000 to 10000. Assets = 10000 + 20000 = 30000. Net worth = 30000 - 8000 = 22000.
-  assert.equal(t.assets, 30000);
-  assert.equal(t.netWorth, 22000);
+  // Checking fell from 9000 to 8000 after living expenses.
+  assert.equal(t.assets, 28000);
+  assert.equal(t.netWorth, 20000);
 
   // Step 6: Stock gains appreciate portfolio from $15,000 to $18,000
   portfolioVal = 18000;
   t = totals(scenario, portfolioVal);
-  // Assets = 10000 + 5000 + 18000 = 33000. Net worth = 33000 - 8000 = 25000.
-  assert.equal(t.assets, 33000);
-  assert.equal(t.netWorth, 25000);
+  // Assets = 8000 + 5000 + 18000 = 31000.
+  assert.equal(t.assets, 31000);
+  assert.equal(t.netWorth, 23000);
 });
 
 test('issue 1: editing a recurring debt payment preserves loan balance and updates payment settings', () => {
@@ -897,7 +897,7 @@ test('issue 7: demo recurring transactions persist reliably without deleting lis
   assert.ok(!afterDelete.recurring.some((r) => r.id === 2), 'Gym must be removed');
 });
 
-test('issue 8: syncGraphNodesToRecurring deduplicates repeated/recopied recurring rules and removes duplicates', () => {
+test('issue 8: syncGraphNodesToRecurring preserves ambiguous and distinct recurring rules', () => {
   const graph = {
     nodes: [
       { id: 'sal1', name: 'Salary', nodeType: 'INCOME', amountOrBalance: 5000, interestRateApr: 0 },
@@ -912,20 +912,16 @@ test('issue 8: syncGraphNodesToRecurring deduplicates repeated/recopied recurrin
   // Simulate multiple repeats (e.g. from clicking into and out of tab)
   const duplicatedList = [
     ...initial.updatedRecurring,
-    { ...initial.updatedRecurring[0], id: 101 },
-    { ...initial.updatedRecurring[0], id: 102 },
+    { ...initial.updatedRecurring[0], id: 101, accountId: 4 },
+    { ...initial.updatedRecurring[0], id: 102, startDate: "2027-01-01" },
     { ...initial.updatedRecurring[1], id: 103 },
   ];
   assert.equal(duplicatedList.length, 5);
 
   const cleanSync = syncGraphNodesToRecurring(graph, duplicatedList);
-  assert.equal(cleanSync.hasChanges, true);
-  assert.equal(cleanSync.updatedRecurring.length, 2, 'Must deduplicate back to 2 recurring rules');
-  assert.equal(cleanSync.removedDuplicates.length, 3, 'Must identify 3 removed duplicates');
-  assert.equal(
-    JSON.stringify(cleanSync.removedDuplicates.map((d) => d.id).sort((a, b) => a - b)),
-    JSON.stringify([101, 102, 103]),
-  );
+  assert.equal(cleanSync.hasChanges, false);
+  assert.equal(cleanSync.updatedRecurring.length, 5);
+  assert.equal(cleanSync.updatedRules.length, 0);
 });
 
 test('issue 8: createSalaryRecurringTemplates and createDebtRecurringTemplates do not create duplicates when rules with [node-id] exist', () => {
@@ -1008,7 +1004,7 @@ test('budgeting-bridge: availableAccounts strictly contains Checking, Savings, a
   assert.deepEqual([...accountsWithoutLoans], ['Checking', 'Savings']);
 });
 
-test('budgeting-bridge: syncRecurringDeletionToGraph matches DEBT node by accountName and archives it', () => {
+test('budgeting-bridge: syncRecurringDeletionToGraph requires an explicit link and preserves the loan principal', () => {
   const graph = {
     nodes: [
       { id: 'chk1', name: 'Checking', nodeType: 'CHECKING', amountOrBalance: 3000 },
@@ -1023,11 +1019,14 @@ test('budgeting-bridge: syncRecurringDeletionToGraph matches DEBT node by accoun
     description: 'Monthly Car Payment',
   };
 
-  const result = syncRecurringDeletionToGraph(graph, deletedRule);
-  assert.ok(result, 'Should find matching debt node by accountName');
+  assert.equal(syncRecurringDeletionToGraph(graph, deletedRule), null);
+  const result = syncRecurringDeletionToGraph(graph, { ...deletedRule, notes: "[node-id:loan1]" });
+  assert.ok(result);
   assert.equal(result.removedNode.id, 'loan1');
   const updatedLoan = result.updatedGraph.nodes.find((n) => n.id === 'loan1');
-  assert.equal(updatedLoan.archived, true, 'Debt node must be archived in graph');
+  assert.equal(Boolean(updatedLoan.archived), false);
+  assert.equal(updatedLoan.amountOrBalance, 8000);
+  assert.equal(updatedLoan.minPayment, 0);
   const updatedChecking = result.updatedGraph.nodes.find((n) => n.id === 'chk1');
   assert.equal(Boolean(updatedChecking.archived), false, 'Checking node must not be archived');
 });

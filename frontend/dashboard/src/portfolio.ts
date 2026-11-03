@@ -131,16 +131,16 @@ export function holdingsToSynthetic(
     userId,
     ticker: h.symbol,
     companyName: h.companyName ?? null,
-    lastPrice: h.lastPrice ?? 100,
+    lastPrice: h.lastPrice ?? 0,
     sharesOwned: h.shares,
-    purchasePrice: h.purchasePrice ?? h.lastPrice ?? 100,
+    purchasePrice: h.purchasePrice ?? h.lastPrice ?? 0,
     paysDividend: Boolean(h.paysDividend),
     dividendFrequency: h.dividendFrequency ?? null,
     dividendPerShare: h.dividendPerShare ?? null,
   }));
 
   const positions: StockPosition[] = holdings.map((h, idx) => {
-    const price = h.lastPrice ?? 100;
+    const price = h.lastPrice ?? 0;
     const purchased = h.purchasePrice ?? price;
     return {
       stockId: h.stockId ?? idx + 1,
@@ -221,6 +221,14 @@ export async function loadUnifiedHoldings(
     saveLocalHoldings(storageKey, localHoldings);
   } else {
     localHoldings = parseLocalHoldings(storageKey);
+    if (demo) {
+      // Filled missing demo quotes from matching samples while retaining saved prices.
+      const seeded = DEFAULT_DEMO_HOLDINGS[userId || 2] ?? DEFAULT_DEMO_HOLDINGS[2];
+      localHoldings = localHoldings.map((holding) => ({
+        ...holding,
+        lastPrice: holding.lastPrice ?? seeded.find((sample) => sample.symbol === holding.symbol)?.lastPrice,
+      }));
+    }
   }
 
   const { stocks, positions } = holdingsToSynthetic(localHoldings, userId || 1);

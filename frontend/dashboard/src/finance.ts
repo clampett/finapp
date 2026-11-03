@@ -185,14 +185,17 @@ export function totals(graph: GraphData, portfolioValue = 0) {
     graph.nodes
       .filter((n) => !n.disabled && types.includes(n.nodeType))
       .reduce((s, n) => s + n.amountOrBalance, 0);
+  // Separated overdrawn balances from positive cash so assets and debt reconciled with net worth.
+  const cashNodes = graph.nodes.filter((node) => !node.disabled && ['CHECKING', 'SAVINGS'].includes(node.nodeType));
+  const overdraft = cashNodes.reduce((total, node) => total + Math.max(0, -node.amountOrBalance), 0);
   const income = sum(['INCOME']),
     expenses = graph.nodes
       .filter((node) => !node.disabled && node.nodeType === 'EXPENSE')
       .reduce((sum, node) => sum + expenseAmount(node, graph), 0),
-    debt = sum(['DEBT']);
+    debt = sum(['DEBT']) + overdraft;
   const nodeInvestments = sum(['INVESTMENT']);
   const totalInvestments = nodeInvestments + (portfolioValue > 0 ? portfolioValue : 0);
-  const assets = sum(['CHECKING', 'SAVINGS']) + totalInvestments;
+  const assets = cashNodes.reduce((total, node) => total + Math.max(0, node.amountOrBalance), 0) + totalInvestments;
   const payments = graph.nodes
     .filter((n) => !n.disabled && n.nodeType === 'DEBT')
     .reduce((s, n) => s + debtPayment(n, graph), 0);
@@ -206,6 +209,7 @@ export function totals(graph: GraphData, portfolioValue = 0) {
     income,
     expenses,
     debt,
+    overdraft,
     assets,
     payments,
     netWorth: assets - debt,
@@ -233,14 +237,14 @@ export function overviewBreakdown(graph: GraphData, mode: OverviewMode, portfoli
             label: 'Checking',
             value: graph.nodes
               .filter((node) => !node.disabled && node.nodeType === 'CHECKING')
-              .reduce((sum, node) => sum + node.amountOrBalance, 0),
+              .reduce((sum, node) => sum + Math.max(0, node.amountOrBalance), 0),
             color: 'var(--ui-paint-60a5fa)',
           },
           {
             label: 'Savings',
             value: graph.nodes
               .filter((node) => !node.disabled && node.nodeType === 'SAVINGS')
-              .reduce((sum, node) => sum + node.amountOrBalance, 0),
+              .reduce((sum, node) => sum + Math.max(0, node.amountOrBalance), 0),
             color: 'var(--ui-paint-22d3ee)',
           },
           {
@@ -250,13 +254,15 @@ export function overviewBreakdown(graph: GraphData, mode: OverviewMode, portfoli
           },
         ]
       : mode === 'debt'
-        ? graph.nodes
-            .filter((node) => !node.disabled && node.nodeType === 'DEBT')
+        ? [
+            ...graph.nodes.filter((node) => !node.disabled && node.nodeType === 'DEBT')
             .map((node, index) => ({
               label: node.name,
               value: node.amountOrBalance,
               color: ['var(--ui-paint-fb7185)', 'var(--ui-paint-fbbf24)', 'var(--ui-paint-b69dfa)', 'var(--ui-paint-59c9c1)', 'var(--ui-paint-7baaf5)'][index % 5],
-            }))
+            })),
+            { label: "Cash overdraft", value: t.overdraft, color: "var(--ui-paint-fb7185)" },
+          ]
         : [
             { label: 'Estimated taxes', value: t.taxes, color: 'var(--ui-paint-a78bfa)' },
             { label: 'Living expenses', value: t.expenses, color: 'var(--ui-paint-fbbf24)' },
@@ -286,10 +292,10 @@ export function parseGraph(value: unknown): GraphData {
     data.edges.length > 500
   )
     throw new Error('Use a FinApp JSON file with up to 200 accounts and 500 connections.');
-  const number = (v: unknown, max: number) => {
+  const number = (v: unknown, max: number, min = 0) => {
     const n = Number(v);
-    if (!Number.isFinite(n) || n < 0 || n > max)
-      throw new Error('Amounts must be finite, nonnegative numbers within the supported range.');
+    if (!Number.isFinite(n) || n < min || n > max)
+      throw new Error('Amounts must be finite and within the supported range.');
     return n;
   };
   const nodes = data.nodes.map((n) => {
@@ -308,7 +314,8 @@ export function parseGraph(value: unknown): GraphData {
       id: String(n.id),
       name: n.name.trim(),
       nodeType: n.nodeType,
-      amountOrBalance: number(n.amountOrBalance, 1e12),
+      // Allowed a negative balance only on cash accounts.
+      amountOrBalance: number(n.amountOrBalance, 1e12, n.nodeType === "CHECKING" || n.nodeType === "SAVINGS" ? -1e12 : 0),
       interestRateApr: number(n.interestRateApr ?? 0, 100),
       ...(n.archived === true ? { archived: true } : {}),
       ...(n.disabled === true ? { disabled: true } : {}),

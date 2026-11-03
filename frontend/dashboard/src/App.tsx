@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useLayoutEffect, useState } from 'react';
 import { ArchetypeGraph } from './graphs';
 import type { View } from './finance';
 import { demoProfile, API_BASE } from './finance';
@@ -34,6 +34,10 @@ export default function App() {
   const [profile, setProfile] = useState(demo ? initialDemoProfile : userId);
   const [view, setView] = useState<View>('overview');
   const [search, setSearch] = useState('');
+  // Reset the page position before the newly selected tab was painted.
+  useLayoutEffect(() => {
+    window.scrollTo({ top: 0, behavior: 'instant' });
+  }, [view]);
   useEffect(() => {
     if (!demo && !userId) location.replace('/login');
     if (!demo && userId) {
@@ -75,7 +79,11 @@ export default function App() {
               }
             });
             if (Object.keys(priceMap).length > 0) {
-              const updated = holdingsToRefresh.map((h) => {
+              // Merged late quotes into current holdings so deleted positions stayed deleted.
+              const latestHoldings = localStorage.getItem(storageKey) === null
+                ? holdingsToRefresh
+                : parseLocalHoldings(storageKey);
+              const updated = latestHoldings.map((h) => {
                 const p = priceMap[h.symbol.toUpperCase()];
                 return p !== undefined ? { ...h, lastPrice: p } : h;
               });
@@ -103,32 +111,38 @@ export default function App() {
               // Kept active and inactive colors exclusive so generated CSS order could not hide selection.
               className={`border flex items-center text-left gap-3 rounded-lg p-3 w-full my-0.75 text-[13px] cursor-pointer transition-colors duration-150 max-[760px]:w-auto max-[760px]:whitespace-nowrap max-[760px]:text-[11px] max-[760px]:px-2.75 max-[760px]:py-2.25 max-[760px]:gap-1.75 ${view === item.id ? 'active bg-active-bg text-active-text border-active-border' : 'border-transparent bg-transparent text-(--ui-text-98a6bc) hover:bg-hover-bg hover:text-(--ui-text-edf2fa)'}`}
               aria-current={view === item.id ? 'page' : undefined}
-              onClick={() => setView(item.id)}
+              onClick={() => {
+                setSearch("");
+                setView(item.id);
+              }}
             >
               <span className="text-[19px] w-5 text-center max-[760px]:text-[15px] max-[760px]:w-3.5" aria-hidden="true">{item.icon}</span>
               {item.label}
             </button>
           ))}
         </nav>
-        <div className="workspace-sidebar-note mt-auto max-[760px]:hidden">
-          <span aria-hidden="true" />
-          <div>
-            <p>Personal finance, connected.</p>
-            <p>Build a scenario. See the possibilities.</p>
-          </div>
-        </div>
+        {/* Opened help in a separate tab so the current workspace session stayed open. */}
+        <a className="workspace-sidebar-help" href="/faq" target="_blank" rel="noopener noreferrer" aria-label="Help center, opens in a new tab">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" aria-hidden="true">
+            <circle cx="12" cy="12" r="9" />
+            <path d="M9.5 9a2.5 2.5 0 1 1 3.7 2.2c-.8.5-1.2 1-1.2 1.8m0 3h.01" />
+          </svg>
+          <span><strong>Help center</strong><small>Guides and answers</small></span>
+          <span className="workspace-help-arrow" aria-hidden="true">↗</span>
+        </a>
       </aside>
       <main className="flex-1 min-w-0">
         <header className="h-18.5 flex gap-5 items-center px-8 border-b border-border bg-header max-[760px]:h-15 max-[760px]:px-4 max-[760px]:gap-2.5">
           <div className="text-xs text-(--ui-text-7f8ea5) flex-1 max-[760px]:hidden">
             Workspace <span className="mx-2.5 text-(--ui-text-4b5971)">/</span> <strong className="text-(--ui-text-bac5d7) font-medium">{views.find((v) => v.id === view)?.label}</strong>
           </div>
-          <label className="min-w-0 flex items-center gap-2.25 text-(--ui-text-8f9db3) bg-(--ui-surface-151c29) border border-(--ui-border-293246) rounded-[7px] px-2.5 w-60 max-[760px]:flex-1 max-[760px]:w-auto">
+          {/* Shown only where the current view supplied a list or graph to search. */}
+          {(view === "graph" || view === "cashflow" || view === "investing") && <label className="min-w-0 flex items-center gap-2.25 text-(--ui-text-8f9db3) bg-(--ui-surface-151c29) border border-(--ui-border-293246) rounded-[7px] px-2.5 w-60 max-[760px]:flex-1 max-[760px]:w-auto">
             <span className="text-[23px]" aria-hidden="true">⌕</span>
             <input
               className="min-w-0 border-0 bg-transparent py-2.25 px-0 w-full text-xs outline-none text-text"
-              aria-label="Search nodes"
-              placeholder="Find a node…"
+              aria-label={view === "graph" ? "Search nodes" : view === "cashflow" ? "Search flows" : "Search scenario accounts"}
+              placeholder={view === "graph" ? "Find a node…" : view === "cashflow" ? "Find a flow…" : "Find a scenario account…"}
               value={search}
               onChange={(e) => setSearch(e.target.value)}
             />
@@ -137,7 +151,7 @@ export default function App() {
                 ×
               </button>
             )}
-          </label>
+          </label>}
           <button
             className="workspace-theme-switch"
             type="button"
@@ -162,16 +176,16 @@ export default function App() {
             {demo ? 'Exit demo' : 'Sign out'} ↗
           </button>
         </header>
-        <div className="p-[29px_32px_24px] flex justify-between items-center gap-5 max-[760px]:items-start max-[760px]:p-[23px_16px_18px] max-[760px]:flex-col max-[760px]:gap-4">
-          <div>
+        {(view === "overview" || demo) && <div className="p-[29px_32px_24px] flex justify-between items-center gap-5 max-[760px]:items-start max-[760px]:p-[23px_16px_18px] max-[760px]:flex-col max-[760px]:gap-4">
+          {view === "overview" && <div>
             <div className="text-[9px] text-(--ui-text-a9b7ce) tracking-[1.7px] font-semibold mb-2.5">
               {demo ? 'EXPLORE A FINANCIAL SCENARIO' : 'YOUR FINANCIAL WORKSPACE'}
             </div>
             <h1 className="text-[clamp(22px,2.5vw,32px)] font-semibold tracking-[-1px] leading-tight text-text m-0 max-[760px]:text-[25px]">Your money. A clearer picture.</h1>
             <p className="text-xs text-(--ui-text-8998b0) mt-2 leading-relaxed">Connect the everyday decisions to the bigger plan.</p>
-          </div>
+          </div>}
           {demo && (
-            <div className="flex gap-2.5 items-center shrink-0 max-[760px]:w-full">
+            <div className="ms-auto flex gap-2.5 items-center shrink-0 max-[760px]:w-full">
               <span className="text-[9px] tracking-[1px] border border-(--ui-border-705822) text-(--ui-text-e8c67a) rounded px-1.75 py-1.25">DEMO</span>
               <label className="sr-only" htmlFor="profile">
                 Demo profile
@@ -194,7 +208,7 @@ export default function App() {
               </select>
             </div>
           )}
-        </div>
+        </div>}
         <ArchetypeGraph
           key={`${demo}-${profile}`}
           userId={profile}

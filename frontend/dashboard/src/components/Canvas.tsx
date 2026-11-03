@@ -146,7 +146,7 @@ export function Canvas({
       .attr('stroke', (edge) => {
         const src = graph.nodes.find((node) => node.id === edge.sourceNodeId);
         const tgt = graph.nodes.find((node) => node.id === edge.targetNodeId);
-        if (src?.disabled || tgt?.disabled) return '#445163';
+        if (src?.disabled || tgt?.disabled) return 'var(--color-subtle)';
         return colors[tgt!.nodeType];
       })
       .attr('stroke-opacity', (edge) => {
@@ -246,10 +246,10 @@ export function Canvas({
       .attr('width', cardWidth)
       .attr('height', cardHeight)
       .attr('rx', 12)
-      .attr('fill', (n) => (n.disabled ? '#0e141f' : 'var(--ui-paint-171f2e)'))
+      .attr('fill', (n) => (n.disabled ? 'var(--color-raised)' : 'var(--ui-paint-171f2e)'))
       .attr('stroke', (n) =>
         n.disabled
-          ? '#3b4759'
+          ? 'var(--color-subtle)'
           : n.id === selected || scopeIds.includes(n.id)
             ? 'var(--ui-paint-e0e7ff)'
             : colors[n.nodeType],
@@ -264,12 +264,12 @@ export function Canvas({
       .attr('cx', 15)
       .attr('cy', 17)
       .attr('r', 3)
-      .attr('fill', (n) => (n.disabled ? '#506076' : colors[n.nodeType]));
+      .attr('fill', (n) => (n.disabled ? 'var(--color-muted)' : colors[n.nodeType]));
     cards
       .append('text')
       .attr('x', 25)
       .attr('y', 21)
-      .attr('fill', (n) => (n.disabled ? '#617288' : 'var(--ui-paint-9caec7)'))
+      .attr('fill', (n) => (n.disabled ? 'var(--color-muted)' : 'var(--ui-paint-9caec7)'))
       .attr('font-size', 9)
       .attr('letter-spacing', '1px')
       .text((n) => (n.disabled ? `${n.nodeType} · OFF` : n.nodeType));
@@ -284,15 +284,15 @@ export function Canvas({
       .attr('width', 32)
       .attr('height', 15)
       .attr('rx', 4)
-      .attr('fill', '#261720')
-      .attr('stroke', '#6e2b3c')
+      .attr('fill', 'var(--color-raised)')
+      .attr('stroke', 'var(--color-coral)')
       .attr('stroke-width', 1);
     offBadges
       .append('text')
       .attr('x', 16)
       .attr('y', 11)
       .attr('text-anchor', 'middle')
-      .attr('fill', '#fda4af')
+      .attr('fill', 'var(--color-coral)')
       .attr('font-size', 8.5)
       .attr('font-weight', 700)
       .attr('letter-spacing', '0.5px')
@@ -302,7 +302,7 @@ export function Canvas({
       .append('text')
       .attr('x', 14)
       .attr('y', 40)
-      .attr('fill', (n) => (n.disabled ? '#7889a2' : 'var(--ui-paint-e7edf8)'))
+      .attr('fill', (n) => (n.disabled ? 'var(--color-muted)' : 'var(--ui-paint-e7edf8)'))
       .attr('font-size', 12)
       .text((n) => (n.name.length > 23 ? `${n.name.slice(0, 22)}…` : n.name));
 
@@ -313,14 +313,14 @@ export function Canvas({
       .attr('x2', (n) => Math.min(cardWidth - 50, 14 + Math.min(n.name.length, 22) * 7.2))
       .attr('y1', 36)
       .attr('y2', 36)
-      .attr('stroke', '#64758d')
+      .attr('stroke', 'var(--color-subtle)')
       .attr('stroke-width', 1.5);
 
     cards
       .append('text')
       .attr('x', 14)
       .attr('y', 62)
-      .attr('fill', (n) => (n.disabled ? '#617288' : colors[n.nodeType]))
+      .attr('fill', (n) => (n.disabled ? 'var(--color-muted)' : colors[n.nodeType]))
       .attr('font-size', 16)
       .attr('font-weight', 650)
       .text(
@@ -331,7 +331,7 @@ export function Canvas({
       .append('text')
       .attr('x', 14)
       .attr('y', 79)
-      .attr('fill', (n) => (n.disabled ? '#55657b' : 'var(--ui-paint-96a9c2)'))
+      .attr('fill', (n) => (n.disabled ? 'var(--color-muted)' : 'var(--ui-paint-96a9c2)'))
       .attr('font-size', 9)
       .text((node) =>
         node.disabled

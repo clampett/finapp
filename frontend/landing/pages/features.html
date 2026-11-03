@@ -226,8 +226,8 @@
           <p>
             Budgeting lets signed-in users manage income and expense records, accounts, categories,
             and recurring entries. Occurrences turn a recurring plan into dated records. These
-            database records and the Node Graph scenario draft are separate workflows; changes are
-            not automatically synchronized between them.
+            transactions record what happened, while your Node Graph shows your plan. Linked
+            recurring entries carry planned income and payments between the two.
           </p>
           <p>
             Gross pay can be reduced by an editable effective tax estimate. Income entered as
@@ -274,7 +274,7 @@
             </text>
           </svg>
           <figcaption>
-            Seeded Mid-Career Family example with a 20% effective tax estimate. Values are monthly
+            Mid-Career Family example with a 20% effective tax estimate. Values are monthly
             USD, before extra investing.
           </figcaption>
         </figure>
@@ -364,7 +364,7 @@
           <h3>Your assumptions, visible</h3>
           <p>
             Choose the model inputs and inspect the data source. Export a scenario to share its
-            setup with a teammate, or export simulation results to keep a record of the inputs and
+            scenario with someone else, or export simulation results to keep a record of the inputs and
             outcome.
           </p>
         </article>
@@ -381,6 +381,14 @@
     <footer class="public-footer border-t border-border bg-card">
       <div class="footer-shell">
         <div class="footer-top">
+          <div class="footer-identity">
+            <a class="footer-brand" href="/" aria-label="FinApp home"
+              ><span aria-hidden="true"></span>FinApp</a
+            >
+            <p class="footer-description">
+              Your money, connected. A clearer view of what comes next.
+            </p>
+          </div>
           <nav class="footer-navigation" aria-label="More about FinApp">
             <div>
               <p class="footer-heading">Product</p>
@@ -391,14 +399,6 @@
               <a href="/how-it-works">How it works</a><a href="/faq">Help &amp; FAQ</a>
             </div>
           </nav>
-          <div class="footer-identity">
-            <a class="footer-brand" href="/" aria-label="FinApp home"
-              ><span aria-hidden="true"></span>FinApp</a
-            >
-            <p class="footer-description">
-              Your money, connected. A clearer view of what comes next.
-            </p>
-          </div>
         </div>
         <div class="footer-bottom">
           <p>
@@ -407,8 +407,7 @@
           </p>
 
           <p class="footer-note">
-            A Rowan University software engineering project.<br />Educational financial modeling.
-            All amounts in USD.
+            For financial planning and education.<br />All amounts in USD.
           </p>
           <div class="footer-utility">
             <a href="mailto:meleja49@rowan.edu">Contact the team</a

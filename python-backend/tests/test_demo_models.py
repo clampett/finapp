@@ -283,11 +283,9 @@ def test_markov_and_monte_carlo_shared_marginal_assumptions():
 
 
 def test_long_history_calibration_used_completed_months(monkeypatch):
-    monkeypatch.setattr(
-        pd.Timestamp,
-        "now",
-        classmethod(lambda cls, tz=None: pd.Timestamp("2026-10-15", tz=tz)),
-    )
+    # Fixed the clock so the completed-month check stayed independent of the test date.
+    fixed_now = pd.Timestamp("2026-10-10", tz="UTC")
+    monkeypatch.setattr(pd.Timestamp, "now", lambda tz=None: fixed_now.tz_convert(tz))
     dates = pd.bdate_range("1993-01-01", "2026-10-10")
     prices = pd.Series(100 * np.exp(np.arange(len(dates)) * 0.0002), index=dates)
     market = calibrate_prices(prices)
@@ -349,3 +347,15 @@ def test_manual_distribution_was_repeatable_finite_and_ordered():
         for point in first[mode]:
             assert np.isfinite(point["p50"])
             assert point["p10"] <= point["p50"] <= point["p90"]
+
+def test_opening_overdraft_is_borrowing_and_does_not_reduce_available_reserves():
+    result = run_simulation(SimulationRequest(
+        nodes=[
+            dict(id="checking", name="Checking", type="CHECKING", balance=-50),
+            dict(id="savings", name="Savings", type="SAVINGS", balance=100),
+        ],
+        sim_type="monte_carlo", years=1, annual_return=0, annual_volatility=0,
+        borrowing_apr=0.12,
+    ))
+    assert result["monte_carlo"][0]["p50"] == pytest.approx(50)
+    assert result["monte_carlo"][-1]["p50"] < 50

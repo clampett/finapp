@@ -254,3 +254,21 @@ summary::-webkit-details-marker {
     animation: none;
   }
 }
+
+/* Applied each tab accent to its introduction using the workspace theme tokens. */
+/* Separated tab panels from the top bar when no overview or demo row preceded them. */
+header + .workspace-tab-content { padding-block-start: clamp(1rem, 2.4vw, 1.75rem); }
+
+.workspace-tab-intro {
+  --tab-accent: var(--color-primary);
+  margin-bottom: 1.25rem;
+  padding: clamp(1rem, 2.6vw, 1.75rem);
+  border: 1px solid var(--color-border);
+  border-inline-start: 3px solid var(--tab-accent);
+  border-radius: 0.875rem;
+  background: linear-gradient(112deg, color-mix(in srgb, var(--tab-accent) 9%, var(--color-base)), var(--color-base) 72%);
+}
+.workspace-tab-overview { --tab-accent: var(--color-mint); }
+.workspace-tab-cashflow { --tab-accent: var(--ui-paint-60a5fa); }
+.workspace-tab-budgeting { --tab-accent: var(--ui-paint-fbbf24); }
+.workspace-tab-investing { --tab-accent: var(--ui-paint-22d3ee); }

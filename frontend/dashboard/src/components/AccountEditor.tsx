@@ -106,7 +106,7 @@ export function AccountEditor({
             : 'Current balance ($)'}
           <NumberField
             type="number"
-            min={0}
+            min={draft.nodeType === "CHECKING" || draft.nodeType === "SAVINGS" ? -1e12 : 0}
             max={1e12}
             step="0.01"
             required

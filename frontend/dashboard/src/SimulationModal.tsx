@@ -24,6 +24,7 @@ import { ForecastChart } from './simulation/ForecastChart';
 import { ForecastInsights } from './simulation/ForecastInsights';
 import { SimulationGuide } from './simulation/SimulationGuide';
 import { sessionHeaders } from './session';
+import type { projectedDividendFlows } from './portfolio';
 import { decryptFromDemoStorage } from './BudgetingTab';
 import type { RecurringTransactionItem } from './budgeting-bridge';
 export type ForecastPoint = {
@@ -131,6 +132,7 @@ export function SimulationModal({
   scopeLabel,
   scope,
   portfolioValue = 0,
+  dividendFlows,
   userId,
   demo,
   recurringTransactions,
@@ -142,6 +144,7 @@ export function SimulationModal({
   scopeLabel?: string;
   scope?: 'all' | 'selected' | 'connected';
   portfolioValue?: number;
+  dividendFlows?: ReturnType<typeof projectedDividendFlows>;
   userId?: number;
   demo?: boolean;
   recurringTransactions?: RecurringTransactionItem[];
@@ -197,9 +200,10 @@ export function SimulationModal({
             signal: controller.signal,
           });
           if (res.ok) {
-            const data = await res.json();
-            if (!controller.signal.aborted && Array.isArray(data)) {
-              setRecurringList(data);
+            const response = await res.json();
+            // Unwrapped the API envelope before accepting saved recurring rules.
+            if (!controller.signal.aborted && Array.isArray(response.data)) {
+              setRecurringList(response.data);
             }
           }
         }
@@ -331,20 +335,27 @@ export function SimulationModal({
                 ]
               : []),
           ],
-          recurring_transactions: recurringList.map((r) => ({
-            id: r.id,
-            kind: r.kind,
-            amount: r.amount,
-            frequency: r.frequency,
-            interval_count: r.intervalCount || 1,
-            is_active: r.isActive !== false,
-            start_date: r.startDate,
-            end_date: r.endDate,
-            description: r.description,
-            category_name: r.categoryName,
-            account_name: r.accountName,
-            notes: r.notes,
-          })),
+          // Kept unrelated account flows outside simulations of selected nodes.
+          recurring_transactions: isSelectedScope ? [] : [
+            ...recurringList
+              .filter((rule) => !rule.notes?.startsWith("Auto-generated dividend for "))
+              .map((rule) => ({
+                id: rule.id,
+                kind: rule.kind,
+                amount: rule.amount,
+                frequency: rule.frequency,
+                interval_count: rule.intervalCount || 1,
+                is_active: rule.isActive !== false,
+                start_date: rule.startDate,
+                end_date: rule.endDate,
+                description: rule.description,
+                category_name: rule.categoryName,
+                account_name: rule.accountName,
+                notes: rule.notes,
+              })),
+            // Excluded separate estimates when adjusted market history already included dividends.
+            ...(marketSource === "manual" ? dividendFlows ?? [] : []),
+          ],
           edges: scenarioEdges.map((e) => ({
             source: e.sourceNodeId,
             target: e.targetNodeId,
@@ -417,6 +428,8 @@ export function SimulationModal({
     target,
     effectivePortfolioValue,
     recurringList,
+    dividendFlows,
+    isSelectedScope,
   ]);
   // Prepared the P10-P90 envelope from year-specific quantiles; these bounds
   // represented a distribution, not one continuous bull or bear market path.
@@ -711,7 +724,7 @@ export function SimulationModal({
                       onChange={(e) => setMarketSource(e.target.value as 'historical' | 'manual')}
                     >
                       <option value="historical">Free historical calibration</option>
-                      <option value="manual">Editable return assumptions</option>
+                      <option value="manual">Editable price return assumptions</option>
                     </select>
                   </label>
                   <label className="flex flex-col gap-2 text-[11px] text-(--ui-text-b9c5d9) mt-4.25">
@@ -749,9 +762,11 @@ export function SimulationModal({
                       </label>
                     )}
                     <label className="flex flex-col gap-2 text-[11px] text-(--ui-text-b9c5d9) mt-4.25">
-                      {marketSource === 'historical' && returnMode === 'observed'
-                        ? 'Fallback annual return (%)'
-                        : 'Forward expected return (%)'}
+                      {marketSource === 'manual'
+                        ? 'Annual price return (%)'
+                        : returnMode === 'observed'
+                          ? 'Fallback annual return (%)'
+                          : 'Forward expected return (%)'}
                       <NumberField
                         type="number"
                         min={-50}

@@ -1022,7 +1022,6 @@ export function BudgetingTab({
 
     if (isDemo) {
       const storageKey = `finapp-holdings-v1:demo:${userId || 1}`;
-      const budgetStorageKey = `finapp-budget-v1:demo:${userId || 1}`;
       let currentPrice: number | null = quotePrice;
       let companyName = stockDraft.companyName?.trim() || null;
       let paysDividend = Boolean(stockDraft.paysDividend);
@@ -1068,127 +1067,11 @@ export function BudgetingTab({
         stockId: editingStockId ?? undefined,
       });
 
-      // Automatically sync recurring dividend income transaction if paysDividend and shares > 0
-      let dividendCreatedNote = '';
-      const divDesc = `${ticker} Dividend`;
-      const recFreq: RecurringTransaction['frequency'] =
-        dividendFrequency === 'annual'
-          ? 'yearly'
-          : dividendFrequency === 'monthly'
-          ? 'monthly'
-          : 'quarterly';
-      const intervalCount = dividendFrequency === 'semiannual' ? 6 : 1;
-
-      if (paysDividend && dividendPerShare && dividendPerShare > 0 && shares > 0) {
-        const otherLots = stocks.filter(
-          (s) => s.ticker.toUpperCase() === ticker && s.id !== editingStockId,
-        );
-        const totalTickerShares = otherLots.reduce((sum, s) => {
-          const pos = positions.find((p) => p.stockId === s.id);
-          return sum + (pos ? Number(pos.sharesOwned || 0) : Number(s.sharesOwned || 0));
-        }, shares);
-        const totalPayout = Math.round(totalTickerShares * dividendPerShare * 100) / 100;
-        if (totalPayout > 0) {
-          const existing = recurringList.find(
-            (r) => r.description.toLowerCase() === divDesc.toLowerCase(),
-          );
-          let updatedRecur: RecurringTransaction[];
-          if (existing) {
-            updatedRecur = recurringList.map((r) =>
-              r.id === existing.id
-                ? {
-                    ...r,
-                    amount: totalPayout,
-                    frequency: recFreq,
-                    intervalCount,
-                    isActive: true,
-                    notes: `Auto-generated dividend for ${ticker} (${totalTickerShares} shares @ $${dividendPerShare}/${dividendFrequency || 'quarterly'})`,
-                  }
-                : r,
-            );
-          } else {
-            const newId = Math.max(0, ...recurringList.map((r) => r.id || 0)) + 1;
-            const newRecurring: RecurringTransaction = {
-              id: newId,
-              kind: 'income',
-              categoryName: 'Dividends',
-              description: divDesc,
-              amount: totalPayout,
-              frequency: recFreq,
-              intervalCount,
-              startDate: new Date().toISOString().split('T')[0],
-              nextDueDate: new Date().toISOString().split('T')[0],
-              isActive: true,
-              notes: `Auto-generated dividend for ${ticker} (${totalTickerShares} shares @ $${dividendPerShare}/${dividendFrequency || 'quarterly'})`,
-            };
-            updatedRecur = [newRecurring, ...recurringList];
-          }
-          setRecurringList(updatedRecur);
-
-          try {
-            const saved =
-              (await decryptFromDemoStorage<Record<string, unknown>>(
-                budgetStorageKey,
-                localStorage.getItem(budgetStorageKey),
-              )) || {};
-            saved.recurring = updatedRecur;
-            localStorage.setItem(
-              budgetStorageKey,
-              await encryptForDemoStorage(budgetStorageKey, saved),
-            );
-          } catch {}
-
-          dividendCreatedNote = ` with recurring dividend income (${dollars(totalPayout)}/${dividendFrequency || 'quarterly'})`;
-        }
-      } else if (editingStockId) {
-        const remainingPayingLots = stocks.filter(
-          (s) => s.ticker.toUpperCase() === ticker && s.id !== editingStockId && s.paysDividend,
-        );
-        const existing = recurringList.find(
-          (r) => r.description.toLowerCase() === divDesc.toLowerCase(),
-        );
-        if (existing) {
-          let updatedRecur: RecurringTransaction[];
-          if (remainingPayingLots.length === 0) {
-            updatedRecur = recurringList.filter((r) => r.id !== existing.id);
-          } else {
-            const remainingShares = remainingPayingLots.reduce((sum, s) => {
-              const pos = positions.find((p) => p.stockId === s.id);
-              return sum + (pos ? Number(pos.sharesOwned || 0) : Number(s.sharesOwned || 0));
-            }, 0);
-            const remainingDivPerShare = Number(remainingPayingLots[0].dividendPerShare || 0);
-            const remainingPayout = Math.round(remainingShares * remainingDivPerShare * 100) / 100;
-            updatedRecur = recurringList.map((r) =>
-              r.id === existing.id
-                ? {
-                    ...r,
-                    amount: remainingPayout,
-                    notes: `Auto-generated dividend for ${ticker} (${remainingShares} shares @ $${remainingDivPerShare}/${remainingPayingLots[0].dividendFrequency || 'quarterly'})`,
-                  }
-                : r,
-            );
-          }
-          setRecurringList(updatedRecur);
-          try {
-            const saved =
-              (await decryptFromDemoStorage<Record<string, unknown>>(
-                budgetStorageKey,
-                localStorage.getItem(budgetStorageKey),
-              )) || {};
-            saved.recurring = updatedRecur;
-            localStorage.setItem(
-              budgetStorageKey,
-              await encryptForDemoStorage(budgetStorageKey, saved),
-            );
-          } catch {}
-        }
-      }
-
       setStatusMessage({
         type: 'success',
         text: editingStockId
-          ? `Stock ${ticker} updated${dividendCreatedNote}. Current price: ${dollars(finalPrice)}.`
-          : `Stock ${ticker} added${dividendCreatedNote}. Current price: ${dollars(finalPrice)}.`,
+          ? `Stock ${ticker} updated. Current price: ${dollars(finalPrice)}.`
+          : `Stock ${ticker} added. Current price: ${dollars(finalPrice)}.`,
       });
       setShowStockForm(false);
       setEditingStockId(null);
@@ -1301,19 +1184,11 @@ export function BudgetingTab({
         }
       }
 
-      let divNote = '';
-      if (paysDividend && dividendPerShare && dividendPerShare > 0 && shares > 0) {
-        const totalPayout = Math.round(shares * dividendPerShare * 100) / 100;
-        if (totalPayout > 0) {
-          divNote = ` with recurring dividend income (${dollars(totalPayout)}/${dividendFrequency || 'quarterly'})`;
-        }
-      }
-
       setStatusMessage({
         type: 'success',
         text: editingStockId
-          ? `Stock ${ticker} updated${divNote}. Current price: ${dollars(finalLastPrice)}.`
-          : `Stock ${ticker} added${divNote}. Current price: ${dollars(finalLastPrice)}.`,
+          ? `Stock ${ticker} updated. Current price: ${dollars(finalLastPrice)}.`
+          : `Stock ${ticker} added. Current price: ${dollars(finalLastPrice)}.`,
       });
       setShowStockForm(false);
       setEditingStockId(null);
@@ -1332,7 +1207,6 @@ export function BudgetingTab({
     if (!window.confirm('Delete this stock and associated history?')) return;
     if (isDemo) {
       const storageKey = `finapp-holdings-v1:demo:${userId || 1}`;
-      const budgetStorageKey = `finapp-budget-v1:demo:${userId || 1}`;
       const stock = stocks.find((s) => s.id === id);
       if (stock) {
         await removeStockUnified({
@@ -1343,51 +1217,6 @@ export function BudgetingTab({
           stockId: id,
         });
 
-        if (stock.paysDividend) {
-          const sym = stock.ticker.toUpperCase();
-          const divDesc = `${sym} Dividend`;
-          const remainingPayingLots = stocks.filter(
-            (s) => s.ticker.toUpperCase() === sym && s.id !== id && s.paysDividend,
-          );
-          const existing = recurringList.find(
-            (r) => r.description.toLowerCase() === divDesc.toLowerCase(),
-          );
-          if (existing) {
-            let updatedRecur: RecurringTransaction[];
-            if (remainingPayingLots.length === 0) {
-              updatedRecur = recurringList.filter((r) => r.id !== existing.id);
-            } else {
-              const remainingShares = remainingPayingLots.reduce((sum, s) => {
-                const pos = positions.find((p) => p.stockId === s.id);
-                return sum + (pos ? Number(pos.sharesOwned || 0) : Number(s.sharesOwned || 0));
-              }, 0);
-              const remainingDivPerShare = Number(remainingPayingLots[0].dividendPerShare || 0);
-              const remainingPayout = Math.round(remainingShares * remainingDivPerShare * 100) / 100;
-              updatedRecur = recurringList.map((r) =>
-                r.id === existing.id
-                  ? {
-                      ...r,
-                      amount: remainingPayout,
-                      notes: `Auto-generated dividend for ${sym} (${remainingShares} shares @ $${remainingDivPerShare}/${remainingPayingLots[0].dividendFrequency || 'quarterly'})`,
-                    }
-                  : r,
-              );
-            }
-            setRecurringList(updatedRecur);
-            try {
-              const saved =
-                (await decryptFromDemoStorage<Record<string, unknown>>(
-                  budgetStorageKey,
-                  localStorage.getItem(budgetStorageKey),
-                )) || {};
-              saved.recurring = updatedRecur;
-              localStorage.setItem(
-                budgetStorageKey,
-                await encryptForDemoStorage(budgetStorageKey, saved),
-              );
-            } catch {}
-          }
-        }
       }
       setStatusMessage({ type: 'success', text: 'Stock deleted.' });
       if (editingStockId === id) {
@@ -3079,7 +2908,8 @@ export function BudgetingTab({
                       />
                     </label>
 
-                    {Number(stockDraft.sharesOwned || 0) > 0 &&
+                    {stockDraft.dividendFrequency !== "irregular" &&
+                      Number(stockDraft.sharesOwned || 0) > 0 &&
                       Number(stockDraft.dividendPerShare || 0) > 0 && (
                         <div
                           style={{
@@ -3092,7 +2922,7 @@ export function BudgetingTab({
                             border: '1px solid rgba(59, 130, 246, 0.2)',
                           }}
                         >
-                          A recurring income transaction of{' '}
+                          Estimated dividend income of{' '}
                           <strong>
                             {dollars(
                               (Number(stockDraft.sharesOwned) || 0) *
@@ -3100,7 +2930,7 @@ export function BudgetingTab({
                             )}
                             /{stockDraft.dividendFrequency || 'quarterly'}
                           </strong>{' '}
-                          will be automatically added under Recurring Transactions.
+                          is included in full portfolio forecasts that use editable price returns. Record payouts as income after you receive them.
                         </div>
                       )}
                   </>

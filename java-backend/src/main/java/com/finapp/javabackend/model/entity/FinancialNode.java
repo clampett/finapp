@@ -11,6 +11,9 @@ public class FinancialNode {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
+    @Column(name = "scenario_id", nullable = false)
+    private Long scenarioId;
+
     // Maps to the 'user_id' column from init.sql
     @Column(name = "user_id", nullable = false)
     private Long profileId;
@@ -40,6 +43,14 @@ public class FinancialNode {
         this.nodeType = nodeType;
         this.amountOrBalance = amountOrBalance;
         this.interestRateApr = interestRateApr;
+    }
+
+    public Long getScenarioId() {
+        return scenarioId;
+    }
+
+    public void setScenarioId(Long scenarioId) {
+        this.scenarioId = scenarioId;
     }
 
     public Long getId() {

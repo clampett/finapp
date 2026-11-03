@@ -1,12 +1,15 @@
 package com.finapp.javabackend.controller;
 
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.finapp.javabackend.config.SessionUser;
+import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import com.finapp.javabackend.dto.EdgeDTO;
 import com.finapp.javabackend.dto.GraphDTO;
 import com.finapp.javabackend.dto.NodeDTO;
@@ -86,12 +89,13 @@ class GraphControllerTest {
             List.of()
         );
 
-        when(graphService.saveGraph(any(GraphDTO.class))).thenReturn(savedGraph);
+        when(graphService.saveGraph(eq(7L), any(GraphDTO.class))).thenReturn(savedGraph);
 
         // Act & Assert
         mockMvc
             .perform(
                 post("/api/v1/graph")
+                    .principal(new UsernamePasswordAuthenticationToken(new SessionUser(7L, "customer"), null))
                     .contentType(MediaType.APPLICATION_JSON)
                     .content(objectMapper.writeValueAsString(inputGraph))
             )

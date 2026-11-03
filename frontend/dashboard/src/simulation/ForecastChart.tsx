@@ -65,30 +65,30 @@ export const ForecastChart = memo(function ForecastChart({
   return (
     <div className="h-full flex flex-col">
       <div className="flex gap-3.25 flex-wrap items-center my-[7px_15px]">
-        <div className="inline-flex border border-[color:var(--ui-border-334459)] rounded-[7px] p-0.75 bg-[var(--ui-surface-101824)]" aria-label="Chart time range">
-          <button className={`border-0 rounded-sm text-[10px] bg-transparent p-[7px_10px] cursor-pointer transition-colors ${!early ? 'selected bg-[var(--ui-surface-29443e)] text-[color:var(--ui-text-c4f1df)] font-medium' : 'text-[color:var(--ui-text-8ea4bd)] hover:text-[color:var(--ui-text-edf2fa)]'}`} onClick={() => setEarly(false)}>
+        <div className="inline-flex border border-(--ui-border-334459) rounded-[7px] p-0.75 bg-(--ui-surface-101824)" aria-label="Chart time range">
+          <button className={`border-0 rounded-sm text-[10px] bg-transparent p-[7px_10px] cursor-pointer transition-colors ${!early ? 'selected bg-(--ui-surface-29443e) text-(--ui-text-c4f1df) font-medium' : 'text-(--ui-text-8ea4bd) hover:text-(--ui-text-edf2fa)'}`} onClick={() => setEarly(false)}>
             Full horizon
           </button>
-          <button className={`border-0 rounded-sm text-[10px] bg-transparent p-[7px_10px] cursor-pointer transition-colors ${early ? 'selected bg-[var(--ui-surface-29443e)] text-[color:var(--ui-text-c4f1df)] font-medium' : 'text-[color:var(--ui-text-8ea4bd)] hover:text-[color:var(--ui-text-edf2fa)]'}`} onClick={() => setEarly(true)}>
+          <button className={`border-0 rounded-sm text-[10px] bg-transparent p-[7px_10px] cursor-pointer transition-colors ${early ? 'selected bg-(--ui-surface-29443e) text-(--ui-text-c4f1df) font-medium' : 'text-(--ui-text-8ea4bd) hover:text-(--ui-text-edf2fa)'}`} onClick={() => setEarly(true)}>
             First 5 years
           </button>
         </div>
-        <label className="inline-flex gap-1.5 items-center text-[10px] text-[color:var(--ui-text-a6b7ce)] cursor-pointer">
-          <input className="accent-[var(--ui-paint-8bd8ba)] w-3 h-3 cursor-pointer" type="checkbox" checked={samples} onChange={(e) => setSamples(e.target.checked)} />{' '}
+        <label className="inline-flex gap-1.5 items-center text-[10px] text-(--ui-text-a6b7ce) cursor-pointer">
+          <input className="accent-(--ui-paint-8bd8ba) w-3 h-3 cursor-pointer" type="checkbox" checked={samples} onChange={(e) => setSamples(e.target.checked)} />{' '}
           Sample paths
         </label>
-        <label className="inline-flex gap-1.5 items-center text-[10px] text-[color:var(--ui-text-a6b7ce)] cursor-pointer">
+        <label className="inline-flex gap-1.5 items-center text-[10px] text-(--ui-text-a6b7ce) cursor-pointer">
           <input
-            className="accent-[var(--ui-paint-8bd8ba)] w-3 h-3 cursor-pointer"
+            className="accent-(--ui-paint-8bd8ba) w-3 h-3 cursor-pointer"
             type="checkbox"
             checked={reference}
             onChange={(e) => setReference(e.target.checked)}
           />{' '}
           Cashflow reference
         </label>
-        <label className="inline-flex gap-1.5 items-center text-[10px] text-[color:var(--ui-text-a6b7ce)] cursor-pointer" title="Compresses large balances while keeping negative values and zero">
+        <label className="inline-flex gap-1.5 items-center text-[10px] text-(--ui-text-a6b7ce) cursor-pointer" title="Compresses large balances while keeping negative values and zero">
           <input
-            className="accent-[var(--ui-paint-8bd8ba)] w-3 h-3 cursor-pointer"
+            className="accent-(--ui-paint-8bd8ba) w-3 h-3 cursor-pointer"
             type="checkbox"
             checked={compressed}
             onChange={(e) => setCompressed(e.target.checked)}
@@ -165,10 +165,10 @@ export const ForecastChart = memo(function ForecastChart({
                 if (!active || !payload?.length) return null;
                 const point = payload[0]?.payload as ForecastPoint;
                 return (
-                  <div className="p-[13px_15px] bg-[var(--ui-surface-1c2638)] border border-[color:var(--ui-border-47536d)] rounded-[9px] shadow-[0_10px_30px_var(--ui-shadow-0005)] min-w-57.5 text-[11px]">
-                    <strong className="block text-[11px] text-[color:var(--ui-text-d9e3f3)] mb-3">
+                  <div className="p-[13px_15px] bg-(--ui-surface-1c2638) border border-(--ui-border-47536d) rounded-[9px] shadow-[0_10px_30px_var(--ui-shadow-0005)] min-w-57.5 text-[11px]">
+                    <strong className="block text-[11px] text-(--ui-text-d9e3f3) mb-3">
                       Year {point.year}{' '}
-                      <small className="text-[9px] text-[color:var(--ui-text-8095ae)] font-normal ml-2.5">{realDollars ? 'today’s dollars' : 'nominal dollars'}</small>
+                      <small className="text-[9px] text-(--ui-text-8095ae) font-normal ml-2.5">{realDollars ? 'today’s dollars' : 'nominal dollars'}</small>
                     </strong>
                     {(['p90', 'p50', 'p10'] as const).map((key, i) => (
                       <div key={key} className="flex justify-between gap-5.5 mt-2.5">
@@ -179,12 +179,12 @@ export const ForecastChart = memo(function ForecastChart({
                       </div>
                     ))}
                     {reference && (
-                      <div className="border-t border-[color:var(--ui-border-344357)] pt-2.25 mt-2.5 flex justify-between gap-5.5">
+                      <div className="border-t border-(--ui-border-344357) pt-2.25 mt-2.5 flex justify-between gap-5.5">
                         <span>Cashflow reference</span>
                         <b className="font-semibold text-text">{dollars(point.reference)}</b>
                       </div>
                     )}
-                    {point.p50 < 0 && <p className="mt-2 text-[color:var(--ui-text-e6a6b2)] text-[10px] m-0">Median liabilities still exceed assets.</p>}
+                    {point.p50 < 0 && <p className="mt-2 text-(--ui-text-e6a6b2) text-[10px] m-0">Median liabilities still exceed assets.</p>}
                   </div>
                 );
               }}
@@ -250,9 +250,9 @@ export const ForecastChart = memo(function ForecastChart({
           </ComposedChart>
         </ResponsiveContainer>
       </div>
-      <div className="flex justify-between flex-wrap gap-2 text-[color:var(--ui-text-839ab3)] text-[9px] p-[9px_8px_2px]">
+      <div className="flex justify-between flex-wrap gap-2 text-(--ui-text-839ab3) text-[9px] p-[9px_8px_2px]">
         <span>
-          <i className="inline-block w-3.75 h-1.75 mr-1.75 bg-[var(--ui-surface-8a7eb445)] border border-[color:var(--ui-border-9480c07a)] rounded-xs align-middle" /> Middle 80% of simulated outcomes
+          <i className="inline-block w-3.75 h-1.75 mr-1.75 bg-(--ui-surface-8a7eb445) border border-(--ui-border-9480c07a) rounded-xs align-middle" /> Middle 80% of simulated outcomes
         </span>
         <span>
           {compressed ? 'Compressed distances · signs retained' : 'Linear dollar scale'} ·{' '}

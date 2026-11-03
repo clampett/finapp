@@ -68,7 +68,7 @@ export function FinancialGoals({
         <h2 className="text-lg font-semibold tracking-[-0.35px] text-text m-0">
           Financial Goals
         </h2>
-        <p className="text-xs text-[color:var(--ui-text-8998b0)] mt-1.5">
+        <p className="text-xs text-(--ui-text-8998b0) mt-1.5">
           Set targets and track your progress over time.
         </p>
       </div>
@@ -140,11 +140,11 @@ function GoalCard({
     : null;
 
   return (
-    <div className="bg-surface border border-[color:var(--ui-border-283145)] rounded-[11px] p-5">
+    <div className="bg-surface border border-(--ui-border-283145) rounded-[11px] p-5">
       <div className="flex justify-between gap-3 items-start">
         <div>
           <h3 className="text-sm font-semibold text-text m-0">{title}</h3>
-          <p className="text-[11px] text-[color:var(--ui-text-8998b0)] mt-1">{description}</p>
+          <p className="text-[11px] text-(--ui-text-8998b0) mt-1">{description}</p>
         </div>
 
         {reached && (
@@ -157,7 +157,7 @@ function GoalCard({
       {goal ? (
         <>
           <div className="mt-5 flex justify-between text-xs">
-            <span className="text-[color:var(--ui-text-8fa0b8)]">
+            <span className="text-(--ui-text-8fa0b8)">
               Current: {money(currentValue)}
             </span>
             <span className="text-text font-medium">
@@ -165,14 +165,14 @@ function GoalCard({
             </span>
           </div>
 
-          <div className="h-2 bg-[var(--ui-surface-1b2535)] rounded-full overflow-hidden mt-3">
+          <div className="h-2 bg-(--ui-surface-1b2535) rounded-full overflow-hidden mt-3">
             <div
               className="h-full bg-primary rounded-full transition-all"
               style={{ width: `${reached ? 100 : progress}%` }}
             />
           </div>
 
-          <div className="flex justify-between mt-2 text-[10px] text-[color:var(--ui-text-73839a)]">
+          <div className="flex justify-between mt-2 text-[10px] text-(--ui-text-73839a)">
             <span>{Math.round(reached ? 100 : progress)}% complete</span>
 
             {daysRemaining != null && (
@@ -187,7 +187,7 @@ function GoalCard({
           </div>
 
           <button
-            className="mt-4 text-[11px] text-[color:var(--ui-text-9aa9bd)] hover:text-text cursor-pointer bg-transparent border-0 p-0"
+            className="mt-4 text-[11px] text-(--ui-text-9aa9bd) hover:text-text cursor-pointer bg-transparent border-0 p-0"
             onClick={onRemove}
           >
             Remove goal
@@ -207,10 +207,10 @@ function GoalCard({
             setDeadline('');
           }}
         >
-          <label className="grid gap-1.5 text-[11px] text-[color:var(--ui-text-9cacbf)]">
+          <label className="grid gap-1.5 text-[11px] text-(--ui-text-9cacbf)">
             Target amount
             <input
-              className="bg-[var(--ui-surface-151c29)] border border-[color:var(--ui-border-303c54)] rounded-[7px] px-3 py-2 text-xs text-text outline-none focus:border-primary"
+              className="bg-(--ui-surface-151c29) border border-(--ui-border-303c54) rounded-[7px] px-3 py-2 text-xs text-text outline-none focus:border-primary"
               type="number"
               min={Math.floor(currentValue) + 1}
               step="1"
@@ -221,10 +221,10 @@ function GoalCard({
             />
           </label>
 
-          <label className="grid gap-1.5 text-[11px] text-[color:var(--ui-text-9cacbf)]">
+          <label className="grid gap-1.5 text-[11px] text-(--ui-text-9cacbf)">
             Target date
             <input
-              className="bg-[var(--ui-surface-151c29)] border border-[color:var(--ui-border-303c54)] rounded-[7px] px-3 py-2 text-xs text-text outline-none focus:border-primary"
+              className="bg-(--ui-surface-151c29) border border-(--ui-border-303c54) rounded-[7px] px-3 py-2 text-xs text-text outline-none focus:border-primary"
               type="date"
               required
               value={deadline}

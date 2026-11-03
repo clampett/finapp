@@ -156,34 +156,23 @@
               </p>
             </details>
           </section>
+          <!-- Distinguished saved account records from scenario drafts kept in the browser. -->
           <section id="faq-1" class="faq-group">
             <h2>Saving and accounts</h2>
             <details>
               <summary>Where does my work live?</summary>
               <p>
-                Node Graph scenario drafts, including demo edits, are stored in this browser for the
-                selected profile. JSON export/import lets you back them up and move them to another
-                device. Signed-in budgeting and stock records are stored in the application’s
-                PostgreSQL database. Those records and the Node Graph draft are separate; changing
-                one does not automatically update the other.
+                Your Node Graph draft is saved in this browser. Export it as a JSON file to
+                keep a backup or open it on another device. When signed in, your budgeting
+                records and stock holdings are saved to your FinApp account.
               </p>
             </details>
             <details>
-              <summary>Will my account appear on a teammate’s computer?</summary>
+              <summary>How do I verify my email?</summary>
               <p>
-                In the current local development setup, each machine has its own database. New
-                registrations belong to that local database. The development testuser account is
-                seeded independently on each machine; it is not one shared cloud account. Git shares
-                application code, not your private account records.
-              </p>
-            </details>
-            <details>
-              <summary>How is registration verified?</summary>
-              <p>
-                In the local classroom setup, the backend prints the six-digit verification code to
-                the Spring Boot terminal. Enter it on the verification page, or use resend if
-                needed. Codes expire after 15 minutes. This setup does not require a paid email
-                provider.
+                Enter the six-digit verification code within 15 minutes. If it expires, request
+                a new one on the verification page. Check your spam folder if you don’t see
+                the email. If you closed the page, sign in to resume verification.
               </p>
             </details>
             <details>
@@ -266,6 +255,14 @@
     <footer class="public-footer border-t border-border bg-card">
       <div class="footer-shell">
         <div class="footer-top">
+          <div class="footer-identity">
+            <a class="footer-brand" href="/" aria-label="FinApp home"
+              ><span aria-hidden="true"></span>FinApp</a
+            >
+            <p class="footer-description">
+              Your money, connected. A clearer view of what comes next.
+            </p>
+          </div>
           <nav class="footer-navigation" aria-label="More about FinApp">
             <div>
               <p class="footer-heading">Product</p>
@@ -276,14 +273,6 @@
               <a href="/how-it-works">How it works</a><a href="/faq">Help &amp; FAQ</a>
             </div>
           </nav>
-          <div class="footer-identity">
-            <a class="footer-brand" href="/" aria-label="FinApp home"
-              ><span aria-hidden="true"></span>FinApp</a
-            >
-            <p class="footer-description">
-              Your money, connected. A clearer view of what comes next.
-            </p>
-          </div>
         </div>
         <div class="footer-bottom">
           <p>
@@ -292,8 +281,7 @@
           </p>
 
           <p class="footer-note">
-            A Rowan University software engineering project.<br />Educational financial modeling.
-            All amounts in USD.
+            For financial planning and education.<br />All amounts in USD.
           </p>
           <div class="footer-utility">
             <a href="mailto:meleja49@rowan.edu">Contact the team</a

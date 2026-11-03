@@ -16,9 +16,17 @@ class NodeInput(BaseModel):
     id: str = Field(min_length=1, max_length=100)
     name: str = Field(min_length=1, max_length=100)
     type: Literal["INCOME", "EXPENSE", "DEBT", "CHECKING", "SAVINGS", "INVESTMENT"]
-    balance: float = Field(ge=0, le=1e12)
+    balance: float = Field(ge=-1e12, le=1e12)
     apr: float = Field(default=0, ge=0, le=100)
     min_payment: float | None = Field(default=None, ge=0, le=1e9)
+
+
+    # Matched the browser by permitting signed balances only on cash accounts.
+    @model_validator(mode="after")
+    def validate_balance(self):
+        if self.balance < 0 and self.type not in ("CHECKING", "SAVINGS"):
+            raise ValueError("Only cash accounts can have a negative balance")
+        return self
 
 
 class EdgeInput(BaseModel):

@@ -94,8 +94,18 @@ export function scopeGraph(
   selected: string[],
 ): GraphData {
   const live = activeGraph(graph);
-  if (mode === 'all') return live;
-  const ids = new Set(selected.filter((id) => live.nodes.some((node) => node.id === id)));
+  const activeNodes = live.nodes.filter((node) => !node.disabled);
+  const activeIds = new Set(activeNodes.map((node) => node.id));
+  if (mode === 'all') {
+    return {
+      ...live,
+      nodes: activeNodes,
+      edges: live.edges.filter(
+        (edge) => activeIds.has(edge.sourceNodeId) && activeIds.has(edge.targetNodeId),
+      ),
+    };
+  }
+  const ids = new Set(selected.filter((id) => activeIds.has(id)));
   // Followed links in both directions for a connected scenario; restricted
   // custom selections to internal edges so excluded accounts could not leak in.
   if (mode === 'connected') {
@@ -103,6 +113,7 @@ export function scopeGraph(
     while (changed) {
       changed = false;
       for (const edge of live.edges) {
+        if (!activeIds.has(edge.sourceNodeId) || !activeIds.has(edge.targetNodeId)) continue;
         if (ids.has(edge.sourceNodeId) || ids.has(edge.targetNodeId)) {
           if (!ids.has(edge.sourceNodeId) || !ids.has(edge.targetNodeId)) changed = true;
           ids.add(edge.sourceNodeId);
@@ -113,7 +124,7 @@ export function scopeGraph(
   }
   return {
     ...live,
-    nodes: live.nodes.filter((node) => ids.has(node.id)),
+    nodes: activeNodes.filter((node) => ids.has(node.id)),
     edges: live.edges.filter((edge) => ids.has(edge.sourceNodeId) && ids.has(edge.targetNodeId)),
   };
 }

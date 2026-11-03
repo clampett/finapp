@@ -244,9 +244,9 @@ body {
   gap: 48px;
   align-items: center;
 }
-/* Positioned the brand after the link groups in both reading and visual order. */
+/* Placed the brand before the link groups in both reading and visual order. */
 .footer-identity {
-  justify-self: end;
+  justify-self: start;
   max-width: 360px;
 }
 .footer-brand {
@@ -281,6 +281,7 @@ body {
   align-self: center;
 }
 .footer-navigation {
+  justify-self: end;
   display: grid;
   grid-template-columns: repeat(2, minmax(120px, 1fr));
   gap: 40px;
@@ -761,6 +762,7 @@ body {
     gap: 32px;
   }
   .footer-navigation {
+    justify-self: start;
     max-width: 400px;
     gap: 32px;
   }

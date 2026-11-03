@@ -364,3 +364,85 @@ test('trackpad policy distinguished two-finger hand panning from pinch zoom and 
   assert.equal(platform.canvasWheelAction('connect', true, false), 'block');
   assert.equal(platform.canvasWheelAction('box', false, true), 'block');
 });
+
+test('turning on and off payments affects Net worth, Take-home income, monthly commitments, and available surplus', () => {
+  const base = demo(2);
+  const initial = finance.totals(base);
+
+  // 1. Unticking/disabling an income node
+  const incomeNode = base.nodes.find((n) => n.nodeType === 'INCOME');
+  assert.ok(incomeNode);
+  const withoutIncome = {
+    ...base,
+    nodes: base.nodes.map((n) => (n.id === incomeNode.id ? { ...n, disabled: true } : n)),
+  };
+  const tWithoutIncome = finance.totals(withoutIncome);
+  assert.ok(tWithoutIncome.takeHome < initial.takeHome);
+  assert.ok(tWithoutIncome.surplus < initial.surplus);
+
+  // 2. Unticking/disabling an expense node
+  const expenseNode = base.nodes.find((n) => n.nodeType === 'EXPENSE');
+  assert.ok(expenseNode);
+  const withoutExpense = {
+    ...base,
+    nodes: base.nodes.map((n) => (n.id === expenseNode.id ? { ...n, disabled: true } : n)),
+  };
+  const tWithoutExpense = finance.totals(withoutExpense);
+  assert.ok(tWithoutExpense.expenses < initial.expenses);
+  assert.ok(tWithoutExpense.expenses + tWithoutExpense.payments < initial.expenses + initial.payments);
+  assert.ok(tWithoutExpense.surplus > initial.surplus);
+  close(tWithoutExpense.takeHome, initial.takeHome);
+
+  // 3. Unticking/disabling a debt node
+  const debtNode = base.nodes.find((n) => n.nodeType === 'DEBT');
+  assert.ok(debtNode);
+  const withoutDebt = {
+    ...base,
+    nodes: base.nodes.map((n) => (n.id === debtNode.id ? { ...n, disabled: true } : n)),
+  };
+  const tWithoutDebt = finance.totals(withoutDebt);
+  assert.ok(tWithoutDebt.netWorth > initial.netWorth);
+  assert.ok(tWithoutDebt.payments < initial.payments);
+  assert.ok(tWithoutDebt.expenses + tWithoutDebt.payments < initial.expenses + initial.payments);
+  assert.ok(tWithoutDebt.surplus > initial.surplus);
+
+  // 4. Unticking/disabling an asset node
+  const assetNode = base.nodes.find((n) => n.nodeType === 'SAVINGS');
+  assert.ok(assetNode);
+  const withoutAsset = {
+    ...base,
+    nodes: base.nodes.map((n) => (n.id === assetNode.id ? { ...n, disabled: true } : n)),
+  };
+  const tWithoutAsset = finance.totals(withoutAsset);
+  assert.ok(tWithoutAsset.netWorth < initial.netWorth);
+  close(tWithoutAsset.takeHome, initial.takeHome);
+  close(tWithoutAsset.surplus, initial.surplus);
+
+  // 5. Re-enabling restores original totals exactly
+  const reEnabled = {
+    ...withoutDebt,
+    nodes: withoutDebt.nodes.map((n) => (n.id === debtNode.id ? { ...n, disabled: false } : n)),
+  };
+  const tRestored = finance.totals(reEnabled);
+  close(tRestored.netWorth, initial.netWorth);
+  close(tRestored.takeHome, initial.takeHome);
+  close(tRestored.expenses + tRestored.payments, initial.expenses + initial.payments);
+  close(tRestored.surplus, initial.surplus);
+
+  // 6. parseGraph retains disabled: true
+  const parsed = finance.parseGraph(withoutExpense);
+  const parsedExpense = parsed.nodes.find((n) => n.id === expenseNode.id);
+  assert.equal(parsedExpense.disabled, true);
+});
+
+// Checked that imported overdrafts reached the debt chart without reducing positive assets.
+test("overdrawn cash validates and appears as a liability without hiding positive assets", () => {
+  const graph = finance.parseGraph({ nodes: [
+    { id: "checking", name: "Checking", nodeType: "CHECKING", amountOrBalance: -50 },
+    { id: "savings", name: "Savings", nodeType: "SAVINGS", amountOrBalance: 100 },
+  ], edges: [] });
+  assert.equal(finance.totals(graph).netWorth, 50);
+  assert.equal(finance.overviewBreakdown(graph, "assets").total, 100);
+  assert.equal(finance.overviewBreakdown(graph, "debt").total, 50);
+  assert.throws(() => finance.parseGraph({ ...graph, nodes: [{ ...graph.nodes[0], nodeType: "DEBT" }] }));
+});

@@ -434,3 +434,14 @@ test('turning on and off payments affects Net worth, Take-home income, monthly c
   const parsedExpense = parsed.nodes.find((n) => n.id === expenseNode.id);
   assert.equal(parsedExpense.disabled, true);
 });
+
+test("overdrawn cash validates and appears as a liability without hiding positive assets", () => {
+  const graph = finance.parseGraph({ nodes: [
+    { id: "checking", name: "Checking", nodeType: "CHECKING", amountOrBalance: -50 },
+    { id: "savings", name: "Savings", nodeType: "SAVINGS", amountOrBalance: 100 },
+  ], edges: [] });
+  assert.equal(finance.totals(graph).netWorth, 50);
+  assert.equal(finance.overviewBreakdown(graph, "assets").total, 100);
+  assert.equal(finance.overviewBreakdown(graph, "debt").total, 50);
+  assert.throws(() => finance.parseGraph({ ...graph, nodes: [{ ...graph.nodes[0], nodeType: "DEBT" }] }));
+});

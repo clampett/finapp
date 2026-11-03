@@ -49,10 +49,10 @@ const fromB64 = (b64: string): Uint8Array<ArrayBuffer> => {
 };
 
 const getDemoStorageSecret = (storageKey: string): string => {
-  const existing = sessionStorage.getItem(`${storageKey}:k`);
-  if (existing) return existing;
-  const generated = `${storageKey}:${crypto.randomUUID()}`;
-  sessionStorage.setItem(`${storageKey}:k`, generated);
+  const key = storageKey + ":k";
+  const existing = localStorage.getItem(key) ?? sessionStorage.getItem(key);
+  const generated = existing ?? crypto.randomUUID();
+  localStorage.setItem(key, generated);
   return generated;
 };
 
@@ -96,6 +96,9 @@ const decryptFromDemoStorage = async <T,>(storageKey: string, raw: string | null
       return null;
     }
   }
+  if (!localStorage.getItem(storageKey + ":k") && !sessionStorage.getItem(storageKey + ":k")) {
+    throw new Error("Open the tab that saved this demo budget to recover its original key.");
+  }
   const body = raw.slice(DEMO_BUDGET_ENC_PREFIX.length);
   const [ivB64, dataB64] = body.split(':');
   if (!ivB64 || !dataB64) return null;
@@ -108,7 +111,7 @@ const decryptFromDemoStorage = async <T,>(storageKey: string, raw: string | null
     );
     return JSON.parse(new TextDecoder().decode(plain)) as T;
   } catch {
-    return null;
+    throw new Error("The saved demo budget could not be decrypted.");
   }
 };
 
@@ -444,24 +447,13 @@ export function BudgetingTab({
               demoTxns = Array.isArray(parsed.transactions) ? (parsed.transactions as Transaction[]) : [];
               demoRecur = Array.isArray(parsed.recurring) ? (parsed.recurring as RecurringTransaction[]) : [];
             }
-          } catch {}
-
-          // Ensure the Transaction tab only holds single, non-recurring transactions
-          demoTxns = demoTxns.filter((t) => {
-            const desc = (t.description || '').toLowerCase();
-            const notes = (t.notes || '').toLowerCase();
-            return (
-              !desc.includes('paycheck') &&
-              !desc.includes('salary') &&
-              !notes.includes('monthly salary') &&
-              !notes.includes('from scenario') &&
-              !notes.includes('living expense from scenario') &&
-              !notes.includes('monthly payment (')
-            );
-          });
+          } catch (err) {
+            setStatusMessage({ type: "error", text: (err as Error).message });
+            return false;
+          }
 
           // Single, non-recurring sample transactions (e.g. grocery trip, coffee, dining out)
-          if (demoTxns.length === 0) {
+          if (!localStorage.getItem(budgetStorageKey)) {
             const now = new Date().toISOString().split('T')[0];
             demoTxns = [
               {
@@ -517,11 +509,11 @@ export function BudgetingTab({
             ];
           }
 
-          const { updatedRecurring: syncedDemoRecur } = syncGraphNodesToRecurring(
-            graphRef.current,
+          const { updatedRecurring: syncedDemoRecur, hasChanges } = syncGraphNodesToRecurring(
+            rawGraphRef.current ?? graphRef.current,
             demoRecur,
           );
-          try {
+          if (hasChanges || !localStorage.getItem(budgetStorageKey)) try {
             localStorage.setItem(
               budgetStorageKey,
               await encryptForDemoStorage(budgetStorageKey, {
@@ -555,7 +547,8 @@ export function BudgetingTab({
         const headers = { ...sessionHeaders() };
         let loadedStocks: Stock[] = [];
         // Published each completed section independently while retaining the previous visible rows.
-        const read = async <T,>(path: string, apply: (data: T) => void) => {
+        const read = async <T,>(path: string, apply: (data: T) => void | Promise<void>) => {
+          if (controller.signal.aborted) return;
           const response = await fetch(`${API_BASE}/${path}`, {
             headers,
             credentials: 'include',
@@ -581,6 +574,9 @@ export function BudgetingTab({
           if (!Array.isArray(json?.data)) throw new Error(`Invalid response for ${path}.`);
           if (!controller.signal.aborted) await apply(json.data);
         };
+        // Serialized reconciliation across tabs so each pass fetched the latest saved rules.
+        const synchronizeRecurring = (task: () => Promise<void>) =>
+          navigator.locks ? navigator.locks.request("finapp-recurring:" + userId, task) : task();
         const results = await Promise.allSettled([
           read<Transaction[]>('transactions', setTransactions),
           read<Stock[]>('stocks', (data) => {
@@ -588,87 +584,34 @@ export function BudgetingTab({
             setStocks(data);
           }),
           read<StockPosition[]>('positions', setPositions),
-          read<RecurringTransaction[]>('recurring-transactions', async (data) => {
-            const { updatedRecurring, newRules, removedDuplicates } = syncGraphNodesToRecurring(
-              graphRef.current,
-              data,
-            );
-            if (!isDemo) {
-              if (removedDuplicates && removedDuplicates.length > 0) {
-                for (const dup of removedDuplicates) {
-                  if (dup.id) {
-                    try {
-                      await fetch(`${API_BASE}/recurring-transactions/${dup.id}`, {
-                        method: 'DELETE',
-                        headers: sessionHeaders(),
-                        credentials: 'include',
-                        signal: controller.signal,
-                      });
-                    } catch {}
-                  }
-                }
-              }
-              if (newRules && newRules.length > 0) {
-                const persistedRules: RecurringTransaction[] = [];
-                for (const rule of newRules) {
-                  try {
-                    const res = await fetch(`${API_BASE}/recurring-transactions`, {
-                      method: 'POST',
-                      headers: { 'Content-Type': 'application/json', ...sessionHeaders() },
-                      credentials: 'include',
-                      body: JSON.stringify({ ...rule, userId }),
-                      signal: controller.signal,
-                    });
-                    if (res.ok) {
-                      const resJson = await res.json();
-                      if (resJson?.data) {
-                        persistedRules.push(resJson.data);
-                      }
-                    }
-                  } catch {}
-                }
-                const finalRules = updatedRecurring
-                  .filter((r) => !newRules.some((nr) => nr.id === r.id))
-                  .concat(persistedRules);
-                setRecurringList(finalRules);
-              } else {
-                setRecurringList(updatedRecurring);
-              }
-            } else {
-              setRecurringList(updatedRecurring);
+          synchronizeRecurring(() => read<RecurringTransaction[]>('recurring-transactions', async (data) => {
+            const { newRules, updatedRules } = syncGraphNodesToRecurring(rawGraphRef.current ?? graphRef.current, data);
+            const write = async (rule: RecurringTransaction, existing: boolean) => {
+              const path = existing ? "/recurring-transactions/" + rule.id : "/recurring-transactions";
+              const response = await fetch(API_BASE + path, {
+                method: existing ? "PUT" : "POST",
+                headers: { "Content-Type": "application/json", ...headers },
+                credentials: "include",
+                body: JSON.stringify(existing ? { amount: rule.amount, kind: rule.kind, isActive: rule.isActive } : { ...rule, id: undefined, userId }),
+              });
+              if (!response.ok) throw new Error("Could not synchronize recurring rules.");
+              return (await response.json()).data as RecurringTransaction;
+            };
+            // Applied saved rules in order and retained database IDs for subsequent edits.
+            const saved = [...data];
+            for (const rule of updatedRules) {
+              if (controller.signal.aborted) return;
+              const result = await write(rule, true);
+              const index = saved.findIndex((row) => row.id === result.id);
+              if (index >= 0) saved[index] = result;
             }
-          }),
-          read<AccountOption[]>('accounts', (data) => {
-            const allNodes = [...(rawGraphRef.current?.nodes ?? []), ...(graphRef.current?.nodes ?? [])];
-            const activeDebts = new Set(
-              allNodes
-                .filter((n) => n.nodeType === 'DEBT' && !n.archived && !n.disabled)
-                .map((n) => n.name.trim().toLowerCase()),
-            );
-
-            const orphanedAccounts = data.filter((a) => {
-              const lower = a.name.trim().toLowerCase();
-              if (lower === 'checking' || lower === 'checking account' || lower === 'savings') return false;
-              if (activeDebts.has(lower)) return false;
-              return true;
-            });
-
-            if (!isDemo && orphanedAccounts.length > 0) {
-              for (const orphan of orphanedAccounts) {
-                if (orphan.id) {
-                  void fetch(`${API_BASE}/accounts/${orphan.id}`, {
-                    method: 'DELETE',
-                    headers: sessionHeaders(),
-                    credentials: 'include',
-                    signal: controller.signal,
-                  }).catch(() => {});
-                }
-              }
+            for (const rule of newRules) {
+              if (controller.signal.aborted) return;
+              saved.push(await write(rule, false));
             }
-
-            const validAccounts = data.filter((a) => !orphanedAccounts.some((o) => o.id === a.id));
-            setDbAccounts(validAccounts);
-          }),
+            if (!controller.signal.aborted) setRecurringList(saved);
+          })),
+          read<AccountOption[]>("accounts", setDbAccounts),
         ]);
         if (controller.signal.aborted) return false;
         if (results.some((result) => result.status === 'rejected')) {
@@ -727,116 +670,14 @@ export function BudgetingTab({
     return () => window.removeEventListener(PORTFOLIO_UPDATED_EVENT, handlePortfolioUpdated);
   }, [loadData]);
 
-  // Automatically synchronize active graph flow nodes (Income, Expense, Debt) into recurring transactions
+  // Reloaded recurring rules when the active graph changed while this tab was open.
   useEffect(() => {
-    // Only sync if initial budgeting data has been loaded and graph actually changed
-    if (!isInitialLoaded.current) return;
-    if (!graph?.nodes?.length) return;
-    if (lastSyncedGraph.current === graph) return;
+    if (!isInitialLoaded.current || lastSyncedGraph.current === graph) return;
     lastSyncedGraph.current = graph;
+    void loadData(false);
+  }, [graph, loadData]);
 
-    setRecurringList((prevList) => {
-      const { updatedRecurring, hasChanges, newRules, removedDuplicates } = syncGraphNodesToRecurring(
-        graph,
-        prevList,
-      );
-      if (!hasChanges) return prevList;
-      if (isDemo) {
-        const budgetStorageKey = `finapp-budget-v1:demo:${userId || 1}`;
-        void (async () => {
-          try {
-            const saved =
-              (await decryptFromDemoStorage<Record<string, unknown>>(
-                budgetStorageKey,
-                localStorage.getItem(budgetStorageKey)
-              )) || {};
-            saved.recurring = updatedRecurring;
-            localStorage.setItem(budgetStorageKey, await encryptForDemoStorage(budgetStorageKey, saved));
-          } catch {}
-        })();
-        return updatedRecurring;
-      }
-      // For signed-in users, clean up duplicates and save graph-generated new rules to PostgreSQL
-      if (removedDuplicates && removedDuplicates.length > 0) {
-        for (const dup of removedDuplicates) {
-          if (dup.id) {
-            void fetch(`${API_BASE}/recurring-transactions/${dup.id}`, {
-              method: 'DELETE',
-              headers: sessionHeaders(),
-              credentials: 'include',
-            }).catch(() => {});
-          }
-        }
-      }
-      if (newRules && newRules.length > 0) {
-        const existingRules = updatedRecurring.filter((r) => !newRules.some((nr) => nr.id === r.id));
-        void (async () => {
-          for (const rule of newRules) {
-            try {
-              const res = await fetch(`${API_BASE}/recurring-transactions`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json', ...sessionHeaders() },
-                credentials: 'include',
-                body: JSON.stringify({ ...rule, userId }),
-              });
-              if (res.ok) {
-                const resJson = await res.json();
-                if (resJson?.data) {
-                  setRecurringList((cur) => {
-                    if (cur.some((r) => r.id === resJson.data.id)) return cur;
-                    return [...cur, resJson.data];
-                  });
-                }
-              }
-            } catch (err) {
-              console.error('Failed to save recurring rule to database:', err);
-            }
-          }
-        })();
-        return existingRules;
-      }
-      return updatedRecurring;
-    });
-  }, [graph, isDemo, userId]);
-
-  // Automatically clean up any dbAccounts if their loan was deleted/archived in the scenario graph
-  useEffect(() => {
-    if (dbAccounts.length === 0) return;
-    const allNodes = [...(rawGraph?.nodes ?? []), ...(graph?.nodes ?? [])];
-    const activeDebts = new Set(
-      allNodes
-        .filter((n) => n.nodeType === 'DEBT' && !n.archived && !n.disabled)
-        .map((n) => n.name.trim().toLowerCase()),
-    );
-
-    const orphanedAccounts = dbAccounts.filter((a) => {
-      const lower = a.name.trim().toLowerCase();
-      if (lower === 'checking' || lower === 'checking account' || lower === 'savings') return false;
-      if (activeDebts.has(lower)) return false;
-      return true;
-    });
-
-    if (orphanedAccounts.length > 0) {
-      if (!isDemo && userId) {
-        for (const orphan of orphanedAccounts) {
-          if (orphan.id) {
-            void fetch(`${API_BASE}/accounts/${orphan.id}`, {
-              method: 'DELETE',
-              headers: sessionHeaders(),
-              credentials: 'include',
-            }).catch(() => {});
-          }
-        }
-      }
-      setDbAccounts((prev) => prev.filter((a) => !orphanedAccounts.some((o) => o.id === a.id)));
-    }
-  }, [rawGraph, graph, dbAccounts, isDemo, userId]);
-
-  // Derived account options strictly: Checking, Savings, and active loans
-  const availableAccounts = useMemo(() => {
-    return getAvailableBudgetAccounts(graph);
-  }, [graph]);
-
+  const availableAccounts = useMemo(() => getAvailableBudgetAccounts(graph, dbAccounts), [graph, dbAccounts]);
   // Ensure transaction draft account stays valid when an account or loan is deleted
   useEffect(() => {
     if (
@@ -946,7 +787,6 @@ export function BudgetingTab({
           ...transactions,
         ];
       }
-      setTransactions(updated);
       try {
         const saved =
           (await decryptFromDemoStorage<Record<string, unknown>>(
@@ -955,7 +795,11 @@ export function BudgetingTab({
           )) || {};
         saved.transactions = updated;
         localStorage.setItem(budgetStorageKey, await encryptForDemoStorage(budgetStorageKey, saved));
-      } catch {}
+      } catch (err) {
+        setStatusMessage({ type: "error", text: (err as Error).message });
+        return;
+      }
+      setTransactions(updated);
       if (syncResult && onUpdateGraph) {
         onUpdateGraph(syncResult.updatedGraph);
       }
@@ -1029,7 +873,6 @@ export function BudgetingTab({
     if (isDemo) {
       const budgetStorageKey = `finapp-budget-v1:demo:${userId || 1}`;
       const updated = transactions.filter((t) => t.id !== id);
-      setTransactions(updated);
       try {
         const saved =
           (await decryptFromDemoStorage<Record<string, unknown>>(
@@ -1038,7 +881,11 @@ export function BudgetingTab({
           )) || {};
         saved.transactions = updated;
         localStorage.setItem(budgetStorageKey, await encryptForDemoStorage(budgetStorageKey, saved));
-      } catch {}
+      } catch (err) {
+        setStatusMessage({ type: "error", text: (err as Error).message });
+        return;
+      }
+      setTransactions(updated);
       if (reverseSync && onUpdateGraph) {
         onUpdateGraph(reverseSync.updatedGraph);
       }
@@ -1411,7 +1258,6 @@ export function BudgetingTab({
         const newId = Math.max(0, ...recurringList.map((r) => r.id || 0)) + 1;
         updated = [{ ...activeRecurDraft, id: newId }, ...recurringList];
       }
-      setRecurringList(updated);
       try {
         const saved =
           (await decryptFromDemoStorage<Record<string, unknown>>(
@@ -1420,7 +1266,11 @@ export function BudgetingTab({
           )) || {};
         saved.recurring = updated;
         localStorage.setItem(budgetStorageKey, await encryptForDemoStorage(budgetStorageKey, saved));
-      } catch {}
+      } catch (err) {
+        setStatusMessage({ type: "error", text: (err as Error).message });
+        return;
+      }
+      setRecurringList(updated);
       if (graphSync && onUpdateGraph) {
         onUpdateGraph(graphSync.updatedGraph);
       }
@@ -1478,27 +1328,9 @@ export function BudgetingTab({
       graphSync = syncRecurringDeletionToGraph(baseGraph, itemToDelete);
     }
 
-    if (itemToDelete) {
-      const acctName = (itemToDelete.accountName || '').trim();
-      const matchingDbAccount = dbAccounts.find(
-        (a) => a.name.trim().toLowerCase() === acctName.toLowerCase(),
-      );
-      if (matchingDbAccount) {
-        setDbAccounts((prev) => prev.filter((a) => a.id !== matchingDbAccount.id));
-        if (!isDemo && matchingDbAccount.id) {
-          void fetch(`${API_BASE}/accounts/${matchingDbAccount.id}`, {
-            method: 'DELETE',
-            headers: sessionHeaders(),
-            credentials: 'include',
-          }).catch(() => {});
-        }
-      }
-    }
-
     if (isDemo) {
       const budgetStorageKey = `finapp-budget-v1:demo:${userId || 1}`;
       const updated = recurringList.filter((r) => r.id !== id);
-      setRecurringList(updated);
       try {
         const saved =
           (await decryptFromDemoStorage<Record<string, unknown>>(
@@ -1507,7 +1339,11 @@ export function BudgetingTab({
           )) || {};
         saved.recurring = updated;
         localStorage.setItem(budgetStorageKey, await encryptForDemoStorage(budgetStorageKey, saved));
-      } catch {}
+      } catch (err) {
+        setStatusMessage({ type: "error", text: (err as Error).message });
+        return;
+      }
+      setRecurringList(updated);
       if (graphSync && onUpdateGraph) {
         onUpdateGraph(graphSync.updatedGraph);
       }
@@ -1540,6 +1376,7 @@ export function BudgetingTab({
     activeGeneration.current = controller;
     setGenerating(true);
     try {
+      if (!(await loadData()) || controller.signal.aborted) throw new Error("Could not synchronize recurring rules before generating.");
       const res = await fetch(`${API_BASE}/recurring-transactions/generate`, {
         signal: controller.signal,
         method: 'POST',
@@ -1548,7 +1385,12 @@ export function BudgetingTab({
       });
       if (!res.ok) throw new Error('Generation failed');
       const json = await res.json();
-      const count = json.data ? json.data.length : 0;
+      const occurrences: Transaction[] = Array.isArray(json.data) ? json.data : [];
+      const count = occurrences.length;
+      const currentGraph = rawGraphRef.current ?? graphRef.current;
+      const nextGraph = occurrences.reduce((next, transaction) =>
+        syncScenarioTransactionToGraph(next, transaction)?.updatedGraph ?? next, currentGraph);
+      if (nextGraph !== currentGraph) onUpdateGraph?.(nextGraph);
       const updated = await loadData();
       if (controller.signal.aborted) return;
       setStatusMessage({
@@ -1582,7 +1424,6 @@ export function BudgetingTab({
       let nextId = Math.max(0, ...recurringList.map((r) => r.id || 0)) + 1;
       const created = newTemplates.map((t) => ({ ...t, id: nextId++ } as RecurringTransaction));
       const updated = [...created, ...recurringList];
-      setRecurringList(updated);
       try {
         const saved =
           (await decryptFromDemoStorage<Record<string, unknown>>(
@@ -1591,7 +1432,11 @@ export function BudgetingTab({
           )) || {};
         saved.recurring = updated;
         localStorage.setItem(budgetStorageKey, await encryptForDemoStorage(budgetStorageKey, saved));
-      } catch {}
+      } catch (err) {
+        setStatusMessage({ type: "error", text: (err as Error).message });
+        return;
+      }
+      setRecurringList(updated);
       setStatusMessage({
         type: 'success',
         text: `Imported ${created.length} salary template(s) into recurring transactions.`,
@@ -1635,7 +1480,6 @@ export function BudgetingTab({
       let nextId = Math.max(0, ...recurringList.map((r) => r.id || 0)) + 1;
       const created = newTemplates.map((t) => ({ ...t, id: nextId++ } as RecurringTransaction));
       const updated = [...created, ...recurringList];
-      setRecurringList(updated);
       try {
         const saved =
           (await decryptFromDemoStorage<Record<string, unknown>>(
@@ -1644,7 +1488,11 @@ export function BudgetingTab({
           )) || {};
         saved.recurring = updated;
         localStorage.setItem(budgetStorageKey, await encryptForDemoStorage(budgetStorageKey, saved));
-      } catch {}
+      } catch (err) {
+        setStatusMessage({ type: "error", text: (err as Error).message });
+        return;
+      }
+      setRecurringList(updated);
       setStatusMessage({
         type: 'success',
         text: `Imported ${created.length} debt payment template(s) into recurring transactions.`,
@@ -1673,7 +1521,7 @@ export function BudgetingTab({
     }
   };
 
-  const activeNodes = graph?.nodes?.filter((n) => !n.archived) || [];
+  const activeNodes = graph.nodes.filter((node) => !node.archived && ["INCOME", "EXPENSE", "DEBT"].includes(node.nodeType));
 
   // Calculations for summary banner
   const totalIncome = transactions
@@ -1750,52 +1598,9 @@ export function BudgetingTab({
 
   return (
     <div
-      className="w-full max-w-300 mx-auto p-4"
+      className="budget-workspace w-full mx-auto"
     >
-      {/* Header and Summary Cards */}
-      <div
-        style={{
-          display: 'flex',
-          justifyContent: 'space-between',
-          alignItems: 'center',
-          marginBottom: '1.5rem',
-        }}
-      >
-        <div>
-          <h2 style={{ margin: 0 }}>Budgeting & Stock Portfolio</h2>
-          <p className="text-(--ui-text-8b9ab1) text-[11px] mt-1 mb-0">
-            Track income, expenses, recurring payments, and stock investments in your database.
-          </p>
-        </div>
-        {demo ? (
-          <div
-            style={{
-              padding: '6px 12px',
-              background: '#3b2f15',
-              border: '1px solid #705822',
-              borderRadius: '4px',
-              color: '#e8c67a',
-              fontSize: '13px',
-            }}
-          >
-            DEMO SCENARIO: Local edits stay in this browser session.
-          </div>
-        ) : !userId && (
-          <div
-            style={{
-              padding: '6px 12px',
-              background: 'var(--ui-paint-3b2f15)',
-              border: '1px solid var(--ui-paint-705822)',
-              borderRadius: '4px',
-              color: 'var(--ui-paint-e8c67a)',
-              fontSize: '13px',
-            }}
-          >
-            Sign in to create, update, and manage private financial data.
-          </div>
-        )}
-      </div>
-
+      {/* Summary cards and ledger tools */}
       {statusMessage && (
         <div
           role="status"
@@ -1868,9 +1673,9 @@ export function BudgetingTab({
           >
             {dollars(currentNetWorth)}
           </div>
-          <div style={{ fontSize: '11px', color: '#8f9db3', marginTop: '4px' }}>
-            Assets: <strong style={{ color: '#cbd5e1' }}>{dollars(currentTotals.assets)}</strong> • Debt:{' '}
-            <strong style={{ color: '#cbd5e1' }}>{dollars(currentTotals.debt)}</strong>
+          <div style={{ fontSize: '11px', color: 'var(--color-muted)', marginTop: '4px' }}>
+            Assets: <strong style={{ color: 'var(--color-text)' }}>{dollars(currentTotals.assets)}</strong> • Debt:{' '}
+            <strong style={{ color: 'var(--color-text)' }}>{dollars(currentTotals.debt)}</strong>
           </div>
         </div>
 
@@ -1888,14 +1693,14 @@ export function BudgetingTab({
           <div style={{ fontSize: '1.5rem', fontWeight: 600, color: 'var(--ui-paint-4ade80)', marginTop: '4px' }}>
             {dollars(totalIncome)}
           </div>
-          <div style={{ fontSize: '11px', color: '#8f9db3', marginTop: '4px' }}>
+          <div style={{ fontSize: '11px', color: 'var(--color-muted)', marginTop: '4px' }}>
             Scenario Salary:{' '}
-            <strong style={{ color: '#cbd5e1' }}>{dollars(scenarioSalary.totalMonthly)}/mo</strong>
+            <strong style={{ color: 'var(--color-text)' }}>{dollars(scenarioSalary.totalMonthly)}/mo</strong>
             {scenarioSalary.totalMonthly > 0 && (
               <span
                 style={{
                   marginLeft: '6px',
-                  color: totalIncome >= scenarioSalary.totalMonthly ? '#4ade80' : '#f59e0b',
+                  color: totalIncome >= scenarioSalary.totalMonthly ? 'var(--color-mint)' : 'var(--ui-paint-fbbf24)',
                 }}
               >
                 {totalIncome >= scenarioSalary.totalMonthly
@@ -1920,13 +1725,13 @@ export function BudgetingTab({
           <div style={{ fontSize: '1.5rem', fontWeight: 600, color: 'var(--ui-paint-f87171)', marginTop: '4px' }}>
             {dollars(totalExpense)}
           </div>
-          <div style={{ fontSize: '11px', color: '#8f9db3', marginTop: '4px' }}>
+          <div style={{ fontSize: '11px', color: 'var(--color-muted)', marginTop: '4px' }}>
             Commitments:{' '}
-            <strong style={{ color: '#cbd5e1' }}>
+            <strong style={{ color: 'var(--color-text)' }}>
               {dollars(budgetComparison.plannedTotalCommitments)}/mo
             </strong>
             {scenarioDebts.totalMonthlyPayment > 0 && (
-              <span style={{ marginLeft: '4px', color: '#fda4af' }}>
+              <span style={{ marginLeft: '4px', color: 'var(--color-coral)' }}>
                 ({dollars(scenarioDebts.totalMonthlyPayment)} debt)
               </span>
             )}
@@ -1954,9 +1759,9 @@ export function BudgetingTab({
           >
             {netCashFlow >= 0 ? `+${dollars(netCashFlow)}` : `-${dollars(Math.abs(netCashFlow))}`}
           </div>
-          <div style={{ fontSize: '11px', color: '#8f9db3', marginTop: '4px' }}>
+          <div style={{ fontSize: '11px', color: 'var(--color-muted)', marginTop: '4px' }}>
             Scenario Surplus Target:{' '}
-            <strong style={{ color: '#cbd5e1' }}>{dollars(budgetComparison.plannedSurplus)}/mo</strong>
+            <strong style={{ color: 'var(--color-text)' }}>{dollars(budgetComparison.plannedSurplus)}/mo</strong>
           </div>
         </div>
 
@@ -1969,7 +1774,7 @@ export function BudgetingTab({
           }}
         >
           <span style={{ fontSize: '12px', color: 'var(--ui-paint-8f9db3)', textTransform: 'uppercase' }}>
-            Stock Portfolio
+            Tracked holdings
           </span>
           <div style={{ fontSize: '1.5rem', fontWeight: 600, color: 'var(--ui-paint-38bdf8)', marginTop: '4px' }}>
             {dollars(totalPortfolioValue)}
@@ -1996,8 +1801,8 @@ export function BudgetingTab({
       {/* Scenario & Budget Alignment Card */}
       <div
         style={{
-          background: '#161d2b',
-          border: '1px solid #283347',
+          background: 'var(--color-surface)',
+          border: '1px solid var(--color-border)',
           borderRadius: '8px',
           padding: '1rem',
           marginBottom: '1.5rem',
@@ -2010,34 +1815,34 @@ export function BudgetingTab({
       >
         <div>
           <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-            <span style={{ fontSize: '14px', fontWeight: 600, color: '#f1f5f9' }}>
-              🔗 Scenario & Budget Alignment
+            <span style={{ fontSize: '14px', fontWeight: 600, color: 'var(--color-text)' }}>
+              Scenario and budget
             </span>
             <span
               style={{
                 fontSize: '11px',
                 padding: '2px 8px',
                 borderRadius: '12px',
-                background: '#1e2838',
-                color: '#93c5fd',
-                border: '1px solid #2563eb',
+                background: 'var(--color-float)',
+                color: 'var(--color-blue)',
+                border: '1px solid var(--color-blue)',
               }}
             >
               {scenarioSalary.nodes.length} Income • {scenarioDebts.nodes.length} Debt Accounts
             </span>
           </div>
-          <div style={{ fontSize: '12px', color: '#8f9db3', marginTop: '6px', lineHeight: 1.5 }}>
+          <div style={{ fontSize: '12px', color: 'var(--color-muted)', marginTop: '6px', lineHeight: 1.5 }}>
             Scenario Monthly Salary:{' '}
-            <strong style={{ color: '#4ade80' }}>
+            <strong style={{ color: 'var(--color-mint)' }}>
               {dollars(scenarioSalary.totalMonthly)}/mo
             </strong>
             {' • '}Debt Commitments:{' '}
-            <strong style={{ color: '#fb7185' }}>
+            <strong style={{ color: 'var(--color-coral)' }}>
               {dollars(scenarioDebts.totalMonthlyPayment)}/mo
             </strong>{' '}
             across {scenarioDebts.nodes.length} loans ({dollars(scenarioDebts.totalBalance)} total balance)
             {scenarioDebts.nodes.length > 0 && (
-              <span style={{ color: '#94a3b8', marginLeft: '6px' }}>
+              <span style={{ color: 'var(--color-muted)', marginLeft: '6px' }}>
                 ({scenarioDebts.nodes.map((n) => `${n.name}: ${dollars(n.monthlyPayment)}/mo`).join(', ')})
               </span>
             )}
@@ -2046,8 +1851,8 @@ export function BudgetingTab({
           {/* Active Nodes Display Chips */}
           {activeNodes.length > 0 && (
             <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px', marginTop: '10px' }}>
-              <span style={{ fontSize: '11px', color: '#64748b', alignSelf: 'center', marginRight: '4px' }}>
-                Scenario Nodes:
+              <span style={{ fontSize: '11px', color: 'var(--color-subtle)', alignSelf: 'center', marginRight: '4px' }}>
+                Linked plan:
               </span>
               {activeNodes.map((n) => {
                 const isIncome = n.nodeType === 'INCOME';
@@ -2071,33 +1876,33 @@ export function BudgetingTab({
                       padding: '3px 8px',
                       borderRadius: '12px',
                       fontSize: '11px',
-                      background: '#121824',
-                      border: '1px solid #283347',
-                      color: '#cbd5e1',
+                      background: 'var(--color-raised)',
+                      border: '1px solid var(--color-border)',
+                      color: 'var(--color-text)',
                       cursor: 'pointer',
                     }}
-                    title={`View recurring rule for ${n.name} in Recurring tab`}
+                    title="Open recurring transactions"
                   >
                     <span
                       style={{
                         width: '6px',
                         height: '6px',
                         borderRadius: '50%',
-                        backgroundColor: colors[n.nodeType] || '#8b9ab1',
+                        backgroundColor: colors[n.nodeType] || 'var(--color-muted)',
                       }}
                     />
                     <span>{n.name}</span>
                     <strong
                       style={{
                         color: isIncome
-                          ? '#4ade80'
+                          ? 'var(--color-mint)'
                           : isExpense || isDebt
-                            ? '#fb7185'
-                            : '#38bdf8',
+                            ? 'var(--color-coral)'
+                            : 'var(--color-blue)',
                       }}
                     >
                       {dollars(amount)}
-                      {isIncome || isExpense ? '/mo' : ''}
+                      /mo
                     </strong>
                   </button>
                 );
@@ -2115,14 +1920,14 @@ export function BudgetingTab({
                 padding: '6px 12px',
                 fontSize: '12px',
                 borderRadius: '6px',
-                border: '1px solid #22c55e',
+                border: '1px solid var(--color-mint)',
                 background: 'rgba(34, 197, 94, 0.12)',
-                color: '#86efac',
+                color: 'var(--color-mint)',
                 cursor: 'pointer',
                 fontWeight: 500,
               }}
             >
-              📥 Import Scenario Salary
+              Import salary
             </button>
           )}
           {scenarioDebts.nodes.length > 0 && (
@@ -2133,14 +1938,14 @@ export function BudgetingTab({
                 padding: '6px 12px',
                 fontSize: '12px',
                 borderRadius: '6px',
-                border: '1px solid #f43f5e',
+                border: '1px solid var(--color-coral)',
                 background: 'rgba(244, 63, 94, 0.12)',
-                color: '#fda4af',
+                color: 'var(--color-coral)',
                 cursor: 'pointer',
                 fontWeight: 500,
               }}
             >
-              📥 Import Scenario Debt Service
+              Import loan payments
             </button>
           )}
         </div>
@@ -2179,7 +1984,7 @@ export function BudgetingTab({
           className={`inline-flex items-center justify-center gap-1.5 whitespace-nowrap rounded-[7px] font-medium cursor-pointer transition-colors ${activeSubTab === 'stocks' ? 'bg-primary text-primary-fg' : 'bg-transparent text-(--ui-text-97a7c2) hover:bg-(--ui-surface-hover-1a2536) hover:text-text'}`}
           style={{ padding: '6px 16px', fontSize: '14px' }}
         >
-          Stocks & Positions ({stocks.length})
+          Trade ledger ({stocks.length})
         </button>
         <button
           type="button"
@@ -2428,13 +2233,13 @@ export function BudgetingTab({
                       padding: '10px 14px',
                       borderRadius: '6px',
                       background: 'rgba(244, 63, 94, 0.12)',
-                      border: '1px solid #f43f5e',
-                      color: '#fecdd3',
+                      border: '1px solid var(--color-coral)',
+                      color: 'var(--color-coral)',
                       fontSize: '12px',
                     }}
                   >
                     💳 <strong>Linked Scenario Debt Account:</strong> {matchedDebtNode.name}
-                    <div style={{ marginTop: '2px', color: '#fda4af' }}>
+                    <div style={{ marginTop: '2px', color: 'var(--color-coral)' }}>
                       Current Balance: <strong>{dollars(matchedDebtNode.amountOrBalance)}</strong> • Interest:{' '}
                       <strong>{matchedDebtNode.interestRateApr}% APR</strong> • Minimum Monthly Payment:{' '}
                       <strong>{dollars(debtPayment(matchedDebtNode, graph))}</strong>.
@@ -2491,10 +2296,10 @@ export function BudgetingTab({
                 color: 'var(--ui-paint-8f9db3)',
               }}
             >
-              <p style={{ margin: '0 0 0.5rem 0', fontSize: '15px', color: '#f1f5f9' }}>
+              <p style={{ margin: '0 0 0.5rem 0', fontSize: '15px', color: 'var(--color-text)' }}>
                 No single transactions recorded yet.
               </p>
-              <p style={{ margin: 0, fontSize: '13px', color: '#8b9ab1' }}>
+              <p style={{ margin: 0, fontSize: '13px', color: 'var(--color-muted)' }}>
                 Click <strong>+ Add Transaction</strong> above to log single, non-recurring expenses (such as grocery trips, dining, and retail). Recurring salary and bills are managed in the <strong>Recurring Transactions</strong> tab.
               </p>
             </div>
@@ -3308,7 +3113,7 @@ export function BudgetingTab({
               {scenarioSalary.nodes.length > 0 && (
                 <button
                   type="button"
-                  className="inline-flex items-center justify-center gap-1 whitespace-nowrap rounded-[7px] px-3 py-2 text-[11px] font-medium min-h-8.5 cursor-pointer bg-transparent text-[#86efac] border border-[#22c55e]/40 hover:bg-[#22c55e]/10 transition-colors"
+                  className="inline-flex items-center justify-center gap-1 whitespace-nowrap rounded-[7px] px-3 py-2 text-[11px] font-medium min-h-8.5 cursor-pointer bg-transparent text-[var(--color-mint)] border border-[var(--color-mint)]/40 hover:bg-[var(--color-mint)]/10 transition-colors"
                   onClick={handleImportScenarioSalary}
                   title="Import scenario salary node as monthly recurring income"
                 >
@@ -3318,7 +3123,7 @@ export function BudgetingTab({
               {scenarioDebts.nodes.length > 0 && (
                 <button
                   type="button"
-                  className="inline-flex items-center justify-center gap-1 whitespace-nowrap rounded-[7px] px-3 py-2 text-[11px] font-medium min-h-8.5 cursor-pointer bg-transparent text-[#fda4af] border border-[#f43f5e]/40 hover:bg-[#f43f5e]/10 transition-colors"
+                  className="inline-flex items-center justify-center gap-1 whitespace-nowrap rounded-[7px] px-3 py-2 text-[11px] font-medium min-h-8.5 cursor-pointer bg-transparent text-[var(--color-coral)] border border-[var(--color-coral)]/40 hover:bg-[var(--color-coral)]/10 transition-colors"
                   onClick={handleImportScenarioDebts}
                   title="Import scenario debt payments as monthly recurring obligations"
                 >
@@ -3547,13 +3352,13 @@ export function BudgetingTab({
                       padding: '10px 14px',
                       borderRadius: '6px',
                       background: 'rgba(244, 63, 94, 0.12)',
-                      border: '1px solid #f43f5e',
-                      color: '#fecdd3',
+                      border: '1px solid var(--color-coral)',
+                      color: 'var(--color-coral)',
                       fontSize: '12px',
                     }}
                   >
                     💳 <strong>Linked Scenario Debt Account:</strong> {matchedRecurDebtNode.name}
-                    <div style={{ marginTop: '2px', color: '#fda4af' }}>
+                    <div style={{ marginTop: '2px', color: 'var(--color-coral)' }}>
                       Current Balance: <strong>{dollars(matchedRecurDebtNode.amountOrBalance)}</strong> • Interest:{' '}
                       <strong>{matchedRecurDebtNode.interestRateApr}% APR</strong> • Minimum Monthly Payment:{' '}
                       <strong>{dollars(debtPayment(matchedRecurDebtNode, graph))}</strong>.

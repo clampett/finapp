@@ -27,6 +27,7 @@ import {
   colors,
   downloadJson,
   expenseAmount,
+  debtPayment,
   money,
   parseGraph,
   totals,
@@ -240,7 +241,8 @@ export function ArchetypeGraph({
   const filtered = live.nodes.filter(
     (n) =>
       n.name.toLowerCase().includes(search.toLowerCase()) &&
-      (view !== 'investing' || ['INVESTMENT', 'SAVINGS'].includes(n.nodeType)),
+      (view !== 'investing' || ['INVESTMENT', 'SAVINGS'].includes(n.nodeType)) &&
+      (view !== 'cashflow' || ['INCOME', 'EXPENSE', 'DEBT'].includes(n.nodeType)),
   );
   const selectAccount = useCallback((n: GraphNode) => {
     setSelectionIds([n.id]);
@@ -519,14 +521,37 @@ export function ArchetypeGraph({
   );
   return (
     <div className="px-8 pb-4.5 max-[1100px]:px-5.5 max-[1100px]:pb-4.5 max-[760px]:px-4 max-[760px]:pb-4 2xl:px-11 fullscreen:bg-[var(--ui-surface-0c1018)] fullscreen:w-full fullscreen:h-full fullscreen:overflow-auto fullscreen:p-6 max-[650px]:fullscreen:p-3">
-      {view !== 'overview' && (
+      <div className={"workspace-tab-intro workspace-tab-" + view}>
+        <div>
+          <h2 className="text-[clamp(18px,2vw,24px)] font-semibold tracking-[-0.5px] text-text m-0">
+            {view === 'graph'
+              ? 'Node Graph'
+              : view === 'overview'
+                ? 'Your financial snapshot'
+                : view === 'cashflow'
+                  ? 'Monthly cash flow'
+                  : view === 'budgeting'
+                    ? 'Budgeting & transactions'
+                    : 'Savings & investments'}
+          </h2>
+          <p className="text-sm text-muted mt-2 mb-0 leading-relaxed">
+            {view === "graph" ? live.nodes.length + " nodes · " + live.edges.length + " connections · " +
+              (storageStatus || "Scenario edits stay in this browser") :
+              view === "overview" ? "See your balances, monthly plan, and progress toward your goals." :
+              view === "cashflow" ? "Review monthly inflows and commitments. Toggle individual flows to explore what changes." :
+              view === "budgeting" ? "Record what happened and manage the schedules that repeat." :
+              "Track stock holdings and review the savings and investments in your scenario."}
+          </p>
+        </div>
+      </div>
+      {view === 'cashflow' && (
         <div className="grid grid-cols-4 max-[1100px]:grid-cols-2 max-[600px]:grid-cols-1 gap-3.5 mb-7">
           {[
             [
-              'Net worth',
-              money(t.netWorth),
-              'Assets minus outstanding debt',
-              t.netWorth < 0 ? 'negative text-coral' : 'text-text',
+              'Gross income',
+              money(t.income),
+              'Monthly income before estimated tax',
+              'text-text',
             ],
             ['Take-home income', money(t.takeHome), 'After the selected tax estimate', 'text-text'],
             [
@@ -552,29 +577,7 @@ export function ArchetypeGraph({
           ))}
         </div>
       )}
-      <div className="flex items-center justify-between gap-4.5 flex-wrap mb-5">
-        <div>
-          <h2 className="text-[clamp(18px,2vw,24px)] font-semibold tracking-[-0.5px] text-text m-0">
-            {view === 'graph'
-              ? 'Node Graph'
-              : view === 'overview'
-                ? 'Your financial snapshot'
-                : view === 'cashflow'
-                  ? 'Monthly cash flow'
-                  : view === 'budgeting'
-                    ? 'Budgeting & transactions'
-                    : 'Savings & investments'}
-          </h2>
-          <p className="text-xs text-muted mt-1.5 mb-0">
-            {live.nodes.length} nodes · {live.edges.length} connections{' '}
-            <span className="max-[1100px]:hidden">
-              · {storageStatus || 'Edits stay in this browser; export to share'}
-            </span>
-          </p>
-        </div>
-        {view !== 'graph' && toolbar}
-      </div>
-      <input
+      {view === "graph" && <input
         ref={importRef}
         type="file"
         className="sr-only"
@@ -592,8 +595,7 @@ export function ArchetypeGraph({
           }
           e.target.value = '';
         }}
-      />
-      {view !== 'graph' && archivePanel}
+      />}
       {error && (
         <div className="p-[12px_16px] text-xs rounded-lg mb-3.5 flex gap-3.5 items-center justify-between leading-[1.6] bg-(--ui-surface-331d2b) text-(--ui-text-fda4af) border border-(--ui-border-743247)" role="alert">
           {error}
@@ -609,14 +611,14 @@ export function ArchetypeGraph({
           </button>
         </div>
       )}
-      {loaded && (
+      {loaded && (view === "cashflow" || view === "graph") && (
         <BudgetControls
           graph={live}
           onChange={(assumptions) => update({ ...graph, assumptions })}
           compact
         />
       )}
-      {t.surplus < 0 && (
+      {(view === "cashflow" || view === "graph") && t.surplus < 0 && (
         <div className="p-[12px_16px] text-xs rounded-lg mb-3.5 flex gap-3.5 items-center justify-between leading-[1.6] bg-(--ui-surface-2b251b) border border-(--ui-border-614b2c) text-(--ui-text-e2c384)">
           Your monthly shortfall is {money(-t.surplus)}. Forecasts draw from reserves and
           investments before adding new borrowing.
@@ -624,7 +626,7 @@ export function ArchetypeGraph({
       )}
       {!loaded ? (
         <div className="py-17.5 px-6 text-center text-(--ui-text-8d9fba) text-xs" role="status">
-          Loading your node graph…
+          Loading your workspace…
         </div>
       ) : (
         <>
@@ -685,27 +687,32 @@ export function ArchetypeGraph({
                     });
                   }}
                 />
-              ) : (
-                <div className="border border-(--ui-border-2a3549) rounded-[11px] bg-(--ui-surface-121a27) overflow-auto min-h-87.5">
+              ) : filtered.length === 0 && view === "investing" ? null : (
+                <section className="workspace-ledger border border-(--ui-border-2a3549) rounded-[11px] bg-(--ui-surface-121a27) overflow-hidden mt-4">
+                  <div className="p-5 border-b border-border">
+                    <h3 className="m-0 font-semibold text-text">{view === "cashflow" ? "Scenario flows" : "Scenario accounts"}</h3>
+                    <p className="mt-1 mb-0 text-xs text-muted">{view === "cashflow" ? "These switches affect the plan and forecasts." : "Balances entered in Node Graph, separate from your tracked holdings."}</p>
+                  </div>
+                  <div className="overflow-x-auto">
                   <table className="w-full border-collapse text-left text-xs whitespace-nowrap">
                     <thead>
                       <tr>
                         <th className="text-(--ui-text-8192ad) text-[10px] font-medium p-[16px_20px] bg-(--ui-surface-161f2e)">Account</th>
                         <th className="text-(--ui-text-8192ad) text-[10px] font-medium p-[16px_20px] bg-(--ui-surface-161f2e)">Type</th>
-                        <th className="text-(--ui-text-8192ad) text-[10px] font-medium p-[16px_20px] bg-(--ui-surface-161f2e)">{view === 'cashflow' ? 'Monthly flow / Balance' : 'Balance'}</th>
+                        <th className="text-(--ui-text-8192ad) text-[10px] font-medium p-[16px_20px] bg-(--ui-surface-161f2e)">{view === 'cashflow' ? 'Monthly amount' : 'Balance'}</th>
                         <th className="text-(--ui-text-8192ad) text-[10px] font-medium p-[16px_20px] bg-(--ui-surface-161f2e)">APR</th>
-                        <th className="p-[16px_20px] bg-(--ui-surface-161f2e)" />
+
                       </tr>
                     </thead>
                     <tbody>
                       {filtered.map((n) => (
                         <tr
                           key={n.id}
-                          className={`transition-colors ${n.disabled ? 'opacity-65 bg-[#0e141f]/50' : 'hover:bg-[#151f2e]/40'}`}
+                          className={`transition-colors ${n.disabled ? 'opacity-65 bg-base' : 'hover:bg-hover-bg'}`}
                         >
                           <td className="p-[13px_20px] border-t border-(--ui-border-263147)">
                             <label className="inline-flex items-center gap-2.5 cursor-pointer select-none">
-                              <input
+                              {view === "cashflow" && <input
                                 type="checkbox"
                                 checked={!n.disabled}
                                 onChange={() => {
@@ -718,7 +725,7 @@ export function ArchetypeGraph({
                                 }}
                                 className="accent-brand w-4 h-4 rounded cursor-pointer shrink-0"
                                 aria-label={`Toggle ${n.name}`}
-                              />
+                              />}
                               <span
                                 className="inline-block w-1.5 h-1.5 rounded-full shrink-0 align-middle transition-opacity"
                                 style={{
@@ -726,7 +733,7 @@ export function ArchetypeGraph({
                                   opacity: n.disabled ? 0.35 : 1,
                                 }}
                               />
-                              <span className={n.disabled ? 'line-through text-[#6e8099]' : 'text-text font-medium'}>
+                              <span className={n.disabled ? 'line-through text-muted' : 'text-text font-medium'}>
                                 {n.name}
                               </span>
                             </label>
@@ -734,28 +741,24 @@ export function ArchetypeGraph({
                           <td className="p-[13px_20px] border-t border-(--ui-border-263147)">{typeLabel(n.nodeType)}</td>
                           <td className="p-[13px_20px] border-t border-(--ui-border-263147)">
                             {money(
-                              n.nodeType === 'EXPENSE' ? expenseAmount(n, live) : n.amountOrBalance,
+                              n.nodeType === 'EXPENSE' ? expenseAmount(n, live, true) : n.nodeType === 'DEBT' ? debtPayment(n, live, true) : n.amountOrBalance,
                             )}
-                            {['INCOME', 'EXPENSE'].includes(n.nodeType) ? '/mo' : ''}
+                            {view === 'cashflow' ? '/mo' : ''}
                           </td>
                           <td className="p-[13px_20px] border-t border-(--ui-border-263147)">{n.interestRateApr}%</td>
-                          <td className="p-[13px_20px] border-t border-(--ui-border-263147)">
-                            <button className="inline-flex items-center justify-center gap-1.75 whitespace-nowrap rounded-[7px] px-3 py-1.5 text-[11px] font-medium cursor-pointer bg-transparent text-(--ui-text-97a7c2) border border-transparent hover:bg-(--ui-surface-hover-1a2536) hover:text-text transition-colors" onClick={() => setSelected(n)}>
-                              Edit ↗
-                            </button>
-                          </td>
                         </tr>
                       ))}
                     </tbody>
                   </table>
+                  </div>
                   {!filtered.length && (
                     <div className="py-17.5 px-6 text-center text-(--ui-text-8d9fba) text-xs">
-                      No matching nodes. Add a node or adjust your search.
+                      No matching flows. Adjust your search or add a flow in Node Graph.
                     </div>
                   )}
-                </div>
+                </section>
               )}
-              <div className="border border-(--ui-border-30384e) rounded-[11px] bg-linear-to-r from-(--ui-surface-1a1b2c) to-(--ui-surface-151b29) mt-3.75 p-[21px_22px] flex flex-col items-stretch gap-4.5">
+              {view === "graph" && <div className="border border-(--ui-border-30384e) rounded-[11px] bg-linear-to-r from-(--ui-surface-1a1b2c) to-(--ui-surface-151b29) mt-3.75 p-[21px_22px] flex flex-col items-stretch gap-4.5">
                 <div>
                   <div className="text-[8px] text-(--ui-text-b5a4e3) mb-1.75 font-semibold tracking-wider">LOOK AHEAD</div>
                   <h3 className="text-sm font-semibold text-text m-0">What could your next chapter look like?</h3>
@@ -817,11 +820,11 @@ export function ArchetypeGraph({
                                 )
                               }
                             />
-                            <span className={node.disabled ? 'line-through text-[#6e8099]' : ''}>
+                            <span className={node.disabled ? 'line-through text-muted' : ''}>
                               {node.name}
                             </span>
                             {node.disabled && (
-                              <span className="text-[10px] text-[#fda4af]">(off)</span>
+                              <span className="text-[10px] text-coral">(off)</span>
                             )}
                           </label>
                         ))}
@@ -856,13 +859,12 @@ export function ArchetypeGraph({
                     Debt payoff ↗
                   </button>
                 </div>
-              </div>
+              </div>}
             </div>
-            {view !== 'graph' && inspector}
           </div>
-          <section className="border border-(--ui-border-293449) rounded-[10px] mt-5 bg-(--ui-surface-111925)" ref={routesRef}>
+          {view === "graph" && <section className="border border-(--ui-border-293449) rounded-[10px] mt-5 bg-(--ui-surface-111925)" ref={routesRef}>
             <button
-              className="w-full p-[16px_19px] bg-transparent border-0 cursor-pointer flex justify-between items-center text-xs font-medium text-text hover:text-white transition-colors"
+              className="w-full p-[16px_19px] bg-transparent border-0 cursor-pointer flex justify-between items-center text-xs font-medium text-text hover:text-primary transition-colors"
               aria-expanded={connections}
               onClick={() => setConnections(!connections)}
             >
@@ -945,7 +947,7 @@ export function ArchetypeGraph({
                 </form>
               </div>
             )}
-          </section>
+          </section>}
         </>
       )}
       <footer className="flex justify-between gap-3 text-(--ui-text-5f728c) text-[9px] mt-6">
@@ -954,7 +956,7 @@ export function ArchetypeGraph({
         </span>
         <span>Educational modeling · All amounts in USD</span>
       </footer>
-      {simType && (
+      {view === "graph" && simType && (
         <Suspense
           fallback={
             <div className="fixed inset-0 z-100 bg-(--ui-surface-04070dbd) backdrop-blur-md flex items-center justify-center p-[clamp(12px,3vw,40px)]">

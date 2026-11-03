@@ -48,15 +48,15 @@ def project_household(
 
     cash_yield = account_yield("CHECKING")
     savings_yield = account_yield("SAVINGS")
-    savings_start = sum(n.balance for n in nodes if n.type == "SAVINGS")
     # Projected contractual loans using minimum payments only; extra repayment
     # strategies were compared separately by the debt endpoint branch.
     debt_log = minimum_payment_schedule(debts, years * 12)
     debt_path = [row["balance"] for row in debt_log]
-    cash = np.full(iterations, float(cash_start - savings_start))
-    savings = np.full(iterations, float(savings_start))
+    # Carried opening overdrafts as borrowing so they could not be spent as reserves.
+    cash = np.full(iterations, sum((max(0.0, n.balance) for n in nodes if n.type == "CHECKING"), 0.0))
+    savings = np.full(iterations, sum((max(0.0, n.balance) for n in nodes if n.type == "SAVINGS"), 0.0))
     investments = np.full(iterations, float(investment_start))
-    borrowing = np.zeros(iterations)
+    borrowing = np.full(iterations, sum((max(0.0, -n.balance) for n in nodes if n.type in ("CHECKING", "SAVINGS")), 0.0))
     contributions = np.zeros(iterations)
     plan = plan or SavingPlan()
     market = market or assumed_model()

@@ -251,11 +251,17 @@ export function Investing({
 
   async function setShares(sym: string, raw: string) {
     const value = Number(raw);
-    const newShares = Number.isFinite(value) && value >= 0 ? value : 0;
+    if (!raw.trim() || !Number.isFinite(value) || value < 0) return;
+    const newShares = value;
     const currentHolding = holdings.find((h) => h.symbol === sym);
     const currentShares = currentHolding?.shares ?? 0;
+    if (currentShares === newShares) return;
     const quote = quotes[sym];
-    const price = isQuote(quote) ? quote.latest_price : currentHolding?.lastPrice ?? 100;
+    const price = isQuote(quote) ? quote.latest_price : currentHolding?.lastPrice;
+    if (!price || !Number.isFinite(price) || price <= 0) {
+      setMessage("A price is needed before shares can be updated.");
+      return;
+    }
     const previousHoldings = holdings;
 
     setHoldings((current) =>
@@ -434,10 +440,18 @@ export function Investing({
                         min="0"
                         step="any"
                         aria-label={`Shares of ${sym}`}
+                        key={shares}
                         defaultValue={shares}
                         className="text-xs min-w-0 border border-border rounded-lg bg-(--ui-surface-101722) text-(--ui-text-edf2fa) px-2.75 py-1.5"
                         style={{ width: '5.5rem' }}
-                        onChange={(event) => setShares(sym, event.target.value)}
+                        onBlur={(event) => {
+                          const value = event.currentTarget.value;
+                          event.currentTarget.value = String(shares);
+                          void setShares(sym, value);
+                        }}
+                        onKeyDown={(event) => {
+                          if (event.key === "Enter") event.currentTarget.blur();
+                        }}
                       />
                     </td>
                     <td className="p-[13px_20px] border-t border-(--ui-border-263147) text-text max-[760px]:p-[11px_14px]">{quote ? dollars(quote.latest_price) : lastPrice ? dollars(lastPrice) : problem ? '—' : 'Loading…'}</td>

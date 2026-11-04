@@ -47,6 +47,8 @@ export function ArchetypeGraph({
   view,
   search,
   userProfile,
+  profileStatus,
+  onRetryProfile,
   onUpdateProfile,
   activeTheme,
   onSelectTheme,
@@ -56,6 +58,8 @@ export function ArchetypeGraph({
   view: View;
   search: string;
   userProfile: UserProfile;
+  profileStatus: 'loading' | 'ready' | 'error';
+  onRetryProfile: () => void;
   onUpdateProfile: (updated: UserProfile) => void;
   activeTheme: 'light' | 'dark';
   onSelectTheme: (theme: 'light' | 'dark' | 'system') => void;
@@ -676,6 +680,8 @@ export function ArchetypeGraph({
                   userId={userId}
                   demo={demo}
                   profile={userProfile}
+                  profileStatus={profileStatus}
+                  onRetryProfile={onRetryProfile}
                   onUpdateProfile={onUpdateProfile}
                   activeTheme={activeTheme}
                   onSelectTheme={onSelectTheme}

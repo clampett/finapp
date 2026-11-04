@@ -44,6 +44,8 @@ export default function App() {
   const [profile, setProfile] = useState(demo ? initialDemoProfile : userId);
   const [view, setView] = useState<View>('overview');
   const [search, setSearch] = useState('');
+  const [profileStatus, setProfileStatus] = useState<'loading' | 'ready' | 'error'>('loading');
+  const [profileRequest, retryProfile] = useState(0);
   const [userProfile, setUserProfile] = useState<UserProfile>(() => {
     if (demo) {
       try {
@@ -74,25 +76,33 @@ export default function App() {
       } catch {}
       setUserProfile(DEMO_PROFILES[profile] || DEMO_PROFILES[2]);
     } else if (userId) {
+      // Kept editing locked until the account fields were loaded successfully.
+      const controller = new AbortController();
+      setProfileStatus('loading');
       fetch(`${API_BASE}/users/me`, {
         headers: sessionHeaders(),
         credentials: 'include',
+        signal: controller.signal,
       })
-        .then((res) => (res.ok ? res.json() : null))
-        .then((body) => {
-          if (body?.data) {
-            setUserProfile({
-              id: body.data.id,
-              username: body.data.username,
-              email: body.data.email,
-              displayName: body.data.displayName || body.data.username,
-              profilePicture: body.data.profilePicture || null,
-            });
-          }
+        .then(async (res) => {
+          if (!res.ok) throw new Error('Profile could not be loaded.');
+          const { data } = await res.json();
+          if (controller.signal.aborted) return;
+          setUserProfile({
+            id: data.id,
+            username: data.username,
+            email: data.email,
+            displayName: data.displayName || data.username,
+            profilePicture: data.profilePicture || null,
+          });
+          setProfileStatus('ready');
         })
-        .catch(() => {});
+        .catch(() => {
+          if (!controller.signal.aborted) setProfileStatus('error');
+        });
+      return () => controller.abort();
     }
-  }, [demo, profile, userId]);
+  }, [demo, profile, userId, profileRequest]);
   useEffect(() => {
     if (!demo && !userId) location.replace('/login');
     if (!demo && userId) {
@@ -291,6 +301,8 @@ export default function App() {
           view={view}
           search={search}
           userProfile={userProfile}
+          profileStatus={demo ? 'ready' : profileStatus}
+          onRetryProfile={() => retryProfile((attempt) => attempt + 1)}
           onUpdateProfile={setUserProfile}
           activeTheme={theme}
           onSelectTheme={selectTheme}

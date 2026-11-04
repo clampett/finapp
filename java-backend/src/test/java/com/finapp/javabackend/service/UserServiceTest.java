@@ -66,7 +66,7 @@ class UserServiceTest {
         when(userRepository.findById(42L)).thenReturn(Optional.of(user));
         when(userRepository.save(any(User.class))).thenAnswer(invocation -> invocation.getArgument(0));
 
-        String photoUri = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==";
+        String photoUri = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAIAAACQd1PeAAAADElEQVR4nGNgYGAAAAAEAAH2FzhVAAAAAElFTkSuQmCC";
         UpdateUserProfileRequest request = new UpdateUserProfileRequest("Alex Developer", photoUri);
 
         UserProfileDTO updated = userService.updateProfile(42L, request);
@@ -132,6 +132,17 @@ class UserServiceTest {
     }
 
     @Test
+    void updateProfile_rejectsNonImageBytesWithAllowedMimeType() {
+        when(userRepository.findById(42L)).thenReturn(Optional.of(user));
+
+        var request = new UpdateUserProfileRequest(null, "data:image/png;base64,AAAA");
+        var error = assertThrows(ResponseStatusException.class, () -> userService.updateProfile(42L, request));
+
+        assertEquals(HttpStatus.BAD_REQUEST, error.getStatusCode());
+        verify(userRepository, never()).save(any(User.class));
+    }
+
+    @Test
     void updateProfile_svgProfilePicture_throwsBadRequest() {
         when(userRepository.findById(42L)).thenReturn(Optional.of(user));
 
@@ -172,4 +183,3 @@ class UserServiceTest {
         verify(userRepository, never()).save(any(User.class));
     }
 }
-

@@ -15,6 +15,8 @@ interface SettingsTabProps {
   userId: number;
   demo: boolean;
   profile: UserProfile;
+  profileStatus: 'loading' | 'ready' | 'error';
+  onRetryProfile: () => void;
   onUpdateProfile: (updated: UserProfile) => void;
   activeTheme: 'light' | 'dark';
   onSelectTheme: (theme: 'light' | 'dark' | 'system') => void;
@@ -38,12 +40,12 @@ export function getInitials(name: string): string {
 
 /**
  * Reads an image file directly as a Base64 data URL using the browser's FileReader.
- * Avoids HTML Canvas to prevent GPU texture readback issues or uninitialized buffer stripes.
+ * Kept native PNG, JPEG, and GIF uploads in their original format.
  */
 export function readFileAsDataUrl(file: File): Promise<string> {
   return new Promise((resolve, reject) => {
-    if (!file.type.startsWith('image/')) {
-      reject(new Error('Please select an image file (PNG, JPG, WebP, GIF, SVG).'));
+    if (!['image/png', 'image/jpeg', 'image/webp', 'image/gif'].includes(file.type)) {
+      reject(new Error('Please select an image file (PNG, JPG, WebP, GIF).'));
       return;
     }
     // Limit to 3MB for database and storage performance
@@ -68,14 +70,21 @@ export default function SettingsTab({
   userId,
   demo,
   profile,
+  profileStatus,
+  onRetryProfile,
   onUpdateProfile,
   activeTheme,
   onSelectTheme,
 }: SettingsTabProps) {
   const [displayName, setDisplayName] = useState(profile.displayName || profile.username || '');
   const [profilePicture, setProfilePicture] = useState<string | null>(profile.profilePicture);
-  const [statusMessage, setStatusMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
+  const [statusMessage, setStatusMessage] = useState<{
+    type: 'success' | 'error';
+    text: string;
+  } | null>(null);
   const [saving, setSaving] = useState(false);
+  const [readingPhoto, setReadingPhoto] = useState(false);
+  const profileEditable = profileStatus === 'ready' && !saving && !readingPhoto;
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   // Controlled theme mode state: 'dark', 'light', or 'system'
@@ -101,15 +110,39 @@ export default function SettingsTab({
 
   const handleFileChange = async (e: ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
-    if (!file) return;
+    if (!file || !profileEditable) return;
+    e.target.value = '';
+    setReadingPhoto(true);
 
     try {
-      const dataUrl = await readFileAsDataUrl(file);
+      let dataUrl = await readFileAsDataUrl(file);
+      const image = new Image();
+      image.src = dataUrl;
+      await image.decode();
+      if (image.naturalWidth > 2048 || image.naturalHeight > 2048) {
+        throw new Error('Use an image no larger than 2048 × 2048 pixels.');
+      }
+      // Converted WebP to a format validated by the Java runtime.
+      if (file.type === 'image/webp') {
+        const canvas = document.createElement('canvas');
+        canvas.width = image.naturalWidth;
+        canvas.height = image.naturalHeight;
+        const context = canvas.getContext('2d');
+        if (!context) throw new Error('Could not convert the WebP image.');
+        context.drawImage(image, 0, 0);
+        dataUrl = canvas.toDataURL('image/png');
+        const encoded = dataUrl.split(',')[1];
+        if (!encoded || atob(encoded).length > 3 * 1024 * 1024) {
+          throw new Error('The converted image exceeds 3 MB. Try a smaller image.');
+        }
+      }
       setProfilePicture(dataUrl);
       setStatusMessage(null);
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : 'Failed to process image.';
       setStatusMessage({ type: 'error', text: msg });
+    } finally {
+      setReadingPhoto(false);
     }
   };
 
@@ -132,6 +165,7 @@ export default function SettingsTab({
   };
 
   const handleSave = async () => {
+    if (!profileEditable) return;
     const trimmedName = displayName.trim();
     if (!trimmedName) {
       setStatusMessage({ type: 'error', text: 'Display name cannot be empty.' });
@@ -158,11 +192,19 @@ export default function SettingsTab({
       try {
         localStorage.setItem(`finapp-demo-profile:${userId}`, JSON.stringify(updatedData));
       } catch {
-        /* Local memory fallback */
+        setSaving(false);
+        setStatusMessage({
+          type: 'error',
+          text: 'This browser could not save the demo profile. Try a smaller photo or free up site storage.',
+        });
+        return;
       }
       onUpdateProfile(updatedData);
       setSaving(false);
-      setStatusMessage({ type: 'success', text: 'Settings updated successfully for this demo profile.' });
+      setStatusMessage({
+        type: 'success',
+        text: 'Settings updated successfully for this demo profile.',
+      });
       return;
     }
 
@@ -176,9 +218,10 @@ export default function SettingsTab({
         },
         credentials: 'include',
         body: JSON.stringify({
-          displayName: trimmedName,
-          // Send empty string to explicitly clear photo on backend, or data URI to update
-          profilePicture: resolvedPicture ?? '',
+          displayName: trimmedName !== profile.displayName ? trimmedName : undefined,
+          // Omitted unchanged photos and sent an empty value only for an explicit removal.
+          profilePicture:
+            resolvedPicture !== profile.profilePicture ? (resolvedPicture ?? '') : undefined,
         }),
       });
 
@@ -209,7 +252,7 @@ export default function SettingsTab({
     profilePicture !== profile.profilePicture;
 
   return (
-    <div className="space-y-6 max-w-4xl">
+    <div className="space-y-5 max-w-5xl">
       {statusMessage && (
         <div
           role="alert"
@@ -230,6 +273,25 @@ export default function SettingsTab({
         </div>
       )}
 
+      {profileStatus !== 'ready' && (
+        <div
+          role="status"
+          className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-border bg-surface p-4 text-sm text-muted"
+        >
+          {profileStatus === 'loading'
+            ? 'Loading your profile…'
+            : 'Your profile could not be loaded.'}
+          {profileStatus === 'error' && (
+            <button
+              type="button"
+              className="rounded-lg border border-border bg-raised px-3 py-2 text-text hover:bg-hover-bg"
+              onClick={onRetryProfile}
+            >
+              Try again
+            </button>
+          )}
+        </div>
+      )}
       {/* Card 1: Profile Picture (User Story 18) */}
       <section className="border border-border rounded-xl bg-surface p-6 shadow-sm">
         <h3 className="text-base font-semibold text-text m-0">Profile Picture</h3>
@@ -247,7 +309,7 @@ export default function SettingsTab({
               />
             ) : (
               <div
-                className="w-full h-full bg-brand/15 text-brand flex items-center justify-center font-bold text-2xl uppercase tracking-wider select-none"
+                className="w-full h-full bg-active-bg text-active-text flex items-center justify-center font-bold text-2xl uppercase tracking-wider select-none"
                 aria-label="Default avatar initials"
               >
                 {getInitials(displayName || profile.username || 'User')}
@@ -259,23 +321,26 @@ export default function SettingsTab({
             <input
               type="file"
               ref={fileInputRef}
+              disabled={!profileEditable}
               onChange={handleFileChange}
               accept="image/png, image/jpeg, image/webp, image/gif"
-              className="sr-only"
-              id="avatar-upload-input"
+              className="hidden"
             />
             <div className="flex flex-wrap items-center gap-3">
-              <label
-                htmlFor="avatar-upload-input"
-                className="inline-flex items-center justify-center px-4 py-2 rounded-lg text-xs font-medium cursor-pointer transition-colors bg-hover-bg border border-border text-text hover:bg-raised hover:border-muted active:scale-[0.98]"
+              <button
+                type="button"
+                onClick={() => fileInputRef.current?.click()}
+                disabled={!profileEditable}
+                className="inline-flex items-center justify-center px-4 py-2 rounded-lg text-xs font-medium cursor-pointer transition-colors bg-hover-bg border border-border text-text hover:bg-raised hover:border-muted disabled:opacity-50 disabled:cursor-not-allowed"
               >
-                Upload Photo
-              </label>
+                {readingPhoto ? 'Checking photo…' : 'Upload Photo'}
+              </button>
 
               {profilePicture && (
                 <button
                   type="button"
                   onClick={handleRemovePhoto}
+                  disabled={!profileEditable}
                   className="inline-flex items-center justify-center px-4 py-2 rounded-lg text-xs font-medium cursor-pointer transition-colors border border-coral/30 text-coral bg-coral/5 hover:bg-coral/15 active:scale-[0.98]"
                 >
                   Remove Photo
@@ -283,7 +348,7 @@ export default function SettingsTab({
               )}
             </div>
             <p className="text-[11px] text-subtle m-0 leading-normal">
-              Supported formats: PNG, JPG, WebP, or GIF (max 3MB).
+              PNG, JPG, WebP, or GIF · up to 3 MB and 2048 × 2048 pixels.
             </p>
           </div>
         </div>
@@ -298,13 +363,17 @@ export default function SettingsTab({
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
           <div>
-            <label htmlFor="user-display-name" className="block text-xs font-medium text-text mb-1.5">
+            <label
+              htmlFor="user-display-name"
+              className="block text-xs font-medium text-text mb-1.5"
+            >
               Display Name
             </label>
             <input
               id="user-display-name"
               type="text"
-              value={displayName}
+              value={profileStatus === 'ready' ? displayName : ''}
+              disabled={!profileEditable}
               maxLength={50}
               onChange={(e) => setDisplayName(e.target.value)}
               placeholder="Enter your preferred name"
@@ -314,20 +383,21 @@ export default function SettingsTab({
               <span className="text-[11px] text-subtle">
                 Visible to you and across account views.
               </span>
-              <span className="text-[11px] text-subtle">
-                {displayName.length}/50
-              </span>
+              <span className="text-[11px] text-subtle">{displayName.length}/50</span>
             </div>
           </div>
 
           <div>
-            <label htmlFor="user-login-username" className="block text-xs font-medium text-text mb-1.5">
+            <label
+              htmlFor="user-login-username"
+              className="block text-xs font-medium text-text mb-1.5"
+            >
               Account Handle (Username)
             </label>
             <input
               id="user-login-username"
               type="text"
-              value={profile.username ? `@${profile.username}` : '@demo'}
+              value={profileStatus === 'ready' && profile.username ? `@${profile.username}` : ''}
               disabled
               className="w-full text-xs rounded-lg border border-border bg-base text-muted px-3.5 py-2.5 cursor-not-allowed select-none opacity-80"
             />
@@ -362,9 +432,10 @@ export default function SettingsTab({
           <button
             type="button"
             onClick={() => handleThemeChange('dark')}
+            aria-pressed={themeMode === 'dark'}
             className={`border rounded-xl p-4 text-left cursor-pointer transition-all ${
               themeMode === 'dark'
-                ? 'border-brand bg-active-bg ring-1 ring-brand'
+                ? 'border-primary bg-active-bg ring-1 ring-primary'
                 : 'border-border bg-raised hover:border-muted hover:bg-hover-bg'
             }`}
           >
@@ -372,15 +443,23 @@ export default function SettingsTab({
               <span className="text-xs font-semibold text-text">Dark Theme</span>
               <span
                 className={`w-3.5 h-3.5 rounded-full border flex items-center justify-center ${
-                  themeMode === 'dark' ? 'border-brand bg-brand' : 'border-subtle bg-transparent'
+                  themeMode === 'dark'
+                    ? 'border-primary bg-primary'
+                    : 'border-subtle bg-transparent'
                 }`}
               >
                 {themeMode === 'dark' && <span className="w-1.5 h-1.5 rounded-full bg-base" />}
               </span>
             </div>
             <div className="flex gap-1.5 mb-2">
-              <span className="w-4 h-4 rounded-sm bg-[#0c1018] border border-[#232c3c]" title="Base" />
-              <span className="w-4 h-4 rounded-sm bg-[#141b27] border border-[#232c3c]" title="Surface" />
+              <span
+                className="w-4 h-4 rounded-sm bg-[#0c1018] border border-[#232c3c]"
+                title="Base"
+              />
+              <span
+                className="w-4 h-4 rounded-sm bg-[#141b27] border border-[#232c3c]"
+                title="Surface"
+              />
               <span className="w-4 h-4 rounded-sm bg-[#b8a3fa]" title="Accent" />
             </div>
             <span className="text-[11px] text-muted block leading-tight">
@@ -392,9 +471,10 @@ export default function SettingsTab({
           <button
             type="button"
             onClick={() => handleThemeChange('light')}
+            aria-pressed={themeMode === 'light'}
             className={`border rounded-xl p-4 text-left cursor-pointer transition-all ${
               themeMode === 'light'
-                ? 'border-brand bg-active-bg ring-1 ring-brand'
+                ? 'border-primary bg-active-bg ring-1 ring-primary'
                 : 'border-border bg-raised hover:border-muted hover:bg-hover-bg'
             }`}
           >
@@ -402,15 +482,23 @@ export default function SettingsTab({
               <span className="text-xs font-semibold text-text">Light Theme</span>
               <span
                 className={`w-3.5 h-3.5 rounded-full border flex items-center justify-center ${
-                  themeMode === 'light' ? 'border-brand bg-brand' : 'border-subtle bg-transparent'
+                  themeMode === 'light'
+                    ? 'border-primary bg-primary'
+                    : 'border-subtle bg-transparent'
                 }`}
               >
                 {themeMode === 'light' && <span className="w-1.5 h-1.5 rounded-full bg-base" />}
               </span>
             </div>
             <div className="flex gap-1.5 mb-2">
-              <span className="w-4 h-4 rounded-sm bg-[#f3f4f7] border border-[#d4dae4]" title="Base" />
-              <span className="w-4 h-4 rounded-sm bg-[#ffffff] border border-[#d4dae4]" title="Surface" />
+              <span
+                className="w-4 h-4 rounded-sm bg-[#f3f4f7] border border-[#d4dae4]"
+                title="Base"
+              />
+              <span
+                className="w-4 h-4 rounded-sm bg-[#ffffff] border border-[#d4dae4]"
+                title="Surface"
+              />
               <span className="w-4 h-4 rounded-sm bg-[#6544ad]" title="Accent" />
             </div>
             <span className="text-[11px] text-muted block leading-tight">
@@ -422,9 +510,10 @@ export default function SettingsTab({
           <button
             type="button"
             onClick={() => handleThemeChange('system')}
+            aria-pressed={themeMode === 'system'}
             className={`border rounded-xl p-4 text-left cursor-pointer transition-all ${
               themeMode === 'system'
-                ? 'border-brand bg-active-bg ring-1 ring-brand'
+                ? 'border-primary bg-active-bg ring-1 ring-primary'
                 : 'border-border bg-raised hover:border-muted hover:bg-hover-bg'
             }`}
           >
@@ -432,7 +521,9 @@ export default function SettingsTab({
               <span className="text-xs font-semibold text-text">System Default</span>
               <span
                 className={`w-3.5 h-3.5 rounded-full border flex items-center justify-center ${
-                  themeMode === 'system' ? 'border-brand bg-brand' : 'border-subtle bg-transparent'
+                  themeMode === 'system'
+                    ? 'border-primary bg-primary'
+                    : 'border-subtle bg-transparent'
                 }`}
               >
                 {themeMode === 'system' && <span className="w-1.5 h-1.5 rounded-full bg-base" />}
@@ -454,7 +545,7 @@ export default function SettingsTab({
         <button
           type="button"
           onClick={handleReset}
-          disabled={!hasChanges || saving}
+          disabled={!hasChanges || !profileEditable}
           className="px-4 py-2.5 rounded-lg text-xs font-medium border border-border bg-transparent text-muted hover:text-text hover:bg-hover-bg transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
         >
           Discard Changes
@@ -462,10 +553,10 @@ export default function SettingsTab({
         <button
           type="button"
           onClick={handleSave}
-          disabled={saving || !displayName.trim()}
-          className="px-5 py-2.5 rounded-lg text-xs font-medium bg-brand text-[#0c1018] hover:opacity-90 active:scale-[0.98] transition-all font-semibold disabled:opacity-50 disabled:cursor-not-allowed shadow-sm"
+          disabled={!profileEditable || !hasChanges || !displayName.trim()}
+          className="px-5 py-2.5 rounded-lg text-xs font-medium bg-primary text-primary-fg hover:opacity-90 active:scale-[0.98] transition-all font-semibold disabled:opacity-50 disabled:cursor-not-allowed shadow-sm"
         >
-          {saving ? 'Saving...' : 'Save Settings'}
+          {saving ? 'Saving...' : 'Save profile'}
         </button>
       </div>
     </div>

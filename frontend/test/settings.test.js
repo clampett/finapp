@@ -10,13 +10,11 @@ function readTsx(relativePath) {
   return fs.readFileSync(path.join(dashboardSrc, relativePath), 'utf8');
 }
 
-test('User Story 20 & Navigation: App.tsx defines unified settings view and maintains existing views', () => {
+test('User Story 20 & Navigation: Settings stays outside the workspace navigation', () => {
   const tsx = readTsx('App.tsx');
 
   // Verify all views are declared in views array
-  assert.match(tsx, /id:\s*'settings'/);
-  assert.match(tsx, /label:\s*'Settings'/);
-  assert.match(tsx, /icon:\s*'⚙'/);
+  assert.doesNotMatch(tsx, /id:\s*'settings'/);
 
   // Verify backward compatibility with original 5 views
   assert.match(tsx, /id:\s*'overview'/);
@@ -26,19 +24,20 @@ test('User Story 20 & Navigation: App.tsx defines unified settings view and main
   assert.match(tsx, /id:\s*'investing'/);
 });
 
-test('Header Profile Button: App.tsx renders accessible user icon that navigates to settings', () => {
+test('Header Profile Button: App.tsx opens account options with a Settings action', () => {
   const tsx = readTsx('App.tsx');
 
   // User icon button exists in header with accessible label
   assert.match(tsx, /aria-label="User profile and settings"/);
   assert.match(tsx, /title="User profile and settings"/);
 
-  // Clicking it switches view to settings
-  assert.match(tsx, /setView\('settings'\)/);
+  // The account button expands the menu, and Settings switches the view.
+  assert.match(tsx, /aria-expanded=\{accountOpen\}/);
+  assert.match(tsx, /openView\('settings'\)/);
 
-  // Renders profile picture or initials fallback
+  // Renders a profile picture or an outline account icon
   assert.match(tsx, /userProfile\.profilePicture/);
-  assert.match(tsx, /getInitials/);
+  assert.match(tsx, /<circle cx="12" cy="8"/);
 });
 
 test('User Story 18: SettingsTab.tsx contains profile picture upload, direct FileReader data URL reading, and remove actions', () => {
@@ -130,4 +129,31 @@ test('Security & Format: SVG format is excluded from profile picture upload acce
   assert.ok(acceptMatch[1].includes('image/jpeg'));
   assert.ok(acceptMatch[1].includes('image/webp'));
   assert.ok(acceptMatch[1].includes('image/gif'));
+});
+
+test('simulation defaults restore valid account preferences and reject out-of-range saved values', () => {
+  const vm = require('node:vm');
+  const compiled = ts.transpileModule(readTsx('simulationPreferences.ts'), {
+    compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022 },
+  }).outputText;
+  const exports = {};
+  vm.runInNewContext(compiled, {
+    exports,
+    localStorage: {
+      getItem(key) {
+        return key === 'finapp-simulation-defaults:42'
+          ? JSON.stringify({ years: 17, contribution: 0, inflation: 0, fee: 30, strategy: 'snowball' })
+          : null;
+      },
+    },
+  });
+
+  const saved = exports.loadSimulationDefaults(42);
+  assert.equal(saved.years, 17);
+  assert.equal(saved.contribution, 0);
+  assert.equal(saved.inflation, 0);
+  assert.equal(saved.fee, 0);
+  assert.equal(saved.strategy, 'snowball');
+  assert.equal(exports.loadSimulationDefaults(43).years, 30);
+  assert.equal(exports.normalizeSimulationDefaults({ years: 12.5 }).years, 30);
 });

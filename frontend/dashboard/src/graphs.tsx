@@ -18,6 +18,8 @@ import { BudgetControls } from './components/BudgetControls';
 import { DashboardTab } from './DashboardTab';
 import { Investing } from './components/Investing';
 import SettingsTab from './components/SettingsTab';
+import { BalancePreferences, SimulationPreferences } from './components/FinancialPreferences';
+import { loadSimulationDefaults, simulationSettingsKey } from './simulationPreferences';
 import type { UserProfile } from './components/SettingsTab';
 import { clearSession, sessionHeaders } from './session';
 import { PORTFOLIO_UPDATED_EVENT, getStoredPortfolioValue, loadUnifiedHoldings, projectedDividendFlows } from './portfolio';
@@ -130,6 +132,9 @@ export function ArchetypeGraph({
   }, []);
   const [original, setOriginal] = useState<GraphData | null>(null);
   const [loaded, setLoaded] = useState(false);
+  const [simulationDefaults, setSimulationDefaults] = useState(() =>
+    demo ? undefined : loadSimulationDefaults(userId),
+  );
   const [error, setError] = useState('');
   const [storageStatus, setStorageStatus] = useState('');
   const [reload, setReload] = useState(0);
@@ -537,7 +542,7 @@ export function ArchetypeGraph({
     </>
   );
   return (
-    <div className="workspace-tab-content px-8 pb-4.5 max-[1100px]:px-5.5 max-[1100px]:pb-4.5 max-[760px]:px-4 max-[760px]:pb-4 2xl:px-11 fullscreen:bg-[var(--ui-surface-0c1018)] fullscreen:w-full fullscreen:h-full fullscreen:overflow-auto fullscreen:p-6 max-[650px]:fullscreen:p-3">
+    <div className={`workspace-tab-content px-8 pb-4.5 max-[1100px]:px-5.5 max-[1100px]:pb-4.5 max-[760px]:px-4 max-[760px]:pb-4 2xl:px-11 fullscreen:bg-[var(--ui-surface-0c1018)] fullscreen:w-full fullscreen:h-full fullscreen:overflow-auto fullscreen:p-6 max-[650px]:fullscreen:p-3 ${view === 'settings' ? 'mx-auto w-full max-w-6xl' : ''}`}>
       <div className={"workspace-tab-intro workspace-tab-" + view}>
         <div>
           <h2 className="text-[clamp(18px,2vw,24px)] font-semibold tracking-[-0.5px] text-text m-0">
@@ -551,7 +556,7 @@ export function ArchetypeGraph({
                     ? 'Budgeting & transactions'
                     : view === 'investing'
                       ? 'Savings & investments'
-                      : 'Account settings'}
+                      : demo ? 'Demo settings' : 'Account settings'}
           </h2>
           <p className="text-sm text-muted mt-2 mb-0 leading-relaxed">
             {view === "graph" ? live.nodes.length + " nodes · " + live.edges.length + " connections · " +
@@ -560,10 +565,14 @@ export function ArchetypeGraph({
               view === "cashflow" ? "Review monthly inflows and commitments. Toggle individual flows to explore what changes." :
               view === "budgeting" ? "Record what happened and manage the schedules that repeat." :
               view === "investing" ? "Track stock holdings and review the savings and investments in your scenario." :
-              "Personalize your display name, profile picture, and website theme."}
+              demo ? "Personalize this demo’s display name and appearance." :
+              "Manage your profile, appearance, balances, and simulation defaults."}
           </p>
         </div>
       </div>
+      {!demo && view === 'settings' && storageStatus && (
+        <p role="status" className="mb-4 text-sm text-muted">{storageStatus}</p>
+      )}
       {view === 'cashflow' && (
         <div className="grid grid-cols-4 max-[1100px]:grid-cols-2 max-[600px]:grid-cols-1 gap-3.5 mb-7">
           {[
@@ -685,6 +694,23 @@ export function ArchetypeGraph({
                   onUpdateProfile={onUpdateProfile}
                   activeTheme={activeTheme}
                   onSelectTheme={onSelectTheme}
+                  simulationSettings={!demo && simulationDefaults && (
+                    <SimulationPreferences
+                      defaults={simulationDefaults}
+                      onSave={(value) => {
+                        localStorage.setItem(simulationSettingsKey(userId), JSON.stringify(value));
+                        setSimulationDefaults(value);
+                      }}
+                      graph={graph}
+                      onUpdate={update}
+                      ready={loaded && !error}
+                    />
+                  )}
+                  financialSettings={!demo && (
+                    loaded && !error ? (
+                      <BalancePreferences graph={graph} onUpdate={update} userId={userId} />
+                    ) : <p role="status" className="text-sm text-muted">Scenario balances are currently unavailable.</p>
+                  )}
                 />
               ) : view === 'graph' ? (
                 <Canvas
@@ -1005,6 +1031,7 @@ export function ArchetypeGraph({
             scope={scope}
             scopeLabel={`${scope === 'all' ? 'All active nodes' : scope === 'connected' ? 'Connected selection' : 'Selected nodes only'} · ${simulationGraph.nodes.length} nodes · ${simulationGraph.edges.length} connections`}
             simulationType={simType}
+            defaults={simulationDefaults}
             onClose={closeSimulation}
             portfolioValue={portfolioValue}
             dividendFlows={dividendFlows}

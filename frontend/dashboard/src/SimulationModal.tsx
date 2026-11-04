@@ -1,3 +1,4 @@
+import type { SimulationDefaults } from './simulationPreferences';
 import { NumberField } from './components/NumberField';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import {
@@ -136,6 +137,7 @@ export function SimulationModal({
   userId,
   demo,
   recurringTransactions,
+  defaults,
 }: {
   graphData: GraphData;
   simulationType: SimulationType;
@@ -148,24 +150,29 @@ export function SimulationModal({
   userId?: number;
   demo?: boolean;
   recurringTransactions?: RecurringTransactionItem[];
+  defaults?: SimulationDefaults;
 }) {
   const [forecast, setForecast] = useState<SimulationResult | null>(null);
-  const [strategy, setStrategy] = useState<'avalanche' | 'snowball'>('avalanche');
-  const [rate, setRate] = useState(100);
+  const [strategy, setStrategy] = useState<'avalanche' | 'snowball'>(defaults?.strategy ?? 'avalanche');
+  const [rate, setRate] = useState(defaults?.contribution ?? 100);
   const [scheduledInvesting, setScheduledInvesting] = useState(true);
-  const [inflation, setInflation] = useState(true);
-  const [years, setYears] = useState(30);
+  const inflationRate = defaults?.inflation ?? 2.5;
+  const [inflation, setInflation] = useState(inflationRate > 0);
+  const [years, setYears] = useState(defaults?.years ?? 30);
+  const horizons = [...new Set([1, 5, 10, 20, 30, 40, 50, defaults?.years ?? 30])].sort(
+    (a, b) => a - b,
+  );
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [retry, setRetry] = useState(0);
-  const [marketSource, setMarketSource] = useState<'historical' | 'manual'>('historical');
-  const [returnMode, setReturnMode] = useState<'forward' | 'observed'>('forward');
+  const [marketSource, setMarketSource] = useState<'historical' | 'manual'>(defaults?.marketSource ?? 'historical');
+  const [returnMode, setReturnMode] = useState<'forward' | 'observed'>(defaults?.returnMode ?? 'forward');
   const [assetClass, setAssetClass] = useState('US_STOCKS');
-  const [annualReturn, setAnnualReturn] = useState(7);
-  const [annualVolatility, setAnnualVolatility] = useState(15);
-  const [fee, setFee] = useState(0);
-  const [borrowingApr, setBorrowingApr] = useState(12);
-  const [target, setTarget] = useState(500000);
+  const [annualReturn, setAnnualReturn] = useState(defaults?.annualReturn ?? 7);
+  const [annualVolatility, setAnnualVolatility] = useState(defaults?.volatility ?? 15);
+  const [fee, setFee] = useState(defaults?.fee ?? 0);
+  const [borrowingApr, setBorrowingApr] = useState(defaults?.borrowingApr ?? 12);
+  const [target, setTarget] = useState(defaults?.target ?? 500000);
   const [recurringList, setRecurringList] = useState<RecurringTransactionItem[]>(
     () => recurringTransactions || [],
   );
@@ -297,7 +304,7 @@ export function SimulationModal({
           // Converted browser field names into the Python API contract;
           // node balances and monthly flow values retained their units.
           investment_rate: rate,
-          inflation_rate: inflation ? 0.025 : 0,
+          inflation_rate: inflation ? inflationRate / 100 : 0,
           sim_type: simulationType,
           years,
           income_basis: settings.incomeBasis,
@@ -415,6 +422,7 @@ export function SimulationModal({
     settings.expenseGrowth,
     rate,
     inflation,
+    inflationRate,
     simulationType,
     years,
     retry,
@@ -803,9 +811,9 @@ export function SimulationModal({
                     setYears(Number(e.target.value));
                   }}
                 >
-                  {[1, 5, 10, 20, 30, 40, 50].map((y) => (
+                  {horizons.map((y) => (
                     <option key={y} value={y}>
-                      {y} years
+                      {y} {y === 1 ? 'year' : 'years'}
                     </option>
                   ))}
                 </select>
@@ -936,12 +944,13 @@ export function SimulationModal({
               {simulationType !== 'debt' && (
                 <label className="flex items-center justify-between gap-2.5 mt-5 text-[11px] cursor-pointer">
                   <span>
-                    Adjust for inflation<small className="block text-(--ui-text-7f91ac) text-[9px] mt-1">2.5% annually · today’s purchasing power</small>
+                    Adjust for inflation<small className="block text-(--ui-text-7f91ac) text-[9px] mt-1">{inflationRate}% annually · today’s purchasing power</small>
                   </span>
                   <input
                     type="checkbox"
                     className="accent-brand w-4 h-4"
                     checked={inflation}
+                    disabled={inflationRate === 0}
                     onChange={(e) => {
                       setLoading(true);
                       setError('');

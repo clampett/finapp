@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from 'react';
-import type { ChangeEvent } from 'react';
+import type { ChangeEvent, ReactNode } from 'react';
 import { sessionHeaders } from '../session';
 import { API_BASE } from '../finance';
 
@@ -13,6 +13,8 @@ export interface UserProfile {
 
 interface SettingsTabProps {
   userId: number;
+  financialSettings?: ReactNode;
+  simulationSettings?: ReactNode;
   demo: boolean;
   profile: UserProfile;
   profileStatus: 'loading' | 'ready' | 'error';
@@ -68,6 +70,8 @@ export function readFileAsDataUrl(file: File): Promise<string> {
 
 export default function SettingsTab({
   userId,
+  financialSettings,
+  simulationSettings,
   demo,
   profile,
   profileStatus,
@@ -83,6 +87,8 @@ export default function SettingsTab({
     text: string;
   } | null>(null);
   const [saving, setSaving] = useState(false);
+  const [section, setSection] = useState('Profile');
+  const showProfile = demo || section === 'Profile';
   const [readingPhoto, setReadingPhoto] = useState(false);
   const profileEditable = profileStatus === 'ready' && !saving && !readingPhoto;
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -179,7 +185,7 @@ export default function SettingsTab({
     setSaving(true);
     setStatusMessage(null);
 
-    const resolvedPicture = profilePicture ? profilePicture.trim() : null;
+    const resolvedPicture = !demo && profilePicture ? profilePicture.trim() : null;
 
     const updatedData: UserProfile = {
       ...profile,
@@ -252,8 +258,32 @@ export default function SettingsTab({
     profilePicture !== profile.profilePicture;
 
   return (
-    <div className="space-y-5 max-w-5xl">
-      {statusMessage && (
+    <div className="space-y-5">
+      {demo ? (
+        <p className="rounded-xl border border-border bg-surface p-4 text-sm text-muted">
+          Customize this demo profile’s name and switch themes. The name is saved in this browser.
+        </p>
+      ) : (
+        <nav
+          aria-label="Settings sections"
+          className="flex flex-wrap gap-1 rounded-xl border border-border bg-surface p-1.5"
+        >
+          {['Profile', 'Appearance', 'Simulation defaults', 'Balances and currency'].map((item) => (
+            <button
+              key={item}
+              type="button"
+              aria-current={section === item ? 'page' : undefined}
+              onClick={() => setSection(item)}
+              className={`rounded-lg px-3 py-2 text-sm font-medium cursor-pointer ${section === item ? 'bg-active-bg text-active-text' : 'text-muted hover:bg-hover-bg hover:text-text'}`}
+            >
+              {item}
+            </button>
+          ))}
+        </nav>
+      )}
+      {!demo && section === 'Simulation defaults' && simulationSettings}
+      {!demo && section === 'Balances and currency' && financialSettings}
+      {showProfile && statusMessage && (
         <div
           role="alert"
           className={`p-4 rounded-xl border text-sm flex items-center justify-between ${
@@ -273,7 +303,7 @@ export default function SettingsTab({
         </div>
       )}
 
-      {profileStatus !== 'ready' && (
+      {showProfile && profileStatus !== 'ready' && (
         <div
           role="status"
           className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-border bg-surface p-4 text-sm text-muted"
@@ -292,273 +322,289 @@ export default function SettingsTab({
           )}
         </div>
       )}
-      {/* Card 1: Profile Picture (User Story 18) */}
-      <section className="border border-border rounded-xl bg-surface p-6 shadow-sm">
-        <h3 className="text-base font-semibold text-text m-0">Profile Picture</h3>
-        <p className="text-xs text-muted mt-1 mb-5 leading-relaxed">
-          Upload a custom avatar or photo to personalize your workspace.
-        </p>
+      {showProfile && !demo && (
+        <>
+          {/* Card 1: Profile Picture (User Story 18) */}
+          <section className="border border-border rounded-xl bg-surface p-6 shadow-sm">
+            <h3 className="text-base font-semibold text-text m-0">Profile Picture</h3>
+            <p className="text-xs text-muted mt-1 mb-5 leading-relaxed">
+              Upload a custom avatar or photo to personalize your workspace.
+            </p>
 
-        <div className="flex items-center gap-6 max-[650px]:flex-col max-[650px]:items-start">
-          <div className="w-24 h-24 rounded-full overflow-hidden border-2 border-border shadow-inner bg-raised flex items-center justify-center shrink-0">
-            {profilePicture ? (
-              <img
-                src={profilePicture}
-                alt={displayName || 'User avatar'}
-                className="w-full h-full object-cover"
-              />
-            ) : (
-              <div
-                className="w-full h-full bg-active-bg text-active-text flex items-center justify-center font-bold text-2xl uppercase tracking-wider select-none"
-                aria-label="Default avatar initials"
-              >
-                {getInitials(displayName || profile.username || 'User')}
+            <div className="flex items-center gap-6 max-[650px]:flex-col max-[650px]:items-start">
+              <div className="w-24 h-24 rounded-full overflow-hidden border-2 border-border shadow-inner bg-raised flex items-center justify-center shrink-0">
+                {profilePicture ? (
+                  <img
+                    src={profilePicture}
+                    alt={displayName || 'User avatar'}
+                    className="w-full h-full object-cover"
+                  />
+                ) : (
+                  <div
+                    className="w-full h-full bg-active-bg text-active-text flex items-center justify-center font-bold text-2xl uppercase tracking-wider select-none"
+                    aria-label="Default avatar initials"
+                  >
+                    {getInitials(displayName || profile.username || 'User')}
+                  </div>
+                )}
               </div>
-            )}
-          </div>
 
-          <div className="flex-1 space-y-3">
-            <input
-              type="file"
-              ref={fileInputRef}
-              disabled={!profileEditable}
-              onChange={handleFileChange}
-              accept="image/png, image/jpeg, image/webp, image/gif"
-              className="hidden"
-            />
-            <div className="flex flex-wrap items-center gap-3">
-              <button
-                type="button"
-                onClick={() => fileInputRef.current?.click()}
-                disabled={!profileEditable}
-                className="inline-flex items-center justify-center px-4 py-2 rounded-lg text-xs font-medium cursor-pointer transition-colors bg-hover-bg border border-border text-text hover:bg-raised hover:border-muted disabled:opacity-50 disabled:cursor-not-allowed"
-              >
-                {readingPhoto ? 'Checking photo…' : 'Upload Photo'}
-              </button>
-
-              {profilePicture && (
-                <button
-                  type="button"
-                  onClick={handleRemovePhoto}
+              <div className="flex-1 space-y-3">
+                <input
+                  type="file"
+                  ref={fileInputRef}
                   disabled={!profileEditable}
-                  className="inline-flex items-center justify-center px-4 py-2 rounded-lg text-xs font-medium cursor-pointer transition-colors border border-coral/30 text-coral bg-coral/5 hover:bg-coral/15 active:scale-[0.98]"
+                  onChange={handleFileChange}
+                  accept="image/png, image/jpeg, image/webp, image/gif"
+                  className="hidden"
+                />
+                <div className="flex flex-wrap items-center gap-3">
+                  <button
+                    type="button"
+                    onClick={() => fileInputRef.current?.click()}
+                    disabled={!profileEditable}
+                    className="inline-flex items-center justify-center px-4 py-2 rounded-lg text-xs font-medium cursor-pointer transition-colors bg-hover-bg border border-border text-text hover:bg-raised hover:border-muted disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    {readingPhoto ? 'Checking photo…' : 'Upload Photo'}
+                  </button>
+
+                  {profilePicture && (
+                    <button
+                      type="button"
+                      onClick={handleRemovePhoto}
+                      disabled={!profileEditable}
+                      className="inline-flex items-center justify-center px-4 py-2 rounded-lg text-xs font-medium cursor-pointer transition-colors border border-coral/30 text-coral bg-coral/5 hover:bg-coral/15 active:scale-[0.98]"
+                    >
+                      Remove Photo
+                    </button>
+                  )}
+                </div>
+                <p className="text-[11px] text-subtle m-0 leading-normal">
+                  PNG, JPG, WebP, or GIF · up to 3 MB and 2048 × 2048 pixels.
+                </p>
+              </div>
+            </div>
+          </section>
+        </>
+      )}
+      {showProfile && (
+        <>
+          {/* Card 2: Display Name & Identity (User Story 20) */}
+          <section className="border border-border rounded-xl bg-surface p-6 shadow-sm">
+            <h3 className="text-base font-semibold text-text m-0">Display Name</h3>
+            <p className="text-xs text-muted mt-1 mb-5 leading-relaxed">
+              Manage how your name appears across workspace headers, dashboards, and reports.
+            </p>
+
+            <div className={`grid grid-cols-1 gap-5 ${demo ? 'max-w-md' : 'md:grid-cols-2'}`}>
+              <div>
+                <label
+                  htmlFor="user-display-name"
+                  className="block text-xs font-medium text-text mb-1.5"
                 >
-                  Remove Photo
-                </button>
+                  Display Name
+                </label>
+                <input
+                  id="user-display-name"
+                  type="text"
+                  value={profileStatus === 'ready' ? displayName : ''}
+                  disabled={!profileEditable}
+                  maxLength={50}
+                  onChange={(e) => setDisplayName(e.target.value)}
+                  placeholder="Enter your preferred name"
+                  className="w-full text-xs rounded-lg border border-border bg-raised text-text px-3.5 py-2.5 outline-none focus:border-brand transition-colors"
+                />
+                <div className="flex justify-between items-center mt-1.5">
+                  <span className="text-[11px] text-subtle">
+                    Visible to you and across account views.
+                  </span>
+                  <span className="text-[11px] text-subtle">{displayName.length}/50</span>
+                </div>
+              </div>
+
+              {!demo && (
+                <div>
+                  <label
+                    htmlFor="user-login-username"
+                    className="block text-xs font-medium text-text mb-1.5"
+                  >
+                    Account Handle (Username)
+                  </label>
+                  <input
+                    id="user-login-username"
+                    type="text"
+                    value={
+                      profileStatus === 'ready' && profile.username ? `@${profile.username}` : ''
+                    }
+                    disabled
+                    className="w-full text-xs rounded-lg border border-border bg-base text-muted px-3.5 py-2.5 cursor-not-allowed select-none opacity-80"
+                  />
+                  <span className="block text-[11px] text-subtle mt-1.5">
+                    Your unique sign-in username cannot be altered.
+                  </span>
+                </div>
               )}
             </div>
-            <p className="text-[11px] text-subtle m-0 leading-normal">
-              PNG, JPG, WebP, or GIF · up to 3 MB and 2048 × 2048 pixels.
-            </p>
-          </div>
-        </div>
-      </section>
+          </section>
 
-      {/* Card 2: Display Name & Identity (User Story 20) */}
-      <section className="border border-border rounded-xl bg-surface p-6 shadow-sm">
-        <h3 className="text-base font-semibold text-text m-0">Display Name</h3>
-        <p className="text-xs text-muted mt-1 mb-5 leading-relaxed">
-          Manage how your name appears across workspace headers, dashboards, and reports.
-        </p>
-
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-          <div>
-            <label
-              htmlFor="user-display-name"
-              className="block text-xs font-medium text-text mb-1.5"
+          {/* Action Footer */}
+          <div className="flex items-center justify-end gap-3 pt-2">
+            <button
+              type="button"
+              onClick={handleReset}
+              disabled={!hasChanges || !profileEditable}
+              className="px-4 py-2.5 rounded-lg text-xs font-medium border border-border bg-transparent text-muted hover:text-text hover:bg-hover-bg transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
             >
-              Display Name
-            </label>
-            <input
-              id="user-display-name"
-              type="text"
-              value={profileStatus === 'ready' ? displayName : ''}
-              disabled={!profileEditable}
-              maxLength={50}
-              onChange={(e) => setDisplayName(e.target.value)}
-              placeholder="Enter your preferred name"
-              className="w-full text-xs rounded-lg border border-border bg-raised text-text px-3.5 py-2.5 outline-none focus:border-brand transition-colors"
-            />
-            <div className="flex justify-between items-center mt-1.5">
-              <span className="text-[11px] text-subtle">
-                Visible to you and across account views.
+              Discard Changes
+            </button>
+            <button
+              type="button"
+              onClick={handleSave}
+              disabled={!profileEditable || !hasChanges || !displayName.trim()}
+              className="px-5 py-2.5 rounded-lg text-xs font-medium bg-primary text-primary-fg hover:opacity-90 active:scale-[0.98] transition-all font-semibold disabled:opacity-50 disabled:cursor-not-allowed shadow-sm"
+            >
+              {saving ? 'Saving...' : 'Save profile'}
+            </button>
+          </div>
+        </>
+      )}
+      {(demo || section === 'Appearance') && (
+        <>
+          {/* Card 3: Website Theme (User Story 19) */}
+          <section className="border border-border rounded-xl bg-surface p-6 shadow-sm">
+            <div className="flex items-start justify-between gap-4 mb-2">
+              <div>
+                <h3 className="text-base font-semibold text-text m-0">Website Theme</h3>
+                <p className="text-xs text-muted mt-1 mb-0 leading-relaxed">
+                  Personalize the visual appearance of your dashboard and shared financial tools.
+                </p>
+              </div>
+              <span className="text-[11px] text-subtle border border-border px-2 py-1 rounded bg-raised whitespace-nowrap">
+                Active: <strong className="text-text capitalize">{activeTheme}</strong>
               </span>
-              <span className="text-[11px] text-subtle">{displayName.length}/50</span>
             </div>
-          </div>
 
-          <div>
-            <label
-              htmlFor="user-login-username"
-              className="block text-xs font-medium text-text mb-1.5"
-            >
-              Account Handle (Username)
-            </label>
-            <input
-              id="user-login-username"
-              type="text"
-              value={profileStatus === 'ready' && profile.username ? `@${profile.username}` : ''}
-              disabled
-              className="w-full text-xs rounded-lg border border-border bg-base text-muted px-3.5 py-2.5 cursor-not-allowed select-none opacity-80"
-            />
-            <span className="block text-[11px] text-subtle mt-1.5">
-              Your unique sign-in username cannot be altered.
-            </span>
-          </div>
-        </div>
-      </section>
-
-      {/* Card 3: Website Theme (User Story 19) */}
-      <section className="border border-border rounded-xl bg-surface p-6 shadow-sm">
-        <div className="flex items-start justify-between gap-4 mb-2">
-          <div>
-            <h3 className="text-base font-semibold text-text m-0">Website Theme</h3>
-            <p className="text-xs text-muted mt-1 mb-0 leading-relaxed">
-              Personalize the visual appearance of your dashboard and shared financial tools.
+            <p className="text-[11px] text-subtle mb-4">
+              Browser preference is currently detected as{' '}
+              <strong className="text-text">{systemIsLight ? 'Light' : 'Dark'}</strong> mode.
             </p>
-          </div>
-          <span className="text-[11px] text-subtle border border-border px-2 py-1 rounded bg-raised whitespace-nowrap">
-            Active: <strong className="text-text capitalize">{activeTheme}</strong>
-          </span>
-        </div>
 
-        <p className="text-[11px] text-subtle mb-4">
-          Browser preference is currently detected as{' '}
-          <strong className="text-text">{systemIsLight ? 'Light' : 'Dark'}</strong> mode.
-        </p>
-
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3.5">
-          {/* Option: Dark Theme */}
-          <button
-            type="button"
-            onClick={() => handleThemeChange('dark')}
-            aria-pressed={themeMode === 'dark'}
-            className={`border rounded-xl p-4 text-left cursor-pointer transition-all ${
-              themeMode === 'dark'
-                ? 'border-primary bg-active-bg ring-1 ring-primary'
-                : 'border-border bg-raised hover:border-muted hover:bg-hover-bg'
-            }`}
-          >
-            <div className="flex items-center justify-between mb-3">
-              <span className="text-xs font-semibold text-text">Dark Theme</span>
-              <span
-                className={`w-3.5 h-3.5 rounded-full border flex items-center justify-center ${
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3.5">
+              {/* Option: Dark Theme */}
+              <button
+                type="button"
+                onClick={() => handleThemeChange('dark')}
+                aria-pressed={themeMode === 'dark'}
+                className={`border rounded-xl p-4 text-left cursor-pointer transition-all ${
                   themeMode === 'dark'
-                    ? 'border-primary bg-primary'
-                    : 'border-subtle bg-transparent'
+                    ? 'border-primary bg-active-bg ring-1 ring-primary'
+                    : 'border-border bg-raised hover:border-muted hover:bg-hover-bg'
                 }`}
               >
-                {themeMode === 'dark' && <span className="w-1.5 h-1.5 rounded-full bg-base" />}
-              </span>
-            </div>
-            <div className="flex gap-1.5 mb-2">
-              <span
-                className="w-4 h-4 rounded-sm bg-[#0c1018] border border-[#232c3c]"
-                title="Base"
-              />
-              <span
-                className="w-4 h-4 rounded-sm bg-[#141b27] border border-[#232c3c]"
-                title="Surface"
-              />
-              <span className="w-4 h-4 rounded-sm bg-[#b8a3fa]" title="Accent" />
-            </div>
-            <span className="text-[11px] text-muted block leading-tight">
-              Low-light palette optimized for focus.
-            </span>
-          </button>
+                <div className="flex items-center justify-between mb-3">
+                  <span className="text-xs font-semibold text-text">Dark Theme</span>
+                  <span
+                    className={`w-3.5 h-3.5 rounded-full border flex items-center justify-center ${
+                      themeMode === 'dark'
+                        ? 'border-primary bg-primary'
+                        : 'border-subtle bg-transparent'
+                    }`}
+                  >
+                    {themeMode === 'dark' && <span className="w-1.5 h-1.5 rounded-full bg-base" />}
+                  </span>
+                </div>
+                <div className="flex gap-1.5 mb-2">
+                  <span
+                    className="w-4 h-4 rounded-sm bg-[#0c1018] border border-[#232c3c]"
+                    title="Base"
+                  />
+                  <span
+                    className="w-4 h-4 rounded-sm bg-[#141b27] border border-[#232c3c]"
+                    title="Surface"
+                  />
+                  <span className="w-4 h-4 rounded-sm bg-[#b8a3fa]" title="Accent" />
+                </div>
+                <span className="text-[11px] text-muted block leading-tight">
+                  Low-light palette optimized for focus.
+                </span>
+              </button>
 
-          {/* Option: Light Theme */}
-          <button
-            type="button"
-            onClick={() => handleThemeChange('light')}
-            aria-pressed={themeMode === 'light'}
-            className={`border rounded-xl p-4 text-left cursor-pointer transition-all ${
-              themeMode === 'light'
-                ? 'border-primary bg-active-bg ring-1 ring-primary'
-                : 'border-border bg-raised hover:border-muted hover:bg-hover-bg'
-            }`}
-          >
-            <div className="flex items-center justify-between mb-3">
-              <span className="text-xs font-semibold text-text">Light Theme</span>
-              <span
-                className={`w-3.5 h-3.5 rounded-full border flex items-center justify-center ${
+              {/* Option: Light Theme */}
+              <button
+                type="button"
+                onClick={() => handleThemeChange('light')}
+                aria-pressed={themeMode === 'light'}
+                className={`border rounded-xl p-4 text-left cursor-pointer transition-all ${
                   themeMode === 'light'
-                    ? 'border-primary bg-primary'
-                    : 'border-subtle bg-transparent'
+                    ? 'border-primary bg-active-bg ring-1 ring-primary'
+                    : 'border-border bg-raised hover:border-muted hover:bg-hover-bg'
                 }`}
               >
-                {themeMode === 'light' && <span className="w-1.5 h-1.5 rounded-full bg-base" />}
-              </span>
-            </div>
-            <div className="flex gap-1.5 mb-2">
-              <span
-                className="w-4 h-4 rounded-sm bg-[#f3f4f7] border border-[#d4dae4]"
-                title="Base"
-              />
-              <span
-                className="w-4 h-4 rounded-sm bg-[#ffffff] border border-[#d4dae4]"
-                title="Surface"
-              />
-              <span className="w-4 h-4 rounded-sm bg-[#6544ad]" title="Accent" />
-            </div>
-            <span className="text-[11px] text-muted block leading-tight">
-              Clean, daylight high-contrast palette.
-            </span>
-          </button>
+                <div className="flex items-center justify-between mb-3">
+                  <span className="text-xs font-semibold text-text">Light Theme</span>
+                  <span
+                    className={`w-3.5 h-3.5 rounded-full border flex items-center justify-center ${
+                      themeMode === 'light'
+                        ? 'border-primary bg-primary'
+                        : 'border-subtle bg-transparent'
+                    }`}
+                  >
+                    {themeMode === 'light' && <span className="w-1.5 h-1.5 rounded-full bg-base" />}
+                  </span>
+                </div>
+                <div className="flex gap-1.5 mb-2">
+                  <span
+                    className="w-4 h-4 rounded-sm bg-[#f3f4f7] border border-[#d4dae4]"
+                    title="Base"
+                  />
+                  <span
+                    className="w-4 h-4 rounded-sm bg-[#ffffff] border border-[#d4dae4]"
+                    title="Surface"
+                  />
+                  <span className="w-4 h-4 rounded-sm bg-[#6544ad]" title="Accent" />
+                </div>
+                <span className="text-[11px] text-muted block leading-tight">
+                  Clean, daylight high-contrast palette.
+                </span>
+              </button>
 
-          {/* Option: System Preference */}
-          <button
-            type="button"
-            onClick={() => handleThemeChange('system')}
-            aria-pressed={themeMode === 'system'}
-            className={`border rounded-xl p-4 text-left cursor-pointer transition-all ${
-              themeMode === 'system'
-                ? 'border-primary bg-active-bg ring-1 ring-primary'
-                : 'border-border bg-raised hover:border-muted hover:bg-hover-bg'
-            }`}
-          >
-            <div className="flex items-center justify-between mb-3">
-              <span className="text-xs font-semibold text-text">System Default</span>
-              <span
-                className={`w-3.5 h-3.5 rounded-full border flex items-center justify-center ${
+              {/* Option: System Preference */}
+              <button
+                type="button"
+                onClick={() => handleThemeChange('system')}
+                aria-pressed={themeMode === 'system'}
+                className={`border rounded-xl p-4 text-left cursor-pointer transition-all ${
                   themeMode === 'system'
-                    ? 'border-primary bg-primary'
-                    : 'border-subtle bg-transparent'
+                    ? 'border-primary bg-active-bg ring-1 ring-primary'
+                    : 'border-border bg-raised hover:border-muted hover:bg-hover-bg'
                 }`}
               >
-                {themeMode === 'system' && <span className="w-1.5 h-1.5 rounded-full bg-base" />}
-              </span>
+                <div className="flex items-center justify-between mb-3">
+                  <span className="text-xs font-semibold text-text">System Default</span>
+                  <span
+                    className={`w-3.5 h-3.5 rounded-full border flex items-center justify-center ${
+                      themeMode === 'system'
+                        ? 'border-primary bg-primary'
+                        : 'border-subtle bg-transparent'
+                    }`}
+                  >
+                    {themeMode === 'system' && (
+                      <span className="w-1.5 h-1.5 rounded-full bg-base" />
+                    )}
+                  </span>
+                </div>
+                <div className="flex gap-1.5 mb-2">
+                  <span className="w-4 h-4 rounded-sm bg-linear-to-r from-[#0c1018] to-[#f3f4f7] border border-border" />
+                  <span className="w-4 h-4 rounded-sm bg-brand" title="Brand accent" />
+                </div>
+                <span className="text-[11px] text-muted block leading-tight">
+                  Automatically matches browser or OS setting.
+                </span>
+              </button>
             </div>
-            <div className="flex gap-1.5 mb-2">
-              <span className="w-4 h-4 rounded-sm bg-linear-to-r from-[#0c1018] to-[#f3f4f7] border border-border" />
-              <span className="w-4 h-4 rounded-sm bg-brand" title="Brand accent" />
-            </div>
-            <span className="text-[11px] text-muted block leading-tight">
-              Automatically matches browser or OS setting.
-            </span>
-          </button>
-        </div>
-      </section>
-
-      {/* Action Footer */}
-      <div className="flex items-center justify-end gap-3 pt-2">
-        <button
-          type="button"
-          onClick={handleReset}
-          disabled={!hasChanges || !profileEditable}
-          className="px-4 py-2.5 rounded-lg text-xs font-medium border border-border bg-transparent text-muted hover:text-text hover:bg-hover-bg transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
-        >
-          Discard Changes
-        </button>
-        <button
-          type="button"
-          onClick={handleSave}
-          disabled={!profileEditable || !hasChanges || !displayName.trim()}
-          className="px-5 py-2.5 rounded-lg text-xs font-medium bg-primary text-primary-fg hover:opacity-90 active:scale-[0.98] transition-all font-semibold disabled:opacity-50 disabled:cursor-not-allowed shadow-sm"
-        >
-          {saving ? 'Saving...' : 'Save profile'}
-        </button>
-      </div>
+          </section>
+        </>
+      )}
     </div>
   );
 }

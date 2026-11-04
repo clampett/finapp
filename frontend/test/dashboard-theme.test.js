@@ -172,3 +172,22 @@ test('all migrated visual paints resolve and retain their original dark colors',
   }
   inspect(sourceDir);
 });
+
+test('budgeting form field borders and text are visible and non-white in light mode', () => {
+  const palette = fs.readFileSync(path.join(sourceDir, 'theme-palette.css'), 'utf8');
+  const light = palette.split(":root[data-theme='light']")[1];
+  assert.ok(light, 'light theme definition must exist in theme-palette.css');
+
+  // Verify border color in light mode is not white (was invisible on white backgrounds)
+  const borderMatch = light.match(/--ui-paint-283347:\s*(#[\da-fA-F]+);/);
+  assert.ok(borderMatch, '--ui-paint-283347 must be defined in light theme');
+  assert.notEqual(borderMatch[1].toLowerCase(), '#ffffff', '--ui-paint-283347 must not be white in light mode');
+
+  // Verify BudgetingTab does not hardcode white text inside input fields or selects
+  const budgetingTsx = fs.readFileSync(path.join(sourceDir, 'BudgetingTab.tsx'), 'utf8');
+  assert.doesNotMatch(
+    budgetingTsx,
+    /<(input|select|NumberField)[^>]*style=\{\{[^}]*color:\s*['"]white['"]/i,
+    'BudgetingTab inputs and selects must not hardcode white font color',
+  );
+});

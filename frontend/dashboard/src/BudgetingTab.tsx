@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback, useRef, useMemo } from 'react';
-import type { FormEvent } from 'react';
+import type { FormEvent, CSSProperties } from 'react';
 import type { GraphData } from './finance';
 import { API_BASE, dollars, debtPayment, expenseAmount, colors, totals } from './finance';
 import { sessionHeaders } from './session';
@@ -210,6 +210,14 @@ export interface AccountOption {
   name: string;
   type?: string;
 }
+
+const formFieldStyle: CSSProperties = {
+  padding: '8px',
+  borderRadius: '4px',
+  background: 'var(--ui-paint-0f141e)',
+  border: '1px solid var(--ui-paint-283347)',
+  color: 'var(--color-text)',
+};
 
 const initialTransaction = (): Transaction => ({
   kind: 'expense',
@@ -2195,13 +2203,7 @@ export function BudgetingTab({
                     onChange={(e) =>
                       setTransDraft((prev) => changeKind(prev, e.target.value as TransactionKind))
                     }
-                    style={{
-                      padding: '8px',
-                      borderRadius: '4px',
-                      background: 'var(--ui-paint-0f141e)',
-                      border: '1px solid var(--ui-paint-283347)',
-                      color: 'white',
-                    }}
+                    style={formFieldStyle}
                   >
                     <option value="income">Income (Earnings / Inflow)</option>
                     <option value="expense">Expense (Payment / Outflow)</option>
@@ -2220,13 +2222,7 @@ export function BudgetingTab({
                     onChange={(e) =>
                       setTransDraft((prev) => ({ ...prev, description: e.target.value }))
                     }
-                    style={{
-                      padding: '8px',
-                      borderRadius: '4px',
-                      background: 'var(--ui-paint-0f141e)',
-                      border: '1px solid var(--ui-paint-283347)',
-                      color: 'white',
-                    }}
+                    style={formFieldStyle}
                   />
                 </label>
 
@@ -2242,13 +2238,7 @@ export function BudgetingTab({
                     onChange={(e) =>
                       setTransDraft((prev) => ({ ...prev, amount: Number(e.target.value) }))
                     }
-                    style={{
-                      padding: '8px',
-                      borderRadius: '4px',
-                      background: 'var(--ui-paint-0f141e)',
-                      border: '1px solid var(--ui-paint-283347)',
-                      color: 'white',
-                    }}
+                    style={formFieldStyle}
                   />
                 </label>
 
@@ -2261,13 +2251,7 @@ export function BudgetingTab({
                     onChange={(e) =>
                       setTransDraft((prev) => changeAccount(prev, e.target.value, dbAccounts))
                     }
-                    style={{
-                      padding: '8px',
-                      borderRadius: '4px',
-                      background: 'var(--ui-paint-0f141e)',
-                      border: '1px solid var(--ui-paint-283347)',
-                      color: 'white',
-                    }}
+                    style={formFieldStyle}
                   >
                     <option value="">Select or Default</option>
                     {availableAccounts.map((acc) => (
@@ -2293,13 +2277,7 @@ export function BudgetingTab({
                         date: e.target.value,
                       }))
                     }
-                    style={{
-                      padding: '8px',
-                      borderRadius: '4px',
-                      background: 'var(--ui-paint-0f141e)',
-                      border: '1px solid var(--ui-paint-283347)',
-                      color: 'white',
-                    }}
+                    style={formFieldStyle}
                   />
                 </label>
 
@@ -2312,13 +2290,7 @@ export function BudgetingTab({
                     placeholder="e.g. Groceries, Utilities, Rent"
                     value={transDraft.categoryName || ''}
                     onChange={(e) => setTransDraft((prev) => changeCategory(prev, e.target.value))}
-                    style={{
-                      padding: '8px',
-                      borderRadius: '4px',
-                      background: 'var(--ui-paint-0f141e)',
-                      border: '1px solid var(--ui-paint-283347)',
-                      color: 'white',
-                    }}
+                    style={formFieldStyle}
                   />
                 </label>
 
@@ -2337,13 +2309,7 @@ export function BudgetingTab({
                     placeholder="Additional details..."
                     value={transDraft.notes || ''}
                     onChange={(e) => setTransDraft((prev) => ({ ...prev, notes: e.target.value }))}
-                    style={{
-                      padding: '8px',
-                      borderRadius: '4px',
-                      background: 'var(--ui-paint-0f141e)',
-                      border: '1px solid var(--ui-paint-283347)',
-                      color: 'white',
-                    }}
+                    style={formFieldStyle}
                   />
                 </label>
 
@@ -2650,13 +2616,7 @@ export function BudgetingTab({
                     onChange={(e) =>
                       setStockDraft((prev) => ({ ...prev, ticker: e.target.value.toUpperCase() }))
                     }
-                    style={{
-                      padding: '8px',
-                      borderRadius: '4px',
-                      background: 'var(--ui-paint-0f141e)',
-                      border: '1px solid var(--ui-paint-283347)',
-                      color: 'white',
-                    }}
+                    style={formFieldStyle}
                   />
                 </label>
 
@@ -2672,13 +2632,7 @@ export function BudgetingTab({
                     onChange={(e) =>
                       setStockDraft((prev) => ({ ...prev, purchasePrice: Number(e.target.value) }))
                     }
-                    style={{
-                      padding: '8px',
-                      borderRadius: '4px',
-                      background: 'var(--ui-paint-0f141e)',
-                      border: '1px solid var(--ui-paint-283347)',
-                      color: 'white',
-                    }}
+                    style={formFieldStyle}
                   />
                 </label>
 
@@ -2694,13 +2648,7 @@ export function BudgetingTab({
                     onChange={(e) =>
                       setStockDraft((prev) => ({ ...prev, sharesOwned: Number(e.target.value) }))
                     }
-                    style={{
-                      padding: '8px',
-                      borderRadius: '4px',
-                      background: 'var(--ui-paint-0f141e)',
-                      border: '1px solid var(--ui-paint-283347)',
-                      color: 'white',
-                    }}
+                    style={formFieldStyle}
                   />
                 </label>
 
@@ -2747,13 +2695,7 @@ export function BudgetingTab({
                     onChange={(e) =>
                       setStockDraft((prev) => ({ ...prev, companyName: e.target.value }))
                     }
-                    style={{
-                      padding: '8px',
-                      borderRadius: '4px',
-                      background: 'var(--ui-paint-0f141e)',
-                      border: '1px solid var(--ui-paint-283347)',
-                      color: 'white',
-                    }}
+                    style={formFieldStyle}
                   />
                 </label>
 
@@ -2787,7 +2729,7 @@ export function BudgetingTab({
                           {detectedDividend.yieldPct != null &&
                             ` • ~${detectedDividend.yieldPct}% yield`}
                           {Number(stockDraft.sharesOwned || 0) > 0 && (
-                            <span style={{ color: '#cbd5e1', marginLeft: '6px' }}>
+                            <span style={{ color: 'var(--color-text)', marginLeft: '6px' }}>
                               → {dollars(Number(stockDraft.sharesOwned) * detectedDividend.perShare)}/
                               {detectedDividend.frequency} recurring income
                             </span>
@@ -2863,13 +2805,7 @@ export function BudgetingTab({
                         onChange={(e) =>
                           setStockDraft((prev) => ({ ...prev, dividendFrequency: e.target.value }))
                         }
-                        style={{
-                          padding: '8px',
-                          borderRadius: '4px',
-                          background: 'var(--ui-paint-0f141e)',
-                          border: '1px solid var(--ui-paint-283347)',
-                          color: 'white',
-                        }}
+                        style={formFieldStyle}
                       >
                         <option value="monthly">Monthly</option>
                         <option value="quarterly">Quarterly</option>
@@ -2898,13 +2834,7 @@ export function BudgetingTab({
                             dividendPerShare: Number(e.target.value),
                           }))
                         }
-                        style={{
-                          padding: '8px',
-                          borderRadius: '4px',
-                          background: 'var(--ui-paint-0f141e)',
-                          border: '1px solid var(--ui-paint-283347)',
-                          color: 'white',
-                        }}
+                        style={formFieldStyle}
                       />
                     </label>
 
@@ -3004,13 +2934,7 @@ export function BudgetingTab({
                     onChange={(e) =>
                       setTradeModal((prev) => ({ ...prev, type: e.target.value as 'buy' | 'sell' }))
                     }
-                    style={{
-                      padding: '8px',
-                      borderRadius: '4px',
-                      background: 'var(--ui-paint-0f141e)',
-                      border: '1px solid var(--ui-paint-283347)',
-                      color: 'white',
-                    }}
+                    style={formFieldStyle}
                   >
                     <option value="buy">Buy</option>
                     <option value="sell">Sell</option>
@@ -3029,13 +2953,7 @@ export function BudgetingTab({
                     onChange={(e) =>
                       setTradeModal((prev) => ({ ...prev, quantity: Number(e.target.value) }))
                     }
-                    style={{
-                      padding: '8px',
-                      borderRadius: '4px',
-                      background: 'var(--ui-paint-0f141e)',
-                      border: '1px solid var(--ui-paint-283347)',
-                      color: 'white',
-                    }}
+                    style={formFieldStyle}
                   />
                 </label>
 
@@ -3051,13 +2969,7 @@ export function BudgetingTab({
                     onChange={(e) =>
                       setTradeModal((prev) => ({ ...prev, price: Number(e.target.value) }))
                     }
-                    style={{
-                      padding: '8px',
-                      borderRadius: '4px',
-                      background: 'var(--ui-paint-0f141e)',
-                      border: '1px solid var(--ui-paint-283347)',
-                      color: 'white',
-                    }}
+                    style={formFieldStyle}
                   />
                 </label>
 
@@ -3070,13 +2982,7 @@ export function BudgetingTab({
                     onChange={(e) =>
                       setTradeModal((prev) => ({ ...prev, accountName: e.target.value }))
                     }
-                    style={{
-                      padding: '8px',
-                      borderRadius: '4px',
-                      background: 'var(--ui-paint-0f141e)',
-                      border: '1px solid var(--ui-paint-283347)',
-                      color: 'white',
-                    }}
+                    style={formFieldStyle}
                   >
                     {availableAccounts.map((acc) => (
                       <option key={acc} value={acc}>
@@ -3405,13 +3311,7 @@ export function BudgetingTab({
                     onChange={(e) =>
                       setRecurDraft((prev) => changeKind(prev, e.target.value as TransactionKind))
                     }
-                    style={{
-                      padding: '8px',
-                      borderRadius: '4px',
-                      background: 'var(--ui-paint-0f141e)',
-                      border: '1px solid var(--ui-paint-283347)',
-                      color: 'white',
-                    }}
+                    style={formFieldStyle}
                   >
                     <option value="expense">Expense</option>
                     <option value="income">Income</option>
@@ -3430,13 +3330,7 @@ export function BudgetingTab({
                     onChange={(e) =>
                       setRecurDraft((prev) => ({ ...prev, description: e.target.value }))
                     }
-                    style={{
-                      padding: '8px',
-                      borderRadius: '4px',
-                      background: 'var(--ui-paint-0f141e)',
-                      border: '1px solid var(--ui-paint-283347)',
-                      color: 'white',
-                    }}
+                    style={formFieldStyle}
                   />
                 </label>
 
@@ -3452,13 +3346,7 @@ export function BudgetingTab({
                     onChange={(e) =>
                       setRecurDraft((prev) => ({ ...prev, amount: Number(e.target.value) }))
                     }
-                    style={{
-                      padding: '8px',
-                      borderRadius: '4px',
-                      background: 'var(--ui-paint-0f141e)',
-                      border: '1px solid var(--ui-paint-283347)',
-                      color: 'white',
-                    }}
+                    style={formFieldStyle}
                   />
                 </label>
 
@@ -3474,13 +3362,7 @@ export function BudgetingTab({
                         frequency: e.target.value as RecurrenceFrequency,
                       }))
                     }
-                    style={{
-                      padding: '8px',
-                      borderRadius: '4px',
-                      background: 'var(--ui-paint-0f141e)',
-                      border: '1px solid var(--ui-paint-283347)',
-                      color: 'white',
-                    }}
+                    style={formFieldStyle}
                   >
                     <option value="daily">Daily</option>
                     <option value="weekly">Weekly</option>
@@ -3506,13 +3388,7 @@ export function BudgetingTab({
                         intervalCount: Math.max(1, Number(e.target.value)),
                       }))
                     }
-                    style={{
-                      padding: '8px',
-                      borderRadius: '4px',
-                      background: 'var(--ui-paint-0f141e)',
-                      border: '1px solid var(--ui-paint-283347)',
-                      color: 'white',
-                    }}
+                    style={formFieldStyle}
                   />
                 </label>
 
@@ -3527,13 +3403,7 @@ export function BudgetingTab({
                     onChange={(e) =>
                       setRecurDraft((prev) => ({ ...prev, nextDueDate: e.target.value }))
                     }
-                    style={{
-                      padding: '8px',
-                      borderRadius: '4px',
-                      background: 'var(--ui-paint-0f141e)',
-                      border: '1px solid var(--ui-paint-283347)',
-                      color: 'white',
-                    }}
+                    style={formFieldStyle}
                   />
                 </label>
 
@@ -3548,13 +3418,7 @@ export function BudgetingTab({
                     onChange={(e) =>
                       setRecurDraft((prev) => ({ ...prev, startDate: e.target.value }))
                     }
-                    style={{
-                      padding: '8px',
-                      borderRadius: '4px',
-                      background: 'var(--ui-paint-0f141e)',
-                      border: '1px solid var(--ui-paint-283347)',
-                      color: 'white',
-                    }}
+                    style={formFieldStyle}
                   />
                 </label>
 
@@ -3568,13 +3432,7 @@ export function BudgetingTab({
                     onChange={(e) =>
                       setRecurDraft((prev) => ({ ...prev, endDate: e.target.value || null }))
                     }
-                    style={{
-                      padding: '8px',
-                      borderRadius: '4px',
-                      background: 'var(--ui-paint-0f141e)',
-                      border: '1px solid var(--ui-paint-283347)',
-                      color: 'white',
-                    }}
+                    style={formFieldStyle}
                   />
                 </label>
 

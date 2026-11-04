@@ -10,16 +10,17 @@
       // Restored the shared preference before the dashboard stylesheet was painted.
       try {
         const saved = localStorage.getItem('user-theme');
-        document.documentElement.dataset.theme =
-          saved === 'light' || saved === 'dark'
-            ? saved
-            : matchMedia('(prefers-color-scheme: light)').matches
-              ? 'light'
-              : 'dark';
+        const isSysLight = window.matchMedia && window.matchMedia('(prefers-color-scheme: light)').matches;
+        const theme = saved === 'light' || saved === 'dark' ? saved : (isSysLight ? 'light' : 'dark');
+        document.documentElement.dataset.theme = theme;
+        document.documentElement.style.colorScheme = theme;
+        const meta = document.querySelector('meta[name="theme-color"]');
+        if (meta) meta.setAttribute('content', theme === 'light' ? '#f3f4f7' : '#0c1018');
       } catch {
-        document.documentElement.dataset.theme = matchMedia('(prefers-color-scheme: light)').matches
-          ? 'light'
-          : 'dark';
+        const isSysLight = window.matchMedia && window.matchMedia('(prefers-color-scheme: light)').matches;
+        const theme = isSysLight ? 'light' : 'dark';
+        document.documentElement.dataset.theme = theme;
+        document.documentElement.style.colorScheme = theme;
       }
     </script>
   </head>

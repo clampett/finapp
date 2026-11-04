@@ -115,6 +115,19 @@ test('Initials Helper: extracts 1 or 2 uppercase initials correctly', () => {
   assert.equal(exports.getInitials('John Doe'), 'JD');
   assert.equal(exports.getInitials('Alex Rivera (Recent Grad)'), 'AG');
   assert.equal(exports.getInitials('Taylor'), 'TA');
+  assert.equal(exports.getInitials('Mary Jane Watson'), 'MW');
+  assert.equal(exports.getInitials('First Middle Last'), 'FL');
   assert.equal(exports.getInitials(''), 'U');
   assert.equal(exports.getInitials('   '), 'U');
+});
+
+test('Security & Format: SVG format is excluded from profile picture upload accept list', () => {
+  const tsx = readTsx('components/SettingsTab.tsx');
+  const acceptMatch = tsx.match(/accept="([^"]+)"/);
+  assert.ok(acceptMatch, 'accept attribute found');
+  assert.ok(!acceptMatch[1].includes('svg'), 'SVG format should be rejected to prevent XSS');
+  assert.ok(acceptMatch[1].includes('image/png'));
+  assert.ok(acceptMatch[1].includes('image/jpeg'));
+  assert.ok(acceptMatch[1].includes('image/webp'));
+  assert.ok(acceptMatch[1].includes('image/gif'));
 });

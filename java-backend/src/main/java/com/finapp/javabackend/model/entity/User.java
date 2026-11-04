@@ -35,9 +35,10 @@ public class User {
     @Column(name = "two_factor_enabled", nullable = false)
     private Boolean twoFactorEnabled = false;
 
-    @Column(name = "display_name", length = 100)
+    @Column(name = "display_name", length = 50)
     private String displayName;
 
+    @Basic(fetch = FetchType.LAZY)
     @Column(name = "profile_picture", columnDefinition = "TEXT")
     private String profilePicture;
 

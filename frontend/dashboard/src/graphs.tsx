@@ -55,10 +55,10 @@ export function ArchetypeGraph({
   demo: boolean;
   view: View;
   search: string;
-  userProfile?: UserProfile;
-  onUpdateProfile?: (updated: UserProfile) => void;
-  activeTheme?: 'light' | 'dark';
-  onSelectTheme?: (theme: 'light' | 'dark' | 'system') => void;
+  userProfile: UserProfile;
+  onUpdateProfile: (updated: UserProfile) => void;
+  activeTheme: 'light' | 'dark';
+  onSelectTheme: (theme: 'light' | 'dark' | 'system') => void;
 }) {
   const storageKey = `finapp-scenario-v2:${demo ? 'demo' : 'user'}:${userId}`;
   const holdingsKey = `finapp-holdings-v1:${demo ? 'demo' : 'user'}:${userId}`;
@@ -675,16 +675,10 @@ export function ArchetypeGraph({
                 <SettingsTab
                   userId={userId}
                   demo={demo}
-                  profile={
-                    userProfile || {
-                      username: demo ? 'demo' : 'user',
-                      displayName: 'User',
-                      profilePicture: null,
-                    }
-                  }
-                  onUpdateProfile={onUpdateProfile || (() => {})}
-                  activeTheme={activeTheme || 'dark'}
-                  onSelectTheme={onSelectTheme || (() => {})}
+                  profile={userProfile}
+                  onUpdateProfile={onUpdateProfile}
+                  activeTheme={activeTheme}
+                  onSelectTheme={onSelectTheme}
                 />
               ) : view === 'graph' ? (
                 <Canvas

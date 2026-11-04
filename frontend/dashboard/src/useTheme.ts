@@ -36,10 +36,7 @@ export function useTheme() {
     };
     const systemChanged = () => {
       if (!savedTheme()) {
-        const next = deviceTheme();
-        setTheme(next);
-        document.documentElement.dataset.theme = next;
-        if (document.documentElement.style) document.documentElement.style.colorScheme = next;
+        setTheme(deviceTheme());
       }
     };
     window.addEventListener('storage', changed);
@@ -66,18 +63,13 @@ export function useTheme() {
       } catch {
         /* Kept selection in memory */
       }
-      const dev = deviceTheme();
-      document.documentElement.dataset.theme = dev;
-      if (document.documentElement.style) document.documentElement.style.colorScheme = dev;
-      setTheme(dev);
+      setTheme(deviceTheme());
     } else {
       try {
         localStorage.setItem(preferenceKey, choice);
       } catch {
         /* Kept selection in memory */
       }
-      document.documentElement.dataset.theme = choice;
-      if (document.documentElement.style) document.documentElement.style.colorScheme = choice;
       setTheme(choice);
     }
   };

@@ -108,14 +108,14 @@ class UserServiceTest {
     void updateProfile_displayNameTooLong_throwsBadRequest() {
         when(userRepository.findById(42L)).thenReturn(Optional.of(user));
 
-        String tooLong = "A".repeat(101);
+        String tooLong = "A".repeat(51);
         UpdateUserProfileRequest request = new UpdateUserProfileRequest(tooLong, null);
 
         ResponseStatusException ex = assertThrows(ResponseStatusException.class, () ->
             userService.updateProfile(42L, request)
         );
         assertEquals(HttpStatus.BAD_REQUEST, ex.getStatusCode());
-        assertTrue(ex.getReason().contains("cannot exceed 100 characters"));
+        assertTrue(ex.getReason().contains("cannot exceed 50 characters"));
     }
 
     @Test
@@ -129,6 +129,47 @@ class UserServiceTest {
         );
         assertEquals(HttpStatus.BAD_REQUEST, ex.getStatusCode());
         assertTrue(ex.getReason().contains("valid image data URI"));
+    }
+
+    @Test
+    void updateProfile_svgProfilePicture_throwsBadRequest() {
+        when(userRepository.findById(42L)).thenReturn(Optional.of(user));
+
+        UpdateUserProfileRequest request = new UpdateUserProfileRequest(
+            "Alex",
+            "data:image/svg+xml;base64,PHN2Zz48c2NyaXB0PmFsZXJ0KDEpPC9zY3JpcHQ+PC9zdmc+"
+        );
+
+        ResponseStatusException ex = assertThrows(ResponseStatusException.class, () ->
+            userService.updateProfile(42L, request)
+        );
+        assertEquals(HttpStatus.BAD_REQUEST, ex.getStatusCode());
+        assertTrue(ex.getReason().contains("valid image data URI"));
+    }
+
+    @Test
+    void updateProfile_profilePictureTooLarge_throwsBadRequest() {
+        when(userRepository.findById(42L)).thenReturn(Optional.of(user));
+
+        String hugePic = "data:image/png;base64," + "A".repeat(7_000_001);
+        UpdateUserProfileRequest request = new UpdateUserProfileRequest("Alex", hugePic);
+
+        ResponseStatusException ex = assertThrows(ResponseStatusException.class, () ->
+            userService.updateProfile(42L, request)
+        );
+        assertEquals(HttpStatus.BAD_REQUEST, ex.getStatusCode());
+        assertTrue(ex.getReason().contains("Profile picture exceeds maximum allowed size"));
+    }
+
+    @Test
+    void updateProfile_nullRequest_returnsCurrentProfileWithoutSaving() {
+        when(userRepository.findById(42L)).thenReturn(Optional.of(user));
+
+        UserProfileDTO updated = userService.updateProfile(42L, null);
+
+        assertNotNull(updated);
+        assertEquals("testuser", updated.displayName());
+        verify(userRepository, never()).save(any(User.class));
     }
 }
 

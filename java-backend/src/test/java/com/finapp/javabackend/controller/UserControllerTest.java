@@ -81,5 +81,24 @@ class UserControllerTest {
         );
         assertEquals(HttpStatus.UNAUTHORIZED, ex.getStatusCode());
     }
+
+    @Test
+    void getProfile_nonSessionUserPrincipal_throwsUnauthorized() {
+        when(authentication.getPrincipal()).thenReturn("anonymousUser");
+        ResponseStatusException ex = assertThrows(ResponseStatusException.class, () ->
+            userController.getProfile(authentication)
+        );
+        assertEquals(HttpStatus.UNAUTHORIZED, ex.getStatusCode());
+    }
+
+    @Test
+    void updateProfile_nonSessionUserPrincipal_throwsUnauthorized() {
+        when(authentication.getPrincipal()).thenReturn("anonymousUser");
+        UpdateUserProfileRequest request = new UpdateUserProfileRequest("Johnny", null);
+        ResponseStatusException ex = assertThrows(ResponseStatusException.class, () ->
+            userController.updateProfile(request, authentication)
+        );
+        assertEquals(HttpStatus.UNAUTHORIZED, ex.getStatusCode());
+    }
 }
 

@@ -20,6 +20,13 @@ interface SettingsTabProps {
   onSelectTheme: (theme: 'light' | 'dark' | 'system') => void;
 }
 
+/**
+ * Extracts 1 or 2 uppercase initials from a user's display name.
+ *
+ * Design choice: Uses the first and last word (e.g., "Mary Jane Watson" -> "MW",
+ * "Alex Rivera (Recent Grad)" -> "AG"). This ensures high-signal primary and
+ * family/qualification initials while ignoring intermediate middle names.
+ */
 export function getInitials(name: string): string {
   if (!name || !name.trim()) return 'U';
   const parts = name.trim().split(/\s+/);
@@ -138,10 +145,12 @@ export default function SettingsTab({
     setSaving(true);
     setStatusMessage(null);
 
+    const resolvedPicture = profilePicture ? profilePicture.trim() : null;
+
     const updatedData: UserProfile = {
       ...profile,
       displayName: trimmedName,
-      profilePicture: profilePicture || null,
+      profilePicture: resolvedPicture,
     };
 
     if (demo) {
@@ -168,7 +177,8 @@ export default function SettingsTab({
         credentials: 'include',
         body: JSON.stringify({
           displayName: trimmedName,
-          profilePicture: profilePicture || '',
+          // Send empty string to explicitly clear photo on backend, or data URI to update
+          profilePicture: resolvedPicture ?? '',
         }),
       });
 
@@ -250,7 +260,7 @@ export default function SettingsTab({
               type="file"
               ref={fileInputRef}
               onChange={handleFileChange}
-              accept="image/png, image/jpeg, image/webp, image/gif, image/svg+xml"
+              accept="image/png, image/jpeg, image/webp, image/gif"
               className="sr-only"
               id="avatar-upload-input"
             />
@@ -273,7 +283,7 @@ export default function SettingsTab({
               )}
             </div>
             <p className="text-[11px] text-subtle m-0 leading-normal">
-              Supported formats: PNG, JPG, WebP, GIF, or SVG (max 3MB).
+              Supported formats: PNG, JPG, WebP, or GIF (max 3MB).
             </p>
           </div>
         </div>

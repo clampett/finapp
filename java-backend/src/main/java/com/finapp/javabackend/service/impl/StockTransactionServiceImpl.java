@@ -147,6 +147,10 @@ public class StockTransactionServiceImpl implements StockTransactionService {
         if (ticker != null && !ticker.trim().isEmpty()) {
             String symbol = ticker.trim().toUpperCase();
             List<Stock> stocks = stockRepository.findByUserIdAndTicker(userId, symbol);
+            // Required an explicit lot when the ticker matched several positions.
+            if (stocks.size() > 1) {
+                throw new ResponseStatusException(HttpStatus.CONFLICT, "Choose a stock lot for this trade.");
+            }
             if (!stocks.isEmpty()) {
                 return stocks.get(0);
             }

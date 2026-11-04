@@ -1208,3 +1208,16 @@ test('demo-storage: encrypt and decrypt roundtrip preserves budget data and reco
   const corrupted = await decryptFromDemoStorage(storageKey, `${DEMO_BUDGET_ENC_PREFIX}bad:data`);
   assert.equal(corrupted, null, 'Corrupted payload must return null without throwing');
 });
+
+test("dividend forecasts reflect current shares across independent lots", () => {
+  const { projectedDividendFlows } = runtime.module.exports;
+  const lot = { symbol: "KO", paysDividend: true, dividendFrequency: "quarterly", dividendPerShare: 0.5 };
+  const flows = projectedDividendFlows([
+    { ...lot, stockId: 1, shares: 10 },
+    { ...lot, stockId: 2, shares: 4 },
+    { ...lot, stockId: 3, shares: 0 },
+    { ...lot, stockId: 4, shares: 5, dividendFrequency: "irregular" },
+  ]);
+  assert.equal(flows.length, 2);
+  assert.equal(flows.reduce((total, flow) => total + flow.amount, 0), 7);
+});

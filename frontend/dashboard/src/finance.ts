@@ -2,10 +2,73 @@ export const API_BASE = import.meta.env.VITE_API_URL || '/api/v1';
 export type NodeType = 'INCOME' | 'CHECKING' | 'SAVINGS' | 'INVESTMENT' | 'DEBT' | 'EXPENSE';
 export type SimulationType = 'monte_carlo' | 'markov' | 'debt';
 export type View = 'overview' | 'graph' | 'cashflow' | 'budgeting' | 'investing' | 'settings';
+export type RecurrenceFrequency =
+  | 'daily'
+  | 'weekly'
+  | 'biweekly'
+  | 'monthly'
+  | 'quarterly'
+  | 'yearly';
+
 export function demoProfile(value: string | null): 1 | 2 | 3 {
   const profile = Number(value);
   return profile === 1 || profile === 2 || profile === 3 ? profile : 2;
 }
+
+export function recurringToMonthlyAmount(
+  amount: number,
+  frequency: RecurrenceFrequency = 'monthly',
+  intervalCount: number = 1,
+): number {
+  const count = Math.max(1, intervalCount || 1);
+  const base = Number(amount) || 0;
+  if (base <= 0) return 0;
+
+  switch (frequency) {
+    case 'daily':
+      return Math.round(((base * 365) / (12 * count)) * 100) / 100;
+    case 'weekly':
+      return Math.round(((base * 52) / (12 * count)) * 100) / 100;
+    case 'biweekly':
+      return Math.round(((base * 26) / (12 * count)) * 100) / 100;
+    case 'monthly':
+      return Math.round((base / count) * 100) / 100;
+    case 'quarterly':
+      return Math.round(((base * 4) / (12 * count)) * 100) / 100;
+    case 'yearly':
+      return Math.round((base / (12 * count)) * 100) / 100;
+    default:
+      return Math.round((base / count) * 100) / 100;
+  }
+}
+
+export function monthlyToRecurringAmount(
+  monthlyAmount: number,
+  frequency: RecurrenceFrequency = 'monthly',
+  intervalCount: number = 1,
+): number {
+  const count = Math.max(1, intervalCount || 1);
+  const base = Number(monthlyAmount) || 0;
+  if (base <= 0) return 0;
+
+  switch (frequency) {
+    case 'daily':
+      return Math.round(((base * 12 * count) / 365) * 100) / 100;
+    case 'weekly':
+      return Math.round(((base * 12 * count) / 52) * 100) / 100;
+    case 'biweekly':
+      return Math.round(((base * 12 * count) / 26) * 100) / 100;
+    case 'monthly':
+      return Math.round(base * count * 100) / 100;
+    case 'quarterly':
+      return Math.round(((base * 12 * count) / 4) * 100) / 100;
+    case 'yearly':
+      return Math.round(base * 12 * count * 100) / 100;
+    default:
+      return Math.round(base * count * 100) / 100;
+  }
+}
+
 export interface GraphNode {
   archived?: boolean;
   disabled?: boolean;
@@ -16,6 +79,8 @@ export interface GraphNode {
   amountOrBalance: number;
   interestRateApr: number;
   minPayment?: number;
+  frequency?: RecurrenceFrequency;
+  intervalCount?: number;
 }
 export interface GraphEdge {
   id: string;
@@ -52,10 +117,10 @@ export function expenseAmount(node: GraphNode, graph: GraphData, ignoreDisabled 
           ['INCOME', 'CHECKING'].includes(source.nodeType),
       ),
   );
-  if (!routes.length) return node.amountOrBalance;
+  if (!routes.length) return recurringToMonthlyAmount(node.amountOrBalance, node.frequency, node.intervalCount);
   const income = graph.nodes
     .filter((n) => n.nodeType === 'INCOME' && (ignoreDisabled || !n.disabled))
-    .reduce((sum, n) => sum + n.amountOrBalance, 0);
+    .reduce((sum, n) => sum + recurringToMonthlyAmount(n.amountOrBalance, n.frequency, n.intervalCount), 0);
   const settings = assumptionsFor(graph);
   const takeHome = income * (settings.incomeBasis === 'gross' ? 1 - settings.taxRate / 100 : 1);
   return routes.reduce(
@@ -165,7 +230,11 @@ export function debtPayment(node: GraphNode, graph: GraphData, ignoreDisabled = 
   const takeHome =
     graph.nodes
       .filter((n) => n.nodeType === 'INCOME' && (ignoreDisabled || !n.disabled))
-      .reduce((sum, n) => sum + n.amountOrBalance, 0) *
+      .reduce(
+        (sum, n) =>
+          sum + recurringToMonthlyAmount(n.amountOrBalance, n.frequency, n.intervalCount),
+        0,
+      ) *
     (settings.incomeBasis === 'gross' ? 1 - settings.taxRate / 100 : 1);
   return Math.min(
     payoff,
@@ -188,7 +257,13 @@ export function totals(graph: GraphData, portfolioValue = 0) {
   // Separated overdrawn balances from positive cash so assets and debt reconciled with net worth.
   const cashNodes = graph.nodes.filter((node) => !node.disabled && ['CHECKING', 'SAVINGS'].includes(node.nodeType));
   const overdraft = cashNodes.reduce((total, node) => total + Math.max(0, -node.amountOrBalance), 0);
-  const income = sum(['INCOME']),
+  const income = graph.nodes
+      .filter((n) => !n.disabled && n.nodeType === 'INCOME')
+      .reduce(
+        (sum, n) =>
+          sum + recurringToMonthlyAmount(n.amountOrBalance, n.frequency, n.intervalCount),
+        0,
+      ),
     expenses = graph.nodes
       .filter((node) => !node.disabled && node.nodeType === 'EXPENSE')
       .reduce((sum, node) => sum + expenseAmount(node, graph), 0),
@@ -327,6 +402,17 @@ export function parseGraph(value: unknown): GraphData {
         ? { position: { x: n.position.x, y: n.position.y } }
         : {}),
       ...(n.minPayment != null ? { minPayment: number(n.minPayment, 1e9) } : {}),
+      ...(n.frequency &&
+      ['daily', 'weekly', 'biweekly', 'monthly', 'quarterly', 'yearly'].includes(
+        n.frequency as string,
+      )
+        ? { frequency: n.frequency as RecurrenceFrequency }
+        : {}),
+      ...(n.intervalCount != null &&
+      Number(n.intervalCount) >= 1 &&
+      Number(n.intervalCount) <= 365
+        ? { intervalCount: Math.round(Number(n.intervalCount)) }
+        : {}),
     };
   });
   const ids = new Set(nodes.map((n) => n.id));

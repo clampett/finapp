@@ -1,4 +1,5 @@
 import numpy as np
+from app.cashflow import recurring_to_monthly
 
 # Retained the earlier aggregate-balance simulator for compatibility. The current
 # /api/simulate route used projection.py for separate cash, investment, and debt flows.
@@ -12,6 +13,7 @@ def process_and_simulate(
     annual_volatility: float = 0.15,
     years: int = 30,
     seed: int | None = None,
+    recurring_transactions: list | None = None,
 ) -> list[dict]:
 
     total_balance = 0.0
@@ -20,13 +22,36 @@ def process_and_simulate(
 
     # Dynamically parse the graph data
     for node in nodes:
-        val = float(node.balance)
-        ntype = str(node.type).upper()
+        val = float(
+            getattr(node, "balance", 0.0)
+            if hasattr(node, "balance")
+            else node.get("balance", 0.0)
+            if isinstance(node, dict)
+            else 0.0
+        )
+        ntype = str(
+            getattr(node, "type", "")
+            if hasattr(node, "type")
+            else node.get("type", "")
+            if isinstance(node, dict)
+            else ""
+        ).upper()
+        freq = (
+            getattr(node, "frequency", None)
+            if hasattr(node, "frequency")
+            else (node.get("frequency") if isinstance(node, dict) else None)
+        )
+        interval = (
+            getattr(node, "interval_count", 1)
+            if hasattr(node, "interval_count")
+            else (node.get("interval_count", 1) if isinstance(node, dict) else 1)
+        )
+        monthly_val = recurring_to_monthly(val, freq, interval)
 
         if ntype == "INCOME":
-            total_income += val
+            total_income += monthly_val
         elif ntype == "EXPENSE":
-            total_expense += val
+            total_expense += monthly_val
         elif ntype == "DEBT":
             # Debts subtract from net worth; assume 1% minimum payment
             total_balance -= val
@@ -34,6 +59,55 @@ def process_and_simulate(
         else:
             # CHECKING, SAVINGS, INVESTMENT
             total_balance += val
+
+    if recurring_transactions:
+        node_ids = {
+            str(getattr(n, "id", "") if hasattr(n, "id") else n.get("id", ""))
+            for n in nodes
+        }
+        for r in recurring_transactions:
+            is_active = (
+                getattr(r, "is_active", True)
+                if hasattr(r, "is_active")
+                else r.get("is_active", True)
+            )
+            if not is_active:
+                continue
+            r_notes = (
+                getattr(r, "notes", "")
+                if hasattr(r, "notes")
+                else r.get("notes", "")
+            )
+            r_id = str(getattr(r, "id", "") if hasattr(r, "id") else r.get("id", ""))
+            if r_id in node_ids or (
+                r_notes and any(f"[node-id:{nid}]" in r_notes for nid in node_ids)
+            ):
+                continue
+            r_amount = float(
+                getattr(r, "amount", 0.0)
+                if hasattr(r, "amount")
+                else r.get("amount", 0.0)
+            )
+            r_freq = (
+                getattr(r, "frequency", "monthly")
+                if hasattr(r, "frequency")
+                else r.get("frequency", "monthly")
+            )
+            r_interval = (
+                getattr(r, "interval_count", 1)
+                if hasattr(r, "interval_count")
+                else r.get("interval_count", 1)
+            )
+            r_kind = str(
+                getattr(r, "kind", "")
+                if hasattr(r, "kind")
+                else r.get("kind", "")
+            ).upper()
+            m_val = recurring_to_monthly(r_amount, r_freq, r_interval)
+            if r_kind == "INCOME":
+                total_income += m_val
+            elif r_kind == "EXPENSE":
+                total_expense += m_val
 
     net_cash_flow = total_income - total_expense
     monthly_contribution = net_cash_flow * (investment_rate / 100.0) if net_cash_flow > 0 else 0.0

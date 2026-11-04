@@ -13,6 +13,18 @@ export interface Holding {
   dividendPerShare?: number | null;
 }
 
+// Derived forecast income from current lots, so trades never left a saved schedule stale.
+export function projectedDividendFlows(holdings: Holding[]) {
+  return holdings.flatMap((holding) => {
+    const amount = holding.shares * Number(holding.dividendPerShare);
+    const cadence = holding.dividendFrequency;
+    if (!holding.paysDividend || !Number.isFinite(amount) || amount <= 0) return [];
+    // Excluded irregular distributions because no reliable cadence was available.
+    if (cadence !== "monthly" && cadence !== "quarterly" && cadence !== "semiannual" && cadence !== "annual") return [];
+    return [{ kind: "income", amount, frequency: cadence, interval_count: 1 }];
+  });
+}
+
 export interface Stock {
   id?: number;
   userId?: number;

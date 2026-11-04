@@ -34,6 +34,9 @@ interface Quote {
   cagr: number | null;
   expected_annual_return: number | null;
   annual_volatility: number | null;
+  pays_dividend?: boolean;
+  dividend_frequency?: string | null;
+  dividend_per_share?: number | null;
   history: { date: string; close: number }[];
 }
 
@@ -234,6 +237,10 @@ export function Investing({
         companyName: quote.name,
         price: quote.latest_price,
         shares: 1,
+        // Retained detected dividend metadata for the portfolio forecast.
+        paysDividend: quote.pays_dividend,
+        dividendFrequency: quote.dividend_frequency,
+        dividendPerShare: quote.dividend_per_share,
       });
       setHoldings((current) => [...current, newHolding]);
       if (intent === selectionIntent.current) setSelected(sym);

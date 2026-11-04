@@ -11,6 +11,9 @@ public class NodeEdge {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
+    @Column(name = "scenario_id", nullable = false)
+    private Long scenarioId;
+
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "source_node_id", nullable = false)
     private FinancialNode sourceNode;
@@ -36,6 +39,14 @@ public class NodeEdge {
         this.targetNode = targetNode;
         this.monthlyFixedFlow = monthlyFixedFlow;
         this.percentageFlow = percentageFlow;
+    }
+
+    public Long getScenarioId() {
+        return scenarioId;
+    }
+
+    public void setScenarioId(Long scenarioId) {
+        this.scenarioId = scenarioId;
     }
 
     public Long getId() {

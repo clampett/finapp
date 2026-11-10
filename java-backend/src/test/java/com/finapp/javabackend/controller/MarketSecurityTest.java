@@ -32,6 +32,12 @@ class MarketSecurityTest {
             "/api/v1/market/stocks/{symbol}",
             "/api/v1/market/private",
             "/api/v1/market/stocks/AAPL/private",
+            "/api/v1/market/crypto",
+            "/api/v1/market/crypto/{symbol}",
+            "/api/v1/market/currencies",
+            "/api/v1/market/currencies/{code}",
+            "/api/v1/market/crypto/BTC/private",
+            "/api/v1/market/currencies/EUR/private",
         })
         String read() {
             return "{}";
@@ -54,5 +60,21 @@ class MarketSecurityTest {
         mvc.perform(get("/api/v1/market/private")).andExpect(status().isUnauthorized());
         mvc.perform(get("/api/v1/market/stocks/AAPL/private")).andExpect(status().isUnauthorized());
         mvc.perform(post("/api/v1/market/stocks")).andExpect(status().isUnauthorized());
+    }
+
+    @Test
+    void cryptoAndCurrencyReadsArePublic() throws Exception {
+        mvc.perform(get("/api/v1/market/crypto")).andExpect(status().isOk());
+        mvc.perform(get("/api/v1/market/crypto/BTC")).andExpect(status().isOk());
+        mvc.perform(get("/api/v1/market/currencies")).andExpect(status().isOk());
+        mvc.perform(get("/api/v1/market/currencies/EUR")).andExpect(status().isOk());
+    }
+
+    @Test
+    void nestedCryptoAndCurrencyRoutesStillRequireAuthentication() throws Exception {
+        mvc.perform(get("/api/v1/market/crypto/BTC/private")).andExpect(status().isUnauthorized());
+        mvc
+            .perform(get("/api/v1/market/currencies/EUR/private"))
+            .andExpect(status().isUnauthorized());
     }
 }

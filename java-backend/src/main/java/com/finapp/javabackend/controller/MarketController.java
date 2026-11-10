@@ -39,9 +39,32 @@ public class MarketController {
 
     @GetMapping("/stocks/{symbol}")
     public ResponseEntity<String> stock(@PathVariable String symbol) {
-        // Encoded so the symbol can never change which Python route is called.
-        String encoded = UriUtils.encodePathSegment(symbol, StandardCharsets.UTF_8);
-        return forward(URI.create(pythonBaseUrl + "/api/stocks/" + encoded));
+        return forward(URI.create(pythonBaseUrl + "/api/stocks/" + encode(symbol)));
+    }
+
+    @GetMapping("/crypto")
+    public ResponseEntity<String> cryptoPrices() {
+        return forward(URI.create(pythonBaseUrl + "/api/crypto"));
+    }
+
+    @GetMapping("/crypto/{symbol}")
+    public ResponseEntity<String> cryptoPrice(@PathVariable String symbol) {
+        return forward(URI.create(pythonBaseUrl + "/api/crypto/" + encode(symbol)));
+    }
+
+    @GetMapping("/currencies")
+    public ResponseEntity<String> currencyRates() {
+        return forward(URI.create(pythonBaseUrl + "/api/currencies"));
+    }
+
+    @GetMapping("/currencies/{code}")
+    public ResponseEntity<String> currencyRate(@PathVariable String code) {
+        return forward(URI.create(pythonBaseUrl + "/api/currencies/" + encode(code)));
+    }
+
+    private String encode(String value) {
+        // Encoded so a path value can never change which Python route is called.
+        return UriUtils.encodePathSegment(value, StandardCharsets.UTF_8);
     }
 
     private ResponseEntity<String> forward(URI uri) {

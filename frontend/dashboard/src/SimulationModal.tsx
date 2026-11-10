@@ -129,6 +129,7 @@ export function SimulationModal({
   graphData,
   simulationType,
   onClose,
+  onOpenCoach,
   onAssumptionsChange,
   scopeLabel,
   scope,
@@ -142,6 +143,7 @@ export function SimulationModal({
   graphData: GraphData;
   simulationType: SimulationType;
   onClose: () => void;
+  onOpenCoach?: () => void;
   onAssumptionsChange: (settings: ScenarioAssumptions) => void;
   scopeLabel?: string;
   scope?: 'all' | 'selected' | 'connected';
@@ -525,6 +527,11 @@ export function SimulationModal({
                 <b>{dollars(currentBudget.surplus)}</b>
               </span>
             </div>
+            {onOpenCoach && simulationType !== 'debt' && (
+              <button type="button" onClick={onOpenCoach} className="mb-4 cursor-pointer rounded-lg border border-border bg-surface px-3 py-2 text-xs font-medium text-active-text hover:bg-hover-bg">
+                Compare assumptions in AI Coach
+              </button>
+            )}
             {!!forecast?.warnings?.length && (
               <div className="border-l-2 border-(--ui-border-bea16f) rounded-sm bg-(--ui-surface-30291c55) p-[10px_15px] mb-4.5 text-(--ui-text-d9bd90) text-[11px] leading-[1.7] [&>p]:m-0 [&>p]:leading-[1.7]" role="status">
                 {forecast.warnings.map((warning) => (

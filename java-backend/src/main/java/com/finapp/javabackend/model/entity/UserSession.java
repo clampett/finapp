@@ -56,6 +56,10 @@ public class UserSession {
         this.ipAddress = ipAddress;
     }
 
+    public LocalDateTime getCreatedAt() {
+        return createdAt;
+    }
+
     public LocalDateTime getExpiresAt() {
         return expiresAt;
     }

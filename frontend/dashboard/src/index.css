@@ -272,3 +272,4 @@ header + .workspace-tab-content { padding-block-start: clamp(1rem, 2.4vw, 1.75re
 .workspace-tab-cashflow { --tab-accent: var(--ui-paint-60a5fa); }
 .workspace-tab-budgeting { --tab-accent: var(--ui-paint-fbbf24); }
 .workspace-tab-investing { --tab-accent: var(--ui-paint-22d3ee); }
+.workspace-tab-ai { --tab-accent: var(--color-primary); }

@@ -1,3 +1,4 @@
+import { ScenarioCoach } from './components/ScenarioCoach';
 import { AccountEditor } from './components/AccountEditor';
 import { Canvas } from './components/Canvas';
 import { CanvasToolbar } from './components/CanvasToolbar';
@@ -55,6 +56,7 @@ export function GraphWorkspace({
   onUpdateProfile,
   activeTheme,
   onSelectTheme,
+  onNavigate,
 }: {
   userId: number;
   demo: boolean;
@@ -66,6 +68,7 @@ export function GraphWorkspace({
   onUpdateProfile: (updated: UserProfile) => void;
   activeTheme: 'light' | 'dark';
   onSelectTheme: (theme: 'light' | 'dark' | 'system') => void;
+  onNavigate: (view: View) => void;
 }) {
   const storageKey = `finapp-scenario-v2:${demo ? 'demo' : 'user'}:${userId}`;
   const holdingsKey = `finapp-holdings-v1:${demo ? 'demo' : 'user'}:${userId}`;
@@ -563,7 +566,7 @@ export function GraphWorkspace({
                     ? 'Budgeting & transactions'
                     : view === 'investing'
                       ? 'Savings & investments'
-                      : demo ? 'Demo settings' : 'Account settings'}
+                      : view === 'ai' ? 'AI Scenario Coach' : demo ? 'Demo settings' : 'Account settings'}
           </h2>
           <p className="text-sm text-muted mt-2 mb-0 leading-relaxed">
             {view === "graph" ? live.nodes.length + " nodes · " + live.edges.length + " connections · " +
@@ -572,6 +575,7 @@ export function GraphWorkspace({
               view === "cashflow" ? "Review monthly inflows and commitments. Toggle individual flows to explore what changes." :
               view === "budgeting" ? "Record what happened and manage the schedules that repeat." :
               view === "investing" ? "Track stock holdings and review the savings and investments in your scenario." :
+              view === "ai" ? "Stress-test a scenario and ask questions about your results." :
               demo ? "Personalize this demo’s display name and appearance." :
               "Manage your profile, appearance, balances, and simulation defaults."}
           </p>
@@ -633,7 +637,7 @@ export function GraphWorkspace({
           e.target.value = '';
         }}
       />}
-      {error && (
+      {view !== 'ai' && error && (
         <div className="p-[12px_16px] text-xs rounded-lg mb-3.5 flex gap-3.5 items-center justify-between leading-[1.6] bg-(--ui-surface-331d2b) text-(--ui-text-fda4af) border border-(--ui-border-743247)" role="alert">
           {error}
           <button
@@ -661,7 +665,13 @@ export function GraphWorkspace({
           investments before adding new borrowing.
         </div>
       )}
-      {!loaded ? (
+      {/* Mounted the sample coach and chat independently of account-graph availability. */}
+      {view === 'ai' ? (
+        <ScenarioCoach
+          graph={!demo && loaded && !error ? graph : undefined}
+          onOpenGraph={() => onNavigate('graph')}
+        />
+      ) : !loaded ? (
         <div className="py-17.5 px-6 text-center text-(--ui-text-8d9fba) text-xs" role="status">
           Loading your workspace…
         </div>
@@ -1040,6 +1050,10 @@ export function GraphWorkspace({
             simulationType={simType}
             defaults={simulationDefaults}
             onClose={closeSimulation}
+            onOpenCoach={() => {
+              closeSimulation();
+              onNavigate('ai');
+            }}
             portfolioValue={portfolioValue}
             dividendFlows={dividendFlows}
             userId={userId}

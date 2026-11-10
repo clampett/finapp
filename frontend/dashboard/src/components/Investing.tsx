@@ -22,6 +22,7 @@ import {
   notifyPortfolioUpdated,
 } from '../portfolio';
 import type { Holding } from '../portfolio';
+import { MarketPrices } from './MarketPrices';
 
 interface Quote {
   symbol: string;
@@ -88,15 +89,27 @@ const monthTicks = (history: { date: string }[]) =>
 
 const monthLabel = (date: string) => `${MONTHS[Number(date.slice(5, 7)) - 1]} ’${date.slice(2, 4)}`;
 
-export function Investing({
-  storageKey,
-  userId,
-  demo,
-}: {
+type InvestingProps = {
   storageKey: string;
   userId?: number;
   demo?: boolean;
-}) {
+};
+
+export function Investing(props: InvestingProps) {
+  // Mounted the market panels with Investing so both dashboard layouts used the same view.
+  return (
+    <>
+      <StockHoldings {...props} />
+      <MarketPrices />
+    </>
+  );
+}
+
+function StockHoldings({
+  storageKey,
+  userId,
+  demo,
+}: InvestingProps) {
   const [holdings, setHoldings] = useState<Holding[]>(() => parseLocalHoldings(storageKey));
   const [quotes, setQuotes] = useState<Record<string, QuoteState>>({});
   const [suggestions, setSuggestions] = useState<Suggestion[]>([]);

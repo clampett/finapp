@@ -1,4 +1,6 @@
 from datetime import datetime, timedelta, timezone
+from collections import deque
+from threading import Event
 
 import pytest
 from fastapi import HTTPException
@@ -19,20 +21,26 @@ PRICES = {
 @pytest.fixture
 def yahoo(monkeypatch):
     # A fake Yahoo, so these tests never touch the network.
-    state = {"calls": [], "down": set(), "now": datetime(2026, 11, 10, tzinfo=timezone.utc)}
+    state = {
+        "calls": [],
+        "down": set(),
+        "now": datetime(2026, 11, 10, tzinfo=timezone.utc),
+    }
 
     def fake_fetch(ticker):
         state["calls"].append(ticker)
         if "*" in state["down"] or ticker in state["down"]:
             raise ConnectionError("yahoo is down")
         if ticker not in PRICES and ticker.startswith("MISSING"):
-            raise quotes.QuoteUnavailable(f"no price for {ticker}")
+            raise quotes.UnknownSymbol(f"no price for {ticker}")
         return PRICES.get(ticker, (100.0, 99.0))
 
     monkeypatch.setattr(quotes, "_fetch_quote", fake_fetch)
     monkeypatch.setattr(quotes, "_now", lambda: state["now"])
     monkeypatch.setattr(quotes, "_cache", {})
-    monkeypatch.setattr(quotes, "_unknown_until", {})
+    monkeypatch.setattr(quotes, "_failures", {})
+    monkeypatch.setattr(quotes, "_pending", {})
+    monkeypatch.setattr(quotes, "_lookup_times", deque())
     return state
 
 
@@ -184,3 +192,52 @@ def test_a_listed_coin_typed_as_a_full_ticker_keeps_its_name(yahoo):
     result = quotes.crypto_quote("BTC-USD")
     assert result["symbol"] == "BTC"
     assert result["name"] == "Bitcoin"
+
+
+def test_concurrent_requests_share_one_upstream_fetch(yahoo, monkeypatch):
+    started = Event()
+    release = Event()
+
+    def fetch(ticker):
+        yahoo["calls"].append(ticker)
+        started.set()
+        if not release.wait(2):
+            raise TimeoutError("test did not release the quote")
+        return PRICES[ticker]
+
+    monkeypatch.setattr(quotes, "_fetch_quote", fetch)
+    first = quotes._request_quote("BTC-USD")
+    try:
+        assert started.wait(2)
+        assert quotes._request_quote("BTC-USD") is first
+    finally:
+        release.set()
+    assert first.result(timeout=2)[:2] == PRICES["BTC-USD"]
+    assert yahoo["calls"] == ["BTC-USD"]
+
+
+def test_transient_lookup_failure_is_not_cached_as_an_unknown_symbol(yahoo):
+    yahoo["down"].add("AVAX-USD")
+    assert status_of(quotes_router.crypto, "AVAX") == 503
+    assert status_of(quotes_router.crypto, "AVAX-USD") == 503
+    assert yahoo["calls"] == ["AVAX-USD"]
+    yahoo["down"].clear()
+    yahoo["now"] += timedelta(seconds=31)
+    assert status_of(quotes_router.crypto, "AVAX") == 200
+    assert yahoo["calls"] == ["AVAX-USD", "AVAX-USD"]
+
+
+def test_new_lookup_budget_preserves_supported_and_cached_quotes(yahoo, monkeypatch):
+    monkeypatch.setattr(quotes, "MAX_NEW_LOOKUPS_PER_MINUTE", 1)
+    assert status_of(quotes_router.crypto, "AVAX") == 200
+    assert status_of(quotes_router.crypto, "AVAX-USD") == 200
+    assert status_of(quotes_router.crypto, "ARB11841") == 503
+    assert status_of(quotes_router.crypto, "BTC") == 200
+    assert yahoo["calls"] == ["AVAX-USD", "BTC-USD"]
+
+
+def test_small_positive_coin_price_keeps_its_precision(yahoo, monkeypatch):
+    monkeypatch.setitem(PRICES, "TINY-USD", (0.000000008, 0.000000004))
+    quote = quotes.crypto_quote("TINY")
+    assert quote["price"] == 0.000000008
+    assert quote["change_percent"] == 100

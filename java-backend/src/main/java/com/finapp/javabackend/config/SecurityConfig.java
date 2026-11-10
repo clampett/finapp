@@ -55,7 +55,6 @@ public class SecurityConfig {
                         "/api/v1/graph/3"
                     )
                     .permitAll()
-                                   
                     // Limited anonymous market access to the public quote routes.
                     .requestMatchers(
                         HttpMethod.GET,

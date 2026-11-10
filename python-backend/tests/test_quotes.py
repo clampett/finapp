@@ -11,6 +11,8 @@ PRICES = {
     "EURUSD=X": (1.1168, 1.1226),
     "JPY=X": (158.79, 157.99),
     "USDCAD=X": (1.4184, 1.4119),
+    "AVAX-USD": (30.0, 29.0),
+    "ARB11841-USD": (0.5, 0.52),
 }
 
 
@@ -23,11 +25,14 @@ def yahoo(monkeypatch):
         state["calls"].append(ticker)
         if "*" in state["down"] or ticker in state["down"]:
             raise ConnectionError("yahoo is down")
+        if ticker not in PRICES and ticker.startswith("MISSING"):
+            raise quotes.QuoteUnavailable(f"no price for {ticker}")
         return PRICES.get(ticker, (100.0, 99.0))
 
     monkeypatch.setattr(quotes, "_fetch_quote", fake_fetch)
     monkeypatch.setattr(quotes, "_now", lambda: state["now"])
     monkeypatch.setattr(quotes, "_cache", {})
+    monkeypatch.setattr(quotes, "_unknown_until", {})
     return state
 
 
@@ -51,9 +56,7 @@ def test_crypto_quote_has_price_and_change(yahoo):
     assert result["as_of"].startswith("2026-11-10")
 
 
-def test_unknown_coins_and_currencies_are_rejected(yahoo):
-    with pytest.raises(quotes.UnknownSymbol):
-        quotes.crypto_quote("NOTACOIN")
+def test_unknown_currencies_are_rejected(yahoo):
     with pytest.raises(quotes.UnknownSymbol):
         quotes.currency_quote("XXX")
     assert yahoo["calls"] == []  # nothing unsupported ever reaches Yahoo
@@ -120,7 +123,8 @@ def test_currency_list_covers_the_settings_tab_currencies(yahoo):
 
 def test_endpoint_status_codes(yahoo):
     assert status_of(quotes_router.crypto, "BTC") == 200
-    assert status_of(quotes_router.crypto, "NOTACOIN") == 404
+    assert status_of(quotes_router.crypto, "MISSINGCOIN") == 404
+    assert status_of(quotes_router.crypto, "A B") == 400
     assert status_of(quotes_router.currency, "EUR") == 200
     assert status_of(quotes_router.currency, "XXX") == 404
     assert status_of(quotes_router.crypto_list) == 200
@@ -129,3 +133,54 @@ def test_endpoint_status_codes(yahoo):
     yahoo["down"].add("*")
     assert status_of(quotes_router.crypto, "BTC") == 503
     assert status_of(quotes_router.currency_list) == 503
+
+
+def test_a_coin_outside_the_list_can_be_looked_up(yahoo):
+    result = quotes.crypto_quote("avax")
+    assert result["symbol"] == "AVAX"
+    assert result["name"] is None
+    assert result["price"] == 30.0
+    assert yahoo["calls"] == ["AVAX-USD"]
+
+
+def test_a_full_yahoo_ticker_is_used_as_typed(yahoo):
+    result = quotes.crypto_quote("arb11841-usd")
+    assert result["symbol"] == "ARB11841"
+    assert result["price"] == 0.5
+    assert yahoo["calls"] == ["ARB11841-USD"]
+
+
+def test_malformed_coin_symbols_never_reach_yahoo(yahoo):
+    for bad in ["", "A B", "../x", "$BTC", "WAYTOOLONGCOINSYMBOL"]:
+        with pytest.raises(quotes.InvalidSymbol):
+            quotes.crypto_quote(bad)
+    assert yahoo["calls"] == []
+
+
+def test_a_missing_coin_is_not_found_and_remembered(yahoo):
+    for _ in range(3):
+        with pytest.raises(quotes.UnknownSymbol):
+            quotes.crypto_quote("MISSINGCOIN")
+    assert yahoo["calls"] == ["MISSINGCOIN-USD"]  # Yahoo was only asked once
+    yahoo["now"] += timedelta(minutes=6)
+    with pytest.raises(quotes.UnknownSymbol):
+        quotes.crypto_quote("MISSINGCOIN")
+    assert yahoo["calls"] == ["MISSINGCOIN-USD", "MISSINGCOIN-USD"]  # asked again later
+
+
+def test_looked_up_coins_are_capped_but_the_list_is_not(yahoo, monkeypatch):
+    monkeypatch.setattr(quotes, "MAX_EXTRA_QUOTES", 2)
+    quotes.crypto_quote("BTC")
+    for coin in ["AAA", "BBB", "CCC"]:
+        yahoo["now"] += timedelta(seconds=1)
+        quotes.crypto_quote(coin)
+    extras = [ticker for ticker in quotes._cache if ticker not in quotes._SUPPORTED_TICKERS]
+    assert len(extras) == 2
+    assert "AAA-USD" not in quotes._cache  # the oldest lookup was dropped
+    assert "BTC-USD" in quotes._cache
+
+
+def test_a_listed_coin_typed_as_a_full_ticker_keeps_its_name(yahoo):
+    result = quotes.crypto_quote("BTC-USD")
+    assert result["symbol"] == "BTC"
+    assert result["name"] == "Bitcoin"

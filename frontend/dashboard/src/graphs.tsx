@@ -671,6 +671,7 @@ export function ArchetypeGraph({
                   demo={demo}
                 />
               )}
+              {view === 'investing' && <MarketPrices />}
               {view === 'overview' ? (
                 <DashboardTab
                 graph={live} portfolioValue={portfolioValue}

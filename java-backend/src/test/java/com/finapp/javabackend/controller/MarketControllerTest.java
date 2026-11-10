@@ -73,4 +73,62 @@ class MarketControllerTest {
             .andRespond(withException(new java.io.IOException("Connection refused")));
         assertEquals(HttpStatus.BAD_GATEWAY, controller.stock("AAPL").getStatusCode());
     }
+
+        @Test
+    void forwardsTheCryptoList() {
+        server
+            .expect(requestTo("http://localhost:5000/api/crypto"))
+            .andRespond(withSuccess("[{\"symbol\":\"BTC\"}]", MediaType.APPLICATION_JSON));
+        var response = controller.cryptoPrices();
+        assertEquals(HttpStatus.OK, response.getStatusCode());
+        assertEquals("[{\"symbol\":\"BTC\"}]", response.getBody());
+        server.verify();
+    }
+
+    @Test
+    void forwardsOneCoin() {
+        server
+            .expect(requestTo("http://localhost:5000/api/crypto/BTC"))
+            .andRespond(withSuccess("{\"symbol\":\"BTC\"}", MediaType.APPLICATION_JSON));
+        var response = controller.cryptoPrice("BTC");
+        assertEquals(HttpStatus.OK, response.getStatusCode());
+        assertEquals("{\"symbol\":\"BTC\"}", response.getBody());
+        server.verify();
+    }
+
+    @Test
+    void forwardsTheCurrencyRates() {
+        server
+            .expect(requestTo("http://localhost:5000/api/currencies"))
+            .andRespond(withSuccess("[{\"code\":\"EUR\"}]", MediaType.APPLICATION_JSON));
+        var response = controller.currencyRates();
+        assertEquals(HttpStatus.OK, response.getStatusCode());
+        assertEquals("[{\"code\":\"EUR\"}]", response.getBody());
+        server.verify();
+    }
+
+    @Test
+    void forwardsOneCurrency() {
+        server
+            .expect(requestTo("http://localhost:5000/api/currencies/EUR"))
+            .andRespond(withSuccess("{\"code\":\"EUR\"}", MediaType.APPLICATION_JSON));
+        var response = controller.currencyRate("EUR");
+        assertEquals(HttpStatus.OK, response.getStatusCode());
+        assertEquals("{\"code\":\"EUR\"}", response.getBody());
+        server.verify();
+    }
+
+    @Test
+    void preservesUnknownCoinMessages() {
+        server
+            .expect(requestTo("http://localhost:5000/api/crypto/NOTACOIN"))
+            .andRespond(
+                withStatus(HttpStatus.NOT_FOUND)
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .body("{\"detail\":\"Unsupported coin 'NOTACOIN'.\"}")
+            );
+        var response = controller.cryptoPrice("NOTACOIN");
+        assertEquals(HttpStatus.NOT_FOUND, response.getStatusCode());
+        assertTrue(response.getBody().contains("Unsupported coin"));
+    }
 }

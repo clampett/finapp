@@ -62,6 +62,18 @@ public class SecurityConfig {
                         "/api/v1/market/stocks/{symbol}"
                     )
                     .permitAll()
+                                   
+                    // Limited anonymous market access to the public quote routes.
+                    .requestMatchers(
+                        HttpMethod.GET,
+                        "/api/v1/market/stocks",
+                        "/api/v1/market/stocks/{symbol}",
+                        "/api/v1/market/crypto",
+                        "/api/v1/market/crypto/{symbol}",
+                        "/api/v1/market/currencies",
+                        "/api/v1/market/currencies/{code}"
+                    )
+                    .permitAll()
                     // Kept the bulk-write route disabled while the UI edits browser drafts.
                     .requestMatchers(HttpMethod.POST, "/api/v1/graph")
                     .denyAll()

@@ -17,6 +17,7 @@ import { historyShortcut } from './ui-platform';
 import { BudgetControls } from './components/BudgetControls';
 import { DashboardTab } from './DashboardTab';
 import { Investing } from './components/Investing';
+import { MarketPrices } from './components/MarketPrices';
 import SettingsTab from './components/SettingsTab';
 import { BalancePreferences, SimulationPreferences } from './components/FinancialPreferences';
 import { loadSimulationDefaults, simulationSettingsKey } from './simulationPreferences';

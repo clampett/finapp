@@ -7,11 +7,16 @@ of different requests to Yahoo small.
 """
 
 import math
+import re
+import threading
 from concurrent.futures import ThreadPoolExecutor
 from datetime import datetime, timedelta, timezone
 
 QUOTE_TTL = timedelta(seconds=60)  # how long a quote is served without asking Yahoo again
 STALE_LIMIT = timedelta(minutes=15)  # how long an old quote may stand in during an outage
+CRYPTO_SYMBOL = re.compile(r"^[A-Z0-9]{1,15}(-USD)?$")
+MAX_EXTRA_QUOTES = 100  # looked-up coins outside the supported list kept in the cache
+UNKNOWN_TTL = timedelta(minutes=5)  # how long a coin Yahoo could not price is remembered
 
 # Coin symbol -> (Yahoo ticker, name). Prices are quoted in US dollars.
 CRYPTO = {
@@ -42,10 +47,18 @@ CURRENCIES = {
 
 # ticker -> (when it was fetched, latest price, previous close)
 _cache: dict[str, tuple[datetime, float, float]] = {}
+_unknown_until: dict[str, datetime] = {}
+_store_lock = threading.Lock()
+_COIN_NAMES = {ticker: name for ticker, name in CRYPTO.values()}
+_SUPPORTED_TICKERS = set(_COIN_NAMES) | {t for t, _, _ in CURRENCIES.values()}
 
 
 class UnknownSymbol(LookupError):
     """The coin or currency is not on the supported list."""
+
+
+class InvalidSymbol(ValueError):
+    """The coin symbol is not a plausible ticker."""
 
 
 class QuoteUnavailable(RuntimeError):
@@ -79,20 +92,57 @@ def _quote(ticker: str) -> tuple[float, float, datetime]:
         if cached and now - cached[0] < STALE_LIMIT:
             return cached[1], cached[2], cached[0]  # a slightly old price beats none
         raise QuoteUnavailable(f"Could not get a current price for {ticker} right now.")
-    _cache[ticker] = (now, last, previous)
+    _store(ticker, now, last, previous)
     return last, previous, now
 
+def _store(ticker: str, fetched_at: datetime, last: float, previous: float) -> None:
+    with _store_lock:
+        _cache[ticker] = (fetched_at, last, previous)
+        extras = [t for t in list(_cache) if t not in _SUPPORTED_TICKERS]
+        if len(extras) > MAX_EXTRA_QUOTES:
+            _cache.pop(min(extras, key=lambda t: _cache[t][0]), None)
+            
 
 def _price(value: float) -> float:
     return round(value, 2) if value >= 1 else round(value, 6)
 
 
+def _extra_coin_ticker(key: str) -> str:
+    """The Yahoo ticker for a coin that is not on the supported list."""
+    if not CRYPTO_SYMBOL.match(key):
+        raise InvalidSymbol("Coin symbols are 1 to 15 letters or numbers (for example SOL).")
+    return key if key.endswith("-USD") else f"{key}-USD"
+
+
+def _extra_quote(ticker: str, asked: str) -> tuple[float, float, datetime]:
+    now = _now()
+    not_found = (
+        f"Could not find a current price for '{asked.strip()}'. "
+        "Check the symbol (for example SOL or AVAX-USD) and try again."
+    )
+    expires = _unknown_until.get(ticker)
+    if expires and expires > now:
+        raise UnknownSymbol(not_found)
+    try:
+        return _quote(ticker)
+    except QuoteUnavailable:
+        # Yahoo not knowing a coin looks the same as a short outage from here.
+        if len(_unknown_until) >= 200:
+            _unknown_until.pop(next(iter(_unknown_until)), None)
+        _unknown_until[ticker] = now + UNKNOWN_TTL
+        raise UnknownSymbol(not_found)
+
+
 def crypto_quote(symbol: str) -> dict:
     key = symbol.strip().upper()
-    if key not in CRYPTO:
-        raise UnknownSymbol(f"Unsupported coin '{symbol}'. Supported: {', '.join(CRYPTO)}.")
-    ticker, name = CRYPTO[key]
-    last, previous, as_of = _quote(ticker)
+    if key in CRYPTO:
+        ticker, name = CRYPTO[key]
+        last, previous, as_of = _quote(ticker)
+    else:
+        ticker = _extra_coin_ticker(key)
+        name = _COIN_NAMES.get(ticker)  # known when typed as BTC-USD
+        last, previous, as_of = _extra_quote(ticker, symbol)
+        key = ticker.removesuffix("-USD")
     return {
         "symbol": key,
         "name": name,

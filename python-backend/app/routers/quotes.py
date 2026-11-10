@@ -1,6 +1,7 @@
 from fastapi import APIRouter, HTTPException
 
 from app.quotes import (
+    InvalidSymbol,
     QuoteUnavailable,
     UnknownSymbol,
     all_crypto,
@@ -15,6 +16,8 @@ router = APIRouter()
 def _call(function, *args):
     try:
         return function(*args)
+    except InvalidSymbol as e:
+        raise HTTPException(status_code=400, detail=str(e))
     except UnknownSymbol as e:
         raise HTTPException(status_code=404, detail=str(e))
     except QuoteUnavailable as e:

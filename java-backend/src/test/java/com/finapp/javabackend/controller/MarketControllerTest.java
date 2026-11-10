@@ -74,7 +74,7 @@ class MarketControllerTest {
         assertEquals(HttpStatus.BAD_GATEWAY, controller.stock("AAPL").getStatusCode());
     }
 
-        @Test
+    @Test
     void forwardsTheCryptoList() {
         server
             .expect(requestTo("http://localhost:5000/api/crypto"))

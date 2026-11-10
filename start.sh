@@ -7,6 +7,7 @@ ROOT="$(cd "$(dirname "$0")" && pwd)"
 COMPOSE="$ROOT/docker-compose.yml"
 VOLUME="${FINAPP_POSTGRES_VOLUME:-finapp_postgres_data}"
 STARTED=0
+AI_PID=
 
 kill_port() {
   local pids
@@ -19,6 +20,12 @@ cleanup() {
   [[ $STARTED == 1 ]] || return 0
   echo "Stopping FinApp..."
   kill_port 8080; kill_port 8081
+  if [[ -n "$AI_PID" ]]; then
+    kill "$AI_PID" 2>/dev/null || true
+    wait "$AI_PID" 2>/dev/null || true
+    # Stopped only the project container and retained downloaded models.
+    docker compose -f "$COMPOSE" stop ollama >/dev/null 2>&1 || true
+  fi
   jobs -p | xargs kill 2>/dev/null || true
   docker compose -f "$COMPOSE" stop db python-backend >/dev/null 2>&1 || true
 }
@@ -103,4 +110,9 @@ cd "$ROOT/frontend"
 FINAPP_API_UPSTREAM=http://127.0.0.1:8081 node express.js 2>&1 | sed -u 's/^/[WEB] /' &
 
 echo "FinApp: http://localhost:8080 - testuser / test123 - press Ctrl+C to stop."
+if [[ "${FINAPP_SKIP_OLLAMA:-0}" != 1 ]]; then
+  # Ran optional model setup independently of the dashboard and database.
+  node "$ROOT/scripts/prepare-ollama.cjs" &
+  AI_PID=$!
+fi
 wait

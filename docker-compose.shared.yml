@@ -32,7 +32,6 @@ services:
     ports:
       - "5000:5000"
     environment:
-      ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY:-}
     networks:
       - finapp-network
 networks:

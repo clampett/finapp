@@ -29,6 +29,7 @@ const views: {
   { id: 'cashflow', label: 'Cash flow', icon: '⇄' },
   { id: 'budgeting', label: 'Budgeting', icon: '▤' },
   { id: 'investing', label: 'Investments', icon: '↗' },
+  { id: 'ai', label: 'AI Coach', icon: '✦' },
 ];
 export default function App() {
   const { theme, selectTheme } = useTheme();
@@ -382,6 +383,7 @@ export default function App() {
           onUpdateProfile={setUserProfile}
           activeTheme={theme}
           onSelectTheme={selectTheme}
+          onNavigate={openView}
         />
       </main>
     </div>

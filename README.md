@@ -214,6 +214,14 @@ These are educational scenarios, not guaranteed outcomes or personalized financi
 
 ---
 
+## AI Coach setup
+
+The Windows and macOS launchers prepare the local model automatically in the background using Docker Desktop. On the first launch, Docker downloads the Ollama image and FinApp downloads the roughly 1 GB `qwen2.5:1.5b` model. Subsequent launches reuse the image and model volume. The dashboard, simulations, and built-in guide are available while downloads run.
+
+The launcher reuses a compatible Ollama server already listening on loopback. Otherwise, it runs FinApp’s CPU-only container and stops that container when FinApp shuts down. The model volume is retained. To skip setup on a particular launch, set `FINAPP_SKIP_OLLAMA=1` in your shell before starting FinApp. No account or API key is required. The separate all-Docker launch does not automatically enable this host-based integration.
+
+Ask FinApp matches questions against a bundled product guide. When local AI is enabled, Ollama receives eligible questions and limited comparison signals. Exact forecast values and account data are excluded from the model request. The Python simulator remains the source of forecast results. Market context reuses the Investments data cache, and historical benchmark volatility can be applied to both cases without changing the expected return.
+
 ## Access Points
 
 | Service | URL |

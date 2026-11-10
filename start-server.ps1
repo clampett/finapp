@@ -6,6 +6,9 @@ $projectRoot = $PSScriptRoot
 Set-Location -LiteralPath $projectRoot
 $javaProcess = $null
 $frontendProcess = $null
+$aiProcess = $null
+$aiOutput = $null
+$aiError = $null
 $javaOutput = $null
 $javaError = $null
 $frontendOutput = $null
@@ -17,7 +20,7 @@ $previousConsoleEncoding = [Console]::OutputEncoding
 $previousOutputEncoding = $OutputEncoding
 $environmentKeys = @('FINAPP_DATABASE_MODE', 'FINAPP_POSTGRES_VOLUME', 'FINAPP_PG_CLIENT_IMAGE',
     'SPRING_DATASOURCE_URL', 'SPRING_DATASOURCE_USERNAME', 'SPRING_DATASOURCE_PASSWORD',
-    'ANTHROPIC_API_KEY', 'PYTHON_SERVICE_URL', 'NO_COLOR', 'SPRING_PROFILES_ACTIVE',
+    'PYTHON_SERVICE_URL', 'NO_COLOR', 'SPRING_PROFILES_ACTIVE',
     'FINAPP_API_UPSTREAM', 'FINAPP_SESSION_SECURE', 'FINAPP_MAIL_MODE')
 $previousEnvironment = @{}
 foreach ($key in $environmentKeys) {
@@ -31,6 +34,8 @@ function Show-ServiceLogs {
     Write-ServiceOutput $javaError 'SPRING' 'Yellow'
     Write-ServiceOutput $frontendOutput 'WEB' 'Green'
     Write-ServiceOutput $frontendError 'WEB' 'Yellow'
+    Write-ServiceOutput $aiOutput 'AI' 'Cyan'
+    Write-ServiceOutput $aiError 'AI' 'Yellow'
 }
 
 try {
@@ -156,6 +161,25 @@ try {
     $frontendOutput = Open-ServiceLog (Join-Path $projectRoot 'java-backend\target\finapp-web.log')
     $frontendError = Open-ServiceLog (Join-Path $projectRoot 'java-backend\target\finapp-web-error.log')
     Write-Host 'FinApp: http://localhost:8080 - press Ctrl+C to stop.' -ForegroundColor Green
+    if ($env:FINAPP_SKIP_OLLAMA -ne '1') {
+        # Started optional downloads alongside FinApp so verification logs remained available.
+        try {
+            $aiStart = @{
+                FilePath               = $frontendStart.FilePath
+                ArgumentList           = 'scripts/prepare-ollama.cjs'
+                WorkingDirectory       = $projectRoot
+                WindowStyle            = 'Hidden'
+                RedirectStandardOutput = Join-Path $projectRoot 'java-backend\target\finapp-ai.log'
+                RedirectStandardError  = Join-Path $projectRoot 'java-backend\target\finapp-ai-error.log'
+                PassThru               = $true
+            }
+            $aiProcess = Start-Process @aiStart
+            $aiOutput = Open-ServiceLog $aiStart.RedirectStandardOutput
+            $aiError = Open-ServiceLog $aiStart.RedirectStandardError
+        } catch {
+            Write-Warning 'Local AI setup could not start. FinApp will use the built-in guide.'
+        }
+    }
     while (!$javaProcess.HasExited -and !$frontendProcess.HasExited) {
         Show-ServiceLogs
         Start-Sleep -Milliseconds 200
@@ -172,7 +196,7 @@ finally {
     # Limited shutdown to this launch's process trees and infrastructure services;
     # database files were retained in the external Docker volume.
     Show-ServiceLogs
-    foreach ($reader in @($javaOutput, $javaError, $frontendOutput, $frontendError)) {
+    foreach ($reader in @($javaOutput, $javaError, $frontendOutput, $frontendError, $aiOutput, $aiError)) {
         if ($null -ne $reader) {
             $reader.Dispose()
         }
@@ -185,6 +209,13 @@ finally {
         Invoke-Native 'taskkill' @('/PID', [string]$javaProcess.Id, '/T', '/F') -Quiet | Out-Null
     }
     Set-Location -LiteralPath $projectRoot
+    if ($null -ne $aiProcess) {
+        if (!$aiProcess.HasExited) {
+            Invoke-Native 'taskkill' @('/PID', [string]$aiProcess.Id, '/T', '/F') -Quiet | Out-Null
+        }
+        # Stopped only FinApp's Compose service and retained its model volume.
+        Invoke-Native 'docker' @('compose', '-f', $composeFile, 'stop', 'ollama') -Quiet | Out-Null
+    }
     if ($infrastructureStarted) {
         Write-Host 'Stopping FinApp infrastructure...' -ForegroundColor Yellow
         Invoke-Native 'docker' (@('compose', '-f', $composeFile, 'stop') + $infrastructureServices) | Out-Null

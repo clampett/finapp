@@ -115,7 +115,7 @@ function Import-FinAppEnvironment([string] $Path) {
     # Parse values as data, never PowerShell commands. Existing shell values win.
     $allowed = @('FINAPP_DATABASE_MODE', 'FINAPP_POSTGRES_VOLUME', 'FINAPP_PG_CLIENT_IMAGE',
         'SPRING_DATASOURCE_URL', 'SPRING_DATASOURCE_USERNAME', 'SPRING_DATASOURCE_PASSWORD',
-        'ANTHROPIC_API_KEY', 'PYTHON_SERVICE_URL')
+        'PYTHON_SERVICE_URL')
     foreach ($line in [System.IO.File]::ReadAllLines($Path, [System.Text.Encoding]::UTF8)) {
         if ($line -match '^\s*(?:#|$)') {
             continue

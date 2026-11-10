@@ -1,0 +1,89 @@
+{
+  "percentiles": {
+    "terms": "p10 p50 p90 downside upside median percentile percentiles range confidence",
+    "question": "How should I read the percentiles in a FinApp forecast?",
+    "guide": "P10 is the 10th percentile: about 10% of modeled outcomes fall below it. P50 is the median: about half are lower and half are higher. P90 is the 90th percentile: about 90% fall below it. The range from P10 to P90 contains the middle 80% of modeled outcomes. These are outcomes at the same forecast year.",
+    "verifiedOnly": true
+  },
+  "markov": {
+    "terms": "markov regime regimes bull bear transition states",
+    "question": "What does the FinApp Markov model do?",
+    "guide": "FinApp’s Markov model allows simulated markets to stay in a stronger or weaker regime for several periods before switching. That persistence can make similar returns cluster in the simulated paths. The model illustrates possible market behavior.",
+    "verifiedOnly": true
+  },
+  "monteCarlo": {
+    "terms": "monte carlo random simulation simulations paths forecasts",
+    "question": "How does FinApp run Monte Carlo and how should a user read it?",
+    "guide": "FinApp starts each simulation path with the same scenario and draws a different sequence of market returns. It updates balances, costs and contributions along each path. Use P50 to see the middle modeled result and P10 to examine a weaker outcome. To see what is sensitive to an assumption, rerun with one input changed."
+  },
+  "inflation": {
+    "terms": "inflation purchasing power real dollars nominal prices",
+    "question": "What does inflation adjustment mean in FinApp?",
+    "guide": "Inflation reduces purchasing power. The coach compares both cases in today's dollars using a fixed 2.5% annual inflation assumption."
+  },
+  "stress": {
+    "terms": "fees fee expense expenses growth market returns stress stress-test compounding",
+    "question": "What can I learn by stress-testing one forecast assumption at a time?",
+    "guide": "The coach changes one input at a time. Higher expense growth can shrink surplus, lower returns can reduce compounding, and fees reduce the returns retained by the portfolio."
+  },
+  "privacy": {
+    "terms": "private privacy offline internet stored data send sharing ollama model",
+    "question": "How does FinApp protect my scenario and chat?",
+    "guide": "FinApp keeps exact results and account records out of Ollama. When local AI is enabled, Ollama receives what you type and may receive a topic label or a limited description of the comparison. Sample data is selected by default. A scenario copy is sent only to the configured FinApp simulator when the user selects it and runs a comparison.",
+    "verifiedOnly": true
+  },
+  "target": {
+    "terms": "target probability chance goal likelihood odds",
+    "question": "How does FinApp calculate the chance of reaching a target?",
+    "guide": "Target probability is the share of modeled paths that finish at or above the target. The coach uses a fixed $500,000 target in today's dollars for both runs.",
+    "verifiedOnly": true
+  },
+  "debt": {
+    "terms": "debt debts loan loans apr avalanche snowball payoff",
+    "question": "What is the difference between avalanche and snowball in FinApp?",
+    "guide": "Avalanche pays the highest APR first. Snowball pays the smallest balance first. Both are available in Debt Optimizer. AI Coach compares wealth forecasts that account for scheduled debt payments.",
+    "verifiedOnly": true
+  },
+  "cashFlow": {
+    "terms": "cash flow surplus budget shortfall deficit cashflow savings",
+    "question": "How does cash flow affect a FinApp forecast?",
+    "guide": "Cash flow is income minus expenses and debt payments. Surplus can fund saving or investing. Under FinApp's forecast rules, a shortfall draws on reserves before adding borrowing."
+  },
+  "graph": {
+    "terms": "node graph canvas connect route routes account checking savings nodes archive",
+    "question": "Where do I edit the accounts and routes that the FinApp coach uses?",
+    "guide": "Open Node Graph to edit scenario nodes and routes. Archived and disabled nodes and their attached routes are excluded from the coach. In AI Coach, choose a new copy of your scenario after editing it. Running a comparison does not edit the saved graph."
+  },
+  "benchmarks": {
+    "terms": "benchmark yahoo finance volatility annualized voo bnd vxus vnq historical historical-volatility adjusted close",
+    "question": "How does FinApp use market benchmark data in a stress test?",
+    "guide": "Applying historical benchmark volatility changes how widely simulated returns vary. FinApp applies the same volatility to both forecasts and leaves their expected return assumptions unchanged. The benchmark history comes from the shared market cache.",
+    "verifiedOnly": true
+  },
+  "assumptions": {
+    "terms": "assumptions tax gross net income take home borrowing baseline salary paycheck",
+    "question": "Which cash-flow assumptions does FinApp use in a scenario comparison?",
+    "guide": "If you enter take-home income, FinApp does not deduct estimated taxes again. The effective tax estimate applies only to gross income. Income growth changes modeled earnings, and expense growth changes modeled expenses.",
+    "verifiedOnly": true
+  },
+  "stockExposure": {
+    "terms": "",
+    "question": "What happens if I use cash to buy more stock?",
+    "guide": "Assume the user pays with cash they already have. The purchase itself leaves starting net worth unchanged before fees. Less cash and more stock means more exposure to future gains and losses. To model the cash-to-stock shift, move the amount from cash to an investment balance in Node Graph and load a fresh scenario copy in AI Coach. Changing share counts in Investments does not change the coach forecast."
+  },
+  "comparison": {
+    "terms": "",
+    "question": "How should I interpret my comparison?",
+    "guide": "The baseline uses the starting assumptions. The stress case changes just one input. Both cases have their own middle outcome, downside outcome, and chance of reaching the goal. Explain the changed input and its effect first. Only explain a metric if it helps answer the question."
+  },
+  "conversation": {
+    "terms": "",
+    "question": "How can you help me with FinApp?",
+    "guide": "FinApp has a Node Graph for financial scenarios, tools for cash flow, budgeting and investments, and an AI Coach that compares one changed forecast assumption at a time. Respond naturally to greetings. If a question is unclear, ask a short clarifying question."
+  },
+  "nextExperiment": {
+    "terms": "",
+    "question": "What would be a useful next experiment in FinApp?",
+    "guide": "Scenario Lab compares a baseline with one changed assumption: higher expense growth, lower market returns, or higher investment fees. Users can change the forecast model and pick a horizon of 5, 10, 20, 30, 40, or 50 years. Users can change expense growth for a scenario in the simulator, then use a fresh copy in AI Coach. Use a similar horizon to isolate an assumption or a shorter horizon to see whether an effect appears sooner. Suggest a single next experiment and describe which displayed metric to inspect. If no comparison has been run, suggest an initial comparison instead."
+  }
+}

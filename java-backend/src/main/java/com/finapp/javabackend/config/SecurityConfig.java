@@ -1,6 +1,9 @@
 package com.finapp.javabackend.config;
 
 import com.finapp.javabackend.repository.UserSessionRepository;
+import java.time.LocalDateTime;
+import java.time.temporal.ChronoUnit;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.http.HttpMethod;
@@ -17,8 +20,15 @@ import org.springframework.security.web.authentication.UsernamePasswordAuthentic
 public class SecurityConfig {
 
     @Bean
-    public SecurityFilterChain filterChain(HttpSecurity http, UserSessionRepository sessions)
-        throws Exception {
+    public SecurityFilterChain filterChain(
+        HttpSecurity http,
+        UserSessionRepository sessions,
+        @Value("${finapp.session.invalidate-on-restart:false}") boolean invalidateOnRestart
+    ) throws Exception {
+        // Captured one startup cutoff at database timestamp precision for local launches.
+        LocalDateTime sessionCutoff = invalidateOnRestart
+            ? LocalDateTime.now().truncatedTo(ChronoUnit.MICROS)
+            : null;
         http
             // Disabled servlet-session persistence so a second JSESSIONID
             // could not restore identity after the FinApp tab key was cleared.
@@ -30,7 +40,7 @@ public class SecurityConfig {
             )
             .requestCache(AbstractHttpConfigurer::disable)
             .addFilterBefore(
-                new SessionCookieAuthenticationFilter(sessions),
+                new SessionCookieAuthenticationFilter(sessions, sessionCutoff),
                 UsernamePasswordAuthenticationFilter.class
             )
             .exceptionHandling(errors ->

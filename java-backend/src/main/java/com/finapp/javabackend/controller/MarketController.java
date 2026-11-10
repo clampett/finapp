@@ -44,6 +44,31 @@ public class MarketController {
         return forward(URI.create(pythonBaseUrl + "/api/stocks/" + encoded));
     }
 
+    @GetMapping("/crypto")
+    public ResponseEntity<String> cryptoPrices() {
+        return forward(URI.create(pythonBaseUrl + "/api/crypto"));
+    }
+
+    @GetMapping("/crypto/{symbol}")
+    public ResponseEntity<String> cryptoPrice(@PathVariable String symbol) {
+        return forward(URI.create(pythonBaseUrl + "/api/crypto/" + encode(symbol)));
+    }
+
+    @GetMapping("/currencies")
+    public ResponseEntity<String> currencyRates() {
+        return forward(URI.create(pythonBaseUrl + "/api/currencies"));
+    }
+
+    @GetMapping("/currencies/{code}")
+    public ResponseEntity<String> currencyRate(@PathVariable String code) {
+        return forward(URI.create(pythonBaseUrl + "/api/currencies/" + encode(code)));
+    }
+
+    private String encode(String value) {
+        // Encoded so a path value can never change which Python route is called.
+        return UriUtils.encodePathSegment(value, StandardCharsets.UTF_8);
+    }
+
     private ResponseEntity<String> forward(URI uri) {
         try {
             ResponseEntity<String> response = restTemplate.getForEntity(uri, String.class);

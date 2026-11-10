@@ -21,6 +21,7 @@ export const coachPresets = {
 } as const;
 export type CoachPreset = keyof typeof coachPresets;
 
+// Supplied synthetic inputs so the coach opened without reading the user's graph.
 export const sampleScenario: GraphData = {
   nodes: [
     {
@@ -64,6 +65,7 @@ export function prepareCoachScenario(graph: GraphData): GraphData {
 }
 
 export function coachChecks(graph: GraphData): string[] {
+  // Derived the readiness checks from the same budget totals used by the dashboard.
   const { income, surplus } = totals(graph);
   const checks: string[] = [];
   if (!income)
@@ -97,6 +99,7 @@ export function coachInputs(
   // Replaced workspace IDs and names with temporary labels before sending model inputs.
   const ids = new Map(graph.nodes.map(({ id }, index) => [id, `coach-node-${index + 1}`]));
   // Kept the scope to graph inputs. Excluded stock holdings, ledger records, and account identity.
+  // Converted scenario percentages to fractions for the Python simulation API.
   const baseline = {
     sim_type: model,
     years,
@@ -212,10 +215,14 @@ export async function runCoachComparison(
 
 export type CoachTopic = keyof typeof helpTopics;
 
-const topicIds = Object.keys(helpTopics) as CoachTopic[];
+// Excluded the internal experiment prompt because it has no searchable terms.
+const topicIds = (Object.keys(helpTopics) as CoachTopic[]).filter((id) => helpTopics[id].terms);
 const tokens = (text: string) => text.toLowerCase().match(/[a-z0-9]+/g) ?? [];
+// Tokenized each topic into unique terms so repeated words did not inflate its score.
 const termSets = topicIds.map((id) => new Set(tokens(helpTopics[id].terms)));
+// Assigned one shared matrix column to each distinct term.
 const vocabulary = [...new Set(termSets.flatMap((terms) => [...terms]))];
+// Weighted rare terms more heavily using smoothed inverse document frequency.
 const weights = vocabulary.map(
   (term) =>
     1 + Math.log((1 + topicIds.length) / (1 + termSets.filter((terms) => terms.has(term)).length)),
@@ -223,18 +230,23 @@ const weights = vocabulary.map(
 
 // Normalized each weighted row so cosine ranking did not favor longer help topics.
 function unitRow(terms: Set<string>): number[] {
+  // Encoded present terms with their weights and absent terms with zeros.
   const row = vocabulary.map((term, index) => (terms.has(term) ? weights[index] : 0));
+  // Scaled each nonzero row to unit length and preserved the zero row for unknown text.
   const norm = Math.hypot(...row);
   return norm ? row.map((value) => value / norm) : row;
 }
+// Precomputed the normalized topic rows once per module load.
 const topicMatrix = termSets.map(unitRow);
 
 export function matchCoachTopic(question: string): CoachTopic | undefined {
+  // Projected the question into the same weighted vocabulary as the topic rows.
   const query = unitRow(new Set(tokens(question)));
   // Multiplied the topic matrix by the normalized query vector and rejected weak matches.
   const scores = topicMatrix.map((row) =>
     row.reduce((score, value, index) => score + value * query[index], 0),
   );
+  // Selected the strongest match only when its cosine score cleared the minimum.
   const best = Math.max(...scores);
   return best >= 0.24 ? topicIds[scores.indexOf(best)] : undefined;
 }
@@ -283,6 +295,7 @@ function comparisonGuidance(comparison: CoachComparison | null, question: string
     return 'Start with a question you want the forecast to answer, like “Would my plan still reach its target if expenses grew faster?” Pick a horizon that matches the goal and run one stress test. Then check whether the median, downside (P10), or target chance changed enough to matter to that goal.';
   }
   const { baseline, stress, label, preset, years } = comparison;
+  // Answered interpretation questions from the current table even when Ollama was unavailable.
   if (readsExistingResult(question)) {
     if (
       /\b(downside|p10|weaker outcome)\b/i.test(question) ||
@@ -314,10 +327,17 @@ function asksForTradeAdvice(question: string): boolean {
   );
 }
 
+function asksAboutBuyingMoreStock(question: string): boolean {
+  return /\b(?:buy(?:ing)?|add(?:ing)?)\s+(?:more|extra|additional)\s+(?:[\d,.]+\s+)?(?:stocks?|shares?)\b|\binvest(?:ing)?\s+more\s+in\s+stocks?\b/i.test(
+    question,
+  );
+}
+
 export function coachTopicForModel(question: string): CoachTopic | undefined {
   if (
     asksAboutComparison(question) ||
     asksForTradeAdvice(question) ||
+    asksAboutBuyingMoreStock(question) ||
     asksForNextStep(question) ||
     isGreeting(question)
   )
@@ -327,40 +347,78 @@ export function coachTopicForModel(question: string): CoachTopic | undefined {
   return topic && !('verifiedOnly' in helpTopics[topic]) ? topic : undefined;
 }
 
-interface CoachModelRequest {
-  topic: CoachTopic;
-  question: string;
-  context?: {
-    preset: CoachPreset;
-    years: number;
-    downsideCrossedZero: boolean;
-    targetChanceFell: boolean;
+type ComparisonContext = {
+  preset: CoachPreset;
+  years: number;
+  downsideCrossedZero: boolean;
+  targetChanceFell: boolean;
+};
+
+type CoachModelRequest =
+  | { topic: Exclude<CoachTopic, 'conversation'>; question: string; context?: ComparisonContext }
+  | {
+      topic: 'conversation';
+      question: string;
+      context?: { subject: CoachTopic; comparison?: ComparisonContext };
+    };
+
+function asksForClarification(question: string): boolean {
+  return /^(?:i do(?:n['’]?t| not) understand(?: (?:this|that|it))?|(?:can you )?explain (?:this|that|it|more)(?: (?:again|in detail|in simpler terms))?|what does (?:this|that|it) mean|(?:can you )?give me an example)[?!. ]*$/i.test(
+    question.trim(),
+  );
+}
+
+export function coachConversationSubject(
+  question: string,
+  previousSubject?: CoachTopic,
+  comparison: CoachComparison | null = null,
+): CoachTopic | undefined {
+  // Carried forward the last substantive topic without forwarding previous messages or answers.
+  if (asksForClarification(question))
+    return previousSubject ?? (comparison ? 'comparison' : undefined);
+  if (asksAboutBuyingMoreStock(question)) return 'stockExposure';
+  if (asksAboutComparison(question) || readsExistingResult(question)) return 'comparison';
+  if (asksForNextStep(question)) return 'nextExperiment';
+  return matchCoachTopic(question);
+}
+
+function comparisonContext(comparison: CoachComparison): ComparisonContext {
+  return {
+    preset: comparison.preset,
+    years: comparison.years,
+    downsideCrossedZero: comparison.baseline.downside >= 0 && comparison.stress.downside < 0,
+    targetChanceFell: comparison.stress.targetChance < comparison.baseline.targetChance,
   };
 }
 
 export function coachRequestForQuestion(
   question: string,
   comparison: CoachComparison | null,
-): CoachModelRequest | undefined {
-  if (asksForTradeAdvice(question) || isGreeting(question)) return undefined;
+  previousSubject?: CoachTopic,
+): CoachModelRequest {
   if (asksForNextStep(question) || readsExistingResult(question)) {
     // Shared only qualitative result signals and the experiment settings with Ollama.
     return {
       topic: 'nextExperiment',
       question,
-      context: comparison
-        ? {
-            preset: comparison.preset,
-            years: comparison.years,
-            downsideCrossedZero:
-              comparison.baseline.downside >= 0 && comparison.stress.downside < 0,
-            targetChanceFell: comparison.stress.targetChance < comparison.baseline.targetChance,
-          }
-        : undefined,
+      context: comparison ? comparisonContext(comparison) : undefined,
     };
   }
   const topic = coachTopicForModel(question);
-  return topic ? { topic, question } : undefined;
+  if (topic && topic !== 'conversation') return { topic, question };
+  // Routed greetings, verified topics, and unmatched questions through local inference first.
+  const subject = coachConversationSubject(question, previousSubject, comparison);
+  return {
+    topic: 'conversation',
+    question,
+    context: subject
+      ? {
+          subject,
+          comparison:
+            subject === 'comparison' && comparison ? comparisonContext(comparison) : undefined,
+        }
+      : undefined,
+  };
 }
 
 export async function liveCoachReply(input: CoachModelRequest, signal: AbortSignal) {
@@ -376,9 +434,28 @@ export async function liveCoachReply(input: CoachModelRequest, signal: AbortSign
   return typeof body.answer === 'string' && body.answer ? body.answer : null;
 }
 
-export function coachReply(question: string, comparison: CoachComparison | null): string {
+export function coachReply(
+  question: string,
+  comparison: CoachComparison | null,
+  previousSubject?: CoachTopic,
+): string {
   if (asksForTradeAdvice(question)) {
     return 'FinApp can help you compare scenarios and understand risk. It cannot recommend what to buy or sell or promise a return.';
+  }
+  if (asksForClarification(question)) {
+    const subject = coachConversationSubject(question, previousSubject, comparison);
+    if (subject === 'stockExposure') {
+      return 'Say you have $100 in cash and use $20 to buy stock. You now have $80 in cash and $20 in stock. You still have $100 before fees. If the stock falls to $15, your total falls to $95. In FinApp, you can try that same $20 shift between cash and investments in Node Graph.';
+    }
+    if (subject === 'comparison') {
+      if (!comparison) return coachReply('What changed in my comparison?', null);
+      return `${coachReply('What changed in my comparison?', comparison)}\n\nP50 is the middle modeled result. P10 shows a weaker outcome, with about one in ten modeled paths ending below it. The target chance tells you how often each case reached the goal.`;
+    }
+    return subject ? helpTopics[subject].guide : 'Which part should I explain in more detail?';
+  }
+  // Explained the exposure change using the graph balances actually read by AI Coach.
+  if (asksAboutBuyingMoreStock(question)) {
+    return 'If you use cash to buy more stock, your starting net worth stays the same before fees, but more of your money moves with the market. Gains and losses can both get larger.\n\n**Try a what-if.** In Node Graph, move the same amount from a cash balance to an investment balance. Load a fresh scenario copy in AI Coach and rerun with the same settings. Compare the baseline P10 before and after the change to see what happened to the modeled downside. AI Coach uses the graph balances, so changing shares in Investments won’t update this comparison.';
   }
   if (isGreeting(question)) {
     return 'Hey! I’m here to help you make sense of your FinApp forecasts. Want to pick a stress test or figure out what to do with a result?';
@@ -389,13 +466,18 @@ export function coachReply(question: string, comparison: CoachComparison | null)
   if (asksAboutComparison(question)) {
     if (!comparison)
       return 'Run a comparison first. Then ask what changed to see the effect on the median and downside outcomes.';
+    // Calculated exact differences locally from the validated baseline and stress results.
     const delta = comparison.stress.median - comparison.baseline.median;
     const points = (comparison.stress.targetChance - comparison.baseline.targetChance) * 100;
     const median =
       delta === 0
         ? 'stayed the same'
         : `was ${money(Math.abs(delta))} ${delta < 0 ? 'lower' : 'higher'}`;
-    return `After ${comparison.years} years, median ending net worth ${median} under “${comparison.label}.” The stressed downside (P10) was ${money(comparison.stress.downside)}. The modeled target chance changed by ${points.toFixed(1)} percentage points.`;
+    const target =
+      points === 0
+        ? 'stayed the same'
+        : `${points < 0 ? 'fell' : 'rose'} by ${Math.abs(points).toFixed(1)} percentage points`;
+    return `After ${comparison.years} years, median ending net worth ${median} under “${comparison.label}.” The stressed downside (P10) was ${money(comparison.stress.downside)}. The modeled target chance ${target}.`;
   }
   const topic = matchCoachTopic(question);
   if (topic === 'percentiles') {

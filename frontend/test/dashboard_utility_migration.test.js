@@ -189,7 +189,7 @@ test('F10-T2-3 (Boundary): BudgetControls.tsx eliminates bespoke budget-panel cl
 });
 
 test('F10-T2-4 (Boundary): GraphWorkspace.tsx eliminates bespoke workspace-content and scenario-layout classes', () => {
-  const tsx = readTsx('GraphWorkspace.tsx');
+  const tsx = ['GraphWorkspace.tsx', 'workspace/WorkspaceIntro.tsx', 'workspace/WorkspaceAccountTable.tsx', 'workspace/WorkspaceCanvas.tsx'].map(readTsx).join('\n');
   assert.doesNotMatch(tsx, /className=["']workspace-content["']/);
   assert.doesNotMatch(tsx, /className=["']scenario-layout["']/);
   assert.doesNotMatch(tsx, /className=["']scenario-main["']/);
@@ -365,7 +365,7 @@ test('F9-F10-T3-1 (Combination): Active view switching and canvas persistence co
 });
 
 test('F9-F11-T3-2 (Combination): Simulation modal launcher triggers from archetype graph and renders simulation lab', () => {
-  const graphTsx = readTsx('GraphWorkspace.tsx');
+  const graphTsx = readTsx('workspace/WorkspaceForecasts.tsx');
   assert.match(graphTsx, /<SimulationModal/);
 });
 

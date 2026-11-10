@@ -7,6 +7,7 @@ const composeFile = resolve(__dirname, '../docker-compose.yml');
 
 async function readModels(request, signal) {
   try {
+    // Checked the loopback model list before creating another runtime.
     const response = await request(`${ollamaOrigin}/api/tags`, {
       signal: AbortSignal.any([signal, AbortSignal.timeout(1500)]),
       redirect: 'error',
@@ -21,6 +22,7 @@ async function readModels(request, signal) {
 
 function startContainer(signal) {
   return new Promise((resolveStart, reject) => {
+    // Started only the optional AI service and reused the cached image when available.
     const child = spawn(
       'docker',
       ['compose', '-f', composeFile, 'up', '-d', '--pull', 'missing', 'ollama'],
@@ -70,6 +72,7 @@ async function prepareOllama({
     if (!response.ok || (await response.json()).status !== 'success') {
       throw new Error('Ollama could not download the model.');
     }
+    // Confirmed the exact model was available before reporting that setup had completed.
     const updated = await readModels(request, signal);
     if (!updated?.some((item) => item?.name === coachModel)) {
       throw new Error('The downloaded model was not available.');

@@ -29,7 +29,7 @@
   "privacy": {
     "terms": "private privacy offline internet stored data send sharing ollama model",
     "question": "How does FinApp protect my scenario and chat?",
-    "guide": "FinApp keeps exact results and account records out of Ollama. When local AI is enabled, eligible questions and a limited description of the current comparison can be processed by Ollama on the same machine. Sample data is selected by default. A scenario copy is sent only to the configured FinApp simulator when the user selects it and runs a comparison.",
+    "guide": "FinApp keeps exact results and account records out of Ollama. When local AI is enabled, Ollama receives what you type and may receive a topic label or a limited description of the comparison. Sample data is selected by default. A scenario copy is sent only to the configured FinApp simulator when the user selects it and runs a comparison.",
     "verifiedOnly": true
   },
   "target": {
@@ -65,6 +65,21 @@
     "question": "Which cash-flow assumptions does FinApp use in a scenario comparison?",
     "guide": "If you enter take-home income, FinApp does not deduct estimated taxes again. The effective tax estimate applies only to gross income. Income growth changes modeled earnings, and expense growth changes modeled expenses.",
     "verifiedOnly": true
+  },
+  "stockExposure": {
+    "terms": "",
+    "question": "What happens if I use cash to buy more stock?",
+    "guide": "Assume the user pays with cash they already have. The purchase itself leaves starting net worth unchanged before fees. Less cash and more stock means more exposure to future gains and losses. To model the cash-to-stock shift, move the amount from cash to an investment balance in Node Graph and load a fresh scenario copy in AI Coach. Changing share counts in Investments does not change the coach forecast."
+  },
+  "comparison": {
+    "terms": "",
+    "question": "How should I interpret my comparison?",
+    "guide": "The baseline uses the starting assumptions. The stress case changes just one input. Both cases have their own middle outcome, downside outcome, and chance of reaching the goal. Explain the changed input and its effect first. Only explain a metric if it helps answer the question."
+  },
+  "conversation": {
+    "terms": "",
+    "question": "How can you help me with FinApp?",
+    "guide": "FinApp has a Node Graph for financial scenarios, tools for cash flow, budgeting and investments, and an AI Coach that compares one changed forecast assumption at a time. Respond naturally to greetings. If a question is unclear, ask a short clarifying question."
   },
   "nextExperiment": {
     "terms": "",

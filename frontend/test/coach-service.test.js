@@ -10,6 +10,33 @@ const success = () =>
     message: { content: 'Explanation from Ollama.' },
   });
 
+test('Ollama explained a follow-up using a reviewed topic without receiving the transcript', async () => {
+  const question = 'i dont understand this';
+  const service = createCoachService({
+    request: async (url, options) => {
+      if (url.endsWith('/api/tags')) return ready();
+      const { messages, format } = JSON.parse(options.body);
+      assert.equal(format, undefined);
+      assert.equal(messages.length, 4);
+      assert.match(messages[0].content, /leaves starting net worth unchanged before fees/);
+      assert.match(messages[2].content, /stays the same at purchase/);
+      assert.equal(messages.at(-1).content.split('\n')[0], question);
+      return Response.json({
+        done: true,
+        done_reason: 'stop',
+        message: { content: 'Your net worth stays the same at the time of purchase.' },
+      });
+    },
+  });
+  assert.equal(await service.explain('conversation', question, { subject: 'unknown' }), null);
+  assert.equal(
+    await service.explain('conversation', question, { subject: 'stockExposure', transcript: [] }),
+    null,
+  );
+  const result = await service.explain('conversation', question, { subject: 'stockExposure' });
+  assert.equal(result.answer, 'Your net worth stays the same at the time of purchase.');
+});
+
 test('local coach rejected arbitrary topics, grounded its prompts, and shared cached answers', async () => {
   let calls = 0;
   const service = createCoachService({
@@ -35,6 +62,46 @@ test('local coach rejected arbitrary topics, grounded its prompts, and shared ca
   assert.deepEqual(answers[0], answers[1]);
   assert.equal((await service.explain('stress')).cached, true);
   assert.equal(calls, 1);
+});
+
+test('rejected invented comparison figures and stock example amounts', async () => {
+  let time = 0;
+  const replies = [
+    'The target chance fell to 20%.',
+    'Your total becomes $120.',
+    'The total stays the same before fees.',
+  ];
+  const service = createCoachService({
+    now: () => time,
+    request: async (url) => {
+      if (url.endsWith('/api/tags')) return ready();
+      return Response.json({
+        done: true,
+        done_reason: 'stop',
+        message: { content: replies.shift() },
+      });
+    },
+  });
+  assert.equal(
+    await service.explain('conversation', 'What changed?', {
+      subject: 'comparison',
+      comparison: {
+        preset: 'returns',
+        years: 40,
+        downsideCrossedZero: false,
+        targetChanceFell: true,
+      },
+    }),
+    null,
+  );
+  time += 5000;
+  const stockContext = { subject: 'stockExposure' };
+  assert.equal(await service.explain('conversation', 'Explain this.', stockContext), null);
+  time += 5000;
+  assert.equal(
+    (await service.explain('conversation', 'Explain this.', stockContext)).answer,
+    'The total stays the same before fees.',
+  );
 });
 
 test('local coach distinguished a missing model from an unreachable runtime', async () => {
@@ -206,7 +273,7 @@ test('rendered model-selected illustrations with verified Monte Carlo and inflat
       });
     },
   });
-  assert.equal((await service.status()).contract, 3);
+  assert.equal((await service.status()).contract, 4);
   const monteCarlo = await service.explain(
     'monteCarlo',
     'Explain two households with the same budget.',
@@ -218,4 +285,52 @@ test('rendered model-selected illustrations with verified Monte Carlo and inflat
   const inflation = await service.explain('inflation', 'Give me a hypothetical example.');
   assert.match(inflation.answer, /\$100\.00 received in 1 year/);
   assert.match(inflation.answer, /\$97\.56/);
+});
+
+test('selected a new stress test at the same horizon for an open-ended follow-up', async () => {
+  const service = createCoachService({
+    request: async (url, options) => {
+      if (url.endsWith('/api/tags')) return ready();
+      const { format } = JSON.parse(options.body);
+      assert.deepEqual(format.properties.horizon.enum, [40]);
+      assert.deepEqual(format.properties.experiment.enum, ['returns', 'fees']);
+      return Response.json({
+        done: true,
+        done_reason: 'stop',
+        message: {
+          content: JSON.stringify({ horizon: 40, experiment: 'returns', metric: 'downside' }),
+        },
+      });
+    },
+  });
+  const result = await service.explain('nextExperiment', 'What should I try next?', {
+    preset: 'expenses',
+    years: 40,
+    downsideCrossedZero: true,
+    targetChanceFell: true,
+  });
+  assert.match(result.answer, /Try this.*40 years.*Lower market returns/);
+});
+
+test('used the existing run when the suggested horizon and stress test matched it', async () => {
+  const service = createCoachService({
+    request: async (url) =>
+      url.endsWith('/api/tags')
+        ? ready()
+        : Response.json({
+            done: true,
+            done_reason: 'stop',
+            message: {
+              content: JSON.stringify({ horizon: 50, experiment: 'expenses', metric: 'downside' }),
+            },
+          }),
+  });
+  const result = await service.explain(
+    'nextExperiment',
+    'What should I try next if I want to keep the 50-year horizon and isolate expense growth?',
+    { preset: 'expenses', years: 50, downsideCrossedZero: true, targetChanceFell: true },
+  );
+  assert.match(result.answer, /Already set.*50 years and Higher expense growth/);
+  assert.match(result.answer, /values already in your table/);
+  assert.doesNotMatch(result.answer, /run the comparison/);
 });

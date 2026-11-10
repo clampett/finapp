@@ -4,6 +4,7 @@ import { API_BASE, dollars, money } from '../finance';
 import type { GraphData } from '../finance';
 import {
   coachChecks,
+  coachConversationSubject,
   coachInputs,
   coachModels,
   coachPresets,
@@ -14,12 +15,15 @@ import {
   runCoachComparison,
   sampleScenario,
 } from '../scenarioCoach';
-import type { CoachComparison, CoachModel, CoachPreset } from '../scenarioCoach';
+import type { CoachComparison, CoachModel, CoachPreset, CoachTopic } from '../scenarioCoach';
+
+type ChatEntry = { question: string; answer: string; source: string; subject?: CoachTopic };
 
 const panel = 'min-w-0 rounded-xl border border-border bg-surface p-5 sm:p-6';
 const field = 'w-full rounded-lg border border-border bg-raised px-3 py-2 text-sm text-text';
 const secondary =
   'cursor-pointer rounded-lg border border-border bg-raised px-3 py-2 text-sm text-text hover:bg-hover-bg disabled:opacity-50';
+// Exposed common prompts for experiment planning, result interpretation, and model explanations.
 const prompts = [
   'What should I try next?',
   'What changed in my comparison?',
@@ -42,7 +46,7 @@ export function ScenarioCoach({
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
   const [question, setQuestion] = useState('');
-  const [chat, setChat] = useState<{ question: string; answer: string; source: string }[]>([]);
+  const [chat, setChat] = useState<ChatEntry[]>([]);
   const [localState, setLocalState] = useState<
     'checking' | 'ready' | 'model_missing' | 'offline' | 'outdated'
   >('checking');
@@ -52,7 +56,7 @@ export function ScenarioCoach({
     volatility: number;
     date: string;
   } | null>(null);
-  const [liveEnabled, setLiveEnabled] = useState(false);
+  const [liveEnabled, setLiveEnabled] = useState(true);
   const [asking, setAsking] = useState(false);
   const chatRequest = useRef<AbortController | null>(null);
   const request = useRef<AbortController | null>(null);
@@ -60,13 +64,14 @@ export function ScenarioCoach({
 
   useEffect(() => {
     const controller = new AbortController();
+    // Bounded the status request and bypassed cached responses after a local restart.
     fetch('/api/v1/coach/status', {
       signal: AbortSignal.any([controller.signal, AbortSignal.timeout(2500)]),
       cache: 'no-store',
     })
       .then(async (response) => {
         const status = response.ok ? await response.json() : null;
-        const state = status && status.contract !== 3 ? 'outdated' : status?.state;
+        const state = status && status.contract !== 4 ? 'outdated' : status?.state;
         if (controller.signal.aborted) return;
         // Rejected older gateway responses before enabling local inference.
         setLocalState(
@@ -74,7 +79,6 @@ export function ScenarioCoach({
             ? state
             : 'offline',
         );
-        setLiveEnabled(state === 'ready');
       })
       .catch(() => {
         if (!controller.signal.aborted) setLocalState('offline');
@@ -115,6 +119,7 @@ export function ScenarioCoach({
   }
 
   function resetChat() {
+    // Cancelled pending inference so an older answer could not reappear after clearing chat.
     chatRequest.current?.abort();
     chatRequest.current = null;
     setAsking(false);
@@ -128,6 +133,7 @@ export function ScenarioCoach({
     setBusy(true);
     const controller = new AbortController();
     request.current = controller;
+    // Applied the same deadline to the two forecasts so partial comparisons were never shown.
     const timeout = setTimeout(() => controller.abort(), 15000);
     try {
       const next = await runCoachComparison(inputs, coachPresets[preset].title, controller.signal);
@@ -153,19 +159,29 @@ export function ScenarioCoach({
     const text = value.trim();
     if (!text || chatRequest.current) return;
     setQuestion('');
-    let answer = coachReply(text, result);
+    const previousSubject = chat.findLast((entry) => entry.subject)?.subject;
+    const subject = coachConversationSubject(text, previousSubject, result);
+    let answer: string | null = null;
     let source = 'FinApp guide';
-    // Kept numeric comparison summaries in the browser and requested local coaching for eligible prompts.
-    const input = liveEnabled ? coachRequestForQuestion(text, result) : undefined;
+    // Tried Ollama first while local AI was enabled, even if the status check was pending.
+    const input =
+      liveEnabled && localState !== 'outdated'
+        ? coachRequestForQuestion(text, result, previousSubject)
+        : undefined;
     if (input) {
       const controller = new AbortController();
       chatRequest.current = controller;
       setAsking(true);
       try {
         const generated = await liveCoachReply(input, controller.signal);
+        // Preserved the built-in answer when the gateway rejected a model response.
         if (generated) {
           answer = generated;
-          source = 'Local AI · FinApp guide';
+          source = 'Local AI · Ollama';
+          // Appended verified figures in the browser without sending them to the model.
+          if (input.topic === 'conversation' && subject === 'comparison' && result) {
+            answer += `\n\n**Your comparison.** ${coachReply('What changed in my comparison?', result)}`;
+          }
         } else source = 'FinApp guide · local answer unavailable';
       } catch {
         source = 'FinApp guide · local answer unavailable';
@@ -178,7 +194,11 @@ export function ScenarioCoach({
       if (controller.signal.aborted) return;
     }
     // Kept messages in memory and limited the transcript to the latest exchanges.
-    setChat((current) => [...current.slice(-19), { question: text, answer, source }]);
+    const reply = answer ?? coachReply(text, result, previousSubject);
+    setChat((current) => [
+      ...current.slice(-19),
+      { question: text, answer: reply, source, subject },
+    ]);
   }
 
   function submitQuestion(event: FormEvent<HTMLFormElement>) {
@@ -369,9 +389,37 @@ export function ScenarioCoach({
             )}
           </div>
           <p className="mt-2 text-sm text-muted">
-            Ask about forecast terms or the comparison on this screen. Live AI explains general
-            topics, and your results are explained privately in this tab.
+            Ask about a forecast, your comparison, or how to use FinApp. Ollama answers first when
+            local AI is enabled. The FinApp guide is available as a fallback.
           </p>
+          <details className="mb-3 rounded-lg border border-border bg-raised px-3 py-2 text-sm">
+            <summary className="cursor-pointer font-medium text-text">
+              How to read coach replies
+            </summary>
+            <dl className="mb-1 mt-2 space-y-2 text-muted">
+              <div>
+                <dt className="font-semibold text-text">Try this</dt>
+                <dd className="m-0">
+                  Shows which time horizon and stress test to choose for your next comparison.
+                </dd>
+              </div>
+              <div>
+                <dt className="font-semibold text-text">Already set</dt>
+                <dd className="m-0">
+                  The time horizon and stress test you asked for match a comparison you’ve already
+                  run. Use the results in the table for that setup.
+                </dd>
+              </div>
+              <div>
+                <dt className="font-semibold text-text">Watch this metric</dt>
+                <dd className="m-0">
+                  Points to a row in the results table. Read across it to compare the baseline and
+                  stress case. For example, a lower P10 means the downside got worse under the
+                  stress assumption.
+                </dd>
+              </div>
+            </dl>
+          </details>
           <div
             ref={thread}
             role="log"
@@ -478,8 +526,8 @@ export function ScenarioCoach({
               </div>
             )}
             <p className="mb-0 mt-1">
-              Ollama processes eligible questions on this computer. FinApp shares limited comparison
-              signals for guidance. It never attaches account balances or exact forecast results.
+              Ollama processes questions on this computer. FinApp shares limited comparison signals
+              for guidance. It never attaches account balances or exact forecast results.
             </p>
           </div>
         </section>
@@ -545,6 +593,7 @@ function CoachMarket({
           const closes: unknown[] = Array.isArray(data.history)
             ? data.history.slice(-21).map((point: { close?: unknown } | null) => point?.close)
             : [];
+          // Accepted volatility only within the simulator's supported range of 0% to 100%.
           setMarket({
             symbol: benchmark,
             price: data.latest_price,
@@ -575,9 +624,11 @@ function CoachMarket({
     return () => controller.abort();
   }, [benchmark]);
   const closes = market?.closes ?? [];
+  // Calculated the 20-session change from 21 closes, including the starting observation.
   const change = closes.length === 21 ? (closes[20] / closes[0] - 1) * 100 : null;
   const low = Math.min(...closes);
   const spread = Math.max(...closes) - low || 1;
+  // Scaled the closes into SVG coordinates without changing the displayed market values.
   const line = closes
     .map(
       (close, index) =>
@@ -690,6 +741,7 @@ function CoachMarket({
 }
 
 function Comparison({ result }: { result: CoachComparison }) {
+  // Presented both runs at the same horizon and kept percentages separate from dollar values.
   const delta = result.stress.median - result.baseline.median;
   const rows = [
     ['Median ending net worth (P50)', money(result.baseline.median), money(result.stress.median)],

@@ -44,7 +44,7 @@ app.use(
   }),
 );
 
-// Grounded eligible questions in reviewed topics and kept inference on the local runtime.
+// Grounded coach questions in reviewed topics and kept inference on the local runtime.
 const coach = createCoachService();
 app.get('/api/v1/coach/status', async (_req, res) => {
   res.set('Cache-Control', 'no-store').json(await coach.status());

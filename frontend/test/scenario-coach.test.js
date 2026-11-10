@@ -187,5 +187,47 @@ test('a practical follow-up used the result to suggest another experiment', () =
     question,
     context: { preset: 'expenses', years: 50, downsideCrossedZero: true, targetChanceFell: true },
   });
-  assert.equal(coach.coachRequestForQuestion('What changed in my comparison?', result), undefined);
+  assert.deepEqual(
+    JSON.parse(
+      JSON.stringify(coach.coachRequestForQuestion('What changed in my comparison?', result)),
+    ),
+    {
+      topic: 'conversation',
+      question: 'What changed in my comparison?',
+      context: {
+        subject: 'comparison',
+        comparison: {
+          preset: 'expenses',
+          years: 50,
+          downsideCrossedZero: true,
+          targetChanceFell: true,
+        },
+      },
+    },
+  );
+  assert.match(
+    coach.coachReply('explain this in detail', result, 'comparison'),
+    /\$50 lower.*P10.*target chance/s,
+  );
+  assert.equal(coach.coachConversationSubject('hello', 'comparison', result), undefined);
+  assert.equal(coach.coachRequestForQuestion('hello', result).topic, 'conversation');
+});
+
+test('explained extra stock exposure using the scenario balances that the coach reads', () => {
+  const coach = loadCoach();
+  const question = 'what happens if i buy more stock';
+  const reply = coach.coachReply(question, null);
+  assert.match(reply, /starting net worth stays the same before fees/);
+  assert.match(reply, /Node Graph.*cash balance.*investment balance/);
+  assert.match(reply, /baseline P10/);
+  assert.match(reply, /changing shares in Investments won’t update this comparison/);
+  assert.equal(coach.coachRequestForQuestion(question, null).context.subject, 'stockExposure');
+  const followUp = 'i dont understand this';
+  assert.equal(
+    coach.coachRequestForQuestion(followUp, null, 'stockExposure').context.subject,
+    'stockExposure',
+  );
+  assert.match(coach.coachReply(followUp, null, 'stockExposure'), /\$80 in cash and \$20 in stock/);
+  assert.equal(coach.coachRequestForQuestion('What is P10?', null).context.subject, 'percentiles');
+  assert.equal(coach.coachRequestForQuestion('banana sandwich', null).topic, 'conversation');
 });

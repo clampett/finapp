@@ -1,5 +1,10 @@
 package com.finapp.javabackend.controller;
 
+import com.google.api.client.googleapis.auth.oauth2.GoogleIdToken;
+import com.google.api.client.googleapis.auth.oauth2.GoogleIdTokenVerifier;
+import com.google.api.client.http.javanet.NetHttpTransport;
+import com.google.api.client.json.gson.GsonFactory;
+import java.util.Collections;
 import com.finapp.javabackend.config.SessionUser;
 import com.finapp.javabackend.dto.AuthRequest;
 import com.finapp.javabackend.dto.AuthResponse;
@@ -33,6 +38,9 @@ import org.springframework.web.bind.annotation.*;
 @RequestMapping("/api/v1/auth")
 public class AuthController {
 
+    @Value("${google.client.id:}")
+    private String googleClientId;
+
     @Value("${finapp.session.secure:false}")
     private boolean secureSessionCookie;
 
@@ -53,6 +61,116 @@ public class AuthController {
 
     @Autowired(required = false)
     private StockService stockService;
+
+    @PostMapping("/google")
+@Transactional
+public ResponseEntity<AuthResponse> googleAuth(
+    @RequestBody Map<String, String> request,
+    HttpServletRequest httpRequest
+) {
+    String idTokenString = request.get("token");
+    if (idTokenString == null || idTokenString.trim().isEmpty()) {
+        return ResponseEntity.badRequest().body(
+            new AuthResponse("Google ID token is required", null)
+        );
+    }
+
+    try {
+        GoogleIdTokenVerifier verifier = new GoogleIdTokenVerifier.Builder(
+                new NetHttpTransport(),
+                new GsonFactory()
+        )
+        .setAudience(Collections.singletonList(googleClientId))
+        .build();
+
+        GoogleIdToken idToken = verifier.verify(idTokenString);
+        if (idToken == null) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(
+                new AuthResponse("Invalid or expired Google token", null)
+            );
+        }
+
+        GoogleIdToken.Payload payload = idToken.getPayload();
+        String email = payload.getEmail();
+        Boolean emailVerified = payload.getEmailVerified();
+
+        if (email == null || !Boolean.TRUE.equals(emailVerified)) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(
+                new AuthResponse("Unverified email from Google account", null)
+            );
+        }
+
+        // 1. Look up existing user or register a new one
+        Optional<User> userOpt = userRepository.findByEmail(email);
+        User user;
+
+        if (userOpt.isPresent()) {
+            user = userOpt.get();
+            if (!Boolean.TRUE.equals(user.getIsEmailVerified())) {
+                user.setIsEmailVerified(true);
+                userRepository.save(user);
+            }
+        } else {
+            user = new User();
+            String baseUsername = email.contains("@") ? email.split("@")[0] : email;
+            String username = baseUsername;
+            int suffix = 1;
+
+            while (userRepository.findByUsername(username).isPresent()) {
+                username = baseUsername + suffix++;
+            }
+
+            user.setUsername(username);
+            user.setEmail(email);
+            // Non-usable password hash placeholder for OAuth accounts
+            user.setPasswordHash(passwordEncoder.encode(UUID.randomUUID().toString()));
+            user.setIsArchetype(false);
+            user.setIsEmailVerified(true);
+            user = userRepository.save(user);
+        }
+
+        // 2. Create standard session token
+        String sessionToken = UUID.randomUUID().toString();
+
+        UserSession session = new UserSession();
+        session.setUser(user);
+        session.setToken(sessionToken);
+        session.setIpAddress(httpRequest.getRemoteAddr());
+        session.setExpiresAt(LocalDateTime.now().plusHours(24));
+        userSessionRepository.save(session);
+
+        // 3. Set HttpOnly session cookie
+        ResponseCookie cookie = ResponseCookie.from("finapp_session", sessionToken)
+            .httpOnly(true)
+            .secure(secureSessionCookie)
+            .path("/")
+            .sameSite("Strict")
+            .build();
+
+        // 4. Asynchronously refresh user's stock holdings
+        if (stockService != null) {
+            final Long uid = user.getId();
+            CompletableFuture.runAsync(() -> {
+                try {
+                    stockService.updateAllStockPricesForUser(uid);
+                } catch (Exception ignored) {
+                }
+            });
+        }
+
+        return ResponseEntity.ok()
+            .header(HttpHeaders.SET_COOKIE, cookie.toString())
+            .body(
+                new AuthResponse("Google login successful", user.getId())
+                    .withSessionToken(sessionToken)
+            );
+
+    } catch (Exception e) {
+        return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(
+            new AuthResponse("Google authentication failed: " + e.getMessage(), null)
+        );
+    }
+}
 
     @PostMapping("/register")
     @Transactional

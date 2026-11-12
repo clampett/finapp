@@ -6,6 +6,12 @@
     <meta name="theme-color" content="#0c1018" />
     <title>Sign in FinApp</title>
     <script src="/assets/theme-init.js"></script>
+
+    <script>
+      window.VITE_GOOGLE_CLIENT_ID = "838068048970-o4p78cvfjtc2uqm6aicjnqtmout2brtm.apps.googleusercontent.com";
+    </script>
+
+    <script src="https://accounts.google.com/gsi/client" async defer></script>
     <link rel="stylesheet" href="/assets/styles.css" />
     <link rel="icon" type="image/svg+xml" href="/static/finapp-circle.svg" />
 
@@ -71,6 +77,8 @@
             <p id="login-error" class="text-[11px] leading-[1.7] text-coral m-0 empty:hidden" role="alert"></p>
             <p id="login-status" class="text-[11px] leading-[1.7] text-mint m-0 empty:hidden" role="status"></p>
             <button id="login_button" class="w-full mt-0.5 inline-flex items-center justify-center gap-3.5 min-h-9.75 border border-primary bg-primary text-primary-fg py-2.5 px-4 rounded-lg text-xs font-[550] whitespace-nowrap hover:brightness-[1.08] transition-all cursor-pointer disabled:opacity-50 disabled:cursor-wait focus-visible:outline-2 focus-visible:outline-primary focus-visible:outline-offset-[5px]" type="submit">Sign in ↗</button>
+          <div class="flex items-center gap-3 text-foreground text-[9px] my-1 before:content-[''] before:flex-1 before:h-px before:bg-border after:content-[''] after:flex-1 after:h-px after:bg-border">OR SIGN IN WITH</div>
+          <div id="google-signin-btn" class="w-full flex justify-center min-h-[40px]"></div>
           </form>
           <p class="text-[11px] text-center text-foreground mt-5.5 m-0 [&_a]:text-primary [&_a]:hover:underline">New to FinApp? <a href="/registration">Create an account</a></p>
           <div class="flex items-center gap-3 text-foreground text-[9px] my-5.5 before:content-[''] before:flex-1 before:h-px before:bg-border after:content-[''] after:flex-1 after:h-px after:bg-border">OR EXPLORE FIRST</div>

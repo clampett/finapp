@@ -81,3 +81,30 @@ export function installPrivateSessionGuard(): void {
     if (root) root.style.visibility = '';
   });
 }
+
+export async function loginWithGoogleToken(idToken: string): Promise<boolean> {
+  try {
+    const response = await fetch('/api/v1/auth/google', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      credentials: 'include',
+      body: JSON.stringify({ token: idToken }),
+    });
+
+    if (!response.ok) return false;
+
+    const data = await response.json();
+
+    // Store identity state using your project's exact sessionStorage keys
+    if (data.sessionToken) {
+      sessionStorage.setItem('finapp_session_token', data.sessionToken);
+    }
+    if (data.userId) {
+      sessionStorage.setItem('finapp_user_id', String(data.userId));
+    }
+
+    return true;
+  } catch {
+    return false;
+  }
+}

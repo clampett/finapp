@@ -1,5 +1,11 @@
 import { AuthError, authRequest, formError } from './main.js';
 
+declare global {
+  interface Window {
+    google?: any;
+  }
+}
+
 const loginForm = document.getElementById('login-form') as HTMLFormElement | null;
 const registrationForm = document.getElementById('registration-form') as HTMLFormElement | null;
 const value = (id: string) => (document.getElementById(id) as HTMLInputElement).value;
@@ -7,6 +13,61 @@ const showError = (id: string, message: string) => {
   const target = document.getElementById(id);
   if (target) target.textContent = message;
 };
+
+async function handleGoogleLogin(response: any) {
+  showError('login-error', '');
+  try {
+    const res = await fetch('/api/v1/auth/google', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      credentials: 'include',
+      body: JSON.stringify({ token: response.credential }),
+    });
+
+    if (!res.ok) throw new Error('Google sign-in failed. Please try again.');
+
+    const data = await res.json();
+    if (!data.userId || !data.sessionToken) {
+      throw new Error('Invalid session returned from server.');
+    }
+
+    sessionStorage.setItem('finapp_session_token', data.sessionToken);
+    sessionStorage.setItem('finapp_user_id', String(data.userId));
+
+    location.assign('/dashboard/');
+  } catch (error: any) {
+    showError('login-error', error.message || 'Failed to log in with Google.');
+  }
+}
+
+function initGoogleSignIn() {
+  const container = document.getElementById('google-signin-btn');
+  if (!container) return;
+
+  const clientId = (window as any).VITE_GOOGLE_CLIENT_ID || '';
+  if (window.google?.accounts?.id) {
+    window.google.accounts.id.initialize({
+      client_id: clientId,
+      callback: handleGoogleLogin,
+    });
+
+    window.google.accounts.id.renderButton(container, {
+      theme: 'outline',
+      size: 'large',
+      width: '100%',
+      text: 'signin_with',
+    });
+  } else {
+    setTimeout(initGoogleSignIn, 150);
+  }
+}
+
+if (document.readyState === 'loading') {
+  document.addEventListener('DOMContentLoaded', initGoogleSignIn);
+} else {
+  initGoogleSignIn();
+}
+
 window.addEventListener('pageshow', () => {
   // Reset restored form controls after Back navigation and cleared password
   // values so a cached sign-in page did not remain disabled or retain the secret.

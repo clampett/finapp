@@ -4,7 +4,7 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <meta name="theme-color" content="#0c1018" />
-    <title>Create an account — FinApp</title>
+    <title>Create an account FinApp</title>
     <script src="/assets/theme-init.js"></script>
     <link rel="stylesheet" href="/assets/styles.css" />
     <link rel="icon" type="image/svg+xml" href="/static/finapp-circle.svg" />
@@ -118,6 +118,15 @@
               Create account ↗
             </button>
           </form>
+          <!-- Kept Google's real button in its own bounded area beside the password flow. -->
+          <div class="mt-5">
+            <div class="flex items-center gap-3 text-foreground text-[9px] mb-3 before:content-[''] before:flex-1 before:h-px before:bg-border after:content-[''] after:flex-1 after:h-px after:bg-border">OR CONTINUE WITH GOOGLE</div>
+            <div id="google-signin-btn" class="w-full min-h-10 flex justify-center"></div>
+            <p id="google-status" class="text-[11px] text-foreground mt-2 mb-0 empty:hidden" role="status"></p>
+            <p id="google-error" class="text-[11px] text-coral mt-2 mb-0 empty:hidden" role="alert"></p>
+            <button id="google-retry" type="button" hidden class="mt-2 text-[11px] text-primary hover:underline cursor-pointer focus-visible:outline-2 focus-visible:outline-primary focus-visible:outline-offset-2">Retry Google sign-in</button>
+          </div>
+
           <p class="text-[11px] text-center text-foreground mt-5.5 m-0 [&_a]:text-primary [&_a]:hover:underline">
             <a href="/dashboard/?demo=true">Just exploring? Open the demo instead ↗</a>
           </p>

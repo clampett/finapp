@@ -210,6 +210,7 @@ export class AuthError extends Error {
 export async function authRequest(
   path: string,
   body: Record<string, string>,
+  signal?: AbortSignal,
 ): Promise<{ message?: string; userId?: number; sessionToken?: string }> {
   // Waited for any previous logout before creating a new login cookie, avoiding
   // a delayed logout response clearing the session that had just been created.
@@ -219,7 +220,9 @@ export async function authRequest(
     credentials: 'include',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(body),
-    signal: AbortSignal.timeout(15000),
+    signal: signal
+      ? AbortSignal.any([signal, AbortSignal.timeout(15000)])
+      : AbortSignal.timeout(15000),
   });
   let data: { message?: string; error?: string; userId?: number; sessionToken?: string } = {};
   const contentType = response.headers.get('content-type') || '';

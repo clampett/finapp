@@ -46,13 +46,24 @@ app.use(
 
 // Grounded coach questions in reviewed topics and kept inference on the local runtime.
 const coach = createCoachService();
+// Reported gateway readiness independently of the proxied Spring Boot health endpoint.
+app.get('/api/v1/gateway/health', (_req, res) => {
+  res.set('Cache-Control', 'no-store').json({
+    success: true,
+    data: { status: 'UP', service: 'frontend-gateway' },
+  });
+});
 app.get('/api/v1/coach/status', async (_req, res) => {
   res.set('Cache-Control', 'no-store').json(await coach.status());
 });
 app.post('/api/v1/coach/explain', express.json({ limit: '4kb' }), async (req, res) => {
   res.set('Cache-Control', 'no-store');
-  if (!req.is('application/json') || !req.body || !Object.hasOwn(req.body, 'topic') ||
-      Object.keys(req.body).some((key) => !['topic', 'question', 'context'].includes(key))) {
+  if (
+    !req.is('application/json') ||
+    !req.body ||
+    !Object.hasOwn(req.body, 'topic') ||
+    Object.keys(req.body).some((key) => !['topic', 'question', 'context'].includes(key))
+  ) {
     return res.status(400).json({ message: 'Choose a help topic.' });
   }
   const result = await coach.explain(req.body.topic, req.body.question, req.body.context);
@@ -165,6 +176,16 @@ app.use(fileAccessLimiter, (req, res) => {
   res.status(404).sendFile(path.join(landingDir, '404.html'));
 });
 
-app.listen(PORT, () => {
+app.listen(PORT, (error) => {
+  // Handled Express 5 listen failures before announcing a usable frontend.
+  if (error) {
+    console.error(
+      error.code === 'EADDRINUSE'
+        ? `Cannot start FinApp: port ${PORT} is already in use. Stop the previous frontend and retry.`
+        : `Cannot start FinApp on port ${PORT}: ${error.message}`,
+    );
+    process.exitCode = 1;
+    return;
+  }
   console.log(`Server running at http://localhost:${PORT}`);
 });

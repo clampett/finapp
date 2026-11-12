@@ -5,6 +5,6 @@ import com.finapp.javabackend.dto.GoogleUserInfo;
 import java.util.Optional;
 
 public interface GoogleAuthService {
-    Optional<GoogleUserInfo> verifyToken(String idTokenString);
+    Optional<GoogleUserInfo> verifyToken(String idTokenString, String nonce);
     GoogleAuthResult authenticateOrCreateUser(GoogleUserInfo userInfo, String ipAddress);
 }

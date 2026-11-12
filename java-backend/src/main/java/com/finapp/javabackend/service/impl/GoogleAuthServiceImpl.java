@@ -14,14 +14,18 @@ import com.google.api.client.http.javanet.NetHttpTransport;
 import com.google.api.client.json.gson.GsonFactory;
 import java.time.LocalDateTime;
 import java.util.Collections;
+import java.util.List;
+import java.util.Locale;
 import java.util.Optional;
 import java.util.UUID;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.http.HttpStatus;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.server.ResponseStatusException;
 
 @Service
 public class GoogleAuthServiceImpl implements GoogleAuthService {
@@ -52,8 +56,8 @@ public class GoogleAuthServiceImpl implements GoogleAuthService {
                 new NetHttpTransport(),
                 new GsonFactory()
             )
-            .setAudience(Collections.singletonList(googleClientId))
-            .build();
+                .setAudience(Collections.singletonList(googleClientId))
+                .build();
         } else {
             this.verifier = null;
         }
@@ -74,7 +78,11 @@ public class GoogleAuthServiceImpl implements GoogleAuthService {
     }
 
     @Override
-    public Optional<GoogleUserInfo> verifyToken(String idTokenString) {
+    public Optional<GoogleUserInfo> verifyToken(String idTokenString, String nonce) {
+        // Required the browser's challenge before accepting a reusable signed Google credential.
+        if (nonce == null || nonce.isBlank() || idTokenString == null || idTokenString.isBlank()) {
+            return Optional.empty();
+        }
         if (verifier == null) {
             log.warn("Google OAuth client ID is not configured; cannot verify token");
             return Optional.empty();
@@ -85,19 +93,34 @@ public class GoogleAuthServiceImpl implements GoogleAuthService {
                 return Optional.empty();
             }
             GoogleIdToken.Payload payload = idToken.getPayload();
+            if (
+                !nonce.equals(payload.get("nonce")) ||
+                payload.getSubject() == null ||
+                payload.getSubject().isBlank() ||
+                payload.getSubject().length() > 255 ||
+                payload.getEmail() == null ||
+                payload.getEmail().isBlank() ||
+                payload.getEmail().length() > 255
+            ) {
+                return Optional.empty();
+            }
             String email = payload.getEmail();
             Boolean emailVerified = payload.getEmailVerified();
             String name = (String) payload.get("name");
             String picture = (String) payload.get("picture");
 
-            return Optional.of(new GoogleUserInfo(
-                email,
-                Boolean.TRUE.equals(emailVerified),
-                name,
-                picture
-            ));
+            return Optional.of(
+                new GoogleUserInfo(
+                    payload.getSubject(),
+                    email,
+                    Boolean.TRUE.equals(emailVerified),
+                    name,
+                    picture,
+                    payload.getHostedDomain()
+                )
+            );
         } catch (Exception e) {
-            log.error("Google ID token verification failed: {}", e.getMessage());
+            log.warn("Google ID token verification failed");
             return Optional.empty();
         }
     }
@@ -105,12 +128,57 @@ public class GoogleAuthServiceImpl implements GoogleAuthService {
     @Override
     @Transactional
     public GoogleAuthResult authenticateOrCreateUser(GoogleUserInfo userInfo, String ipAddress) {
-        String email = userInfo.email();
-        Optional<User> userOpt = userRepository.findByEmail(email);
+        // Rechecked trusted identity claims at the account-writing boundary.
+        if (
+            !userInfo.emailVerified() ||
+            userInfo.subject() == null ||
+            userInfo.subject().isBlank() ||
+            userInfo.subject().length() > 255 ||
+            userInfo.email() == null ||
+            userInfo.email().isBlank() ||
+            userInfo.email().length() > 255
+        ) {
+            throw new ResponseStatusException(
+                HttpStatus.BAD_REQUEST,
+                "A verified Google account is required."
+            );
+        }
+        String email = userInfo.email().trim().toLowerCase(Locale.ROOT);
+        Optional<User> userOpt = userRepository.findByGoogleSubject(userInfo.subject());
+        if (userOpt.isEmpty()) {
+            List<User> matches = userRepository.findAllByEmailIgnoreCase(email);
+            if (matches.size() > 1) {
+                throw new ResponseStatusException(
+                    HttpStatus.CONFLICT,
+                    "Sign in with your FinApp username and password for this email address."
+                );
+            }
+            userOpt = matches.stream().findFirst();
+            if (userOpt.isPresent()) {
+                User existing = userOpt.get();
+                // Linked by email only when Google was authoritative for the Gmail or Workspace address.
+                boolean authoritative =
+                    email.endsWith("@gmail.com") ||
+                    (userInfo.hostedDomain() != null && !userInfo.hostedDomain().isBlank());
+                if (existing.getGoogleSubject() != null || !authoritative) {
+                    throw new ResponseStatusException(
+                        HttpStatus.CONFLICT,
+                        "Sign in with your FinApp username and password for this email address."
+                    );
+                }
+            }
+        }
         User user;
 
         if (userOpt.isPresent()) {
             user = userOpt.get();
+            // Kept the public demo fixtures outside all provider account linking.
+            if (Boolean.TRUE.equals(user.getIsArchetype())) {
+                throw new ResponseStatusException(
+                    HttpStatus.FORBIDDEN,
+                    "This account cannot use Google sign-in."
+                );
+            }
             // Pre-Account Takeover Mitigation:
             // If the account was previously unverified, an attacker may have registered it with a password they know.
             // Invalidate any existing password hash and delete pending verification codes upon verified OAuth login.
@@ -119,13 +187,20 @@ public class GoogleAuthServiceImpl implements GoogleAuthService {
                 authTokenRepository.deleteByUserIdAndTokenType(user.getId(), "EMAIL_VERIFICATION");
                 user.setIsEmailVerified(true);
             }
-            if (user.getDisplayName() == null && userInfo.name() != null && !userInfo.name().isBlank()) {
+            if (
+                user.getDisplayName() == null &&
+                userInfo.name() != null &&
+                !userInfo.name().isBlank()
+            ) {
                 user.setDisplayName(truncate(userInfo.name().trim(), 50));
             }
-            if (user.getProfilePicture() == null && userInfo.pictureUrl() != null && !userInfo.pictureUrl().isBlank()) {
+            if (
+                user.getProfilePicture() == null &&
+                userInfo.pictureUrl() != null &&
+                !userInfo.pictureUrl().isBlank()
+            ) {
                 user.setProfilePicture(userInfo.pictureUrl().trim());
             }
-            user = userRepository.save(user);
         } else {
             user = new User();
             String baseUsername = email.contains("@") ? email.split("@")[0] : email;
@@ -156,9 +231,11 @@ public class GoogleAuthServiceImpl implements GoogleAuthService {
             if (userInfo.pictureUrl() != null && !userInfo.pictureUrl().isBlank()) {
                 user.setProfilePicture(userInfo.pictureUrl().trim());
             }
-            user = userRepository.save(user);
         }
 
+        user.setGoogleSubject(userInfo.subject());
+        user = userRepository.saveAndFlush(user);
+        // Kept the Google subject and session in the same transaction for retry-safe account creation.
         String sessionToken = UUID.randomUUID().toString();
         UserSession session = new UserSession();
         session.setUser(user);

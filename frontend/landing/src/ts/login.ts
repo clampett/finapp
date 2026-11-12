@@ -1,5 +1,11 @@
 import { AuthError, authRequest, formError } from './main.js';
 
+declare global {
+  interface Window {
+    google?: any;
+  }
+}
+
 const loginForm = document.getElementById('login-form') as HTMLFormElement | null;
 const registrationForm = document.getElementById('registration-form') as HTMLFormElement | null;
 const value = (id: string) => (document.getElementById(id) as HTMLInputElement).value;
@@ -7,6 +13,74 @@ const showError = (id: string, message: string) => {
   const target = document.getElementById(id);
   if (target) target.textContent = message;
 };
+
+async function handleGoogleLogin(response: any) {
+  showError('login-error', '');
+  try {
+    if (!response?.credential) {
+      throw new Error('No credential was returned from Google. Please try again.');
+    }
+    const data = await authRequest('google', { token: response.credential });
+    if (!data.userId || !Number.isInteger(data.userId) || data.userId < 1) {
+      throw new Error('The server did not return a valid workspace. Please try again.');
+    }
+    if (!data.sessionToken) {
+      throw new Error('The server did not return a session. Restart FinApp and try again.');
+    }
+    try {
+      sessionStorage.setItem('finapp_session_token', data.sessionToken);
+      sessionStorage.setItem('finapp_user_id', String(data.userId));
+    } catch {
+      throw new Error(
+        'Browser storage is required to open your workspace. Allow storage for this site and try again.',
+      );
+    }
+    location.assign('/dashboard/');
+  } catch (error) {
+    showError('login-error', formError(error));
+  }
+}
+
+let googleInitAttempts = 0;
+const MAX_GOOGLE_INIT_ATTEMPTS = 40;
+
+function renderGoogleButton() {
+  const container = document.getElementById('google-signin-btn');
+  if (!container || !window.google?.accounts?.id) return;
+
+  container.innerHTML = '';
+  window.google.accounts.id.renderButton(container, {
+    theme: 'outline',
+    size: 'large',
+    width: '100%',
+    text: 'signin_with',
+  });
+}
+
+function initGoogleSignIn() {
+  const container = document.getElementById('google-signin-btn');
+  if (!container) return;
+
+  const clientId =
+    (window as any).GOOGLE_CLIENT_ID || (window as any).VITE_GOOGLE_CLIENT_ID || '';
+  if (window.google?.accounts?.id) {
+    window.google.accounts.id.initialize({
+      client_id: clientId,
+      callback: handleGoogleLogin,
+    });
+
+    renderGoogleButton();
+  } else if (++googleInitAttempts < MAX_GOOGLE_INIT_ATTEMPTS) {
+    setTimeout(initGoogleSignIn, 150);
+  }
+}
+
+if (document.readyState === 'loading') {
+  document.addEventListener('DOMContentLoaded', initGoogleSignIn);
+} else {
+  initGoogleSignIn();
+}
+
 window.addEventListener('pageshow', () => {
   // Reset restored form controls after Back navigation and cleared password
   // values so a cached sign-in page did not remain disabled or retain the secret.

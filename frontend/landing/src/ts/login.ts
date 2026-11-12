@@ -17,47 +17,60 @@ const showError = (id: string, message: string) => {
 async function handleGoogleLogin(response: any) {
   showError('login-error', '');
   try {
-    const res = await fetch('/api/v1/auth/google', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      credentials: 'include',
-      body: JSON.stringify({ token: response.credential }),
-    });
-
-    if (!res.ok) throw new Error('Google sign-in failed. Please try again.');
-
-    const data = await res.json();
-    if (!data.userId || !data.sessionToken) {
-      throw new Error('Invalid session returned from server.');
+    if (!response?.credential) {
+      throw new Error('No credential was returned from Google. Please try again.');
     }
-
-    sessionStorage.setItem('finapp_session_token', data.sessionToken);
-    sessionStorage.setItem('finapp_user_id', String(data.userId));
-
+    const data = await authRequest('google', { token: response.credential });
+    if (!data.userId || !Number.isInteger(data.userId) || data.userId < 1) {
+      throw new Error('The server did not return a valid workspace. Please try again.');
+    }
+    if (!data.sessionToken) {
+      throw new Error('The server did not return a session. Restart FinApp and try again.');
+    }
+    try {
+      sessionStorage.setItem('finapp_session_token', data.sessionToken);
+      sessionStorage.setItem('finapp_user_id', String(data.userId));
+    } catch {
+      throw new Error(
+        'Browser storage is required to open your workspace. Allow storage for this site and try again.',
+      );
+    }
     location.assign('/dashboard/');
-  } catch (error: any) {
-    showError('login-error', error.message || 'Failed to log in with Google.');
+  } catch (error) {
+    showError('login-error', formError(error));
   }
+}
+
+let googleInitAttempts = 0;
+const MAX_GOOGLE_INIT_ATTEMPTS = 40;
+
+function renderGoogleButton() {
+  const container = document.getElementById('google-signin-btn');
+  if (!container || !window.google?.accounts?.id) return;
+
+  container.innerHTML = '';
+  window.google.accounts.id.renderButton(container, {
+    theme: 'outline',
+    size: 'large',
+    width: '100%',
+    text: 'signin_with',
+  });
 }
 
 function initGoogleSignIn() {
   const container = document.getElementById('google-signin-btn');
   if (!container) return;
 
-  const clientId = (window as any).VITE_GOOGLE_CLIENT_ID || '';
+  const clientId =
+    (window as any).GOOGLE_CLIENT_ID || (window as any).VITE_GOOGLE_CLIENT_ID || '';
   if (window.google?.accounts?.id) {
     window.google.accounts.id.initialize({
       client_id: clientId,
       callback: handleGoogleLogin,
     });
 
-    window.google.accounts.id.renderButton(container, {
-      theme: 'outline',
-      size: 'large',
-      width: '100%',
-      text: 'signin_with',
-    });
-  } else {
+    renderGoogleButton();
+  } else if (++googleInitAttempts < MAX_GOOGLE_INIT_ATTEMPTS) {
     setTimeout(initGoogleSignIn, 150);
   }
 }

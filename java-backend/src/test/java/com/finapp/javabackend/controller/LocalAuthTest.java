@@ -4,10 +4,13 @@ import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.*;
 
 import com.finapp.javabackend.dto.AuthRequest;
+import com.finapp.javabackend.dto.GoogleAuthResult;
+import com.finapp.javabackend.dto.GoogleUserInfo;
 import com.finapp.javabackend.model.entity.AuthToken;
 import com.finapp.javabackend.model.entity.User;
 import com.finapp.javabackend.repository.*;
 import com.finapp.javabackend.service.EmailService;
+import com.finapp.javabackend.service.GoogleAuthService;
 import java.time.LocalDateTime;
 import java.util.Map;
 import java.util.Optional;
@@ -24,6 +27,7 @@ class LocalAuthTest {
     AuthTokenRepository tokens;
     UserSessionRepository sessions;
     EmailService emails;
+    GoogleAuthService googleAuthService;
     BCryptPasswordEncoder passwords = new BCryptPasswordEncoder();
     User user;
 
@@ -34,11 +38,13 @@ class LocalAuthTest {
         tokens = mock(AuthTokenRepository.class);
         sessions = mock(UserSessionRepository.class);
         emails = mock(EmailService.class);
+        googleAuthService = mock(GoogleAuthService.class);
         ReflectionTestUtils.setField(controller, "userRepository", users);
         ReflectionTestUtils.setField(controller, "authTokenRepository", tokens);
         ReflectionTestUtils.setField(controller, "userSessionRepository", sessions);
         ReflectionTestUtils.setField(controller, "emailService", emails);
         ReflectionTestUtils.setField(controller, "passwordEncoder", passwords);
+        ReflectionTestUtils.setField(controller, "googleAuthService", googleAuthService);
         user = new User();
         user.setId(10L);
         user.setUsername("testuser");
@@ -178,5 +184,50 @@ class LocalAuthTest {
         );
         assertNull(result.getHeaders().getFirst("Set-Cookie"));
         verify(sessions).deleteByToken(token);
+    }
+
+    @Test
+    void googleAuthRejectsMissingToken() {
+        var missing = controller.googleAuth(Map.of(), new MockHttpServletRequest());
+        assertEquals(400, missing.getStatusCode().value());
+        assertTrue(missing.getBody().getMessage().contains("Google ID token is required"));
+
+        var empty = controller.googleAuth(Map.of("token", "   "), new MockHttpServletRequest());
+        assertEquals(400, empty.getStatusCode().value());
+    }
+
+    @Test
+    void googleAuthRejectsInvalidToken() {
+        when(googleAuthService.verifyToken("bad-token")).thenReturn(Optional.empty());
+        var result = controller.googleAuth(Map.of("token", "bad-token"), new MockHttpServletRequest());
+        assertEquals(401, result.getStatusCode().value());
+        assertTrue(result.getBody().getMessage().contains("Invalid or expired Google token"));
+    }
+
+    @Test
+    void googleAuthRejectsUnverifiedEmail() {
+        when(googleAuthService.verifyToken("unverified-token")).thenReturn(
+            Optional.of(new GoogleUserInfo("alice@example.com", false, "Alice", null))
+        );
+        var result = controller.googleAuth(Map.of("token", "unverified-token"), new MockHttpServletRequest());
+        assertEquals(400, result.getStatusCode().value());
+        assertTrue(result.getBody().getMessage().contains("Unverified email"));
+    }
+
+    @Test
+    void googleAuthLogsInSuccessfullyAndSetsHttpOnlyCookie() {
+        GoogleUserInfo userInfo = new GoogleUserInfo("alice@example.com", true, "Alice", "https://pic.url");
+        when(googleAuthService.verifyToken("good-token")).thenReturn(Optional.of(userInfo));
+        when(googleAuthService.authenticateOrCreateUser(eq(userInfo), any())).thenReturn(
+            new GoogleAuthResult(25L, "mock-google-session-token")
+        );
+
+        var result = controller.googleAuth(Map.of("token", "good-token"), new MockHttpServletRequest());
+        assertEquals(200, result.getStatusCode().value());
+        assertEquals(25L, result.getBody().getUserId());
+        assertEquals("mock-google-session-token", result.getBody().getSessionToken());
+        assertTrue(result.getHeaders().getFirst("Set-Cookie").contains("finapp_session=mock-google-session-token"));
+        assertTrue(result.getHeaders().getFirst("Set-Cookie").contains("HttpOnly"));
+        assertTrue(result.getHeaders().getFirst("Set-Cookie").contains("SameSite=Strict"));
     }
 }

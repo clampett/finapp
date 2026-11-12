@@ -1,13 +1,10 @@
 package com.finapp.javabackend.controller;
 
-import com.google.api.client.googleapis.auth.oauth2.GoogleIdToken;
-import com.google.api.client.googleapis.auth.oauth2.GoogleIdTokenVerifier;
-import com.google.api.client.http.javanet.NetHttpTransport;
-import com.google.api.client.json.gson.GsonFactory;
-import java.util.Collections;
 import com.finapp.javabackend.config.SessionUser;
 import com.finapp.javabackend.dto.AuthRequest;
 import com.finapp.javabackend.dto.AuthResponse;
+import com.finapp.javabackend.dto.GoogleAuthResult;
+import com.finapp.javabackend.dto.GoogleUserInfo;
 import com.finapp.javabackend.model.entity.AuthToken;
 import com.finapp.javabackend.model.entity.User;
 import com.finapp.javabackend.model.entity.UserSession;
@@ -15,14 +12,17 @@ import com.finapp.javabackend.repository.AuthTokenRepository;
 import com.finapp.javabackend.repository.UserRepository;
 import com.finapp.javabackend.repository.UserSessionRepository;
 import com.finapp.javabackend.service.EmailService;
+import com.finapp.javabackend.service.GoogleAuthService;
+import com.finapp.javabackend.service.StockService;
 import jakarta.servlet.http.HttpServletRequest;
 import java.nio.charset.StandardCharsets;
 import java.time.LocalDateTime;
 import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
-import com.finapp.javabackend.service.StockService;
 import java.util.concurrent.CompletableFuture;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpHeaders;
@@ -38,8 +38,7 @@ import org.springframework.web.bind.annotation.*;
 @RequestMapping("/api/v1/auth")
 public class AuthController {
 
-    @Value("${google.client.id:}")
-    private String googleClientId;
+    private static final Logger log = LoggerFactory.getLogger(AuthController.class);
 
     @Value("${finapp.session.secure:false}")
     private boolean secureSessionCookie;
@@ -62,115 +61,71 @@ public class AuthController {
     @Autowired(required = false)
     private StockService stockService;
 
+    @Autowired
+    private GoogleAuthService googleAuthService;
+
     @PostMapping("/google")
-@Transactional
-public ResponseEntity<AuthResponse> googleAuth(
-    @RequestBody Map<String, String> request,
-    HttpServletRequest httpRequest
-) {
-    String idTokenString = request.get("token");
-    if (idTokenString == null || idTokenString.trim().isEmpty()) {
-        return ResponseEntity.badRequest().body(
-            new AuthResponse("Google ID token is required", null)
-        );
-    }
-
-    try {
-        GoogleIdTokenVerifier verifier = new GoogleIdTokenVerifier.Builder(
-                new NetHttpTransport(),
-                new GsonFactory()
-        )
-        .setAudience(Collections.singletonList(googleClientId))
-        .build();
-
-        GoogleIdToken idToken = verifier.verify(idTokenString);
-        if (idToken == null) {
-            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(
-                new AuthResponse("Invalid or expired Google token", null)
+    public ResponseEntity<AuthResponse> googleAuth(
+        @RequestBody Map<String, String> request,
+        HttpServletRequest httpRequest
+    ) {
+        String idTokenString = request.get("token");
+        if (idTokenString == null || idTokenString.trim().isEmpty()) {
+            return ResponseEntity.badRequest().body(
+                new AuthResponse("Google ID token is required", null)
             );
         }
 
-        GoogleIdToken.Payload payload = idToken.getPayload();
-        String email = payload.getEmail();
-        Boolean emailVerified = payload.getEmailVerified();
-
-        if (email == null || !Boolean.TRUE.equals(emailVerified)) {
-            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(
-                new AuthResponse("Unverified email from Google account", null)
-            );
-        }
-
-        // 1. Look up existing user or register a new one
-        Optional<User> userOpt = userRepository.findByEmail(email);
-        User user;
-
-        if (userOpt.isPresent()) {
-            user = userOpt.get();
-            if (!Boolean.TRUE.equals(user.getIsEmailVerified())) {
-                user.setIsEmailVerified(true);
-                userRepository.save(user);
-            }
-        } else {
-            user = new User();
-            String baseUsername = email.contains("@") ? email.split("@")[0] : email;
-            String username = baseUsername;
-            int suffix = 1;
-
-            while (userRepository.findByUsername(username).isPresent()) {
-                username = baseUsername + suffix++;
+        try {
+            Optional<GoogleUserInfo> userInfoOpt = googleAuthService.verifyToken(idTokenString);
+            if (userInfoOpt.isEmpty()) {
+                return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(
+                    new AuthResponse("Invalid or expired Google token", null)
+                );
             }
 
-            user.setUsername(username);
-            user.setEmail(email);
-            // Non-usable password hash placeholder for OAuth accounts
-            user.setPasswordHash(passwordEncoder.encode(UUID.randomUUID().toString()));
-            user.setIsArchetype(false);
-            user.setIsEmailVerified(true);
-            user = userRepository.save(user);
-        }
+            GoogleUserInfo userInfo = userInfoOpt.get();
+            if (userInfo.email() == null || !userInfo.emailVerified()) {
+                return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(
+                    new AuthResponse("Unverified email from Google account", null)
+                );
+            }
 
-        // 2. Create standard session token
-        String sessionToken = UUID.randomUUID().toString();
-
-        UserSession session = new UserSession();
-        session.setUser(user);
-        session.setToken(sessionToken);
-        session.setIpAddress(httpRequest.getRemoteAddr());
-        session.setExpiresAt(LocalDateTime.now().plusHours(24));
-        userSessionRepository.save(session);
-
-        // 3. Set HttpOnly session cookie
-        ResponseCookie cookie = ResponseCookie.from("finapp_session", sessionToken)
-            .httpOnly(true)
-            .secure(secureSessionCookie)
-            .path("/")
-            .sameSite("Strict")
-            .build();
-
-        // 4. Asynchronously refresh user's stock holdings
-        if (stockService != null) {
-            final Long uid = user.getId();
-            CompletableFuture.runAsync(() -> {
-                try {
-                    stockService.updateAllStockPricesForUser(uid);
-                } catch (Exception ignored) {
-                }
-            });
-        }
-
-        return ResponseEntity.ok()
-            .header(HttpHeaders.SET_COOKIE, cookie.toString())
-            .body(
-                new AuthResponse("Google login successful", user.getId())
-                    .withSessionToken(sessionToken)
+            GoogleAuthResult authResult = googleAuthService.authenticateOrCreateUser(
+                userInfo,
+                httpRequest.getRemoteAddr()
             );
 
-    } catch (Exception e) {
-        return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(
-            new AuthResponse("Google authentication failed: " + e.getMessage(), null)
-        );
+            ResponseCookie cookie = ResponseCookie.from("finapp_session", authResult.sessionToken())
+                .httpOnly(true)
+                .secure(secureSessionCookie)
+                .path("/")
+                .sameSite("Strict")
+                .build();
+
+            if (stockService != null) {
+                final Long uid = authResult.userId();
+                CompletableFuture.runAsync(() -> {
+                    try {
+                        stockService.updateAllStockPricesForUser(uid);
+                    } catch (Exception ignored) {
+                    }
+                });
+            }
+
+            return ResponseEntity.ok()
+                .header(HttpHeaders.SET_COOKIE, cookie.toString())
+                .body(
+                    new AuthResponse("Google login successful", authResult.userId())
+                        .withSessionToken(authResult.sessionToken())
+                );
+        } catch (Exception e) {
+            log.error("Google authentication processing failed", e);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(
+                new AuthResponse("Google authentication failed. Please try again.", null)
+            );
+        }
     }
-}
 
     @PostMapping("/register")
     @Transactional

@@ -104,15 +104,15 @@ public class StockServiceImpl implements StockService {
         if (ticker == null) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Ticker cannot be null");
         }
-        Stock stock = stockRepository
-            .findByUserIdAndTicker(userId, ticker.trim().toUpperCase())
-            .orElseThrow(() ->
-                new ResponseStatusException(
-                    HttpStatus.NOT_FOUND,
-                    "Stock with ticker " + ticker + " not found"
-                )
+        List<Stock> stocks = stockRepository
+            .findByUserIdAndTicker(userId, ticker.trim().toUpperCase());
+        if (stocks.isEmpty()) {
+            throw new ResponseStatusException(
+                HttpStatus.NOT_FOUND,
+                "Stock with ticker " + ticker + " not found"
             );
-        return EntityDtoMapper.toDto(stock);
+        }
+        return EntityDtoMapper.toDto(stocks.get(0));
     }
 
     @Override
@@ -121,12 +121,6 @@ public class StockServiceImpl implements StockService {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Stock ticker is required");
         }
         String ticker = request.ticker().trim().toUpperCase();
-        if (stockRepository.existsByUserIdAndTicker(userId, ticker)) {
-            throw new ResponseStatusException(
-                HttpStatus.CONFLICT,
-                "Stock with ticker " + ticker + " already exists for this user"
-            );
-        }
 
         User user = userRepository
             .findById(userId)
@@ -192,6 +186,7 @@ public class StockServiceImpl implements StockService {
             stockTransactionRepository.save(txn);
         }
 
+        // Kept dividend metadata on the lot for forecasts without scheduling cash receipts.
         return EntityDtoMapper.toDto(savedStock);
     }
 
@@ -205,15 +200,6 @@ public class StockServiceImpl implements StockService {
 
         if (request.ticker() != null && !request.ticker().trim().isEmpty()) {
             String ticker = request.ticker().trim().toUpperCase();
-            if (
-                !ticker.equals(stock.getTicker()) &&
-                stockRepository.existsByUserIdAndTicker(userId, ticker)
-            ) {
-                throw new ResponseStatusException(
-                    HttpStatus.CONFLICT,
-                    "Stock with ticker " + ticker + " already exists for this user"
-                );
-            }
             stock.setTicker(ticker);
         }
 
@@ -277,6 +263,7 @@ public class StockServiceImpl implements StockService {
             .orElseThrow(() ->
                 new ResponseStatusException(HttpStatus.NOT_FOUND, "Stock not found")
             );
+        // Kept recurring rules and recorded budget income independent of lot deletion.
         stockRepository.delete(stock);
     }
 

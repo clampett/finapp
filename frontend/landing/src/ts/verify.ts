@@ -20,7 +20,7 @@ resend?.addEventListener('click', async () => {
   status.textContent = '';
   try {
     const data = await authRequest('resend-verification', { userId });
-    status.textContent = data.message ?? 'Check your Spring Boot terminal for the new code.';
+    status.textContent = data.message ?? 'A new code was requested. Check your email.';
   } catch (err) {
     error.textContent = formError(err);
   } finally {

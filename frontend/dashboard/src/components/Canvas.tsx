@@ -104,7 +104,7 @@ export function Canvas({
       .attr('orient', 'auto')
       .append('path')
       .attr('d', 'M0,-5L10,0L0,5')
-      .attr('fill', '#52637a');
+      .attr('fill', 'var(--ui-paint-52637a)');
     const g = svg.append('g');
     const marquee = svg
       .append('rect')
@@ -143,15 +143,30 @@ export function Canvas({
       .data(graph.edges)
       .join('path')
       .attr('fill', 'none')
-      .attr(
-        'stroke',
-        (edge) => colors[graph.nodes.find((node) => node.id === edge.targetNodeId)!.nodeType],
-      )
-      .attr('stroke-opacity', 0.6)
+      .attr('stroke', (edge) => {
+        const src = graph.nodes.find((node) => node.id === edge.sourceNodeId);
+        const tgt = graph.nodes.find((node) => node.id === edge.targetNodeId);
+        if (src?.disabled || tgt?.disabled) return 'var(--color-subtle)';
+        return colors[tgt!.nodeType];
+      })
+      .attr('stroke-opacity', (edge) => {
+        const src = graph.nodes.find((node) => node.id === edge.sourceNodeId);
+        const tgt = graph.nodes.find((node) => node.id === edge.targetNodeId);
+        return src?.disabled || tgt?.disabled ? 0.25 : 0.6;
+      })
+      .attr('stroke-dasharray', (edge) => {
+        const src = graph.nodes.find((node) => node.id === edge.sourceNodeId);
+        const tgt = graph.nodes.find((node) => node.id === edge.targetNodeId);
+        return src?.disabled || tgt?.disabled ? '4 4' : null;
+      })
       .attr('stroke-width', (edge) =>
         Math.min(6, 1.5 + Math.log1p(edge.monthlyFixedFlow ?? edge.percentageFlow ?? 0) / 2),
       )
-      .attr('marker-end', `url(#${markerId})`)
+      .attr('marker-end', (edge) => {
+        const src = graph.nodes.find((node) => node.id === edge.sourceNodeId);
+        const tgt = graph.nodes.find((node) => node.id === edge.targetNodeId);
+        return src?.disabled || tgt?.disabled ? 'none' : `url(#${markerId})`;
+      })
       .attr('class', 'canvas-edge')
       .classed('edge-selected', (edge) => edgeSelectionIds.includes(edge.id))
       .attr('tabindex', 0)
@@ -177,11 +192,11 @@ export function Canvas({
       .selectAll('text')
       .data(graph.edges)
       .join('text')
-      .attr('fill', '#91a0b7')
+      .attr('fill', 'var(--ui-paint-91a0b7)')
       .attr('font-size', 10)
       .attr('text-anchor', 'middle')
       .attr('paint-order', 'stroke')
-      .attr('stroke', '#0e131d')
+      .attr('stroke', 'var(--ui-paint-0e131d)')
       .attr('stroke-width', 5)
       .attr('class', 'canvas-edge-label')
       .on('click', (event, edge) => {
@@ -199,16 +214,19 @@ export function Canvas({
       .join('g')
       .attr('class', 'canvas-node')
       .classed('is-selected', (node) => selectionIds.includes(node.id))
+      .classed('is-disabled', (node) => !!node.disabled)
       .attr('tabindex', 0)
       .attr('role', 'button')
       .attr(
         'aria-label',
         (n) =>
-          `Edit ${n.name}, ${money(n.nodeType === 'EXPENSE' ? expenseAmount(n, graph) : n.amountOrBalance)}`,
+          `${n.disabled ? '[Turned Off] ' : ''}Edit ${n.name}, ${money(n.nodeType === 'EXPENSE' ? expenseAmount(n, graph, true) : n.amountOrBalance)}`,
       )
-      .attr('opacity', (n) =>
-        !search || n.name.toLowerCase().includes(search.toLowerCase()) ? 1 : 0.2,
-      )
+      .attr('opacity', (n) => {
+        const matches = !search || n.name.toLowerCase().includes(search.toLowerCase());
+        if (!matches) return 0.2;
+        return n.disabled ? 0.5 : 1;
+      })
       .on('click', (event, n) => {
         if (event.defaultPrevented) return;
         if (tool === 'pan') return;
@@ -228,64 +246,109 @@ export function Canvas({
       .attr('width', cardWidth)
       .attr('height', cardHeight)
       .attr('rx', 12)
-      .attr('fill', '#171f2e')
+      .attr('fill', (n) => (n.disabled ? 'var(--color-raised)' : 'var(--ui-paint-171f2e)'))
       .attr('stroke', (n) =>
-        n.id === selected || scopeIds.includes(n.id) ? '#e0e7ff' : colors[n.nodeType],
+        n.disabled
+          ? 'var(--color-subtle)'
+          : n.id === selected || scopeIds.includes(n.id)
+            ? 'var(--ui-paint-e0e7ff)'
+            : colors[n.nodeType],
       )
-      .attr('stroke-opacity', (n) => (n.id === selected || scopeIds.includes(n.id) ? 1 : 0.6))
-      .attr('stroke-width', (n) => (n.id === selected || scopeIds.includes(n.id) ? 2.5 : 1));
+      .attr('stroke-opacity', (n) =>
+        n.disabled ? 0.45 : n.id === selected || scopeIds.includes(n.id) ? 1 : 0.6,
+      )
+      .attr('stroke-width', (n) => (n.id === selected || scopeIds.includes(n.id) ? 2.5 : 1))
+      .attr('stroke-dasharray', (n) => (n.disabled ? '5 4' : null));
     cards
       .append('circle')
       .attr('cx', 15)
       .attr('cy', 17)
       .attr('r', 3)
-      .attr('fill', (n) => colors[n.nodeType]);
+      .attr('fill', (n) => (n.disabled ? 'var(--color-muted)' : colors[n.nodeType]));
     cards
       .append('text')
       .attr('x', 25)
       .attr('y', 21)
-      .attr('fill', '#9caec7')
+      .attr('fill', (n) => (n.disabled ? 'var(--color-muted)' : 'var(--ui-paint-9caec7)'))
       .attr('font-size', 9)
       .attr('letter-spacing', '1px')
-      .text((n) => n.nodeType);
+      .text((n) => (n.disabled ? `${n.nodeType} · OFF` : n.nodeType));
+
+    const offBadges = cards
+      .filter((n) => !!n.disabled)
+      .append('g')
+      .attr('class', 'node-off-badge')
+      .attr('transform', `translate(${cardWidth - 44}, 9)`);
+    offBadges
+      .append('rect')
+      .attr('width', 32)
+      .attr('height', 15)
+      .attr('rx', 4)
+      .attr('fill', 'var(--color-raised)')
+      .attr('stroke', 'var(--color-coral)')
+      .attr('stroke-width', 1);
+    offBadges
+      .append('text')
+      .attr('x', 16)
+      .attr('y', 11)
+      .attr('text-anchor', 'middle')
+      .attr('fill', 'var(--color-coral)')
+      .attr('font-size', 8.5)
+      .attr('font-weight', 700)
+      .attr('letter-spacing', '0.5px')
+      .text('OFF');
+
     cards
       .append('text')
       .attr('x', 14)
       .attr('y', 40)
-      .attr('fill', '#e7edf8')
+      .attr('fill', (n) => (n.disabled ? 'var(--color-muted)' : 'var(--ui-paint-e7edf8)'))
       .attr('font-size', 12)
       .text((n) => (n.name.length > 23 ? `${n.name.slice(0, 22)}…` : n.name));
+
+    cards
+      .filter((n) => !!n.disabled)
+      .append('line')
+      .attr('x1', 14)
+      .attr('x2', (n) => Math.min(cardWidth - 50, 14 + Math.min(n.name.length, 22) * 7.2))
+      .attr('y1', 36)
+      .attr('y2', 36)
+      .attr('stroke', 'var(--color-subtle)')
+      .attr('stroke-width', 1.5);
+
     cards
       .append('text')
       .attr('x', 14)
       .attr('y', 62)
-      .attr('fill', (n) => colors[n.nodeType])
+      .attr('fill', (n) => (n.disabled ? 'var(--color-muted)' : colors[n.nodeType]))
       .attr('font-size', 16)
       .attr('font-weight', 650)
       .text(
         (n) =>
-          `${money(n.nodeType === 'EXPENSE' ? expenseAmount(n, graph) : n.amountOrBalance)}${['INCOME', 'EXPENSE'].includes(n.nodeType) ? ' /mo' : ''}`,
+          `${money(n.nodeType === 'EXPENSE' ? expenseAmount(n, graph, true) : n.amountOrBalance)}${['INCOME', 'EXPENSE'].includes(n.nodeType) ? ' /mo' : ''}`,
       );
     cards
       .append('text')
       .attr('x', 14)
       .attr('y', 79)
-      .attr('fill', '#96a9c2')
+      .attr('fill', (n) => (n.disabled ? 'var(--color-muted)' : 'var(--ui-paint-96a9c2)'))
       .attr('font-size', 9)
       .text((node) =>
-        scopeIds.includes(node.id)
-          ? '✓ SELECTED FOR SIMULATION'
-          : node.nodeType === 'DEBT'
-            ? `${node.interestRateApr}% APR · click to edit`
-            : node.nodeType === 'INVESTMENT'
-              ? 'Market-linked asset · click to edit'
-              : `Click to edit · ${shortcuts.select} to select`,
+        node.disabled
+          ? 'Turned off · click to edit or re-enable'
+          : scopeIds.includes(node.id)
+            ? '✓ SELECTED FOR SIMULATION'
+            : node.nodeType === 'DEBT'
+              ? `${node.interestRateApr}% APR · click to edit`
+              : node.nodeType === 'INVESTMENT'
+                ? 'Market-linked asset · click to edit'
+                : `Click to edit · ${shortcuts.select} to select`,
       );
     cards
       .append('title')
       .text(
         (n) =>
-          `${n.name}\n${typeLabel(n.nodeType)} · ${money(n.nodeType === 'EXPENSE' ? expenseAmount(n, graph) : n.amountOrBalance)}\nClick to edit`,
+          `${n.disabled ? '[Turned Off] ' : ''}${n.name}\n${typeLabel(n.nodeType)} · ${money(n.nodeType === 'EXPENSE' ? expenseAmount(n, graph, true) : n.amountOrBalance)}\nClick to edit`,
       );
     // Added dedicated ports with a live, snapped connector preview; kept link
     // gestures separate from card dragging and committed only valid destinations.
@@ -316,6 +379,7 @@ export function Canvas({
       .attr('cx', 0)
       .attr('cy', cardHeight / 2)
       .attr('r', 5)
+      .attr('opacity', (node) => (node.disabled ? 0.2 : null))
       .attr('tabindex', 0)
       .attr('role', 'button')
       .attr('aria-label', (node) => `Connect to ${node.name}`)
@@ -336,6 +400,7 @@ export function Canvas({
       .attr('cx', cardWidth)
       .attr('cy', cardHeight / 2)
       .attr('r', 6)
+      .attr('opacity', (node) => (node.disabled ? 0.2 : null))
       .attr('tabindex', 0)
       .attr('role', 'button')
       .attr('aria-label', (node) => `Connect from ${node.name}`)
@@ -685,20 +750,21 @@ export function Canvas({
   ]);
   return (
     <div
-      className={`canvas-host canvas-editor tool-${tool}${expanded ? ' canvas-expanded' : ''}${connecting ? ' connect-mode' : ''}`}
+      // Selected one frame geometry so normal sizing could not override the fullscreen fallback.
+      className={`canvas-host overflow-hidden isolate ${expanded ? 'fixed inset-0 w-screen h-dvh min-h-0 max-h-none border-0 rounded-none z-1000' : 'relative border border-(--ui-border-2a3448) rounded-xl h-[clamp(510px,62vh,760px)] min-h-127.5'} fullscreen:w-screen fullscreen:h-dvh fullscreen:min-h-0 fullscreen:max-h-none fullscreen:border-0 fullscreen:rounded-none tool-${tool}${connecting ? ' connect-mode' : ''}`}
       ref={host}
       tabIndex={0}
       onPointerDown={(event) => {
         if (!(
           event.target instanceof Element &&
-          event.target.closest('input,textarea,select,button,summary,.canvas-editor-panel')
+          event.target.closest('input,textarea,select,button,summary,[data-editor-panel]')
         ))
           host.current?.focus({ preventScroll: true });
       }}
     >
-      <div className="canvas-toolbar-slot">{toolbar}</div>
+      <div className="absolute top-3.5 left-3.5 z-12 max-xs:max-w-[calc(100%-77px)] max-xs:left-2.5">{toolbar}</div>
       <button
-        className="canvas-tool canvas-fullscreen"
+        className="w-11 h-11 absolute top-3.5 right-3.5 z-12 bg-(--ui-surface-152031ed) border border-(--ui-border-34485c) rounded-xl shadow-[0_8px_25px_var(--ui-shadow-0004)] grid place-items-center cursor-pointer text-(--ui-text-a8bbd2) hover:bg-(--ui-surface-hover-2b3d52) hover:text-(--ui-text-f0f7ff) max-xs:right-2.5 max-xs:w-7.25 max-xs:h-8"
         aria-label={canvasFullscreen ? 'Exit canvas fullscreen' : 'Enter canvas fullscreen'}
         title={canvasFullscreen ? 'Exit fullscreen · Esc' : 'Fullscreen canvas'}
         onClick={async () => {
@@ -714,8 +780,8 @@ export function Canvas({
       >
         <CanvasIcon name={canvasFullscreen ? 'collapse' : 'expand'} />
       </button>
-      <div className="canvas-caption">
-        <span className="status-dot" />{' '}
+      <div className="absolute top-18.5 left-5 max-xs:top-26.25 text-[8px] text-(--ui-text-7d95b0) flex items-center gap-1.5 pointer-events-none z-10">
+        <span className="inline-block w-1.5 h-1.5 rounded-full bg-(--ui-surface-73d9af) align-middle mr-1" />{' '}
         {connecting
           ? 'CONNECT MODE'
           : tool === 'pan'
@@ -723,7 +789,7 @@ export function Canvas({
             : tool === 'box'
               ? 'BOX SELECT'
               : 'SELECT MODE'}{' '}
-        <span>
+        <span className="text-(--ui-text-687e98) text-[10px] max-xs:hidden">
           {connecting
             ? 'Choose a source, then a destination · or drag a handle'
             : tool === 'pan'
@@ -733,35 +799,36 @@ export function Canvas({
                 : 'Click to select · Shift-click for multiple · Delete to remove'}
         </span>
       </div>
-      <svg ref={ref} aria-label="Financial account connections" className="financial-canvas" />
+      <svg ref={ref} aria-label="Financial account connections" className="financial-canvas w-full h-full block" />
       {(selectionIds.length > 0 || edgeSelectionIds.length > 0) && (
-        <div className="canvas-selection-status" role="status">
+        <div className="absolute bottom-16 left-5 px-3 py-2 border border-(--ui-border-386051) rounded-lg text-(--ui-text-a2ead4) bg-(--ui-surface-132c29ed) text-[11px] pointer-events-none" role="status">
           {selectionIds.length} nodes · {edgeSelectionIds.length} lines selected{' '}
-          <span>
+          <span className="ml-3.5 text-(--ui-text-91a7bd) max-md:hidden">
             {shortcuts.remove} to remove · {shortcuts.undo} to restore
           </span>
         </div>
       )}
-      {panel && <div className="canvas-editor-panel">{panel}</div>}
+      {panel && <div data-editor-panel="true" className="absolute top-3.5 right-17 max-w-[calc(100%-28px)] w-95 max-h-[calc(100%-28px)] z-15 overflow-y-auto border border-(--ui-border-3a4f68) rounded-[14px] bg-(--ui-surface-131e2ef5) backdrop-blur-[18px] shadow-[0_14px_45px_var(--ui-shadow-0008)] max-xs:top-17 max-xs:right-2.5 max-xs:left-2.5 max-xs:w-[calc(100%-20px)] max-xs:max-w-[calc(100%-20px)]">{panel}</div>}
       {feedback && (
-        <div className="canvas-feedback" role="status">
+        <div className="absolute bottom-16.25 left-5 right-5 text-xs text-(--ui-text-f8cd91) pointer-events-none" role="status">
           {feedback}
         </div>
       )}
       {!graph.nodes.length && (
-        <div className="canvas-empty">
-          <h3>Start with your first node</h3>
-          <p>Add nodes for income, accounts, debts, and expenses to build your scenario.</p>
+        <div className="absolute inset-0 flex flex-col justify-center items-center pointer-events-none p-12.5 text-center gap-2">
+          <h3 className="text-[15px] font-semibold text-text m-0">Start with your first node</h3>
+          <p className="text-(--ui-text-7b8ea8) text-xs m-0">Add nodes for income, accounts, debts, and expenses to build your scenario.</p>
         </div>
       )}
-      <div className="canvas-controls">
-        <button aria-label="Zoom in" title="Zoom in" onClick={() => zoomRef.current(1.25)}>
+      <div className="absolute right-4 bottom-4 flex bg-(--ui-surface-172030) border border-(--ui-border-354056) rounded-[7px] overflow-hidden">
+        <button className="border-0 border-r border-(--ui-border-354056) bg-transparent px-2.75 py-1.75 text-[16px] text-(--ui-text-a8bbd2) hover:bg-(--ui-surface-hover-2a3750) cursor-pointer grid place-items-center" aria-label="Zoom in" title="Zoom in" onClick={() => zoomRef.current(1.25)}>
           <CanvasIcon name="plus" />
         </button>
-        <button aria-label="Zoom out" title="Zoom out" onClick={() => zoomRef.current(0.8)}>
+        <button className="border-0 border-r border-(--ui-border-354056) bg-transparent px-2.75 py-1.75 text-[16px] text-(--ui-text-a8bbd2) hover:bg-(--ui-surface-hover-2a3750) cursor-pointer grid place-items-center" aria-label="Zoom out" title="Zoom out" onClick={() => zoomRef.current(0.8)}>
           <CanvasIcon name="minus" />
         </button>
         <button
+          className="border-0 bg-transparent px-2.75 py-1.75 text-[11px] text-(--ui-text-a8bbd2) hover:bg-(--ui-surface-hover-2a3750) cursor-pointer grid place-items-center"
           aria-label="Fit canvas to nodes"
           title="Fit to nodes"
           onClick={() => fitRef.current()}
@@ -769,10 +836,10 @@ export function Canvas({
           <CanvasIcon name="fit" />
         </button>
       </div>
-      <div className="canvas-legend">
+      <div className="absolute left-5 bottom-5 flex gap-3 flex-wrap pointer-events-none max-md:gap-2 max-md:left-3.5 max-md:bottom-14">
         {types.map((t) => (
-          <span key={t}>
-            <i style={{ background: colors[t] }} />
+          <span key={t} className="inline-flex gap-1.5 items-center text-[9px] text-(--ui-text-96a7bf) max-md:text-[8px]">
+            <i className="w-1.5 h-1.5 rounded-full inline-block" style={{ background: colors[t] }} />
             {typeLabel(t)}
           </span>
         ))}

@@ -126,6 +126,23 @@ class RecurringTransactionServiceTest {
     }
 
     @Test
+    void generateDueTransactions_skipsLegacyDividendEstimates() {
+        var estimate = new RecurringTransaction();
+        estimate.setDescription("KO Dividend");
+        estimate.setNotes("Auto-generated dividend for KO (10 shares @ $0.50/quarterly)");
+        estimate.setIsActive(true);
+        var target = LocalDate.of(2026, 11, 3);
+        estimate.setNextDueDate(target);
+        when(recurringRepository.findByUserIdAndIsActiveTrueAndNextDueDateLessThanEqual(7L, target))
+            .thenReturn(List.of(estimate));
+
+        // Preserved the saved estimate while preventing it from posting as received income.
+        assertTrue(recurringService.generateDueTransactions(7L, target).isEmpty());
+        verifyNoInteractions(transactionRepository);
+        verify(recurringRepository, never()).delete(any());
+    }
+
+    @Test
     void generateDueTransactions_respectsEndDate() {
         RecurringTransaction r = new RecurringTransaction();
         r.setId(10L);

@@ -1,8 +1,8 @@
 import { NumberField } from './NumberField';
 import { useState } from 'react';
 import type { FormEvent } from 'react';
-import { debtPayment, expenseAmount, types } from '../finance';
-import type { GraphData, GraphNode } from '../finance';
+import { debtPayment, expenseAmount, money, recurringToMonthlyAmount, types } from '../finance';
+import type { GraphData, GraphNode, RecurrenceFrequency } from '../finance';
 
 export function AccountEditor({
   node,
@@ -38,14 +38,15 @@ export function AccountEditor({
     onSave({ ...draft, name: draft.name.trim() });
   };
   return (
-    <aside className="inspector">
-      <div className="section-heading">
+    <aside className="w-71.25 border border-(--ui-border-334055) rounded-[11px] p-4.75 bg-(--ui-surface-151d2b) shrink-0 max-md:w-full">
+      <div className="flex items-center justify-between gap-4">
         <div>
-          <div className="eyebrow">NODE DETAILS</div>
-          <h3>{graph.nodes.some((n) => n.id === node.id) ? 'Edit node' : 'New node'}</h3>
+          <div className="text-[9px] text-(--ui-text-a9b7ce) tracking-[1.7px] font-semibold mb-2.5 max-md:mb-1.25">NODE DETAILS</div>
+          <h3 className="text-[15px] font-semibold text-text m-0">{graph.nodes.some((n) => n.id === node.id) ? 'Edit node' : 'New node'}</h3>
         </div>
-        <button className="icon-button" aria-label="Close node editor" onClick={onClose}>
+        <button className="p-0 leading-none bg-(--ui-surface-1d2737) hover:bg-(--ui-surface-hover-263346) border border-(--ui-border-334057) rounded-[7px] grid place-items-center w-7.5 h-7.5 text-[20px] text-(--ui-text-a5b5cd) hover:text-white shrink-0 cursor-pointer" aria-label="Close node editor" onClick={onClose}>
           <svg
+            className="block"
             width="16"
             height="16"
             viewBox="0 0 24 24"
@@ -60,19 +61,35 @@ export function AccountEditor({
           </svg>
         </button>
       </div>
-      <form onSubmit={submit} className="editor-form">
-        <label>
+      <form onSubmit={submit} className="flex flex-col gap-3.75 mt-5.5 max-md:grid max-md:grid-cols-2">
+        <label className="flex items-center gap-2.5 text-xs text-[#cad6e8] cursor-pointer p-2.5 rounded-lg bg-[#101722] border border-[#283548]">
+          <input
+            type="checkbox"
+            className="accent-brand w-4 h-4 cursor-pointer rounded"
+            checked={!draft.disabled}
+            onChange={(e) => setDraft({ ...draft, disabled: !e.target.checked })}
+          />
+          <div>
+            <span className="font-medium block">Active in cash flow & calculations</span>
+            <small className="text-[10px] text-[#7d91ac] leading-normal block">
+              Untick to turn off this payment/account and exclude it from cash flow and totals.
+            </small>
+          </div>
+        </label>
+        <label className="flex flex-col gap-1.75 text-[11px] text-(--ui-text-a9b6cc)">
           Name
           <input
+            className="w-full text-xs min-w-0 border border-border rounded-lg bg-(--ui-surface-101722) text-(--ui-text-edf2fa) px-2.75 py-2.5"
             required
             maxLength={100}
             value={draft.name}
             onChange={(e) => setDraft({ ...draft, name: e.target.value })}
           />
         </label>
-        <label>
+        <label className="flex flex-col gap-1.75 text-[11px] text-(--ui-text-a9b6cc)">
           Node type
           <select
+            className="w-full text-xs min-w-0 border border-border rounded-lg bg-(--ui-surface-101722) text-(--ui-text-edf2fa) px-2.75 py-2.5 cursor-pointer"
             value={draft.nodeType}
             onChange={(e) =>
               setDraft({ ...draft, nodeType: e.target.value as GraphNode['nodeType'] })
@@ -83,31 +100,62 @@ export function AccountEditor({
             ))}
           </select>
         </label>
-        <label>
+        {['INCOME', 'EXPENSE'].includes(draft.nodeType) && (
+          <label className="flex flex-col gap-1.75 text-[11px] text-(--ui-text-a9b6cc)">
+            Frequency
+            <select
+              className="w-full text-xs min-w-0 border border-border rounded-lg bg-(--ui-surface-101722) text-(--ui-text-edf2fa) px-2.75 py-2.5 cursor-pointer"
+              value={draft.frequency || 'monthly'}
+              onChange={(e) =>
+                setDraft({
+                  ...draft,
+                  frequency: e.target.value as RecurrenceFrequency,
+                })
+              }
+            >
+              <option value="daily">Daily</option>
+              <option value="weekly">Weekly</option>
+              <option value="biweekly">Bi-weekly (every 2 weeks)</option>
+              <option value="monthly">Monthly</option>
+              <option value="quarterly">Quarterly</option>
+              <option value="yearly">Yearly / Annual</option>
+            </select>
+          </label>
+        )}
+        <label className="flex flex-col gap-1.75 text-[11px] text-(--ui-text-a9b6cc)">
           {['INCOME', 'EXPENSE'].includes(draft.nodeType)
-            ? 'Monthly amount ($)'
+            ? draft.frequency && draft.frequency !== 'monthly'
+              ? `${draft.frequency.charAt(0).toUpperCase() + draft.frequency.slice(1)} amount ($)`
+              : 'Monthly amount ($)'
             : 'Current balance ($)'}
           <NumberField
             type="number"
-            min={0}
+            min={draft.nodeType === "CHECKING" || draft.nodeType === "SAVINGS" ? -1e12 : 0}
             max={1e12}
             step="0.01"
             required
-            value={expenseRoutes.length ? expenseAmount(draft, graph) : draft.amountOrBalance}
+            value={expenseRoutes.length ? expenseAmount(draft, graph, true) : draft.amountOrBalance}
             disabled={expenseRoutes.length > 0}
             onChange={(e) => setDraft({ ...draft, amountOrBalance: Number(e.target.value) })}
           />
+          {['INCOME', 'EXPENSE'].includes(draft.nodeType) &&
+            draft.frequency &&
+            draft.frequency !== 'monthly' && (
+              <small className="text-[10px] text-[#7d91ac] leading-normal block">
+                Monthly equivalent: {money(recurringToMonthlyAmount(draft.amountOrBalance, draft.frequency, draft.intervalCount))}/month
+              </small>
+            )}
         </label>
         {expenseRoutes.length > 0 && (
-          <div className="notice">
-            <p>
+          <div className="p-[12px_16px] text-xs rounded-lg mb-3.5 flex gap-3.5 items-center justify-between leading-relaxed bg-(--ui-surface-192332) border border-(--ui-border-2e3e54) text-(--ui-text-a9b8cc)">
+            <p className="m-0">
               This expense is controlled by {expenseRoutes.length} incoming route(s). Edit a route
               to change its monthly amount without keeping two conflicting values.
             </p>
             {expenseRoutes.map((edge) => (
               <button
                 type="button"
-                className="button"
+                className="inline-flex items-center justify-center gap-1.75 whitespace-nowrap border border-(--ui-border-344056) rounded-[7px] px-3.25 py-2.25 bg-(--ui-surface-182131) hover:bg-(--ui-surface-hover-232f43) hover:border-(--ui-border-65738c) text-[11px] font-medium min-h-8.5 cursor-pointer text-text"
                 key={edge.id}
                 onClick={() => onEditRoute(edge.id)}
               >
@@ -117,7 +165,7 @@ export function AccountEditor({
           </div>
         )}
         {!['INCOME', 'EXPENSE'].includes(draft.nodeType) && (
-          <label>
+          <label className="flex flex-col gap-1.75 text-[11px] text-(--ui-text-a9b6cc)">
             {draft.nodeType === 'INVESTMENT'
               ? 'Reference return (%; model uses market settings)'
               : 'Annual cash yield / loan APR (%)'}
@@ -133,7 +181,7 @@ export function AccountEditor({
           </label>
         )}
         {draft.nodeType === 'DEBT' && (
-          <label>
+          <label className="flex flex-col gap-1.75 text-[11px] text-(--ui-text-a9b6cc)">
             Monthly payment override ($)
             <NumberField
               type="number"
@@ -149,21 +197,21 @@ export function AccountEditor({
                 })
               }
             />
-            <small>
+            <small className="text-[10px] text-(--ui-text-7d91ac) leading-normal">
               Leave blank to use incoming payment routes, or 2% of the starting balance when no
               route is present.
             </small>
           </label>
         )}
-        <p className="muted small">
+        <p className="text-(--ui-text-8b9ab1) text-[11px] leading-normal m-0">
           Income follows the scenario’s gross/net setting. Expenses are monthly flows; other nodes
           hold balances.
         </p>
-        <button className="button primary" disabled={!draft.name.trim()}>
+        <button className="inline-flex items-center justify-center gap-1.75 whitespace-nowrap rounded-[7px] px-3.25 py-2.25 text-[11px] font-medium min-h-8.5 cursor-pointer bg-primary text-primary-fg border border-primary hover:bg-(--ui-surface-hover-cbbafa) disabled:opacity-40 disabled:cursor-not-allowed" disabled={!draft.name.trim()}>
           Apply to scenario
         </button>
         {graph.nodes.some((n) => n.id === node.id) && (
-          <button type="button" className="button danger" onClick={onDelete}>
+          <button type="button" className="inline-flex items-center justify-center gap-1.75 whitespace-nowrap rounded-[7px] px-3.25 py-2.25 text-[11px] font-medium min-h-8.5 cursor-pointer text-coral border border-(--ui-border-633246) bg-(--ui-surface-2b1b28) hover:bg-(--ui-surface-hover-3d2034)" onClick={onDelete}>
             Remove node
           </button>
         )}

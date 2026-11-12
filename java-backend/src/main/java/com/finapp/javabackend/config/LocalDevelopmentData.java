@@ -66,27 +66,34 @@ public class LocalDevelopmentData implements ApplicationRunner {
             user.getId()
         );
 
-        // Give a new workspace the Recent Grad scenario without modifying existing work.
+        // Copied the starter graph into the local user’s default scenario.
+        Long scenarioId = jdbc.queryForObject(
+            "SELECT id FROM scenarios WHERE user_id = ? AND LOWER(name) = 'default'",
+            Long.class,
+            user.getId()
+        );
         if (
             jdbc.queryForObject(
-                "SELECT count(*) FROM financial_nodes WHERE user_id = ?",
+                "SELECT count(*) FROM financial_nodes WHERE scenario_id = ?",
                 Long.class,
-                user.getId()
+                scenarioId
             ) == 0
         ) {
             // Remapped copied node IDs before copying edges, so the development
             // account owned its graph rather than sharing the archetype's records.
             Map<Long, Long> ids = new HashMap<>();
             for (Long sourceId : jdbc.queryForList(
-                "SELECT id FROM financial_nodes WHERE user_id = 1 ORDER BY id",
+                "SELECT n.id FROM financial_nodes n JOIN scenarios s ON n.scenario_id = s.id " +
+                    "WHERE s.user_id = 1 AND LOWER(s.name) = 'default' ORDER BY n.id",
                 Long.class
             )) {
                 Long newId = jdbc.queryForObject(
                     "INSERT INTO financial_nodes " +
-                        "(user_id, node_type, name, current_balance, interest_rate_apr) " +
-                        "SELECT ?, node_type, name, current_balance, interest_rate_apr FROM financial_nodes WHERE id = ? RETURNING id",
+                        "(user_id, scenario_id, node_type, name, current_balance, interest_rate_apr, pos_x, pos_y) " +
+                        "SELECT ?, ?, node_type, name, current_balance, interest_rate_apr, pos_x, pos_y FROM financial_nodes WHERE id = ? RETURNING id",
                     Long.class,
                     user.getId(),
+                    scenarioId,
                     sourceId
                 );
                 ids.put(sourceId, newId);
@@ -99,7 +106,8 @@ public class LocalDevelopmentData implements ApplicationRunner {
                 Long target = ids.get(((Number) edge.get("target_node_id")).longValue());
                 if (source != null && target != null) {
                     jdbc.update(
-                        "INSERT INTO node_edges (source_node_id, target_node_id, percentage_flow, fixed_amount_flow) VALUES (?, ?, ?, ?)",
+                        "INSERT INTO node_edges (scenario_id, source_node_id, target_node_id, percentage_flow, fixed_amount_flow) VALUES (?, ?, ?, ?, ?)",
+                        scenarioId,
                         source,
                         target,
                         edge.get("percentage_flow"),

@@ -1,6 +1,6 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from app.routers import simulate, stocks
+from app.routers import quotes, simulate, stocks
 from contextlib import asynccontextmanager
 from app.market_model import warm_market
 
@@ -28,3 +28,4 @@ app.add_middleware(
 # Register the simulate router
 app.include_router(simulate.router)
 app.include_router(stocks.router)
+app.include_router(quotes.router)

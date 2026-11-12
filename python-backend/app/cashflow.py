@@ -5,32 +5,110 @@ from dataclasses import dataclass
 import numpy as np
 
 
+def recurring_to_monthly(
+    amount: float, frequency: str | None = "monthly", interval_count: int | None = 1
+) -> float:
+    count = max(1, interval_count or 1)
+    base = float(amount or 0.0)
+    if base <= 0:
+        return 0.0
+    freq = (frequency or "monthly").lower()
+    if freq == "daily":
+        return round((base * 365) / (12 * count), 2)
+    elif freq == "weekly":
+        return round((base * 52) / (12 * count), 2)
+    elif freq == "biweekly":
+        return round((base * 26) / (12 * count), 2)
+    elif freq == "monthly":
+        return round(base / count, 2)
+    elif freq == "quarterly":
+        return round((base * 4) / (12 * count), 2)
+    elif freq == "semiannual":
+        return round((base * 2) / (12 * count), 2)
+    elif freq in ("yearly", "annual"):
+        return round(base / (12 * count), 2)
+    return round(base / count, 2)
+
+
+def node_monthly_amount(node) -> float:
+    val = float(
+        getattr(node, "balance", 0.0)
+        if hasattr(node, "balance")
+        else node.get("balance", 0.0)
+        if isinstance(node, dict)
+        else 0.0
+    )
+    freq = (
+        getattr(node, "frequency", None)
+        if hasattr(node, "frequency")
+        else (node.get("frequency") if isinstance(node, dict) else None)
+    )
+    interval = (
+        getattr(node, "interval_count", 1)
+        if hasattr(node, "interval_count")
+        else (node.get("interval_count", 1) if isinstance(node, dict) else 1)
+    )
+    return recurring_to_monthly(val, freq, interval)
+
+
 def expense_total(nodes, edges, income_basis, tax_rate):
     # Replaced an expense's default monthly amount with its funded-route plan;
     # based percentage expense routes on starting household take-home income.
-    by_id = {node.id: node for node in nodes}
-    income = sum(node.balance for node in nodes if node.type == "INCOME")
+    by_id = {node.id if hasattr(node, "id") else node["id"]: node for node in nodes}
+    income = sum(
+        node_monthly_amount(node)
+        for node in nodes
+        if (getattr(node, "type", "") if hasattr(node, "type") else node.get("type", "")).upper()
+        == "INCOME"
+    )
     take_home = income * (1 - tax_rate if income_basis == "gross" else 1)
     total = 0.0
     for node in nodes:
-        if node.type != "EXPENSE":
+        ntype = (
+            getattr(node, "type", "") if hasattr(node, "type") else node.get("type", "")
+        ).upper()
+        nid = getattr(node, "id", "") if hasattr(node, "id") else node.get("id", "")
+        if ntype != "EXPENSE":
             continue
         routes = [
             edge
             for edge in edges
-            if edge.target == node.id and by_id[edge.source].type in ("INCOME", "CHECKING")
+            if (edge.target if hasattr(edge, "target") else edge["target"]) == nid
+            and (
+                getattr(by_id[edge.source if hasattr(edge, "source") else edge["source"]], "type", "")
+                if hasattr(by_id[edge.source if hasattr(edge, "source") else edge["source"]], "type")
+                else by_id[edge.source if hasattr(edge, "source") else edge["source"]].get(
+                    "type", ""
+                )
+            ).upper()
+            in ("INCOME", "CHECKING")
         ]
         total += (
             sum(
                 (
-                    edge.monthly_fixed_flow
-                    if edge.monthly_fixed_flow is not None
-                    else take_home * edge.percentage_flow / 100
+                    (
+                        edge.monthly_fixed_flow
+                        if hasattr(edge, "monthly_fixed_flow")
+                        else edge.get("monthly_fixed_flow")
+                    )
+                    if (
+                        edge.monthly_fixed_flow
+                        if hasattr(edge, "monthly_fixed_flow")
+                        else edge.get("monthly_fixed_flow")
+                    )
+                    is not None
+                    else take_home
+                    * (
+                        edge.percentage_flow
+                        if hasattr(edge, "percentage_flow")
+                        else edge.get("percentage_flow", 0.0)
+                    )
+                    / 100
                 )
                 for edge in routes
             )
             if routes
-            else node.balance
+            else node_monthly_amount(node)
         )
     return total
 

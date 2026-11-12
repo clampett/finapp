@@ -17,8 +17,11 @@ public class SessionCookieAuthenticationFilter extends OncePerRequestFilter {
 
     private final UserSessionRepository sessions;
 
-    public SessionCookieAuthenticationFilter(UserSessionRepository sessions) {
+    private final LocalDateTime sessionCutoff;
+
+    public SessionCookieAuthenticationFilter(UserSessionRepository sessions, LocalDateTime sessionCutoff) {
         this.sessions = sessions;
+        this.sessionCutoff = sessionCutoff;
     }
 
     @Override
@@ -43,6 +46,8 @@ public class SessionCookieAuthenticationFilter extends OncePerRequestFilter {
                     sessions
                         .findByToken(cookie.getValue())
                         .filter(session -> session.getExpiresAt().isAfter(LocalDateTime.now()))
+                        // Rejected sessions issued before this local backend started.
+                        .filter(session -> sessionCutoff == null || !session.getCreatedAt().isBefore(sessionCutoff))
                         .ifPresent(session -> {
                             // Derived identity from the stored session's user,
                             // then exposed that identity to downstream owner checks.

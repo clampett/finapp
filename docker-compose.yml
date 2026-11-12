@@ -38,12 +38,22 @@ services:
     ports:
       - "5000:5000"
     environment:
-      - ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY:-}
       - PRICE_CACHE_DB=/data/price_cache.db
     volumes:
       - market_cache:/data
     networks:
       - finapp-network
+
+  # Isolated the optional CPU runtime from the normal database and frontend profile.
+  ollama:
+    image: ollama/ollama:0.40.16
+    profiles: ["local-ai"]
+    ports:
+      - "127.0.0.1:11434:11434"
+    environment:
+      OLLAMA_NO_CLOUD: "1"
+    volumes:
+      - ollama_models:/root/.ollama
 
   db:
     image: postgres:15-alpine
@@ -59,6 +69,7 @@ services:
       - finapp-network
 
 volumes:
+  ollama_models:
   market_cache:
   postgres_data:
     external: true

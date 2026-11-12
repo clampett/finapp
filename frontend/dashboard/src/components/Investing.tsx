@@ -10,11 +10,19 @@ import {
   YAxis,
 } from 'recharts';
 import { API_BASE, colors, dollars, money } from '../finance';
-
-interface Holding {
-  symbol: string;
-  shares: number;
-}
+import {
+  PORTFOLIO_UPDATED_EVENT,
+  addStockUnified,
+  loadUnifiedHoldings,
+  parseLocalHoldings,
+  saveLocalHoldings,
+  removeStockUnified,
+  updateSharesUnified,
+  saveStoredPortfolioValue,
+  notifyPortfolioUpdated,
+} from '../portfolio';
+import type { Holding } from '../portfolio';
+import { MarketPrices } from './MarketPrices';
 
 interface Quote {
   symbol: string;
@@ -27,6 +35,9 @@ interface Quote {
   cagr: number | null;
   expected_annual_return: number | null;
   annual_volatility: number | null;
+  pays_dividend?: boolean;
+  dividend_frequency?: string | null;
+  dividend_per_share?: number | null;
   history: { date: string; close: number }[];
 }
 
@@ -39,24 +50,6 @@ type QuoteState = Quote | { error: string } | 'loading';
 
 const MAX_HOLDINGS = 25;
 const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
-
-function loadHoldings(storageKey: string): Holding[] {
-  try {
-    const parsed: unknown = JSON.parse(localStorage.getItem(storageKey) ?? '[]');
-    if (!Array.isArray(parsed)) return [];
-    return parsed
-      .filter(
-        (item): item is Holding =>
-          typeof item?.symbol === 'string' &&
-          typeof item?.shares === 'number' &&
-          Number.isFinite(item.shares) &&
-          item.shares >= 0,
-      )
-      .slice(0, MAX_HOLDINGS);
-  } catch {
-    return [];
-  }
-}
 
 async function fetchQuote(symbol: string, signal?: AbortSignal): Promise<Quote> {
   const response = await fetch(`${API_BASE}/market/stocks/${encodeURIComponent(symbol)}`, {
@@ -73,7 +66,7 @@ async function fetchQuote(symbol: string, signal?: AbortSignal): Promise<Quote> 
   // Rejected unverified currencies, including responses from an outdated backend.
   if (body?.currency !== 'USD') {
     throw new Error(
-      'This stock needs a verified USD quote. Update the Python backend and try again.',
+      'A verified USD price is unavailable for this stock. Try another symbol.',
     );
   }
   return body as Quote;
@@ -96,56 +89,124 @@ const monthTicks = (history: { date: string }[]) =>
 
 const monthLabel = (date: string) => `${MONTHS[Number(date.slice(5, 7)) - 1]} ’${date.slice(2, 4)}`;
 
-export function Investing({ storageKey }: { storageKey: string }) {
-  const [holdings, setHoldings] = useState<Holding[]>(() => loadHoldings(storageKey));
+type InvestingProps = {
+  storageKey: string;
+  userId?: number;
+  demo?: boolean;
+};
+
+export function Investing(props: InvestingProps) {
+  // Mounted the market panels with Investing so both dashboard layouts used the same view.
+  return (
+    <>
+      <StockHoldings {...props} />
+      <MarketPrices />
+    </>
+  );
+}
+
+function StockHoldings({
+  storageKey,
+  userId,
+  demo,
+}: InvestingProps) {
+  const [holdings, setHoldings] = useState<Holding[]>(() => parseLocalHoldings(storageKey));
   const [quotes, setQuotes] = useState<Record<string, QuoteState>>({});
   const [suggestions, setSuggestions] = useState<Suggestion[]>([]);
   const [symbol, setSymbol] = useState('');
   const [message, setMessage] = useState('');
   const [pending, setPending] = useState<string[]>([]);
   const [selected, setSelected] = useState<string | null>(null);
-  const startup = useRef(holdings);
-  // Reserved symbols immediately so rapid clicks could not add duplicates or exceed the limit.
   const reserved = useRef(new Set(holdings.map((holding) => holding.symbol)));
   const requests = useRef(new Map<string, AbortController>());
   const selectionIntent = useRef(0);
 
+  // Initial unified portfolio load
   useEffect(() => {
-    try {
-      localStorage.setItem(storageKey, JSON.stringify(holdings));
-    } catch {
-      /* Private browsing can block storage; holdings just won't persist. */
-    }
-  }, [holdings, storageKey]);
+    const controller = new AbortController();
+    loadUnifiedHoldings(storageKey, userId, demo, controller.signal)
+      .then(({ holdings: unified }) => {
+        if (controller.signal.aborted) return;
+        setHoldings(unified);
+        unified.forEach((h) => reserved.current.add(h.symbol));
+        for (const { symbol: sym } of unified) {
+          if (!requests.current.has(sym)) {
+            const reqCtrl = new AbortController();
+            requests.current.set(sym, reqCtrl);
+            setQuotes((cur) => ({ ...cur, [sym]: 'loading' }));
+            fetchQuote(sym, reqCtrl.signal)
+              .then((quote) => {
+                if (!reqCtrl.signal.aborted) {
+                  setQuotes((cur) => ({ ...cur, [sym]: quote }));
+                  setHoldings((curHoldings) => {
+                    const updated = curHoldings.map((h) =>
+                      h.symbol === sym
+                        ? { ...h, lastPrice: quote.latest_price, companyName: quote.name || h.companyName }
+                        : h,
+                    );
+                    saveLocalHoldings(storageKey, updated);
+                    return updated;
+                  });
+                }
+              })
+              .catch((err) => {
+                if (!reqCtrl.signal.aborted)
+                  setQuotes((cur) => ({
+                    ...cur,
+                    [sym]: { error: err instanceof Error ? err.message : `Could not load ${sym}.` },
+                  }));
+              })
+              .finally(() => {
+                if (requests.current.get(sym) === reqCtrl) requests.current.delete(sym);
+              });
+          }
+        }
+      })
+      .catch(() => {});
 
+    return () => controller.abort();
+  }, [storageKey, userId, demo]);
+
+  // Synchronize when another tab updates stocks (e.g. Budgeting)
   useEffect(() => {
-    // Prices are not saved with the holdings, so reload them for each saved stock.
-    for (const { symbol: sym } of startup.current) {
-      const controller = new AbortController();
-      requests.current.set(sym, controller);
-      setQuotes((current) => ({ ...current, [sym]: 'loading' }));
-      fetchQuote(sym, controller.signal)
-        .then((quote) => {
-          if (!controller.signal.aborted) setQuotes((current) => ({ ...current, [sym]: quote }));
+    const handlePortfolioUpdated = () => {
+      loadUnifiedHoldings(storageKey, userId, demo)
+        .then(({ holdings: unified }) => {
+          setHoldings(unified);
+          unified.forEach((h) => reserved.current.add(h.symbol));
+          for (const { symbol: sym } of unified) {
+            if (!quotes[sym] && !requests.current.has(sym)) {
+              const reqCtrl = new AbortController();
+              requests.current.set(sym, reqCtrl);
+              setQuotes((cur) => ({ ...cur, [sym]: 'loading' }));
+              fetchQuote(sym, reqCtrl.signal)
+                .then((quote) => {
+                  if (!reqCtrl.signal.aborted) {
+                    setQuotes((cur) => ({ ...cur, [sym]: quote }));
+                    setHoldings((curHoldings) => {
+                      const updated = curHoldings.map((h) =>
+                        h.symbol === sym
+                          ? { ...h, lastPrice: quote.latest_price, companyName: quote.name || h.companyName }
+                          : h,
+                      );
+                      saveLocalHoldings(storageKey, updated);
+                      return updated;
+                    });
+                  }
+                })
+                .catch(() => {})
+                .finally(() => {
+                  if (requests.current.get(sym) === reqCtrl) requests.current.delete(sym);
+                });
+            }
+          }
         })
-        .catch((err) => {
-          if (controller.signal.aborted) return;
-          setQuotes((current) => ({
-            ...current,
-            [sym]: { error: err instanceof Error ? err.message : `Could not load ${sym}.` },
-          }));
-        })
-        .finally(() => {
-          if (requests.current.get(sym) === controller) requests.current.delete(sym);
-        });
-    }
-    const activeRequests = requests.current;
-    // Cancelled outstanding quotes when leaving the tab, preventing stale results from returning.
-    return () => {
-      for (const controller of activeRequests.values()) controller.abort();
-      activeRequests.clear();
+        .catch(() => {});
     };
-  }, []);
+
+    window.addEventListener(PORTFOLIO_UPDATED_EVENT, handlePortfolioUpdated);
+    return () => window.removeEventListener(PORTFOLIO_UPDATED_EVENT, handlePortfolioUpdated);
+  }, [storageKey, userId, demo, quotes]);
 
   useEffect(() => {
     const controller = new AbortController();
@@ -161,12 +222,11 @@ export function Investing({ storageKey }: { storageKey: string }) {
   async function addSymbol(raw: string) {
     const sym = raw.trim().toUpperCase();
     if (!sym) return;
-    if (requests.current.has(sym)) return;
-    if (reserved.current.has(sym)) {
-      setMessage(`${sym} is already in your holdings or is being loaded.`);
+    if (requests.current.has(sym)) {
+      setMessage(`${sym} is already being loaded.`);
       return;
     }
-    if (reserved.current.size >= MAX_HOLDINGS) {
+    if (holdings.length >= MAX_HOLDINGS) {
       setMessage(`You can track up to ${MAX_HOLDINGS} stocks.`);
       return;
     }
@@ -178,16 +238,29 @@ export function Investing({ storageKey }: { storageKey: string }) {
     setMessage('');
     setSymbol('');
     try {
-      // Reused an already loaded quote when a removed stock was added again during this visit.
       const savedQuote = quotes[sym];
       const quote = isQuote(savedQuote) ? savedQuote : await fetchQuote(sym, controller.signal);
       if (controller.signal.aborted) return;
       setQuotes((current) => ({ ...current, [sym]: quote }));
-      setHoldings((current) => [...current, { symbol: sym, shares: 1 }]);
-      // Preserved a newer chart choice if this request finished after another user action.
+      const newHolding = await addStockUnified({
+        storageKey,
+        userId,
+        demo,
+        symbol: sym,
+        companyName: quote.name,
+        price: quote.latest_price,
+        shares: 1,
+        // Retained detected dividend metadata for the portfolio forecast.
+        paysDividend: quote.pays_dividend,
+        dividendFrequency: quote.dividend_frequency,
+        dividendPerShare: quote.dividend_per_share,
+      });
+      setHoldings((current) => [...current, newHolding]);
       if (intent === selectionIntent.current) setSelected(sym);
     } catch (err) {
-      reserved.current.delete(sym);
+      if (!holdings.some((h) => h.symbol === sym)) {
+        reserved.current.delete(sym);
+      }
       if (controller.signal.aborted) return;
       setMessage(err instanceof Error ? err.message : `Could not add ${sym}.`);
     } finally {
@@ -197,23 +270,95 @@ export function Investing({ storageKey }: { storageKey: string }) {
     }
   }
 
-  function setShares(sym: string, raw: string) {
+  async function setShares(sym: string, raw: string, stockId?: number) {
     const value = Number(raw);
+    if (!raw.trim() || !Number.isFinite(value) || value < 0) return;
+    const newShares = value;
+    const currentHolding = stockId !== undefined
+      ? holdings.find((h) => h.stockId === stockId)
+      : holdings.find((h) => h.symbol === sym);
+    const currentShares = currentHolding?.shares ?? 0;
+    if (currentShares === newShares) return;
+    const quote = quotes[sym];
+    const price = isQuote(quote) ? quote.latest_price : currentHolding?.lastPrice;
+    if (!price || !Number.isFinite(price) || price <= 0) {
+      setMessage("A price is needed before shares can be updated.");
+      return;
+    }
+    const previousHoldings = holdings;
+
     setHoldings((current) =>
       current.map((h) =>
-        h.symbol === sym ? { ...h, shares: Number.isFinite(value) && value >= 0 ? value : 0 } : h,
+        (stockId !== undefined ? h.stockId === stockId : h.symbol === sym)
+          ? { ...h, shares: newShares }
+          : h,
       ),
     );
+    try {
+      await updateSharesUnified({
+        storageKey,
+        userId,
+        demo,
+        symbol: sym,
+        currentShares,
+        newShares,
+        price,
+        stockId: currentHolding?.stockId ?? stockId,
+      });
+    } catch (err) {
+      setHoldings(previousHoldings);
+      setMessage(err instanceof Error ? err.message : `Could not update shares for ${sym}.`);
+    }
+  }
+
+  async function removeHolding(sym: string, stockId?: number) {
+    const target = stockId !== undefined
+      ? holdings.find((h) => h.stockId === stockId)
+      : holdings.find((h) => h.symbol === sym);
+    const otherLotsForSym = holdings.filter(
+      (h) => h.symbol === sym && (stockId !== undefined ? h.stockId !== stockId : false),
+    );
+    if (otherLotsForSym.length === 0) {
+      reserved.current.delete(sym);
+      requests.current.get(sym)?.abort();
+      requests.current.delete(sym);
+    }
+    const previousHoldings = holdings;
+    setHoldings((current) =>
+      stockId !== undefined
+        ? current.filter((h) => h.stockId !== stockId)
+        : current.filter((h) => h.symbol !== sym),
+    );
+    try {
+      await removeStockUnified({
+        storageKey,
+        userId,
+        demo,
+        symbol: sym,
+        stockId: target?.stockId ?? stockId,
+      });
+    } catch (err) {
+      setHoldings(previousHoldings);
+      setMessage(err instanceof Error ? err.message : `Could not remove ${sym}.`);
+    }
   }
 
   const rows = holdings.map((h) => ({
     ...h,
     state: quotes[h.symbol] as QuoteState | undefined,
   }));
-  const total = rows.reduce(
-    (sum, { shares, state }) => sum + (isQuote(state) ? state.latest_price * shares : 0),
-    0,
-  );
+  const total = rows.reduce((sum, { shares, state, lastPrice }) => {
+    const price = isQuote(state) ? state.latest_price : Number(lastPrice || 0);
+    return sum + price * shares;
+  }, 0);
+
+  useEffect(() => {
+    if (total > 0 || holdings.length === 0) {
+      if (saveStoredPortfolioValue(storageKey, total)) {
+        notifyPortfolioUpdated();
+      }
+    }
+  }, [total, storageKey, holdings.length]);
   const activeSymbol =
     selected && holdings.some((h) => h.symbol === selected)
       ? selected
@@ -223,34 +368,35 @@ export function Investing({ storageKey }: { storageKey: string }) {
   const available = suggestions.filter((s) => !holdings.some((h) => h.symbol === s.symbol));
 
   return (
-    <section className="investing" aria-label="Stock holdings">
+    <section className="flex flex-col gap-4 mb-6" aria-label="Stock holdings">
       <div>
-        <div className="eyebrow">STOCKS</div>
-        <h3>Your stock holdings</h3>
-        <p className="investing-intro">
+        <div className="text-[9px] text-(--ui-text-a9b7ce) tracking-[1.7px] font-semibold mb-2">STOCKS</div>
+        <h3 className="text-[17px] font-semibold tracking-[-0.2px] text-text m-0">Your stock holdings</h3>
+        <p className="text-xs text-(--ui-text-8998b0) m-0 mt-1.5">
           Search a USD-priced ticker symbol, enter your shares, and see its price, value, and
           history.
         </p>
       </div>
       <form
-        className="button-row investing-form"
+        className="flex gap-2 flex-wrap items-center"
         onSubmit={(event: FormEvent) => {
           event.preventDefault();
           void addSymbol(symbol);
         }}
       >
         <input
+          className="w-65 max-w-full text-xs min-w-0 border border-border rounded-lg bg-(--ui-surface-101722) text-(--ui-text-edf2fa) px-2.75 py-2.5"
           aria-label="Ticker symbol"
           placeholder="Ticker symbol (for example AAPL)"
           value={symbol}
           maxLength={10}
           onChange={(event) => setSymbol(event.target.value)}
         />
-        <button className="button primary" type="submit" disabled={!symbol.trim()}>
+        <button className="inline-flex items-center justify-center gap-1.75 whitespace-nowrap rounded-[7px] px-3.25 py-2.25 text-[11px] font-medium min-h-8.5 cursor-pointer bg-primary text-primary-fg border border-primary hover:bg-(--ui-surface-hover-cbbafa) disabled:opacity-40 disabled:cursor-not-allowed" type="submit" disabled={!symbol.trim()}>
           Add stock
         </button>
       </form>
-      <div className="stock-load-status" role="status" aria-live="polite">
+      <div className="min-h-[1.4em] flex items-center gap-2 text-(--ui-text-91a3bd) text-[13px]" role="status" aria-live="polite">
         {pending.length > 0 && (
           <>
             <span className="stock-loading-spinner" aria-hidden="true" />
@@ -259,19 +405,19 @@ export function Investing({ storageKey }: { storageKey: string }) {
         )}
       </div>
       {message && (
-        <p className="negative" role="alert">
+        <p className="text-xs text-coral m-0 negative" role="alert">
           {message}
         </p>
       )}
       {available.length > 0 && (
         <div>
-          <div className="eyebrow">POPULAR STOCKS</div>
-          <div className="stock-chips">
+          <div className="text-[9px] text-(--ui-text-a9b7ce) tracking-[1.7px] font-semibold mb-2">POPULAR STOCKS</div>
+          <div className="flex flex-wrap gap-2">
             {available.map((s) => (
               <button
                 key={s.symbol}
                 type="button"
-                className="button quiet stock-chip"
+                className="inline-flex items-center justify-center gap-1.5 whitespace-nowrap min-h-7 px-2.75 py-1 rounded-full border border-(--ui-border-344056) hover:not-disabled:border-(--ui-border-51607a) hover:not-disabled:text-(--ui-text-e5ecf7) text-[11px] font-medium text-(--ui-text-a4b2c9) bg-transparent cursor-pointer aria-busy:cursor-progress aria-busy:border-(--ui-border-51607a)"
                 title={s.name}
                 aria-busy={pending.includes(s.symbol)}
                 aria-disabled={pending.includes(s.symbol)}
@@ -288,78 +434,88 @@ export function Investing({ storageKey }: { storageKey: string }) {
           </div>
         </div>
       )}
-      <div className="metric-grid">
-        <div className="metric-card">
-          <span>Total stock value (USD)</span>
-          <strong>{dollars(total)}</strong>
-          <small>
+      <div className="grid grid-cols-[repeat(auto-fit,minmax(200px,260px))] gap-3.5 mb-0">
+        <div className="p-[18px_19px] bg-surface border border-(--ui-border-283145) rounded-[11px] flex flex-col gap-2.5 max-[760px]:p-3.5">
+          <span className="text-[11px] text-(--ui-text-9cacbf)">Total stock value (USD)</span>
+          <strong className="text-[clamp(20px,2vw,28px)] tracking-[-0.7px] font-semibold text-text">{dollars(total)}</strong>
+          <small className="text-[10px] text-(--ui-text-73839a)">
             {holdings.length} {holdings.length === 1 ? 'stock' : 'stocks'}
           </small>
         </div>
       </div>
       {holdings.length === 0 ? (
-        <div className="loading-panel">
+        <div className="py-17.5 px-6 text-center text-(--ui-text-8d9fba)">
           No stocks yet. Type a ticker symbol above or pick a suggestion.
         </div>
       ) : (
-        <div className="account-table-wrap">
-          <table className="account-table">
+        <div className="border border-(--ui-border-2a3549) rounded-[11px] bg-(--ui-surface-121a27) overflow-auto min-h-0">
+          <table className="w-full border-collapse text-left text-xs whitespace-nowrap">
             <thead>
               <tr>
-                <th>Stock</th>
-                <th>Shares</th>
-                <th>Price</th>
-                <th>Value</th>
-                <th>Annualized return</th>
-                <th>Annualized volatility</th>
-                <th />
+                <th className="text-(--ui-text-8192ad) text-[10px] font-medium p-[16px_20px] bg-(--ui-surface-161f2e) max-[760px]:p-[11px_14px]">Stock</th>
+                <th className="text-(--ui-text-8192ad) text-[10px] font-medium p-[16px_20px] bg-(--ui-surface-161f2e) max-[760px]:p-[11px_14px]">Shares</th>
+                <th className="text-(--ui-text-8192ad) text-[10px] font-medium p-[16px_20px] bg-(--ui-surface-161f2e) max-[760px]:p-[11px_14px]">Price</th>
+                <th className="text-(--ui-text-8192ad) text-[10px] font-medium p-[16px_20px] bg-(--ui-surface-161f2e) max-[760px]:p-[11px_14px]">Value</th>
+                <th className="text-(--ui-text-8192ad) text-[10px] font-medium p-[16px_20px] bg-(--ui-surface-161f2e) max-[760px]:p-[11px_14px]">Annualized return</th>
+                <th className="text-(--ui-text-8192ad) text-[10px] font-medium p-[16px_20px] bg-(--ui-surface-161f2e) max-[760px]:p-[11px_14px]">Annualized volatility</th>
+                <th className="p-[16px_20px] bg-(--ui-surface-161f2e) max-[760px]:p-[11px_14px]" />
               </tr>
             </thead>
             <tbody>
-              {rows.map(({ symbol: sym, shares, state }) => {
+              {rows.map(({ symbol: sym, shares, state, lastPrice, stockId }, index) => {
                 const quote = isQuote(state) ? state : null;
                 const problem = errorOf(state);
                 return (
-                  <tr key={sym}>
-                    <td>
+                  <tr key={stockId ?? `${sym}-${index}`}>
+                    <td className="p-[13px_20px] border-t border-(--ui-border-263147) text-text max-[760px]:p-[11px_14px]">
                       <strong>{sym}</strong>
-                      {quote?.name && <small className="muted"> {quote.name}</small>}
-                      {problem && <small className="negative"> {problem}</small>}
+                      {quote?.name && <small className="text-(--ui-text-8b9ab1)"> {quote.name}</small>}
+                      {problem && <small className="text-coral negative"> {problem}</small>}
                     </td>
-                    <td>
+                    <td className="p-[13px_20px] border-t border-(--ui-border-263147) text-text max-[760px]:p-[11px_14px]">
                       <input
                         type="number"
                         min="0"
                         step="any"
                         aria-label={`Shares of ${sym}`}
+                        key={shares}
                         defaultValue={shares}
+                        className="text-xs min-w-0 border border-border rounded-lg bg-(--ui-surface-101722) text-(--ui-text-edf2fa) px-2.75 py-1.5"
                         style={{ width: '5.5rem' }}
-                        onChange={(event) => setShares(sym, event.target.value)}
+                        onChange={(event) => setShares(sym, event.target.value, stockId)}
+                        onBlur={(event) => {
+                          const value = event.currentTarget.value;
+                          event.currentTarget.value = String(shares);
+                          void setShares(sym, value);
+                        }}
+                        onKeyDown={(event) => {
+                          if (event.key === "Enter") event.currentTarget.blur();
+                        }}
                       />
                     </td>
-                    <td>{quote ? dollars(quote.latest_price) : problem ? '—' : 'Loading…'}</td>
-                    <td>{quote ? dollars(quote.latest_price * shares) : '—'}</td>
+                    <td className="p-[13px_20px] border-t border-(--ui-border-263147) text-text max-[760px]:p-[11px_14px]">{quote ? dollars(quote.latest_price) : lastPrice ? dollars(lastPrice) : problem ? '—' : 'Loading…'}</td>
+                    <td className="p-[13px_20px] border-t border-(--ui-border-263147) text-text max-[760px]:p-[11px_14px]">{quote ? dollars(quote.latest_price * shares) : lastPrice ? dollars(lastPrice * shares) : '—'}</td>
                     <td
-                      className={
+                      className={`p-[13px_20px] border-t border-(--ui-border-263147) text-text max-[760px]:p-[11px_14px] ${
                         quote && quote.cagr !== null
                           ? quote.cagr >= 0
-                            ? 'positive'
-                            : 'negative'
+                            ? 'positive text-mint'
+                            : 'negative text-coral'
                           : ''
-                      }
+                      }`}
                     >
                       {percent(quote?.cagr)}
                       {quote?.stats_start_date && quote.stats_end_date && (
-                        <small className="muted" style={{ display: 'block' }}>
-                          {quote.stats_start_date} to {quote.stats_end_date}
+                        <small className="text-(--ui-text-8b9ab1)" style={{ display: 'block' }}>
+                           {quote.stats_start_date} to {quote.stats_end_date}
                         </small>
                       )}
                     </td>
-                    <td>{percent(quote?.annual_volatility)}</td>
-                    <td>
+                    <td className="p-[13px_20px] border-t border-(--ui-border-263147) text-text max-[760px]:p-[11px_14px]">{percent(quote?.annual_volatility)}</td>
+                    <td className="p-[13px_20px] border-t border-(--ui-border-263147) text-text max-[760px]:p-[11px_14px]">
                       <button
                         type="button"
-                        className={`button ${sym === activeSymbol ? 'primary' : 'quiet'}`}
+                        className={`inline-flex items-center justify-center gap-1.75 whitespace-nowrap rounded-[7px] px-3.25 py-2.25 text-[11px] font-medium min-h-8.5 cursor-pointer ${sym === activeSymbol ? 'bg-primary text-primary-fg border border-primary' : 'bg-transparent border border-transparent text-(--ui-text-a4b2c9) hover:bg-(--ui-surface-hover-232f43) hover:text-text'}`}
                         aria-pressed={sym === activeSymbol}
                         onClick={() => {
                           selectionIntent.current++;
@@ -370,12 +526,9 @@ export function Investing({ storageKey }: { storageKey: string }) {
                       </button>{' '}
                       <button
                         type="button"
-                        className="button danger"
+                        className="inline-flex items-center justify-center gap-1.75 whitespace-nowrap rounded-[7px] px-3.25 py-2.25 text-[11px] font-medium min-h-8.5 cursor-pointer text-coral border border-(--ui-border-633246) bg-(--ui-surface-2b1b28) hover:bg-(--ui-surface-hover-3d2034)"
                         onClick={() => {
-                          reserved.current.delete(sym);
-                          requests.current.get(sym)?.abort();
-                          requests.current.delete(sym);
-                          setHoldings((current) => current.filter((h) => h.symbol !== sym));
+                          void removeHolding(sym, stockId);
                         }}
                       >
                         Remove
@@ -389,7 +542,7 @@ export function Investing({ storageKey }: { storageKey: string }) {
         </div>
       )}
       {chartQuote && <StockPriceChart quote={chartQuote} />}
-      <p className="investing-note">
+      <p className="text-[11px] text-(--ui-text-73839a) leading-relaxed m-0 mt-3">
         Prices come from Yahoo Finance and refresh about once a day. Past performance does not
         predict future results. Only verified USD-priced securities are supported; no currency
         conversion is performed. Annualized return is compounded yearly growth over the dates shown,
@@ -409,26 +562,26 @@ const StockPriceChart = memo(function StockPriceChart({ quote: chartQuote }: { q
     chartHistory.length > 1
       ? chartHistory[chartHistory.length - 1].close - chartHistory[0].close
       : 0;
-  const chartColor = chartChange > 0 ? colors.INCOME : chartChange < 0 ? colors.DEBT : '#91a3bd';
+  const chartColor = chartChange > 0 ? colors.INCOME : chartChange < 0 ? colors.DEBT : 'var(--ui-paint-91a3bd)';
   return (
     <div>
-      <h4>
+      <h4 className="text-[13px] font-semibold text-text m-0 mb-2">
         {chartQuote.symbol} · recent adjusted prices (USD){' '}
-        <small className="muted">as of {chartQuote.latest_date}</small>
+        <small className="text-(--ui-text-8b9ab1)">as of {chartQuote.latest_date}</small>
       </h4>
-      <div className="investing-chart" role="img" aria-label={`${chartQuote.symbol} price history`}>
+      <div className="h-65 mt-2.5" role="img" aria-label={`${chartQuote.symbol} price history`}>
         <ResponsiveContainer width="100%" height="100%">
           <LineChart
             accessibilityLayer={false}
             data={chartQuote.history}
             margin={{ top: 10, right: 28, bottom: 10, left: 2 }}
           >
-            <CartesianGrid strokeDasharray="3 7" stroke="#29364a" vertical={false} />
+            <CartesianGrid strokeDasharray="3 7" stroke="var(--ui-paint-29364a)" vertical={false} />
             <XAxis
               dataKey="date"
               ticks={monthTicks(chartQuote.history)}
               tickFormatter={monthLabel}
-              tick={{ fill: '#91a3bd', fontSize: 11 }}
+              tick={{ fill: 'var(--ui-paint-91a3bd)', fontSize: 11 }}
               minTickGap={16}
               axisLine={false}
               tickLine={false}
@@ -437,7 +590,7 @@ const StockPriceChart = memo(function StockPriceChart({ quote: chartQuote }: { q
               domain={['auto', 'auto']}
               tickFormatter={(value: number) => money(value)}
               width={70}
-              tick={{ fill: '#91a3bd', fontSize: 11 }}
+              tick={{ fill: 'var(--ui-paint-91a3bd)', fontSize: 11 }}
               axisLine={false}
               tickLine={false}
             />
@@ -446,11 +599,11 @@ const StockPriceChart = memo(function StockPriceChart({ quote: chartQuote }: { q
                 if (!active || !payload?.length) return null;
                 const point = payload[0]?.payload as { date: string; close: number };
                 return (
-                  <div className="chart-tooltip">
-                    <strong>{point.date}</strong>
-                    <div>
+                  <div className="p-[13px_15px] bg-(--ui-surface-1c2638) border border-(--ui-border-47536d) rounded-[9px] shadow-[0_10px_30px_var(--ui-shadow-0005)] min-w-50 text-[11px]">
+                    <strong className="block text-[11px] text-(--ui-text-d9e3f3) mb-3">{point.date}</strong>
+                    <div className="flex justify-between gap-5.5 mt-2.5">
                       <span>Close</span>
-                      <b>{dollars(point.close)}</b>
+                      <b className="font-semibold text-text">{dollars(point.close)}</b>
                     </div>
                   </div>
                 );

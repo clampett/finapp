@@ -1,14 +1,142 @@
-import { useState, useEffect, useCallback, useRef } from 'react';
-import type { FormEvent } from 'react';
+import { useState, useEffect, useCallback, useRef, useMemo } from 'react';
+import type { FormEvent, CSSProperties } from 'react';
 import type { GraphData } from './finance';
-import { API_BASE, dollars } from './finance';
+import { API_BASE, dollars, debtPayment, expenseAmount, colors, totals } from './finance';
 import { sessionHeaders } from './session';
 import { NumberField } from './components/NumberField';
 import { changeAccount, changeCategory, changeKind } from './budgeting-drafts';
+import {
+  PORTFOLIO_UPDATED_EVENT,
+  notifyPortfolioUpdated,
+  loadUnifiedHoldings,
+  addStockUnified,
+  removeStockUnified,
+  updateSharesUnified,
+  saveStoredPortfolioValue,
+} from './portfolio';
+import {
+  getScenarioSalary,
+  getScenarioDebts,
+  getScenarioBudgetComparison,
+  createSalaryRecurringTemplates,
+  createDebtRecurringTemplates,
+  syncScenarioTransactionToGraph,
+  syncGraphNodesToRecurring,
+  syncRecurringToGraphNode,
+  syncRecurringDeletionToGraph,
+  getAvailableBudgetAccounts,
+} from './budgeting-bridge';
 
 interface BudgetingTabProps {
   graph: GraphData;
+  rawGraph?: GraphData;
+  userId?: number;
+  demo?: boolean;
+  portfolioValue?: number;
+  onUpdateGraph?: (next: GraphData) => void;
 }
+
+export const DEMO_BUDGET_ENC_PREFIX = 'enc:v1:';
+
+export const toB64 = (bytes: Uint8Array): string => {
+  let binary = '';
+  const len = bytes.byteLength;
+  for (let i = 0; i < len; i++) {
+    binary += String.fromCharCode(bytes[i]);
+  }
+  return btoa(binary);
+};
+
+export const fromB64 = (b64: string): Uint8Array<ArrayBuffer> => {
+  const binary = atob(b64);
+  const bytes = new Uint8Array(new ArrayBuffer(binary.length));
+  for (let i = 0; i < binary.length; i++) {
+    bytes[i] = binary.charCodeAt(i);
+  }
+  return bytes;
+};
+
+export const getDemoStorageSecret = (storageKey: string): string => {
+  const encKey = `${storageKey}:k`;
+  let existing: string | null = null;
+  try {
+    existing = localStorage.getItem(encKey) || sessionStorage.getItem(encKey);
+  } catch {}
+  if (existing) {
+    try {
+      sessionStorage.setItem(encKey, existing);
+    } catch {}
+    return existing;
+  }
+  const generated = `${storageKey}:${crypto.randomUUID()}`;
+  try {
+    localStorage.setItem(encKey, generated);
+  } catch {}
+  try {
+    sessionStorage.setItem(encKey, generated);
+  } catch {}
+  return generated;
+};
+
+export const deriveDemoCryptoKey = async (storageKey: string): Promise<CryptoKey> => {
+  const enc = new TextEncoder();
+  const baseKey = await crypto.subtle.importKey(
+    'raw',
+    enc.encode(getDemoStorageSecret(storageKey)),
+    'PBKDF2',
+    false,
+    ['deriveKey']
+  );
+  return crypto.subtle.deriveKey(
+    {
+      name: 'PBKDF2',
+      salt: enc.encode(storageKey),
+      iterations: 100000,
+      hash: 'SHA-256',
+    },
+    baseKey,
+    { name: 'AES-GCM', length: 256 },
+    false,
+    ['encrypt', 'decrypt']
+  );
+};
+
+export const encryptForDemoStorage = async (storageKey: string, payload: unknown): Promise<string> => {
+  const key = await deriveDemoCryptoKey(storageKey);
+  const iv = crypto.getRandomValues(new Uint8Array(12));
+  const data = new TextEncoder().encode(JSON.stringify(payload));
+  const cipher = await crypto.subtle.encrypt({ name: 'AES-GCM', iv }, key, data);
+  return `${DEMO_BUDGET_ENC_PREFIX}${toB64(iv)}:${toB64(new Uint8Array(cipher))}`;
+};
+
+export const decryptFromDemoStorage = async <T,>(storageKey: string, raw: string | null): Promise<T | null> => {
+  if (!raw) return null;
+  if (!raw.startsWith(DEMO_BUDGET_ENC_PREFIX)) {
+    try {
+      return JSON.parse(raw) as T;
+    } catch {
+      return null;
+    }
+  }
+  // Stopped before writing defaults when the saved budget could not be unlocked.
+  if (!localStorage.getItem(storageKey + ":k") && !sessionStorage.getItem(storageKey + ":k")) {
+    throw new Error("Open the tab that saved this demo budget to recover its original key.");
+  }
+  const body = raw.slice(DEMO_BUDGET_ENC_PREFIX.length);
+  const [ivB64, dataB64] = body.split(':');
+  if (!ivB64 || !dataB64) return null;
+  try {
+    const key = await deriveDemoCryptoKey(storageKey);
+    const plain = await crypto.subtle.decrypt(
+      { name: 'AES-GCM', iv: fromB64(ivB64) },
+      key,
+      fromB64(dataB64)
+    );
+    return JSON.parse(new TextDecoder().decode(plain)) as T;
+  } catch {
+    return null;
+  }
+};
 
 export type TransactionKind = 'income' | 'expense';
 export type StockTxnType = 'buy' | 'sell' | 'dividend' | 'split';
@@ -83,9 +211,17 @@ export interface AccountOption {
   type?: string;
 }
 
+const formFieldStyle: CSSProperties = {
+  padding: '8px',
+  borderRadius: '4px',
+  background: 'var(--ui-paint-0f141e)',
+  border: '1px solid var(--ui-paint-283347)',
+  color: 'var(--color-text)',
+};
+
 const initialTransaction = (): Transaction => ({
   kind: 'expense',
-  accountName: '',
+  accountName: 'Checking',
   description: '',
   amount: 0,
   transactionDate: new Date().toISOString().split('T')[0],
@@ -114,14 +250,23 @@ const initialRecurring = (): RecurringTransaction => ({
   notes: '',
 });
 
-export function BudgetingTab({ graph }: BudgetingTabProps) {
-  const userId =
+export function BudgetingTab({
+  graph,
+  rawGraph,
+  userId: propUserId,
+  demo,
+  portfolioValue: propPortfolioValue,
+  onUpdateGraph,
+}: BudgetingTabProps) {
+  const sessionUserId =
     Number(sessionStorage.getItem('finapp_user_id') || localStorage.getItem('finapp_user_id')) || 0;
+  const userId = propUserId || sessionUserId;
+  const isDemo = Boolean(demo || !sessionUserId);
 
   // Active view section
-  const [activeSubTab, setActiveSubTab] = useState<'transactions' | 'stocks' | 'recurring'>(
-    'transactions',
-  );
+  const [activeSubTab, setActiveSubTab] = useState<
+    'transactions' | 'recurring' | 'stocks'
+  >('transactions');
 
   // Data states
   const [transactions, setTransactions] = useState<Transaction[]>([]);
@@ -150,14 +295,23 @@ export function BudgetingTab({ graph }: BudgetingTabProps) {
   const [currentPrices, setCurrentPrices] = useState<Record<string, number>>({});
   const [quotePrice, setQuotePrice] = useState<number | null>(null);
   const [fetchingQuote, setFetchingQuote] = useState(false);
+  const [detectedDividend, setDetectedDividend] = useState<{
+    pays: boolean;
+    perShare: number;
+    frequency: string;
+    yieldPct: number | null;
+    rate: number | null;
+  } | null>(null);
 
   // Debounce-fetch live market quote when typing ticker in stock form
   useEffect(() => {
     if (!showStockForm) return;
+    if (editingStockId != null) return;
     const sym = stockDraft.ticker.trim().toUpperCase();
     if (!sym || sym.length < 1) {
       const timer = setTimeout(() => {
         setQuotePrice(null);
+        setDetectedDividend(null);
         setFetchingQuote(false);
       }, 0);
       return () => clearTimeout(timer);
@@ -178,21 +332,35 @@ export function BudgetingTab({ graph }: BudgetingTabProps) {
           if (data && typeof data.latest_price === 'number') {
             setQuotePrice(data.latest_price);
             setCurrentPrices((prev) => ({ ...prev, [sym]: data.latest_price }));
-            if (data.name) {
-              setStockDraft((prev) => ({
-                ...prev,
-                companyName: prev.companyName ? prev.companyName : data.name,
-              }));
-            }
+            const hasDiv = Boolean(data.pays_dividend);
+            const perShare = typeof data.dividend_per_share === 'number' ? data.dividend_per_share : 0;
+            const freq = data.dividend_frequency || 'quarterly';
+            setDetectedDividend({
+              pays: hasDiv,
+              perShare,
+              frequency: freq,
+              yieldPct: data.dividend_yield ?? null,
+              rate: data.dividend_rate ?? null,
+            });
+            setStockDraft((prev) => ({
+              ...prev,
+              companyName: prev.companyName ? prev.companyName : data.name,
+              paysDividend: hasDiv,
+              dividendFrequency: hasDiv ? freq : prev.dividendFrequency,
+              dividendPerShare: hasDiv ? perShare : prev.dividendPerShare,
+            }));
           } else {
             setQuotePrice(null);
+            setDetectedDividend(null);
           }
         } else {
           setQuotePrice(null);
+          setDetectedDividend(null);
         }
       } catch (err: unknown) {
         if ((err as Error)?.name !== 'AbortError') {
           setQuotePrice(null);
+          setDetectedDividend(null);
         }
       } finally {
         setFetchingQuote(false);
@@ -203,62 +371,75 @@ export function BudgetingTab({ graph }: BudgetingTabProps) {
       clearTimeout(timer);
       controller.abort();
     };
-  }, [stockDraft.ticker, showStockForm]);
+  }, [stockDraft.ticker, showStockForm, editingStockId]);
+
+  const lastQuoteRefresh = useRef<number>(0);
+  const graphRef = useRef(graph);
+  graphRef.current = graph;
+  const rawGraphRef = useRef(rawGraph);
+  rawGraphRef.current = rawGraph;
 
   // Refresh current market prices for all tracked stocks
-  const refreshCurrentPrices = useCallback(async (stockList: Stock[], signal: AbortSignal) => {
-    const tickers = Array.from(new Set(stockList.map((s) => s.ticker.trim().toUpperCase()))).filter(
-      Boolean,
-    );
-    if (tickers.length === 0) return;
-
-    const results = await Promise.allSettled(
-      tickers.map(async (ticker) => {
-        const res = await fetch(`${API_BASE}/market/stocks/${encodeURIComponent(ticker)}`, {
-          signal,
-          headers: sessionHeaders(),
-          credentials: 'include',
-        });
-        if (!res.ok) throw new Error('Not found');
-        const data = await res.json();
-        if (data && typeof data.latest_price === 'number') {
-          return { ticker, price: data.latest_price };
-        }
-        throw new Error('Invalid price data');
-      }),
-    );
-
-    const priceMap: Record<string, number> = {};
-    results.forEach((r) => {
-      if (r.status === 'fulfilled' && r.value) {
-        priceMap[r.value.ticker] = r.value.price;
+  const refreshCurrentPrices = useCallback(
+    async (stockList: Stock[], signal?: AbortSignal, force = false) => {
+      if (!force && Date.now() - lastQuoteRefresh.current < 60000) {
+        return;
       }
-    });
+      const tickers = Array.from(new Set(stockList.map((s) => s.ticker.trim().toUpperCase()))).filter(
+        Boolean,
+      );
+      if (tickers.length === 0) return;
+      lastQuoteRefresh.current = Date.now();
 
-    if (!signal.aborted && Object.keys(priceMap).length > 0) {
-      setCurrentPrices((prev) => ({ ...prev, ...priceMap }));
-
-      // Keep database last_price synced if stale
-      stockList.forEach((s) => {
-        const sym = s.ticker.trim().toUpperCase();
-        const livePrice = priceMap[sym];
-        if (livePrice !== undefined && s.id && Number(s.lastPrice) !== livePrice) {
-          fetch(`${API_BASE}/stocks/${s.id}`, {
-            signal,
-            method: 'PUT',
-            headers: { 'Content-Type': 'application/json', ...sessionHeaders() },
+      const results = await Promise.allSettled(
+        tickers.map(async (ticker) => {
+          const res = await fetch(`${API_BASE}/market/stocks/${encodeURIComponent(ticker)}`, {
+            ...(signal ? { signal } : {}),
+            headers: sessionHeaders(),
             credentials: 'include',
-            body: JSON.stringify({
-              ticker: s.ticker,
-              companyName: s.companyName,
-              exchange: s.exchange,
-              lastPrice: livePrice,
-            }),
-          }).catch(() => {});
+          });
+          if (!res.ok) throw new Error('Not found');
+          const data = await res.json().catch(() => null);
+          if (data && typeof data.latest_price === 'number') {
+            return { ticker, price: data.latest_price };
+          }
+          throw new Error('Invalid price data');
+        }),
+      );
+
+      const priceMap: Record<string, number> = {};
+      results.forEach((r) => {
+        if (r.status === 'fulfilled' && r.value) {
+          priceMap[r.value.ticker] = r.value.price;
         }
       });
-    }
-  }, []);
+
+      if (!signal?.aborted && Object.keys(priceMap).length > 0) {
+        setCurrentPrices((prev) => ({ ...prev, ...priceMap }));
+
+        // Keep database last_price synced if stale
+        stockList.forEach((s) => {
+          const sym = s.ticker.trim().toUpperCase();
+          const livePrice = priceMap[sym];
+          if (livePrice !== undefined && s.id && Number(s.lastPrice) !== livePrice) {
+            fetch(`${API_BASE}/stocks/${s.id}`, {
+              ...(signal ? { signal } : {}),
+              method: 'PUT',
+              headers: { 'Content-Type': 'application/json', ...sessionHeaders() },
+              credentials: 'include',
+              body: JSON.stringify({
+                ticker: s.ticker,
+                companyName: s.companyName,
+                exchange: s.exchange,
+                lastPrice: livePrice,
+              }),
+            }).catch(() => {});
+          }
+        });
+      }
+    },
+    [],
+  );
 
   // Stock Buy/Sell trade modal
   const [tradeModal, setTradeModal] = useState<{
@@ -286,9 +467,130 @@ export function BudgetingTab({ graph }: BudgetingTabProps) {
   const [showRecurForm, setShowRecurForm] = useState(false);
   const [editingRecurId, setEditingRecurId] = useState<number | null>(null);
 
-  // Load all budgeting and stock data from API
+  // Load all budgeting and stock data from API or demo storage
   const loadData = useCallback(
-    async (includePrices = false) => {
+    async (includePrices = false, forcePrices = false) => {
+      // Demo mode or unauthenticated fallback
+      if (isDemo) {
+        activeLoad.current?.abort();
+        const controller = new AbortController();
+        activeLoad.current = controller;
+        setRefreshing(true);
+        try {
+          const storageKey = `finapp-holdings-v1:demo:${userId || 1}`;
+          const budgetStorageKey = `finapp-budget-v1:demo:${userId || 1}`;
+          const { stocks: loadedStocks, positions: loadedPositions } = await loadUnifiedHoldings(
+            storageKey,
+            userId || 1,
+            true,
+            controller.signal,
+          );
+          if (controller.signal.aborted) return false;
+          setStocks(loadedStocks);
+          setPositions(loadedPositions);
+
+          let demoTxns: Transaction[] = [];
+          let demoRecur: RecurringTransaction[] = [];
+          try {
+            const savedRaw = localStorage.getItem(budgetStorageKey);
+            const parsed = await decryptFromDemoStorage<Record<string, unknown>>(
+              budgetStorageKey,
+              savedRaw
+            );
+            if (parsed) {
+              demoTxns = Array.isArray(parsed.transactions) ? (parsed.transactions as Transaction[]) : [];
+              demoRecur = Array.isArray(parsed.recurring) ? (parsed.recurring as RecurringTransaction[]) : [];
+            }
+          } catch (err) {
+            setStatusMessage({ type: "error", text: (err as Error).message });
+            return false;
+          }
+
+          // Single, non-recurring sample transactions (e.g. grocery trip, coffee, dining out)
+          if (!localStorage.getItem(budgetStorageKey)) {
+            const now = new Date().toISOString().split('T')[0];
+            demoTxns = [
+              {
+                id: 1,
+                kind: 'expense',
+                accountName: 'Checking',
+                categoryName: 'Groceries',
+                description: 'Grocery Trip - Trader Joe’s',
+                amount: 112.5,
+                transactionDate: now,
+                notes: 'Weekly groceries',
+              },
+              {
+                id: 2,
+                kind: 'expense',
+                accountName: 'Checking',
+                categoryName: 'Food & Dining',
+                description: 'Coffee Shop',
+                amount: 6.75,
+                transactionDate: now,
+                notes: 'Morning coffee',
+              },
+              {
+                id: 3,
+                kind: 'expense',
+                accountName: 'Checking',
+                categoryName: 'Transportation',
+                description: 'Gas Station',
+                amount: 45.0,
+                transactionDate: now,
+                notes: 'Fuel',
+              },
+              {
+                id: 4,
+                kind: 'expense',
+                accountName: 'Checking',
+                categoryName: 'Food & Dining',
+                description: 'Dinner with Friends',
+                amount: 68.2,
+                transactionDate: now,
+                notes: 'Weekend dining out',
+              },
+              {
+                id: 5,
+                kind: 'expense',
+                accountName: 'Checking',
+                categoryName: 'Household',
+                description: 'Target Home Supplies',
+                amount: 38.45,
+                transactionDate: now,
+                notes: 'Cleaning supplies',
+              },
+            ];
+          }
+
+          const { updatedRecurring: syncedDemoRecur, hasChanges } = syncGraphNodesToRecurring(
+            rawGraphRef.current ?? graphRef.current,
+            demoRecur,
+          );
+          if (hasChanges || !localStorage.getItem(budgetStorageKey)) try {
+            localStorage.setItem(
+              budgetStorageKey,
+              await encryptForDemoStorage(budgetStorageKey, {
+                transactions: demoTxns,
+                recurring: syncedDemoRecur,
+              }),
+            );
+          } catch {}
+
+          setTransactions(demoTxns);
+          setRecurringList(syncedDemoRecur);
+          isInitialLoaded.current = true;
+          lastSyncedGraph.current = graphRef.current;
+          if (includePrices) await refreshCurrentPrices(loadedStocks, controller.signal, forcePrices);
+          return true;
+        } finally {
+          if (activeLoad.current === controller) {
+            activeLoad.current = null;
+            setRefreshing(false);
+          }
+        }
+      }
+
       if (!userId) return false;
       // Cancelled superseded reads so a late response could not replace newer budgeting data.
       activeLoad.current?.abort();
@@ -299,17 +601,36 @@ export function BudgetingTab({ graph }: BudgetingTabProps) {
         const headers = { ...sessionHeaders() };
         let loadedStocks: Stock[] = [];
         // Published each completed section independently while retaining the previous visible rows.
-        const read = async <T,>(path: string, apply: (data: T) => void) => {
+        const read = async <T,>(path: string, apply: (data: T) => void | Promise<void>) => {
+          if (controller.signal.aborted) return;
           const response = await fetch(`${API_BASE}/${path}`, {
             headers,
             credentials: 'include',
             signal: controller.signal,
           });
-          if (!response.ok) throw new Error(`Could not refresh ${path}.`);
-          const json = await response.json();
-          if (!Array.isArray(json.data)) throw new Error(`Invalid response for ${path}.`);
-          if (!controller.signal.aborted) apply(json.data);
+          if (controller.signal.aborted) return;
+          if (!response.ok) {
+            let errorMsg = `Could not refresh ${path}.`;
+            try {
+              const errJson = await response.json();
+              if (errJson?.message) errorMsg = errJson.message;
+            } catch {
+              // Ignore non-json body
+            }
+            throw new Error(errorMsg);
+          }
+          let json: any = null;
+          try {
+            json = await response.json();
+          } catch {
+            throw new Error(`Invalid response for ${path}.`);
+          }
+          if (!Array.isArray(json?.data)) throw new Error(`Invalid response for ${path}.`);
+          if (!controller.signal.aborted) await apply(json.data);
         };
+        // Serialized reconciliation across tabs so each pass fetched the latest saved rules.
+        const synchronizeRecurring = (task: () => Promise<void>) =>
+          navigator.locks ? navigator.locks.request("finapp-recurring:" + userId, task) : task();
         const results = await Promise.allSettled([
           read<Transaction[]>('transactions', setTransactions),
           read<Stock[]>('stocks', (data) => {
@@ -317,24 +638,54 @@ export function BudgetingTab({ graph }: BudgetingTabProps) {
             setStocks(data);
           }),
           read<StockPosition[]>('positions', setPositions),
-          read<RecurringTransaction[]>('recurring-transactions', setRecurringList),
-          read<AccountOption[]>('accounts', setDbAccounts),
+          synchronizeRecurring(() => read<RecurringTransaction[]>('recurring-transactions', async (data) => {
+            const { newRules, updatedRules } = syncGraphNodesToRecurring(rawGraphRef.current ?? graphRef.current, data);
+            const write = async (rule: RecurringTransaction, existing: boolean) => {
+              const path = existing ? "/recurring-transactions/" + rule.id : "/recurring-transactions";
+              const response = await fetch(API_BASE + path, {
+                method: existing ? "PUT" : "POST",
+                headers: { "Content-Type": "application/json", ...headers },
+                credentials: "include",
+                body: JSON.stringify(existing ? { amount: rule.amount, kind: rule.kind, isActive: rule.isActive } : { ...rule, id: undefined, userId }),
+              });
+              if (!response.ok) throw new Error("Could not synchronize recurring rules.");
+              return (await response.json()).data as RecurringTransaction;
+            };
+            // Applied saved rules in order and retained database IDs for subsequent edits.
+            const saved = [...data];
+            for (const rule of updatedRules) {
+              if (controller.signal.aborted) return;
+              const result = await write(rule, true);
+              const index = saved.findIndex((row) => row.id === result.id);
+              if (index >= 0) saved[index] = result;
+            }
+            for (const rule of newRules) {
+              if (controller.signal.aborted) return;
+              saved.push(await write(rule, false));
+            }
+            if (!controller.signal.aborted) setRecurringList(saved);
+          })),
+          // Loaded saved accounts independently of the browser’s scenario nodes.
+          read<AccountOption[]>("accounts", setDbAccounts),
         ]);
         if (controller.signal.aborted) return false;
         if (results.some((result) => result.status === 'rejected')) {
+          if (controller.signal.aborted) return false;
           throw new Error(
             'Some budgeting data could not be refreshed. Previous values have been kept.',
           );
         }
+        isInitialLoaded.current = true;
+        lastSyncedGraph.current = graphRef.current;
         // Requested market quotes only on entry or explicit refresh, avoiding downloads after every edit.
-        if (includePrices) await refreshCurrentPrices(loadedStocks, controller.signal);
+        if (includePrices) await refreshCurrentPrices(loadedStocks, controller.signal, forcePrices);
         return !controller.signal.aborted;
       } catch (err) {
         if (controller.signal.aborted) return false;
         console.error('Failed to load budgeting data:', err);
         setStatusMessage({
           type: 'error',
-          text: err instanceof Error ? err.message : 'Could not load data from backend.',
+          text: err instanceof Error ? err.message : 'We couldn’t load your budget. Please try again.',
         });
         return false;
       } finally {
@@ -344,35 +695,59 @@ export function BudgetingTab({ graph }: BudgetingTabProps) {
         }
       }
     },
-    [userId, refreshCurrentPrices],
+    [userId, isDemo, refreshCurrentPrices],
   );
 
+  const isSelfUpdate = useRef(false);
+  const isInitialLoaded = useRef(false);
+  const lastSyncedGraph = useRef<GraphData | null>(null);
+
   useEffect(() => {
-    void loadData(true);
+    isInitialLoaded.current = false;
+    lastSyncedGraph.current = null;
+    // Only load budgeting data without re-fetching live market prices on tab entry
+    void loadData(false);
     return () => {
       activeLoad.current?.abort();
       activeLoad.current = null;
       activeGeneration.current?.abort();
       activeGeneration.current = null;
     };
+  }, [userId, isDemo, loadData]);
+
+  // Synchronize stocks when prices are updated at login or page refresh
+  useEffect(() => {
+    const handlePortfolioUpdated = () => {
+      if (isSelfUpdate.current) return;
+      void loadData(false);
+    };
+    window.addEventListener(PORTFOLIO_UPDATED_EVENT, handlePortfolioUpdated);
+    return () => window.removeEventListener(PORTFOLIO_UPDATED_EVENT, handlePortfolioUpdated);
   }, [loadData]);
 
-  // Derived account options from both backend accounts and graph nodes
-  const availableAccounts: string[] = Array.from(
-    new Set([
-      ...dbAccounts.map((a) =>
-        a.name.trim().toLowerCase() === 'checking account' ? 'Checking' : a.name,
-      ),
-      ...(graph?.nodes
-        ?.filter((n) => ['CHECKING', 'SAVINGS', 'BROKERAGE'].includes(n.nodeType))
-        .map((n) => (n.name.trim().toLowerCase() === 'checking account' ? 'Checking' : n.name)) ??
-        []),
-      'Checking',
-      'Savings',
-    ]),
-  )
-    .filter(Boolean)
-    .filter((acc) => acc.trim().toLowerCase() !== 'checking account');
+  // Reloaded recurring rules when the active graph changed while this tab was open.
+  useEffect(() => {
+    if (!isInitialLoaded.current || lastSyncedGraph.current === graph) return;
+    lastSyncedGraph.current = graph;
+    void loadData(false);
+  }, [graph, loadData]);
+
+  const availableAccounts = useMemo(() => getAvailableBudgetAccounts(graph, dbAccounts), [graph, dbAccounts]);
+  // Ensure transaction draft account stays valid when an account or loan is deleted
+  useEffect(() => {
+    if (
+      transDraft.accountName &&
+      !availableAccounts.some(
+        (a) => a.toLowerCase() === transDraft.accountName?.trim().toLowerCase(),
+      )
+    ) {
+      setTransDraft((prev) => ({
+        ...prev,
+        accountName: availableAccounts[0] || 'Checking',
+        accountId: undefined,
+      }));
+    }
+  }, [availableAccounts, transDraft.accountName]);
 
   // --- Transaction Handlers ---
   const handleOpenAddTransaction = () => {
@@ -405,6 +780,94 @@ export function BudgetingTab({ graph }: BudgetingTabProps) {
       return;
     }
 
+    let syncResult: ReturnType<typeof syncScenarioTransactionToGraph> | null = null;
+    let syncStatusMsg = '';
+    const baseInitial = rawGraph || graph;
+    if (onUpdateGraph && baseInitial) {
+      const prevTxn = editingTransId ? transactions.find((t) => t.id === editingTransId) : null;
+      let baseGraph = baseInitial;
+      if (prevTxn) {
+        const reverseTxn = {
+          kind: prevTxn.kind === 'income' ? 'expense' : 'income',
+          accountName: prevTxn.accountName || 'Checking',
+          description: prevTxn.description,
+          amount: prevTxn.amount,
+          categoryName: prevTxn.categoryName,
+          isReversal: true,
+        };
+        const reverseResult = syncScenarioTransactionToGraph(baseGraph, reverseTxn);
+        if (reverseResult) {
+          baseGraph = reverseResult.updatedGraph;
+        }
+      }
+
+      syncResult = syncScenarioTransactionToGraph(baseGraph, transDraft);
+      if (syncResult) {
+        if (syncResult.isNew) {
+          syncStatusMsg = ` Created ${syncResult.matchedNode.name} node with balance ${dollars(syncResult.newBalance)} (Net Worth updated).`;
+        } else if (syncResult.matchedNode.nodeType === 'DEBT') {
+          syncStatusMsg = ` Paid down ${syncResult.matchedNode.name} to ${dollars(syncResult.newBalance)}.`;
+        } else if (transDraft.kind === 'income') {
+          syncStatusMsg = ` Added ${dollars(transDraft.amount)} to ${syncResult.matchedNode.name} balance (Net Worth +${dollars(transDraft.amount)}).`;
+        } else {
+          syncStatusMsg = ` Deducted ${dollars(transDraft.amount)} from ${syncResult.matchedNode.name} balance (Net Worth -${dollars(transDraft.amount)}).`;
+        }
+        if (syncResult.insufficientFunds) {
+          syncStatusMsg += ` (Account overdraft: ${dollars(syncResult.newBalance)}).`;
+        }
+      }
+    }
+
+    if (isDemo) {
+      const budgetStorageKey = `finapp-budget-v1:demo:${userId || 1}`;
+      let updated: Transaction[];
+      if (editingTransId) {
+        updated = transactions.map((t) =>
+          t.id === editingTransId
+            ? {
+                ...transDraft,
+                id: editingTransId,
+                transactionDate: transDraft.transactionDate || transDraft.date,
+              }
+            : t,
+        );
+      } else {
+        const newId = Math.max(0, ...transactions.map((t) => t.id || 0)) + 1;
+        updated = [
+          {
+            ...transDraft,
+            id: newId,
+            transactionDate: transDraft.transactionDate || transDraft.date,
+          },
+          ...transactions,
+        ];
+      }
+      try {
+        const saved =
+          (await decryptFromDemoStorage<Record<string, unknown>>(
+            budgetStorageKey,
+            localStorage.getItem(budgetStorageKey)
+          )) || {};
+        saved.transactions = updated;
+        localStorage.setItem(budgetStorageKey, await encryptForDemoStorage(budgetStorageKey, saved));
+      } catch (err) {
+        setStatusMessage({ type: "error", text: (err as Error).message });
+        return;
+      }
+      setTransactions(updated);
+      if (syncResult && onUpdateGraph) {
+        onUpdateGraph(syncResult.updatedGraph);
+      }
+      setStatusMessage({
+        type: 'success',
+        text: (editingTransId ? 'Transaction updated successfully.' : 'Transaction recorded.') + syncStatusMsg,
+      });
+      setShowTransForm(false);
+      setEditingTransId(null);
+      setTransDraft(initialTransaction());
+      return;
+    }
+
     try {
       const endpoint = editingTransId
         ? `${API_BASE}/transactions/${editingTransId}`
@@ -427,9 +890,13 @@ export function BudgetingTab({ graph }: BudgetingTabProps) {
         throw new Error(errJson.message || 'Failed to save transaction');
       }
 
+      if (syncResult && onUpdateGraph) {
+        onUpdateGraph(syncResult.updatedGraph);
+      }
+
       setStatusMessage({
         type: 'success',
-        text: editingTransId ? 'Transaction updated successfully.' : 'Transaction recorded.',
+        text: (editingTransId ? 'Transaction updated successfully.' : 'Transaction recorded.') + syncStatusMsg,
       });
       setShowTransForm(false);
       setEditingTransId(null);
@@ -443,22 +910,70 @@ export function BudgetingTab({ graph }: BudgetingTabProps) {
 
   const handleDeleteTransaction = async (id: number): Promise<void> => {
     if (!window.confirm('Delete this transaction?')) return;
+    const transToDelete = transactions.find((t) => t.id === id);
+    let reverseSync: ReturnType<typeof syncScenarioTransactionToGraph> | null = null;
+    const baseGraph = rawGraph || graph;
+    if (transToDelete && onUpdateGraph && baseGraph) {
+      const reverseTxn = {
+        kind: transToDelete.kind === 'income' ? 'expense' : 'income',
+        accountName: transToDelete.accountName || 'Checking',
+        description: transToDelete.description,
+        amount: transToDelete.amount,
+        categoryName: transToDelete.categoryName,
+        isReversal: true,
+      };
+      reverseSync = syncScenarioTransactionToGraph(baseGraph, reverseTxn);
+    }
+
+    if (isDemo) {
+      const budgetStorageKey = `finapp-budget-v1:demo:${userId || 1}`;
+      const updated = transactions.filter((t) => t.id !== id);
+      try {
+        const saved =
+          (await decryptFromDemoStorage<Record<string, unknown>>(
+            budgetStorageKey,
+            localStorage.getItem(budgetStorageKey)
+          )) || {};
+        saved.transactions = updated;
+        localStorage.setItem(budgetStorageKey, await encryptForDemoStorage(budgetStorageKey, saved));
+      } catch (err) {
+        setStatusMessage({ type: "error", text: (err as Error).message });
+        return;
+      }
+      setTransactions(updated);
+      if (reverseSync && onUpdateGraph) {
+        onUpdateGraph(reverseSync.updatedGraph);
+      }
+      setStatusMessage({ type: 'success', text: 'Transaction deleted.' });
+      if (editingTransId === id) {
+        setShowTransForm(false);
+        setEditingTransId(null);
+      }
+      return;
+    }
+
     try {
       const res = await fetch(`${API_BASE}/transactions/${id}`, {
         method: 'DELETE',
         headers: sessionHeaders(),
         credentials: 'include',
       });
-      if (!res.ok) throw new Error('Delete failed');
+      if (!res.ok) {
+        const errJson = await res.json().catch(() => ({}));
+        throw new Error(errJson.message || 'Failed to delete transaction');
+      }
+      if (reverseSync && onUpdateGraph) {
+        onUpdateGraph(reverseSync.updatedGraph);
+      }
       setStatusMessage({ type: 'success', text: 'Transaction deleted.' });
       if (editingTransId === id) {
         setShowTransForm(false);
         setEditingTransId(null);
       }
       loadData();
-    } catch (err) {
-      console.error('Delete failed:', err);
-      setStatusMessage({ type: 'error', text: 'Failed to delete transaction.' });
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : 'Error deleting transaction';
+      setStatusMessage({ type: 'error', text: msg });
     }
   };
 
@@ -467,7 +982,12 @@ export function BudgetingTab({ graph }: BudgetingTabProps) {
     setEditingStockId(null);
     setStockDraft(initialStock);
     setQuotePrice(null);
+    setDetectedDividend(null);
     setShowStockForm(true);
+    // Refresh current stock prices when trying to add a new stock
+    if (stocks.length > 0) {
+      void refreshCurrentPrices(stocks, undefined, true);
+    }
   };
 
   const handleEditStock = (s: Stock) => {
@@ -486,6 +1006,17 @@ export function BudgetingTab({ graph }: BudgetingTabProps) {
       sharesOwned: pos ? pos.sharesOwned : (s.sharesOwned ?? 0),
     });
     setQuotePrice(livePrice);
+    setDetectedDividend(
+      s.paysDividend
+        ? {
+            pays: true,
+            perShare: Number(s.dividendPerShare || 0),
+            frequency: s.dividendFrequency || 'quarterly',
+            yieldPct: null,
+            rate: null,
+          }
+        : null,
+    );
     setShowStockForm(true);
   };
 
@@ -497,10 +1028,76 @@ export function BudgetingTab({ graph }: BudgetingTabProps) {
       return;
     }
 
-    try {
-      // 1. Fetch current price through java-backend -> python-backend
+    if (isDemo) {
+      const storageKey = `finapp-holdings-v1:demo:${userId || 1}`;
       let currentPrice: number | null = quotePrice;
       let companyName = stockDraft.companyName?.trim() || null;
+      let paysDividend = Boolean(stockDraft.paysDividend);
+      let dividendFrequency = stockDraft.dividendFrequency || 'quarterly';
+      let dividendPerShare =
+        stockDraft.dividendPerShare != null ? Number(stockDraft.dividendPerShare) : null;
+
+      if (currentPrice == null) {
+        try {
+          const res = await fetch(`${API_BASE}/market/stocks/${encodeURIComponent(ticker)}`);
+          if (res.ok) {
+            const data = await res.json();
+            if (data && typeof data.latest_price === 'number') {
+              currentPrice = data.latest_price;
+              if (!companyName && data.name) companyName = data.name;
+              if (data.pays_dividend && !paysDividend) {
+                paysDividend = true;
+                dividendFrequency = data.dividend_frequency || 'quarterly';
+                dividendPerShare = data.dividend_per_share ?? 0;
+              }
+            }
+          }
+        } catch {}
+      }
+
+      const finalPrice =
+        currentPrice || Number(stockDraft.purchasePrice || stockDraft.lastPrice) || 100;
+      const shares = Number(stockDraft.sharesOwned || 1);
+      const purchasePrice = Number(stockDraft.purchasePrice ?? stockDraft.lastPrice ?? finalPrice);
+
+      await addStockUnified({
+        storageKey,
+        userId: userId || 1,
+        demo: true,
+        symbol: ticker,
+        companyName,
+        price: finalPrice,
+        purchasePrice,
+        shares,
+        paysDividend,
+        dividendFrequency: paysDividend ? dividendFrequency : null,
+        dividendPerShare: paysDividend ? dividendPerShare : null,
+        stockId: editingStockId ?? undefined,
+      });
+
+      setStatusMessage({
+        type: 'success',
+        text: editingStockId
+          ? `Stock ${ticker} updated. Current price: ${dollars(finalPrice)}.`
+          : `Stock ${ticker} added. Current price: ${dollars(finalPrice)}.`,
+      });
+      setShowStockForm(false);
+      setEditingStockId(null);
+      setStockDraft(initialStock);
+      setDetectedDividend(null);
+      setQuotePrice(null);
+      void loadData();
+      return;
+    }
+
+    try {
+      // 1. Fetch current price and dividend data through java-backend -> python-backend if not already loaded
+      let currentPrice: number | null = quotePrice;
+      let companyName = stockDraft.companyName?.trim() || null;
+      let paysDividend = Boolean(stockDraft.paysDividend);
+      let dividendFrequency = stockDraft.dividendFrequency || 'quarterly';
+      let dividendPerShare =
+        stockDraft.dividendPerShare != null ? Number(stockDraft.dividendPerShare) : null;
 
       if (currentPrice == null) {
         try {
@@ -515,6 +1112,11 @@ export function BudgetingTab({ graph }: BudgetingTabProps) {
               if (!companyName && data.name) {
                 companyName = data.name;
               }
+              if (data.pays_dividend && !paysDividend) {
+                paysDividend = true;
+                dividendFrequency = data.dividend_frequency || 'quarterly';
+                dividendPerShare = data.dividend_per_share ?? 0;
+              }
             }
           }
         } catch {
@@ -525,6 +1127,7 @@ export function BudgetingTab({ graph }: BudgetingTabProps) {
       const purchasePrice = Number(stockDraft.purchasePrice ?? stockDraft.lastPrice) || 0;
       const finalLastPrice =
         currentPrice != null && currentPrice > 0 ? currentPrice : purchasePrice;
+      const shares = Number(stockDraft.sharesOwned) || 0;
 
       const endpoint = editingStockId
         ? `${API_BASE}/stocks/${editingStockId}`
@@ -535,13 +1138,11 @@ export function BudgetingTab({ graph }: BudgetingTabProps) {
         companyName,
         exchange: stockDraft.exchange?.trim() || null,
         // Included opening holdings only for creation; detail edits preserved the trade ledger.
-        ...(!editingStockId
-          ? { purchasePrice, sharesOwned: Number(stockDraft.sharesOwned) || 0 }
-          : {}),
+        ...(!editingStockId ? { purchasePrice, sharesOwned: shares } : {}),
         lastPrice: finalLastPrice,
-        paysDividend: Boolean(stockDraft.paysDividend),
-        dividendFrequency: stockDraft.paysDividend ? stockDraft.dividendFrequency : null,
-        dividendPerShare: stockDraft.paysDividend ? Number(stockDraft.dividendPerShare) : null,
+        paysDividend,
+        dividendFrequency: paysDividend ? dividendFrequency : null,
+        dividendPerShare: paysDividend ? dividendPerShare : null,
       };
 
       const res = await fetch(endpoint, {
@@ -563,16 +1164,46 @@ export function BudgetingTab({ graph }: BudgetingTabProps) {
         }));
       }
 
+      // If editing in live database mode and shares were adjusted, record balancing trade
+      if (editingStockId) {
+        const originalPos = positions.find((p) => p.stockId === editingStockId);
+        const originalShares = originalPos ? Number(originalPos.sharesOwned) : 0;
+        const delta = shares - originalShares;
+        if (delta !== 0) {
+          try {
+            await fetch(`${API_BASE}/stock-transactions`, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json', ...sessionHeaders() },
+              credentials: 'include',
+              body: JSON.stringify({
+                userId,
+                stockId: editingStockId,
+                type: delta > 0 ? 'buy' : 'sell',
+                quantity: Math.abs(delta),
+                pricePerShare: purchasePrice > 0 ? purchasePrice : finalLastPrice,
+                accountName: availableAccounts[0] || 'Brokerage',
+                transactionDate: new Date().toISOString().split('T')[0],
+                notes: 'Position adjusted via edit',
+              }),
+            });
+          } catch (e) {
+            console.error('Failed to adjust stock transaction position:', e);
+          }
+        }
+      }
+
       setStatusMessage({
         type: 'success',
         text: editingStockId
-          ? 'Stock updated successfully.'
+          ? `Stock ${ticker} updated. Current price: ${dollars(finalLastPrice)}.`
           : `Stock ${ticker} added. Current price: ${dollars(finalLastPrice)}.`,
       });
       setShowStockForm(false);
       setEditingStockId(null);
       setStockDraft(initialStock);
+      setDetectedDividend(null);
       setQuotePrice(null);
+      notifyPortfolioUpdated();
       loadData();
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : 'Error saving stock';
@@ -582,6 +1213,28 @@ export function BudgetingTab({ graph }: BudgetingTabProps) {
 
   const handleDeleteStock = async (id: number): Promise<void> => {
     if (!window.confirm('Delete this stock and associated history?')) return;
+    if (isDemo) {
+      const storageKey = `finapp-holdings-v1:demo:${userId || 1}`;
+      const stock = stocks.find((s) => s.id === id);
+      if (stock) {
+        await removeStockUnified({
+          storageKey,
+          userId: userId || 1,
+          demo: true,
+          symbol: stock.ticker,
+          stockId: id,
+        });
+
+      }
+      setStatusMessage({ type: 'success', text: 'Stock deleted.' });
+      if (editingStockId === id) {
+        setShowStockForm(false);
+        setEditingStockId(null);
+      }
+      void loadData();
+      return;
+    }
+
     try {
       const res = await fetch(`${API_BASE}/stocks/${id}`, {
         method: 'DELETE',
@@ -594,6 +1247,7 @@ export function BudgetingTab({ graph }: BudgetingTabProps) {
         setShowStockForm(false);
         setEditingStockId(null);
       }
+      notifyPortfolioUpdated();
       loadData();
     } catch (err) {
       console.error('Delete failed:', err);
@@ -622,6 +1276,33 @@ export function BudgetingTab({ graph }: BudgetingTabProps) {
     e.preventDefault();
     if (!tradeModal.stockId || tradeModal.quantity <= 0) {
       setStatusMessage({ type: 'error', text: 'Valid quantity is required.' });
+      return;
+    }
+
+    if (isDemo) {
+      const storageKey = `finapp-holdings-v1:demo:${userId || 1}`;
+      const stock = stocks.find((s) => s.id === tradeModal.stockId);
+      const sym = stock?.ticker || tradeModal.ticker;
+      const currentPos = positions.find((p) => p.stockId === tradeModal.stockId);
+      const currentShares = currentPos?.sharesOwned ?? stock?.sharesOwned ?? 0;
+      const delta = tradeModal.type === 'buy' ? tradeModal.quantity : -tradeModal.quantity;
+      const newShares = Math.max(0, currentShares + delta);
+      await updateSharesUnified({
+        storageKey,
+        userId: userId || 1,
+        demo: true,
+        symbol: sym,
+        currentShares,
+        newShares,
+        price: tradeModal.price,
+        stockId: tradeModal.stockId,
+      });
+      setStatusMessage({
+        type: 'success',
+        text: `Executed ${tradeModal.type.toUpperCase()} for ${tradeModal.quantity} shares of ${sym}.`,
+      });
+      setTradeModal((prev) => ({ ...prev, open: false }));
+      void loadData();
       return;
     }
 
@@ -654,6 +1335,7 @@ export function BudgetingTab({ graph }: BudgetingTabProps) {
         text: `Executed ${tradeModal.type.toUpperCase()} for ${tradeModal.quantity} shares of ${tradeModal.ticker}.`,
       });
       setTradeModal((prev) => ({ ...prev, open: false }));
+      notifyPortfolioUpdated();
       loadData();
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : 'Error executing trade';
@@ -679,6 +1361,57 @@ export function BudgetingTab({ graph }: BudgetingTabProps) {
       return;
     }
 
+    // Automatically synchronize to graph scenario node
+    let activeRecurDraft = { ...recurDraft };
+    let graphSync: ReturnType<typeof syncRecurringToGraphNode> | null = null;
+    const baseGraph = rawGraph || graph;
+    if (onUpdateGraph && baseGraph) {
+      graphSync = syncRecurringToGraphNode(baseGraph, activeRecurDraft);
+      if (
+        graphSync.affectedNode &&
+        !activeRecurDraft.notes?.includes(`[node-id:${graphSync.affectedNode.id}]`)
+      ) {
+        activeRecurDraft.notes = `${activeRecurDraft.notes || ''} [node-id:${graphSync.affectedNode.id}]`.trim();
+      }
+    }
+
+    if (isDemo) {
+      const budgetStorageKey = `finapp-budget-v1:demo:${userId || 1}`;
+      let updated: RecurringTransaction[];
+      if (editingRecurId) {
+        updated = recurringList.map((r) =>
+          r.id === editingRecurId ? { ...activeRecurDraft, id: editingRecurId } : r,
+        );
+      } else {
+        const newId = Math.max(0, ...recurringList.map((r) => r.id || 0)) + 1;
+        updated = [{ ...activeRecurDraft, id: newId }, ...recurringList];
+      }
+      try {
+        const saved =
+          (await decryptFromDemoStorage<Record<string, unknown>>(
+            budgetStorageKey,
+            localStorage.getItem(budgetStorageKey)
+          )) || {};
+        saved.recurring = updated;
+        localStorage.setItem(budgetStorageKey, await encryptForDemoStorage(budgetStorageKey, saved));
+      } catch (err) {
+        setStatusMessage({ type: "error", text: (err as Error).message });
+        return;
+      }
+      setRecurringList(updated);
+      if (graphSync && onUpdateGraph) {
+        onUpdateGraph(graphSync.updatedGraph);
+      }
+      setStatusMessage({
+        type: 'success',
+        text: editingRecurId ? 'Recurring rule updated.' : 'Recurring rule created.',
+      });
+      setShowRecurForm(false);
+      setEditingRecurId(null);
+      setRecurDraft(initialRecurring());
+      return;
+    }
+
     try {
       const endpoint = editingRecurId
         ? `${API_BASE}/recurring-transactions/${editingRecurId}`
@@ -688,12 +1421,16 @@ export function BudgetingTab({ graph }: BudgetingTabProps) {
         method: editingRecurId ? 'PUT' : 'POST',
         headers: { 'Content-Type': 'application/json', ...sessionHeaders() },
         credentials: 'include',
-        body: JSON.stringify({ ...recurDraft, userId }),
+        body: JSON.stringify({ ...activeRecurDraft, userId }),
       });
 
       if (!res.ok) {
         const errJson = await res.json().catch(() => ({}));
         throw new Error(errJson.message || 'Failed to save recurring template');
+      }
+
+      if (graphSync && onUpdateGraph) {
+        onUpdateGraph(graphSync.updatedGraph);
       }
 
       setStatusMessage({
@@ -712,6 +1449,36 @@ export function BudgetingTab({ graph }: BudgetingTabProps) {
 
   const handleDeleteRecurring = async (id: number): Promise<void> => {
     if (!window.confirm('Delete this recurring rule?')) return;
+    const itemToDelete = recurringList.find((r) => r.id === id);
+    let graphSync: ReturnType<typeof syncRecurringDeletionToGraph> | null = null;
+    const baseGraph = rawGraph || graph;
+    if (itemToDelete && onUpdateGraph && baseGraph) {
+      graphSync = syncRecurringDeletionToGraph(baseGraph, itemToDelete);
+    }
+
+    if (isDemo) {
+      const budgetStorageKey = `finapp-budget-v1:demo:${userId || 1}`;
+      const updated = recurringList.filter((r) => r.id !== id);
+      try {
+        const saved =
+          (await decryptFromDemoStorage<Record<string, unknown>>(
+            budgetStorageKey,
+            localStorage.getItem(budgetStorageKey)
+          )) || {};
+        saved.recurring = updated;
+        localStorage.setItem(budgetStorageKey, await encryptForDemoStorage(budgetStorageKey, saved));
+      } catch (err) {
+        setStatusMessage({ type: "error", text: (err as Error).message });
+        return;
+      }
+      setRecurringList(updated);
+      if (graphSync && onUpdateGraph) {
+        onUpdateGraph(graphSync.updatedGraph);
+      }
+      setStatusMessage({ type: 'success', text: 'Recurring rule deleted.' });
+      return;
+    }
+
     try {
       const res = await fetch(`${API_BASE}/recurring-transactions/${id}`, {
         method: 'DELETE',
@@ -719,6 +1486,9 @@ export function BudgetingTab({ graph }: BudgetingTabProps) {
         credentials: 'include',
       });
       if (!res.ok) throw new Error('Delete failed');
+      if (graphSync && onUpdateGraph) {
+        onUpdateGraph(graphSync.updatedGraph);
+      }
       setStatusMessage({ type: 'success', text: 'Recurring rule deleted.' });
       loadData();
     } catch (err) {
@@ -734,6 +1504,7 @@ export function BudgetingTab({ graph }: BudgetingTabProps) {
     activeGeneration.current = controller;
     setGenerating(true);
     try {
+      if (!(await loadData()) || controller.signal.aborted) throw new Error("Could not synchronize recurring rules before generating.");
       const res = await fetch(`${API_BASE}/recurring-transactions/generate`, {
         signal: controller.signal,
         method: 'POST',
@@ -742,7 +1513,13 @@ export function BudgetingTab({ graph }: BudgetingTabProps) {
       });
       if (!res.ok) throw new Error('Generation failed');
       const json = await res.json();
-      const count = json.data ? json.data.length : 0;
+      // Applied only newly generated transactions to the scenario balances.
+      const occurrences: Transaction[] = Array.isArray(json.data) ? json.data : [];
+      const count = occurrences.length;
+      const currentGraph = rawGraphRef.current ?? graphRef.current;
+      const nextGraph = occurrences.reduce((next, transaction) =>
+        syncScenarioTransactionToGraph(next, transaction)?.updatedGraph ?? next, currentGraph);
+      if (nextGraph !== currentGraph) onUpdateGraph?.(nextGraph);
       const updated = await loadData();
       if (controller.signal.aborted) return;
       setStatusMessage({
@@ -761,6 +1538,120 @@ export function BudgetingTab({ graph }: BudgetingTabProps) {
     }
   };
 
+  const handleImportScenarioSalary = async (): Promise<void> => {
+    const newTemplates = createSalaryRecurringTemplates(graph, recurringList);
+    if (newTemplates.length === 0) {
+      setStatusMessage({
+        type: 'info',
+        text: 'All scenario income sources are already in your recurring templates.',
+      });
+      return;
+    }
+
+    if (isDemo) {
+      const budgetStorageKey = `finapp-budget-v1:demo:${userId || 1}`;
+      let nextId = Math.max(0, ...recurringList.map((r) => r.id || 0)) + 1;
+      const created = newTemplates.map((t) => ({ ...t, id: nextId++ } as RecurringTransaction));
+      const updated = [...created, ...recurringList];
+      try {
+        const saved =
+          (await decryptFromDemoStorage<Record<string, unknown>>(
+            budgetStorageKey,
+            localStorage.getItem(budgetStorageKey)
+          )) || {};
+        saved.recurring = updated;
+        localStorage.setItem(budgetStorageKey, await encryptForDemoStorage(budgetStorageKey, saved));
+      } catch (err) {
+        setStatusMessage({ type: "error", text: (err as Error).message });
+        return;
+      }
+      setRecurringList(updated);
+      setStatusMessage({
+        type: 'success',
+        text: `Imported ${created.length} salary template(s) into recurring transactions.`,
+      });
+      return;
+    }
+
+    let count = 0;
+    try {
+      for (const t of newTemplates) {
+        const res = await fetch(`${API_BASE}/recurring-transactions`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', ...sessionHeaders() },
+          credentials: 'include',
+          body: JSON.stringify({ ...t, userId }),
+        });
+        if (res.ok) count++;
+      }
+      setStatusMessage({
+        type: 'success',
+        text: `Imported ${count} salary template(s) into recurring transactions.`,
+      });
+      loadData();
+    } catch {
+      setStatusMessage({ type: 'error', text: 'Failed to import scenario salary.' });
+    }
+  };
+
+  const handleImportScenarioDebts = async (): Promise<void> => {
+    const newTemplates = createDebtRecurringTemplates(graph, recurringList);
+    if (newTemplates.length === 0) {
+      setStatusMessage({
+        type: 'info',
+        text: 'All scenario debt obligations are already in your recurring templates or have $0 payments.',
+      });
+      return;
+    }
+
+    if (isDemo) {
+      const budgetStorageKey = `finapp-budget-v1:demo:${userId || 1}`;
+      let nextId = Math.max(0, ...recurringList.map((r) => r.id || 0)) + 1;
+      const created = newTemplates.map((t) => ({ ...t, id: nextId++ } as RecurringTransaction));
+      const updated = [...created, ...recurringList];
+      try {
+        const saved =
+          (await decryptFromDemoStorage<Record<string, unknown>>(
+            budgetStorageKey,
+            localStorage.getItem(budgetStorageKey)
+          )) || {};
+        saved.recurring = updated;
+        localStorage.setItem(budgetStorageKey, await encryptForDemoStorage(budgetStorageKey, saved));
+      } catch (err) {
+        setStatusMessage({ type: "error", text: (err as Error).message });
+        return;
+      }
+      setRecurringList(updated);
+      setStatusMessage({
+        type: 'success',
+        text: `Imported ${created.length} debt payment template(s) into recurring transactions.`,
+      });
+      return;
+    }
+
+    let count = 0;
+    try {
+      for (const t of newTemplates) {
+        const res = await fetch(`${API_BASE}/recurring-transactions`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', ...sessionHeaders() },
+          credentials: 'include',
+          body: JSON.stringify({ ...t, userId }),
+        });
+        if (res.ok) count++;
+      }
+      setStatusMessage({
+        type: 'success',
+        text: `Imported ${count} debt obligation template(s) into recurring transactions.`,
+      });
+      loadData();
+    } catch {
+      setStatusMessage({ type: 'error', text: 'Failed to import scenario debt payments.' });
+    }
+  };
+
+  const activeNodes = graph.nodes.filter((node) => !node.archived && ["INCOME", "EXPENSE", "DEBT"].includes(node.nodeType));
+
   // Calculations for summary banner
   const totalIncome = transactions
     .filter((t) => t.kind === 'income')
@@ -771,6 +1662,26 @@ export function BudgetingTab({ graph }: BudgetingTabProps) {
     .reduce((sum, t) => sum + Number(t.amount || 0), 0);
 
   const netCashFlow = totalIncome - totalExpense;
+
+  const scenarioSalary = getScenarioSalary(graph);
+  const scenarioDebts = getScenarioDebts(graph);
+  const budgetComparison = getScenarioBudgetComparison(graph, totalIncome, totalExpense);
+
+  const matchedDebtNode = graph?.nodes?.find(
+    (n) =>
+      n.nodeType === 'DEBT' &&
+      !n.archived &&
+      (n.name.trim().toLowerCase() === (transDraft.accountName || '').trim().toLowerCase() ||
+        (transDraft.description || '').trim().toLowerCase().includes(n.name.trim().toLowerCase())),
+  );
+
+  const matchedRecurDebtNode = graph?.nodes?.find(
+    (n) =>
+      n.nodeType === 'DEBT' &&
+      !n.archived &&
+      (n.name.trim().toLowerCase() === (recurDraft.accountName || '').trim().toLowerCase() ||
+        (recurDraft.description || '').trim().toLowerCase().includes(n.name.trim().toLowerCase())),
+  );
 
   const totalPurchasedValue =
     positions.length > 0
@@ -796,42 +1707,29 @@ export function BudgetingTab({ graph }: BudgetingTabProps) {
           return sum + Number(s.sharesOwned || 0) * Number(currentPrice);
         }, 0);
 
+  const activePortfolioValue =
+    propPortfolioValue !== undefined ? propPortfolioValue : totalPortfolioValue;
+  const currentTotals = totals(graph, activePortfolioValue);
+  const currentNetWorth = currentTotals.netWorth;
+
+  useEffect(() => {
+    const storageKey = `finapp-holdings-v1:${isDemo ? 'demo' : 'user'}:${userId || 1}`;
+    if (totalPortfolioValue >= 0) {
+      if (saveStoredPortfolioValue(storageKey, totalPortfolioValue)) {
+        isSelfUpdate.current = true;
+        notifyPortfolioUpdated();
+        queueMicrotask(() => {
+          isSelfUpdate.current = false;
+        });
+      }
+    }
+  }, [totalPortfolioValue, isDemo, userId]);
+
   return (
     <div
-      className="dashboard-tab"
-      style={{ padding: '1rem', maxWidth: '1200px', margin: '0 auto' }}
+      className="budget-workspace w-full mx-auto"
     >
-      {/* Header and Summary Cards */}
-      <div
-        style={{
-          display: 'flex',
-          justifyContent: 'space-between',
-          alignItems: 'center',
-          marginBottom: '1.5rem',
-        }}
-      >
-        <div>
-          <h2 style={{ margin: 0 }}>Budgeting & Stock Portfolio</h2>
-          <p className="muted small" style={{ margin: '4px 0 0 0' }}>
-            Track income, expenses, recurring payments, and stock investments in your database.
-          </p>
-        </div>
-        {!userId && (
-          <div
-            style={{
-              padding: '6px 12px',
-              background: '#3b2f15',
-              border: '1px solid #705822',
-              borderRadius: '4px',
-              color: '#e8c67a',
-              fontSize: '13px',
-            }}
-          >
-            Sign in to create, update, and manage private financial data.
-          </div>
-        )}
-      </div>
-
+      {/* Summary cards and ledger tools */}
       {statusMessage && (
         <div
           role="status"
@@ -841,17 +1739,17 @@ export function BudgetingTab({ graph }: BudgetingTabProps) {
             marginBottom: '1rem',
             background:
               statusMessage.type === 'error'
-                ? '#3d1b1b'
+                ? 'var(--ui-paint-3d1b1b)'
                 : statusMessage.type === 'success'
-                  ? '#143825'
-                  : '#1e2838',
+                  ? 'var(--ui-paint-143825)'
+                  : 'var(--ui-paint-1e2838)',
             color:
               statusMessage.type === 'error'
-                ? '#fca5a5'
+                ? 'var(--ui-paint-fca5a5)'
                 : statusMessage.type === 'success'
-                  ? '#86efac'
-                  : '#93c5fd',
-            border: `1px solid ${statusMessage.type === 'error' ? '#7f1d1d' : statusMessage.type === 'success' ? '#166534' : '#2563eb'}`,
+                  ? 'var(--ui-paint-86efac)'
+                  : 'var(--ui-paint-93c5fd)',
+            border: `1px solid ${statusMessage.type === 'error' ? 'var(--ui-paint-7f1d1d)' : statusMessage.type === 'success' ? 'var(--ui-paint-166534)' : 'var(--ui-paint-2563eb)'}`,
             display: 'flex',
             justifyContent: 'space-between',
             alignItems: 'center',
@@ -880,76 +1778,134 @@ export function BudgetingTab({ graph }: BudgetingTabProps) {
           display: 'grid',
           gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))',
           gap: '1rem',
-          marginBottom: '1.5rem',
+          marginBottom: '1rem',
         }}
       >
         <div
           style={{
-            background: '#161d2b',
-            border: '1px solid #283347',
+            background: 'var(--ui-paint-161d2b)',
+            border: '1px solid var(--ui-paint-283347)',
             borderRadius: '8px',
             padding: '1rem',
           }}
         >
-          <span style={{ fontSize: '12px', color: '#8f9db3', textTransform: 'uppercase' }}>
+          <span style={{ fontSize: '12px', color: 'var(--ui-paint-8f9db3)', textTransform: 'uppercase' }}>
+            Overall Net Worth
+          </span>
+          <div
+            style={{
+              fontSize: '1.5rem',
+              fontWeight: 600,
+              color: currentNetWorth < 0 ? 'var(--ui-paint-f87171)' : 'var(--ui-paint-4ade80)',
+              marginTop: '4px',
+            }}
+          >
+            {dollars(currentNetWorth)}
+          </div>
+          <div style={{ fontSize: '11px', color: 'var(--color-muted)', marginTop: '4px' }}>
+            Assets: <strong style={{ color: 'var(--color-text)' }}>{dollars(currentTotals.assets)}</strong> • Debt:{' '}
+            <strong style={{ color: 'var(--color-text)' }}>{dollars(currentTotals.debt)}</strong>
+          </div>
+        </div>
+
+        <div
+          style={{
+            background: 'var(--ui-paint-161d2b)',
+            border: '1px solid var(--ui-paint-283347)',
+            borderRadius: '8px',
+            padding: '1rem',
+          }}
+        >
+          <span style={{ fontSize: '12px', color: 'var(--ui-paint-8f9db3)', textTransform: 'uppercase' }}>
             Total Income
           </span>
-          <div style={{ fontSize: '1.5rem', fontWeight: 600, color: '#4ade80', marginTop: '4px' }}>
+          <div style={{ fontSize: '1.5rem', fontWeight: 600, color: 'var(--ui-paint-4ade80)', marginTop: '4px' }}>
             {dollars(totalIncome)}
           </div>
-        </div>
-
-        <div
-          style={{
-            background: '#161d2b',
-            border: '1px solid #283347',
-            borderRadius: '8px',
-            padding: '1rem',
-          }}
-        >
-          <span style={{ fontSize: '12px', color: '#8f9db3', textTransform: 'uppercase' }}>
-            Total Expenses
-          </span>
-          <div style={{ fontSize: '1.5rem', fontWeight: 600, color: '#f87171', marginTop: '4px' }}>
-            {dollars(totalExpense)}
+          <div style={{ fontSize: '11px', color: 'var(--color-muted)', marginTop: '4px' }}>
+            Scenario Salary:{' '}
+            <strong style={{ color: 'var(--color-text)' }}>{dollars(scenarioSalary.totalMonthly)}/mo</strong>
+            {scenarioSalary.totalMonthly > 0 && (
+              <span
+                style={{
+                  marginLeft: '6px',
+                  color: totalIncome >= scenarioSalary.totalMonthly ? 'var(--color-mint)' : 'var(--ui-paint-fbbf24)',
+                }}
+              >
+                {totalIncome >= scenarioSalary.totalMonthly
+                  ? '✓ Target Met'
+                  : `${dollars(scenarioSalary.totalMonthly - totalIncome)} remaining`}
+              </span>
+            )}
           </div>
         </div>
 
         <div
           style={{
-            background: '#161d2b',
-            border: '1px solid #283347',
+            background: 'var(--ui-paint-161d2b)',
+            border: '1px solid var(--ui-paint-283347)',
             borderRadius: '8px',
             padding: '1rem',
           }}
         >
-          <span style={{ fontSize: '12px', color: '#8f9db3', textTransform: 'uppercase' }}>
+          <span style={{ fontSize: '12px', color: 'var(--ui-paint-8f9db3)', textTransform: 'uppercase' }}>
+            Total Expenses
+          </span>
+          <div style={{ fontSize: '1.5rem', fontWeight: 600, color: 'var(--ui-paint-f87171)', marginTop: '4px' }}>
+            {dollars(totalExpense)}
+          </div>
+          <div style={{ fontSize: '11px', color: 'var(--color-muted)', marginTop: '4px' }}>
+            Commitments:{' '}
+            <strong style={{ color: 'var(--color-text)' }}>
+              {dollars(budgetComparison.plannedTotalCommitments)}/mo
+            </strong>
+            {scenarioDebts.totalMonthlyPayment > 0 && (
+              <span style={{ marginLeft: '4px', color: 'var(--color-coral)' }}>
+                ({dollars(scenarioDebts.totalMonthlyPayment)} debt)
+              </span>
+            )}
+          </div>
+        </div>
+
+        <div
+          style={{
+            background: 'var(--ui-paint-161d2b)',
+            border: '1px solid var(--ui-paint-283347)',
+            borderRadius: '8px',
+            padding: '1rem',
+          }}
+        >
+          <span style={{ fontSize: '12px', color: 'var(--ui-paint-8f9db3)', textTransform: 'uppercase' }}>
             Net Cash Flow
           </span>
           <div
             style={{
               fontSize: '1.5rem',
               fontWeight: 600,
-              color: netCashFlow >= 0 ? '#4ade80' : '#f87171',
+              color: netCashFlow >= 0 ? 'var(--ui-paint-4ade80)' : 'var(--ui-paint-f87171)',
               marginTop: '4px',
             }}
           >
             {netCashFlow >= 0 ? `+${dollars(netCashFlow)}` : `-${dollars(Math.abs(netCashFlow))}`}
           </div>
+          <div style={{ fontSize: '11px', color: 'var(--color-muted)', marginTop: '4px' }}>
+            Scenario Surplus Target:{' '}
+            <strong style={{ color: 'var(--color-text)' }}>{dollars(budgetComparison.plannedSurplus)}/mo</strong>
+          </div>
         </div>
 
         <div
           style={{
-            background: '#161d2b',
-            border: '1px solid #283347',
+            background: 'var(--ui-paint-161d2b)',
+            border: '1px solid var(--ui-paint-283347)',
             borderRadius: '8px',
             padding: '1rem',
           }}
         >
-          <span style={{ fontSize: '12px', color: '#8f9db3', textTransform: 'uppercase' }}>
-            Stock Portfolio
+          <span style={{ fontSize: '12px', color: 'var(--ui-paint-8f9db3)', textTransform: 'uppercase' }}>
+            Tracked holdings
           </span>
-          <div style={{ fontSize: '1.5rem', fontWeight: 600, color: '#38bdf8', marginTop: '4px' }}>
+          <div style={{ fontSize: '1.5rem', fontWeight: 600, color: 'var(--ui-paint-38bdf8)', marginTop: '4px' }}>
             {dollars(totalPortfolioValue)}
           </div>
           {totalPurchasedValue > 0 && (
@@ -957,7 +1913,7 @@ export function BudgetingTab({ graph }: BudgetingTabProps) {
               style={{
                 fontSize: '12px',
                 marginTop: '4px',
-                color: totalPortfolioValue >= totalPurchasedValue ? '#4ade80' : '#f87171',
+                color: totalPortfolioValue >= totalPurchasedValue ? 'var(--ui-paint-4ade80)' : 'var(--ui-paint-f87171)',
               }}
             >
               {totalPortfolioValue >= totalPurchasedValue ? '+' : ''}
@@ -971,49 +1927,203 @@ export function BudgetingTab({ graph }: BudgetingTabProps) {
         </div>
       </div>
 
+      {/* Scenario & Budget Alignment Card */}
+      <div
+        style={{
+          background: 'var(--color-surface)',
+          border: '1px solid var(--color-border)',
+          borderRadius: '8px',
+          padding: '1rem',
+          marginBottom: '1.5rem',
+          display: 'flex',
+          flexWrap: 'wrap',
+          justifyContent: 'space-between',
+          alignItems: 'center',
+          gap: '1rem',
+        }}
+      >
+        <div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <span style={{ fontSize: '14px', fontWeight: 600, color: 'var(--color-text)' }}>
+              Scenario and budget
+            </span>
+            <span
+              style={{
+                fontSize: '11px',
+                padding: '2px 8px',
+                borderRadius: '12px',
+                background: 'var(--color-float)',
+                color: 'var(--color-blue)',
+                border: '1px solid var(--color-blue)',
+              }}
+            >
+              {scenarioSalary.nodes.length} Income • {scenarioDebts.nodes.length} Debt Accounts
+            </span>
+          </div>
+          <div style={{ fontSize: '12px', color: 'var(--color-muted)', marginTop: '6px', lineHeight: 1.5 }}>
+            Scenario Monthly Salary:{' '}
+            <strong style={{ color: 'var(--color-mint)' }}>
+              {dollars(scenarioSalary.totalMonthly)}/mo
+            </strong>
+            {' • '}Debt Commitments:{' '}
+            <strong style={{ color: 'var(--color-coral)' }}>
+              {dollars(scenarioDebts.totalMonthlyPayment)}/mo
+            </strong>{' '}
+            across {scenarioDebts.nodes.length} loans ({dollars(scenarioDebts.totalBalance)} total balance)
+            {scenarioDebts.nodes.length > 0 && (
+              <span style={{ color: 'var(--color-muted)', marginLeft: '6px' }}>
+                ({scenarioDebts.nodes.map((n) => `${n.name}: ${dollars(n.monthlyPayment)}/mo`).join(', ')})
+              </span>
+            )}
+          </div>
+
+          {/* Active Nodes Display Chips */}
+          {activeNodes.length > 0 && (
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px', marginTop: '10px' }}>
+              <span style={{ fontSize: '11px', color: 'var(--color-subtle)', alignSelf: 'center', marginRight: '4px' }}>
+                Linked plan:
+              </span>
+              {activeNodes.map((n) => {
+                const isIncome = n.nodeType === 'INCOME';
+                const isExpense = n.nodeType === 'EXPENSE';
+                const isDebt = n.nodeType === 'DEBT';
+                const amount = isExpense
+                  ? expenseAmount(n, graph)
+                  : isDebt
+                    ? debtPayment(n, graph)
+                    : n.amountOrBalance;
+
+                return (
+                  <button
+                    type="button"
+                    key={n.id}
+                    onClick={() => setActiveSubTab('recurring')}
+                    style={{
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: '5px',
+                      padding: '3px 8px',
+                      borderRadius: '12px',
+                      fontSize: '11px',
+                      background: 'var(--color-raised)',
+                      border: '1px solid var(--color-border)',
+                      color: 'var(--color-text)',
+                      cursor: 'pointer',
+                    }}
+                    title="Open recurring transactions"
+                  >
+                    <span
+                      style={{
+                        width: '6px',
+                        height: '6px',
+                        borderRadius: '50%',
+                        backgroundColor: colors[n.nodeType] || 'var(--color-muted)',
+                      }}
+                    />
+                    <span>{n.name}</span>
+                    <strong
+                      style={{
+                        color: isIncome
+                          ? 'var(--color-mint)'
+                          : isExpense || isDebt
+                            ? 'var(--color-coral)'
+                            : 'var(--color-blue)',
+                      }}
+                    >
+                      {dollars(amount)}
+                      /mo
+                    </strong>
+                  </button>
+                );
+              })}
+            </div>
+          )}
+        </div>
+
+        <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.5rem' }}>
+          {scenarioSalary.nodes.length > 0 && (
+            <button
+              type="button"
+              onClick={handleImportScenarioSalary}
+              style={{
+                padding: '6px 12px',
+                fontSize: '12px',
+                borderRadius: '6px',
+                border: '1px solid var(--color-mint)',
+                background: 'rgba(34, 197, 94, 0.12)',
+                color: 'var(--color-mint)',
+                cursor: 'pointer',
+                fontWeight: 500,
+              }}
+            >
+              Import salary
+            </button>
+          )}
+          {scenarioDebts.nodes.length > 0 && (
+            <button
+              type="button"
+              onClick={handleImportScenarioDebts}
+              style={{
+                padding: '6px 12px',
+                fontSize: '12px',
+                borderRadius: '6px',
+                border: '1px solid var(--color-coral)',
+                background: 'rgba(244, 63, 94, 0.12)',
+                color: 'var(--color-coral)',
+                cursor: 'pointer',
+                fontWeight: 500,
+              }}
+            >
+              Import loan payments
+            </button>
+          )}
+        </div>
+      </div>
+
       {/* Navigation Sub-Tabs */}
       <div
         style={{
           display: 'flex',
           gap: '0.5rem',
-          borderBottom: '1px solid #283347',
+          borderBottom: '1px solid var(--ui-paint-283347)',
           paddingBottom: '0.5rem',
           marginBottom: '1.5rem',
+          flexWrap: 'wrap',
         }}
       >
         <button
           type="button"
           onClick={() => setActiveSubTab('transactions')}
-          className={`button ${activeSubTab === 'transactions' ? 'primary' : 'quiet'}`}
+          className={`inline-flex items-center justify-center gap-1.5 whitespace-nowrap rounded-[7px] font-medium cursor-pointer transition-colors ${activeSubTab === 'transactions' ? 'bg-primary text-primary-fg' : 'bg-transparent text-(--ui-text-97a7c2) hover:bg-(--ui-surface-hover-1a2536) hover:text-text'}`}
           style={{ padding: '6px 16px', fontSize: '14px' }}
         >
           Transactions ({transactions.length})
         </button>
         <button
           type="button"
-          onClick={() => setActiveSubTab('stocks')}
-          className={`button ${activeSubTab === 'stocks' ? 'primary' : 'quiet'}`}
+          onClick={() => setActiveSubTab('recurring')}
+          className={`inline-flex items-center justify-center gap-1.5 whitespace-nowrap rounded-[7px] font-medium cursor-pointer transition-colors ${activeSubTab === 'recurring' ? 'bg-primary text-primary-fg' : 'bg-transparent text-(--ui-text-97a7c2) hover:bg-(--ui-surface-hover-1a2536) hover:text-text'}`}
           style={{ padding: '6px 16px', fontSize: '14px' }}
         >
-          Stocks & Positions ({stocks.length})
+          Recurring Transactions ({recurringList.length})
         </button>
         <button
           type="button"
-          onClick={() => setActiveSubTab('recurring')}
-          className={`button ${activeSubTab === 'recurring' ? 'primary' : 'quiet'}`}
+          onClick={() => setActiveSubTab('stocks')}
+          className={`inline-flex items-center justify-center gap-1.5 whitespace-nowrap rounded-[7px] font-medium cursor-pointer transition-colors ${activeSubTab === 'stocks' ? 'bg-primary text-primary-fg' : 'bg-transparent text-(--ui-text-97a7c2) hover:bg-(--ui-surface-hover-1a2536) hover:text-text'}`}
           style={{ padding: '6px 16px', fontSize: '14px' }}
         >
-          Recurring Rules ({recurringList.length})
+          Trade ledger ({stocks.length})
         </button>
         <button
           type="button"
           onClick={() => {
-            if (!activeLoad.current) void loadData(true);
+            if (!activeLoad.current) void loadData(true, true);
           }}
           disabled={!userId}
           aria-busy={refreshing}
           aria-disabled={refreshing || !userId}
-          className="button quiet budgeting-async-button"
+          className="inline-flex items-center justify-center gap-2 min-w-30 aria-busy:cursor-progress whitespace-nowrap rounded-[7px] font-medium cursor-pointer bg-transparent text-(--ui-text-97a7c2) hover:bg-(--ui-surface-hover-1a2536) hover:text-text transition-colors disabled:opacity-45 disabled:cursor-not-allowed"
           style={{ marginLeft: 'auto', padding: '6px 12px', fontSize: '12px' }}
         >
           {refreshing ? (
@@ -1025,7 +2135,7 @@ export function BudgetingTab({ graph }: BudgetingTabProps) {
           )}
         </button>
       </div>
-      <div className="stock-load-status" role="status" aria-live="polite">
+      <div className="min-h-[1.4em] flex items-center gap-2 text-(--ui-text-91a3bd) text-[13px]" role="status" aria-live="polite">
         {generating
           ? 'Generating due occurrences. You can keep browsing.'
           : refreshing
@@ -1048,15 +2158,15 @@ export function BudgetingTab({ graph }: BudgetingTabProps) {
               <h3 id="transactions-section-heading" style={{ margin: 0 }}>
                 Recorded Transactions
               </h3>
-              <p className="muted small" style={{ margin: '2px 0 0 0' }}>
+              <p className="text-(--ui-text-8b9ab1) text-[11px] mt-0.5 mb-0">
                 Income and expenses linked to your accounts.
               </p>
             </div>
             <button
               type="button"
-              className="button primary"
+              className="inline-flex items-center justify-center gap-1.75 whitespace-nowrap rounded-[7px] px-3.5 py-2.25 text-[11px] font-medium min-h-8.5 cursor-pointer bg-primary text-primary-fg hover:bg-(--ui-surface-hover-cbbcfc) transition-colors disabled:opacity-45 disabled:cursor-not-allowed"
               onClick={handleOpenAddTransaction}
-              disabled={!userId}
+              disabled={!userId && !isDemo}
             >
               + Add Transaction
             </button>
@@ -1066,8 +2176,8 @@ export function BudgetingTab({ graph }: BudgetingTabProps) {
           {showTransForm && (
             <div
               style={{
-                background: '#161d2b',
-                border: '1px solid #283347',
+                background: 'var(--ui-paint-161d2b)',
+                border: '1px solid var(--ui-paint-283347)',
                 borderRadius: '8px',
                 padding: '1.25rem',
                 marginBottom: '1.5rem',
@@ -1093,13 +2203,7 @@ export function BudgetingTab({ graph }: BudgetingTabProps) {
                     onChange={(e) =>
                       setTransDraft((prev) => changeKind(prev, e.target.value as TransactionKind))
                     }
-                    style={{
-                      padding: '8px',
-                      borderRadius: '4px',
-                      background: '#0f141e',
-                      border: '1px solid #283347',
-                      color: 'white',
-                    }}
+                    style={formFieldStyle}
                   >
                     <option value="income">Income (Earnings / Inflow)</option>
                     <option value="expense">Expense (Payment / Outflow)</option>
@@ -1118,13 +2222,7 @@ export function BudgetingTab({ graph }: BudgetingTabProps) {
                     onChange={(e) =>
                       setTransDraft((prev) => ({ ...prev, description: e.target.value }))
                     }
-                    style={{
-                      padding: '8px',
-                      borderRadius: '4px',
-                      background: '#0f141e',
-                      border: '1px solid #283347',
-                      color: 'white',
-                    }}
+                    style={formFieldStyle}
                   />
                 </label>
 
@@ -1140,13 +2238,7 @@ export function BudgetingTab({ graph }: BudgetingTabProps) {
                     onChange={(e) =>
                       setTransDraft((prev) => ({ ...prev, amount: Number(e.target.value) }))
                     }
-                    style={{
-                      padding: '8px',
-                      borderRadius: '4px',
-                      background: '#0f141e',
-                      border: '1px solid #283347',
-                      color: 'white',
-                    }}
+                    style={formFieldStyle}
                   />
                 </label>
 
@@ -1159,13 +2251,7 @@ export function BudgetingTab({ graph }: BudgetingTabProps) {
                     onChange={(e) =>
                       setTransDraft((prev) => changeAccount(prev, e.target.value, dbAccounts))
                     }
-                    style={{
-                      padding: '8px',
-                      borderRadius: '4px',
-                      background: '#0f141e',
-                      border: '1px solid #283347',
-                      color: 'white',
-                    }}
+                    style={formFieldStyle}
                   >
                     <option value="">Select or Default</option>
                     {availableAccounts.map((acc) => (
@@ -1191,13 +2277,7 @@ export function BudgetingTab({ graph }: BudgetingTabProps) {
                         date: e.target.value,
                       }))
                     }
-                    style={{
-                      padding: '8px',
-                      borderRadius: '4px',
-                      background: '#0f141e',
-                      border: '1px solid #283347',
-                      color: 'white',
-                    }}
+                    style={formFieldStyle}
                   />
                 </label>
 
@@ -1210,13 +2290,7 @@ export function BudgetingTab({ graph }: BudgetingTabProps) {
                     placeholder="e.g. Groceries, Utilities, Rent"
                     value={transDraft.categoryName || ''}
                     onChange={(e) => setTransDraft((prev) => changeCategory(prev, e.target.value))}
-                    style={{
-                      padding: '8px',
-                      borderRadius: '4px',
-                      background: '#0f141e',
-                      border: '1px solid #283347',
-                      color: 'white',
-                    }}
+                    style={formFieldStyle}
                   />
                 </label>
 
@@ -1235,15 +2309,31 @@ export function BudgetingTab({ graph }: BudgetingTabProps) {
                     placeholder="Additional details..."
                     value={transDraft.notes || ''}
                     onChange={(e) => setTransDraft((prev) => ({ ...prev, notes: e.target.value }))}
-                    style={{
-                      padding: '8px',
-                      borderRadius: '4px',
-                      background: '#0f141e',
-                      border: '1px solid #283347',
-                      color: 'white',
-                    }}
+                    style={formFieldStyle}
                   />
                 </label>
+
+                {matchedDebtNode && transDraft.kind === 'expense' && (
+                  <div
+                    style={{
+                      gridColumn: '1 / -1',
+                      padding: '10px 14px',
+                      borderRadius: '6px',
+                      background: 'rgba(244, 63, 94, 0.12)',
+                      border: '1px solid var(--color-coral)',
+                      color: 'var(--color-coral)',
+                      fontSize: '12px',
+                    }}
+                  >
+                    💳 <strong>Linked Scenario Debt Account:</strong> {matchedDebtNode.name}
+                    <div style={{ marginTop: '2px', color: 'var(--color-coral)' }}>
+                      Current Balance: <strong>{dollars(matchedDebtNode.amountOrBalance)}</strong> • Interest:{' '}
+                      <strong>{matchedDebtNode.interestRateApr}% APR</strong> • Minimum Monthly Payment:{' '}
+                      <strong>{dollars(debtPayment(matchedDebtNode, graph))}</strong>.
+                      Logging this expense will automatically pay down this debt balance and increase your net worth.
+                    </div>
+                  </div>
+                )}
 
                 <div
                   style={{
@@ -1253,12 +2343,12 @@ export function BudgetingTab({ graph }: BudgetingTabProps) {
                     marginTop: '0.5rem',
                   }}
                 >
-                  <button type="submit" className="button primary">
+                  <button type="submit" className="inline-flex items-center justify-center gap-1.75 whitespace-nowrap rounded-[7px] px-3.5 py-2.25 text-[11px] font-medium min-h-8.5 cursor-pointer bg-primary text-primary-fg hover:bg-(--ui-surface-hover-cbbcfc) transition-colors">
                     {editingTransId ? 'Save Changes' : 'Record Transaction'}
                   </button>
                   <button
                     type="button"
-                    className="button quiet"
+                    className="inline-flex items-center justify-center gap-1.75 whitespace-nowrap rounded-[7px] px-3.25 py-2.25 text-[11px] font-medium min-h-8.5 cursor-pointer bg-transparent text-(--ui-text-97a7c2) border border-transparent hover:bg-(--ui-surface-hover-1a2536) hover:text-text transition-colors"
                     onClick={() => {
                       setShowTransForm(false);
                       setEditingTransId(null);
@@ -1269,7 +2359,7 @@ export function BudgetingTab({ graph }: BudgetingTabProps) {
                   {editingTransId && (
                     <button
                       type="button"
-                      className="button danger"
+                      className="inline-flex items-center justify-center gap-1.75 whitespace-nowrap rounded-[7px] px-3.25 py-2.25 text-[11px] font-medium min-h-8.5 cursor-pointer text-coral border border-(--ui-border-633246) bg-(--ui-surface-2b1b28) hover:bg-(--ui-surface-hover-3d2034) transition-colors"
                       style={{ marginLeft: 'auto' }}
                       onClick={() => handleDeleteTransaction(editingTransId)}
                     >
@@ -1287,22 +2377,28 @@ export function BudgetingTab({ graph }: BudgetingTabProps) {
               style={{
                 textAlign: 'center',
                 padding: '3rem',
-                background: '#161d2b',
+                background: 'var(--ui-paint-161d2b)',
                 borderRadius: '8px',
-                border: '1px dashed #283347',
-                color: '#8f9db3',
+                border: '1px dashed var(--ui-paint-283347)',
+                color: 'var(--ui-paint-8f9db3)',
               }}
             >
-              No transactions recorded yet. Click <strong>+ Add Transaction</strong> to record
-              income or expenses.
+              <p style={{ margin: '0 0 0.5rem 0', fontSize: '15px', color: 'var(--color-text)' }}>
+                No single transactions recorded yet.
+              </p>
+              <p style={{ margin: 0, fontSize: '13px', color: 'var(--color-muted)' }}>
+                Click <strong>+ Add Transaction</strong> above to log single, non-recurring expenses (such as grocery trips, dining, and retail). Recurring salary and bills are managed in the <strong>Recurring Transactions</strong> tab.
+              </p>
             </div>
           ) : (
+
+
             <div
               style={{
                 overflowX: 'auto',
-                background: '#161d2b',
+                background: 'var(--ui-paint-161d2b)',
                 borderRadius: '8px',
-                border: '1px solid #283347',
+                border: '1px solid var(--ui-paint-283347)',
               }}
             >
               <table
@@ -1316,9 +2412,9 @@ export function BudgetingTab({ graph }: BudgetingTabProps) {
                 <thead>
                   <tr
                     style={{
-                      borderBottom: '1px solid #283347',
-                      background: '#121824',
-                      color: '#8f9db3',
+                      borderBottom: '1px solid var(--ui-paint-283347)',
+                      background: 'var(--ui-paint-121824)',
+                      color: 'var(--ui-paint-8f9db3)',
                     }}
                   >
                     <th style={{ padding: '12px' }}>Date</th>
@@ -1333,7 +2429,7 @@ export function BudgetingTab({ graph }: BudgetingTabProps) {
                 </thead>
                 <tbody>
                   {transactions.map((t) => (
-                    <tr key={t.id} style={{ borderBottom: '1px solid #1f2737' }}>
+                    <tr key={t.id} style={{ borderBottom: '1px solid var(--ui-paint-1f2737)' }}>
                       <td style={{ padding: '10px 12px', whiteSpace: 'nowrap' }}>
                         {t.transactionDate || t.date}
                       </td>
@@ -1345,20 +2441,20 @@ export function BudgetingTab({ graph }: BudgetingTabProps) {
                             fontSize: '11px',
                             fontWeight: 600,
                             textTransform: 'uppercase',
-                            background: t.kind === 'income' ? '#064e3b' : '#7f1d1d',
-                            color: t.kind === 'income' ? '#86efac' : '#fca5a5',
+                            background: t.kind === 'income' ? 'var(--ui-paint-064e3b)' : 'var(--ui-paint-7f1d1d)',
+                            color: t.kind === 'income' ? 'var(--ui-paint-86efac)' : 'var(--ui-paint-fca5a5)',
                           }}
                         >
                           {t.kind}
                         </span>
                       </td>
                       <td style={{ padding: '10px 12px', fontWeight: 500 }}>{t.description}</td>
-                      <td style={{ padding: '10px 12px', color: '#93c5fd' }}>
+                      <td style={{ padding: '10px 12px', color: 'var(--ui-paint-93c5fd)' }}>
                         {t.accountName && t.accountName.trim().toLowerCase() === 'checking account'
                           ? 'Checking'
                           : t.accountName || '—'}
                       </td>
-                      <td style={{ padding: '10px 12px', color: '#d1d5db' }}>
+                      <td style={{ padding: '10px 12px', color: 'var(--ui-paint-d1d5db)' }}>
                         {t.categoryName || '—'}
                       </td>
                       <td
@@ -1366,7 +2462,7 @@ export function BudgetingTab({ graph }: BudgetingTabProps) {
                           padding: '10px 12px',
                           textAlign: 'right',
                           fontWeight: 600,
-                          color: t.kind === 'income' ? '#4ade80' : '#f87171',
+                          color: t.kind === 'income' ? 'var(--ui-paint-4ade80)' : 'var(--ui-paint-f87171)',
                         }}
                       >
                         {t.kind === 'income' ? `+${dollars(t.amount)}` : `-${dollars(t.amount)}`}
@@ -1374,7 +2470,7 @@ export function BudgetingTab({ graph }: BudgetingTabProps) {
                       <td
                         style={{
                           padding: '10px 12px',
-                          color: '#8f9db3',
+                          color: 'var(--ui-paint-8f9db3)',
                           maxWidth: '200px',
                           overflow: 'hidden',
                           textOverflow: 'ellipsis',
@@ -1388,7 +2484,7 @@ export function BudgetingTab({ graph }: BudgetingTabProps) {
                       >
                         <button
                           type="button"
-                          className="button quiet"
+                          className="inline-flex items-center justify-center whitespace-nowrap rounded-[7px] font-medium cursor-pointer bg-transparent border border-transparent hover:bg-(--ui-surface-hover-1a2536) text-(--ui-text-97a7c2) hover:text-text transition-colors"
                           onClick={() => handleEditTransaction(t)}
                           style={{ padding: '4px 8px', fontSize: '11px', marginRight: '6px' }}
                         >
@@ -1396,8 +2492,8 @@ export function BudgetingTab({ graph }: BudgetingTabProps) {
                         </button>
                         <button
                           type="button"
-                          className="button quiet"
-                          style={{ color: '#f87171', padding: '4px 8px', fontSize: '11px' }}
+                          className="inline-flex items-center justify-center whitespace-nowrap rounded-[7px] font-medium cursor-pointer bg-transparent border border-transparent hover:bg-(--ui-surface-hover-1a2536) transition-colors"
+                          style={{ color: 'var(--ui-paint-f87171)', padding: '4px 8px', fontSize: '11px' }}
                           onClick={() => t.id && handleDeleteTransaction(t.id)}
                         >
                           Delete
@@ -1409,8 +2505,12 @@ export function BudgetingTab({ graph }: BudgetingTabProps) {
               </table>
             </div>
           )}
+
+
         </section>
       )}
+
+
 
       {/* ===================== SECTION 2: STOCKS & POSITIONS ===================== */}
       {activeSubTab === 'stocks' && (
@@ -1441,18 +2541,18 @@ export function BudgetingTab({ graph }: BudgetingTabProps) {
                       style={{
                         fontSize: '14px',
                         fontWeight: 500,
-                        color: '#8f9db3',
+                        color: 'var(--ui-paint-8f9db3)',
                         display: 'inline-flex',
                         gap: '6px',
                         alignItems: 'center',
                       }}
                     >
                       (Purchased Price:{' '}
-                      <strong style={{ color: '#cbd5e1' }}>{dollars(totalPurchasedValue)}</strong> |
+                      <strong style={{ color: 'var(--ui-paint-cbd5e1)' }}>{dollars(totalPurchasedValue)}</strong> |
                       Current Price:{' '}
                       <strong
                         style={{
-                          color: totalPortfolioValue >= totalPurchasedValue ? '#4ade80' : '#f87171',
+                          color: totalPortfolioValue >= totalPurchasedValue ? 'var(--ui-paint-4ade80)' : 'var(--ui-paint-f87171)',
                         }}
                       >
                         {dollars(totalPortfolioValue)}
@@ -1462,13 +2562,13 @@ export function BudgetingTab({ graph }: BudgetingTabProps) {
                   )}
                 </h3>
               </div>
-              <p className="muted small" style={{ margin: '2px 0 0 0' }}>
+              <p className="text-(--ui-text-8b9ab1) text-[11px] mt-0.5 mb-0">
                 Track shares, cost basis, market prices, and buy/sell operations.
               </p>
             </div>
             <button
               type="button"
-              className="button primary"
+              className="inline-flex items-center justify-center gap-1.75 whitespace-nowrap rounded-[7px] px-3.5 py-2.25 text-[11px] font-medium min-h-8.5 cursor-pointer bg-primary text-primary-fg hover:bg-(--ui-surface-hover-cbbcfc) transition-colors disabled:opacity-45 disabled:cursor-not-allowed"
               onClick={handleOpenAddStock}
               disabled={!userId}
             >
@@ -1480,8 +2580,8 @@ export function BudgetingTab({ graph }: BudgetingTabProps) {
           {showStockForm && (
             <div
               style={{
-                background: '#161d2b',
-                border: '1px solid #283347',
+                background: 'var(--ui-paint-161d2b)',
+                border: '1px solid var(--ui-paint-283347)',
                 borderRadius: '8px',
                 padding: '1.25rem',
                 marginBottom: '1.5rem',
@@ -1491,9 +2591,8 @@ export function BudgetingTab({ graph }: BudgetingTabProps) {
                 {editingStockId ? 'Edit Stock Details' : 'Add Stock To Portfolio'}
               </h4>
               {editingStockId && (
-                <p className="muted small">
-                  Current holdings are shown for reference. Use Buy or Sell to record position
-                  changes; editing stock details preserves your purchase history.
+                <p className="text-(--ui-text-8b9ab1) text-[11px]">
+                  Modify your stock details, dividend settings, or position holdings below.
                 </p>
               )}
               <form
@@ -1517,13 +2616,7 @@ export function BudgetingTab({ graph }: BudgetingTabProps) {
                     onChange={(e) =>
                       setStockDraft((prev) => ({ ...prev, ticker: e.target.value.toUpperCase() }))
                     }
-                    style={{
-                      padding: '8px',
-                      borderRadius: '4px',
-                      background: '#0f141e',
-                      border: '1px solid #283347',
-                      color: 'white',
-                    }}
+                    style={formFieldStyle}
                   />
                 </label>
 
@@ -1536,17 +2629,10 @@ export function BudgetingTab({ graph }: BudgetingTabProps) {
                     step="0.01"
                     required
                     value={String(stockDraft.purchasePrice ?? stockDraft.lastPrice ?? '')}
-                    readOnly={Boolean(editingStockId)}
                     onChange={(e) =>
                       setStockDraft((prev) => ({ ...prev, purchasePrice: Number(e.target.value) }))
                     }
-                    style={{
-                      padding: '8px',
-                      borderRadius: '4px',
-                      background: '#0f141e',
-                      border: '1px solid #283347',
-                      color: 'white',
-                    }}
+                    style={formFieldStyle}
                   />
                 </label>
 
@@ -1559,30 +2645,23 @@ export function BudgetingTab({ graph }: BudgetingTabProps) {
                     step="0.0001"
                     required
                     value={String(stockDraft.sharesOwned ?? 0)}
-                    readOnly={Boolean(editingStockId)}
                     onChange={(e) =>
                       setStockDraft((prev) => ({ ...prev, sharesOwned: Number(e.target.value) }))
                     }
-                    style={{
-                      padding: '8px',
-                      borderRadius: '4px',
-                      background: '#0f141e',
-                      border: '1px solid #283347',
-                      color: 'white',
-                    }}
+                    style={formFieldStyle}
                   />
                 </label>
 
                 <div
                   style={{ display: 'flex', flexDirection: 'column', gap: '4px', fontSize: '13px' }}
                 >
-                  <span style={{ color: '#8f9db3' }}>Current Price ($)</span>
+                  <span style={{ color: 'var(--ui-paint-8f9db3)' }}>Current Price ($)</span>
                   <div
                     style={{
                       padding: '8px 12px',
                       borderRadius: '4px',
-                      background: '#0f141e',
-                      border: '1px solid #283347',
+                      background: 'var(--ui-paint-0f141e)',
+                      border: '1px solid var(--ui-paint-283347)',
                       minHeight: '38px',
                       display: 'flex',
                       alignItems: 'center',
@@ -1590,15 +2669,15 @@ export function BudgetingTab({ graph }: BudgetingTabProps) {
                     }}
                   >
                     {fetchingQuote ? (
-                      <span style={{ color: '#93c5fd', fontSize: '12px' }}>
+                      <span style={{ color: 'var(--ui-paint-93c5fd)', fontSize: '12px' }}>
                         Fetching current price...
                       </span>
                     ) : quotePrice != null ? (
-                      <span style={{ color: '#4ade80', fontWeight: 600 }}>
+                      <span style={{ color: 'var(--ui-paint-4ade80)', fontWeight: 600 }}>
                         {dollars(quotePrice)}
                       </span>
                     ) : (
-                      <span style={{ color: '#64748b', fontSize: '12px' }}>
+                      <span style={{ color: 'var(--ui-paint-64748b)', fontSize: '12px' }}>
                         Auto-fetched from market
                       </span>
                     )}
@@ -1616,15 +2695,55 @@ export function BudgetingTab({ graph }: BudgetingTabProps) {
                     onChange={(e) =>
                       setStockDraft((prev) => ({ ...prev, companyName: e.target.value }))
                     }
-                    style={{
-                      padding: '8px',
-                      borderRadius: '4px',
-                      background: '#0f141e',
-                      border: '1px solid #283347',
-                      color: 'white',
-                    }}
+                    style={formFieldStyle}
                   />
                 </label>
+
+                {detectedDividend && (
+                  <div
+                    style={{
+                      gridColumn: '1 / -1',
+                      padding: '8px 12px',
+                      borderRadius: '6px',
+                      fontSize: '12px',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '8px',
+                      background: detectedDividend.pays
+                        ? 'rgba(74, 222, 128, 0.12)'
+                        : 'rgba(148, 163, 184, 0.10)',
+                      border: `1px solid ${
+                        detectedDividend.pays ? 'rgba(74, 222, 128, 0.3)' : 'rgba(148, 163, 184, 0.2)'
+                      }`,
+                      color: detectedDividend.pays
+                        ? 'var(--ui-paint-4ade80)'
+                        : '#94a3b8',
+                    }}
+                  >
+                    {detectedDividend.pays ? (
+                      <>
+                        <span>✓</span>
+                        <span>
+                          <strong>Dividend detected:</strong> ${detectedDividend.perShare.toFixed(4)}
+                          /share ({detectedDividend.frequency})
+                          {detectedDividend.yieldPct != null &&
+                            ` • ~${detectedDividend.yieldPct}% yield`}
+                          {Number(stockDraft.sharesOwned || 0) > 0 && (
+                            <span style={{ color: 'var(--color-text)', marginLeft: '6px' }}>
+                              → {dollars(Number(stockDraft.sharesOwned) * detectedDividend.perShare)}/
+                              {detectedDividend.frequency} recurring income
+                            </span>
+                          )}
+                        </span>
+                      </>
+                    ) : (
+                      <>
+                        <span>ℹ</span>
+                        <span>No dividend distributions detected for this security.</span>
+                      </>
+                    )}
+                  </div>
+                )}
 
                 <div
                   style={{
@@ -1645,9 +2764,28 @@ export function BudgetingTab({ graph }: BudgetingTabProps) {
                   />
                   <label
                     htmlFor="paysDividendCheckbox"
-                    style={{ fontSize: '13px', cursor: 'pointer' }}
+                    style={{
+                      fontSize: '13px',
+                      cursor: 'pointer',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '6px',
+                    }}
                   >
                     Pays Dividends
+                    {detectedDividend?.pays && (
+                      <span
+                        style={{
+                          fontSize: '11px',
+                          color: 'var(--ui-paint-4ade80)',
+                          background: 'rgba(74, 222, 128, 0.15)',
+                          borderRadius: '4px',
+                          padding: '1px 6px',
+                        }}
+                      >
+                        Auto-detected
+                      </span>
+                    )}
                   </label>
                 </div>
 
@@ -1667,13 +2805,7 @@ export function BudgetingTab({ graph }: BudgetingTabProps) {
                         onChange={(e) =>
                           setStockDraft((prev) => ({ ...prev, dividendFrequency: e.target.value }))
                         }
-                        style={{
-                          padding: '8px',
-                          borderRadius: '4px',
-                          background: '#0f141e',
-                          border: '1px solid #283347',
-                          color: 'white',
-                        }}
+                        style={formFieldStyle}
                       >
                         <option value="monthly">Monthly</option>
                         <option value="quarterly">Quarterly</option>
@@ -1702,15 +2834,35 @@ export function BudgetingTab({ graph }: BudgetingTabProps) {
                             dividendPerShare: Number(e.target.value),
                           }))
                         }
-                        style={{
-                          padding: '8px',
-                          borderRadius: '4px',
-                          background: '#0f141e',
-                          border: '1px solid #283347',
-                          color: 'white',
-                        }}
+                        style={formFieldStyle}
                       />
                     </label>
+
+                    {stockDraft.dividendFrequency !== "irregular" &&
+                      Number(stockDraft.sharesOwned || 0) > 0 &&
+                      Number(stockDraft.dividendPerShare || 0) > 0 && (
+                        <div
+                          style={{
+                            gridColumn: '1 / -1',
+                            fontSize: '12px',
+                            color: 'var(--ui-paint-93c5fd)',
+                            background: 'rgba(59, 130, 246, 0.1)',
+                            padding: '6px 10px',
+                            borderRadius: '4px',
+                            border: '1px solid rgba(59, 130, 246, 0.2)',
+                          }}
+                        >
+                          Estimated dividend income of{' '}
+                          <strong>
+                            {dollars(
+                              (Number(stockDraft.sharesOwned) || 0) *
+                                (Number(stockDraft.dividendPerShare) || 0),
+                            )}
+                            /{stockDraft.dividendFrequency || 'quarterly'}
+                          </strong>{' '}
+                          is included in full portfolio forecasts that use editable price returns. Record payouts as income after you receive them.
+                        </div>
+                      )}
                   </>
                 )}
 
@@ -1722,12 +2874,12 @@ export function BudgetingTab({ graph }: BudgetingTabProps) {
                     marginTop: '0.5rem',
                   }}
                 >
-                  <button type="submit" className="button primary">
+                  <button type="submit" className="inline-flex items-center justify-center gap-1.75 whitespace-nowrap rounded-[7px] px-3.5 py-2.25 text-[11px] font-medium min-h-8.5 cursor-pointer bg-primary text-primary-fg hover:bg-(--ui-surface-hover-cbbcfc) transition-colors">
                     {editingStockId ? 'Save Changes' : 'Add Stock'}
                   </button>
                   <button
                     type="button"
-                    className="button quiet"
+                    className="inline-flex items-center justify-center gap-1.75 whitespace-nowrap rounded-[7px] px-3.25 py-2.25 text-[11px] font-medium min-h-8.5 cursor-pointer bg-transparent text-(--ui-text-97a7c2) border border-transparent hover:bg-(--ui-surface-hover-1a2536) hover:text-text transition-colors"
                     onClick={() => {
                       setShowStockForm(false);
                       setEditingStockId(null);
@@ -1738,7 +2890,7 @@ export function BudgetingTab({ graph }: BudgetingTabProps) {
                   {editingStockId && (
                     <button
                       type="button"
-                      className="button danger"
+                      className="inline-flex items-center justify-center gap-1.75 whitespace-nowrap rounded-[7px] px-3.25 py-2.25 text-[11px] font-medium min-h-8.5 cursor-pointer text-coral border border-(--ui-border-633246) bg-(--ui-surface-2b1b28) hover:bg-(--ui-surface-hover-3d2034) transition-colors"
                       style={{ marginLeft: 'auto' }}
                       onClick={() => handleDeleteStock(editingStockId)}
                     >
@@ -1754,8 +2906,8 @@ export function BudgetingTab({ graph }: BudgetingTabProps) {
           {tradeModal.open && (
             <div
               style={{
-                background: '#1c2436',
-                border: '1px solid #3b82f6',
+                background: 'var(--ui-paint-1c2436)',
+                border: '1px solid var(--ui-paint-3b82f6)',
                 borderRadius: '8px',
                 padding: '1.25rem',
                 marginBottom: '1.5rem',
@@ -1782,13 +2934,7 @@ export function BudgetingTab({ graph }: BudgetingTabProps) {
                     onChange={(e) =>
                       setTradeModal((prev) => ({ ...prev, type: e.target.value as 'buy' | 'sell' }))
                     }
-                    style={{
-                      padding: '8px',
-                      borderRadius: '4px',
-                      background: '#0f141e',
-                      border: '1px solid #283347',
-                      color: 'white',
-                    }}
+                    style={formFieldStyle}
                   >
                     <option value="buy">Buy</option>
                     <option value="sell">Sell</option>
@@ -1807,13 +2953,7 @@ export function BudgetingTab({ graph }: BudgetingTabProps) {
                     onChange={(e) =>
                       setTradeModal((prev) => ({ ...prev, quantity: Number(e.target.value) }))
                     }
-                    style={{
-                      padding: '8px',
-                      borderRadius: '4px',
-                      background: '#0f141e',
-                      border: '1px solid #283347',
-                      color: 'white',
-                    }}
+                    style={formFieldStyle}
                   />
                 </label>
 
@@ -1829,13 +2969,7 @@ export function BudgetingTab({ graph }: BudgetingTabProps) {
                     onChange={(e) =>
                       setTradeModal((prev) => ({ ...prev, price: Number(e.target.value) }))
                     }
-                    style={{
-                      padding: '8px',
-                      borderRadius: '4px',
-                      background: '#0f141e',
-                      border: '1px solid #283347',
-                      color: 'white',
-                    }}
+                    style={formFieldStyle}
                   />
                 </label>
 
@@ -1848,13 +2982,7 @@ export function BudgetingTab({ graph }: BudgetingTabProps) {
                     onChange={(e) =>
                       setTradeModal((prev) => ({ ...prev, accountName: e.target.value }))
                     }
-                    style={{
-                      padding: '8px',
-                      borderRadius: '4px',
-                      background: '#0f141e',
-                      border: '1px solid #283347',
-                      color: 'white',
-                    }}
+                    style={formFieldStyle}
                   >
                     {availableAccounts.map((acc) => (
                       <option key={acc} value={acc}>
@@ -1864,18 +2992,18 @@ export function BudgetingTab({ graph }: BudgetingTabProps) {
                   </select>
                 </label>
 
-                <div style={{ gridColumn: '1 / -1', fontSize: '13px', color: '#93c5fd' }}>
+                <div style={{ gridColumn: '1 / -1', fontSize: '13px', color: 'var(--ui-paint-93c5fd)' }}>
                   Total Estimated {tradeModal.type === 'buy' ? 'Cost' : 'Proceeds'}:{' '}
                   <strong>{dollars(tradeModal.quantity * tradeModal.price)}</strong>
                 </div>
 
                 <div style={{ display: 'flex', gap: '0.5rem', gridColumn: '1 / -1' }}>
-                  <button type="submit" className="button primary">
+                  <button type="submit" className="inline-flex items-center justify-center gap-1.75 whitespace-nowrap rounded-[7px] px-3.5 py-2.25 text-[11px] font-medium min-h-8.5 cursor-pointer bg-primary text-primary-fg hover:bg-(--ui-surface-hover-cbbcfc) transition-colors">
                     Execute {tradeModal.type.toUpperCase()}
                   </button>
                   <button
                     type="button"
-                    className="button quiet"
+                    className="inline-flex items-center justify-center gap-1.75 whitespace-nowrap rounded-[7px] px-3.25 py-2.25 text-[11px] font-medium min-h-8.5 cursor-pointer bg-transparent text-(--ui-text-97a7c2) border border-transparent hover:bg-(--ui-surface-hover-1a2536) hover:text-text transition-colors"
                     onClick={() => setTradeModal((prev) => ({ ...prev, open: false }))}
                   >
                     Cancel
@@ -1891,10 +3019,10 @@ export function BudgetingTab({ graph }: BudgetingTabProps) {
               style={{
                 textAlign: 'center',
                 padding: '3rem',
-                background: '#161d2b',
+                background: 'var(--ui-paint-161d2b)',
                 borderRadius: '8px',
-                border: '1px dashed #283347',
-                color: '#8f9db3',
+                border: '1px dashed var(--ui-paint-283347)',
+                color: 'var(--ui-paint-8f9db3)',
               }}
             >
               No stock positions yet. Click <strong>+ Add Stock Ticker</strong> to track your
@@ -1904,9 +3032,9 @@ export function BudgetingTab({ graph }: BudgetingTabProps) {
             <div
               style={{
                 overflowX: 'auto',
-                background: '#161d2b',
+                background: 'var(--ui-paint-161d2b)',
                 borderRadius: '8px',
-                border: '1px solid #283347',
+                border: '1px solid var(--ui-paint-283347)',
               }}
             >
               <table
@@ -1920,9 +3048,9 @@ export function BudgetingTab({ graph }: BudgetingTabProps) {
                 <thead>
                   <tr
                     style={{
-                      borderBottom: '1px solid #283347',
-                      background: '#121824',
-                      color: '#8f9db3',
+                      borderBottom: '1px solid var(--ui-paint-283347)',
+                      background: 'var(--ui-paint-121824)',
+                      color: 'var(--ui-paint-8f9db3)',
                     }}
                   >
                     <th style={{ padding: '12px' }}>Ticker</th>
@@ -1957,12 +3085,36 @@ export function BudgetingTab({ graph }: BudgetingTabProps) {
                       : shares * purchasedPrice;
                     const totalDiv = pos ? pos.totalDividends : 0;
 
+                    const sameTickerStocks = stocks.filter(
+                      (s) => s.ticker?.toUpperCase() === sym,
+                    );
+                    const isMultiLot = sameTickerStocks.length > 1;
+                    const lotIndex =
+                      sameTickerStocks.findIndex((s) => s.id === stock.id) + 1;
+
                     return (
-                      <tr key={stock.id} style={{ borderBottom: '1px solid #1f2737' }}>
-                        <td style={{ padding: '10px 12px', fontWeight: 700, color: '#38bdf8' }}>
-                          {stock.ticker}
+                      <tr key={stock.id} style={{ borderBottom: '1px solid var(--ui-paint-1f2737)' }}>
+                        <td style={{ padding: '10px 12px', fontWeight: 700, color: 'var(--ui-paint-38bdf8)' }}>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                            <span>{stock.ticker}</span>
+                            {isMultiLot && (
+                              <span
+                                style={{
+                                  fontSize: '10px',
+                                  fontWeight: 600,
+                                  background: 'rgba(56, 189, 248, 0.15)',
+                                  color: 'var(--ui-paint-38bdf8)',
+                                  padding: '1px 5px',
+                                  borderRadius: '4px',
+                                  border: '1px solid rgba(56, 189, 248, 0.3)',
+                                }}
+                              >
+                                Lot #{lotIndex}
+                              </span>
+                            )}
+                          </div>
                         </td>
-                        <td style={{ padding: '10px 12px', color: '#cbd5e1' }}>
+                        <td style={{ padding: '10px 12px', color: 'var(--ui-paint-cbd5e1)' }}>
                           {stock.companyName || '—'}
                         </td>
                         <td style={{ padding: '10px 12px', textAlign: 'right', fontWeight: 600 }}>
@@ -1978,7 +3130,7 @@ export function BudgetingTab({ graph }: BudgetingTabProps) {
                             padding: '10px 12px',
                             textAlign: 'right',
                             fontWeight: 600,
-                            color: currentPrice >= purchasedPrice ? '#4ade80' : '#f87171',
+                            color: currentPrice >= purchasedPrice ? 'var(--ui-paint-4ade80)' : 'var(--ui-paint-f87171)',
                           }}
                         >
                           {dollars(currentPrice)}
@@ -1988,15 +3140,15 @@ export function BudgetingTab({ graph }: BudgetingTabProps) {
                             padding: '10px 12px',
                             textAlign: 'right',
                             fontWeight: 600,
-                            color: '#4ade80',
+                            color: 'var(--ui-paint-4ade80)',
                           }}
                         >
                           {dollars(marketVal)}
                         </td>
-                        <td style={{ padding: '10px 12px', textAlign: 'right', color: '#8f9db3' }}>
+                        <td style={{ padding: '10px 12px', textAlign: 'right', color: 'var(--ui-paint-8f9db3)' }}>
                           {costBasis ? dollars(costBasis) : '—'}
                         </td>
-                        <td style={{ padding: '10px 12px', textAlign: 'right', color: '#a7f3d0' }}>
+                        <td style={{ padding: '10px 12px', textAlign: 'right', color: 'var(--ui-paint-a7f3d0)' }}>
                           {totalDiv ? dollars(totalDiv) : '—'}
                         </td>
                         <td
@@ -2008,12 +3160,12 @@ export function BudgetingTab({ graph }: BudgetingTabProps) {
                         >
                           <button
                             type="button"
-                            className="button quiet"
+                            className="inline-flex items-center justify-center whitespace-nowrap rounded-[7px] font-medium cursor-pointer bg-transparent border border-transparent hover:bg-(--ui-surface-hover-1a2536) transition-colors"
                             style={{
                               padding: '4px 8px',
                               fontSize: '11px',
                               marginRight: '4px',
-                              color: '#4ade80',
+                              color: 'var(--ui-paint-4ade80)',
                             }}
                             onClick={() => handleOpenTrade(pos || stock, 'buy')}
                           >
@@ -2021,12 +3173,12 @@ export function BudgetingTab({ graph }: BudgetingTabProps) {
                           </button>
                           <button
                             type="button"
-                            className="button quiet"
+                            className="inline-flex items-center justify-center whitespace-nowrap rounded-[7px] font-medium cursor-pointer bg-transparent border border-transparent hover:bg-(--ui-surface-hover-1a2536) transition-colors"
                             style={{
                               padding: '4px 8px',
                               fontSize: '11px',
                               marginRight: '6px',
-                              color: '#fb923c',
+                              color: 'var(--ui-paint-fb923c)',
                             }}
                             onClick={() => handleOpenTrade(pos || stock, 'sell')}
                           >
@@ -2034,7 +3186,7 @@ export function BudgetingTab({ graph }: BudgetingTabProps) {
                           </button>
                           <button
                             type="button"
-                            className="button quiet"
+                            className="inline-flex items-center justify-center whitespace-nowrap rounded-[7px] font-medium cursor-pointer bg-transparent border border-transparent hover:bg-(--ui-surface-hover-1a2536) text-(--ui-text-97a7c2) hover:text-text transition-colors"
                             onClick={() => handleEditStock(stock)}
                             style={{ padding: '4px 8px', fontSize: '11px', marginRight: '4px' }}
                           >
@@ -2042,8 +3194,8 @@ export function BudgetingTab({ graph }: BudgetingTabProps) {
                           </button>
                           <button
                             type="button"
-                            className="button quiet"
-                            style={{ color: '#f87171', padding: '4px 8px', fontSize: '11px' }}
+                            className="inline-flex items-center justify-center whitespace-nowrap rounded-[7px] font-medium cursor-pointer bg-transparent border border-transparent hover:bg-(--ui-surface-hover-1a2536) transition-colors"
+                            style={{ color: 'var(--ui-paint-f87171)', padding: '4px 8px', fontSize: '11px' }}
                             onClick={() => stock.id && handleDeleteStock(stock.id)}
                           >
                             Delete
@@ -2074,7 +3226,7 @@ export function BudgetingTab({ graph }: BudgetingTabProps) {
               <h3 id="recurring-section-heading" style={{ margin: 0 }}>
                 Recurring Transaction Templates
               </h3>
-              <p className="muted small" style={{ margin: '2px 0 0 0' }}>
+              <p className="text-(--ui-text-8b9ab1) text-[11px] mt-0.5 mb-0">
                 Automate repeating expenses and income (e.g. rent, payroll, Netflix). Occurrences
                 are generated into Transactions.
               </p>
@@ -2082,7 +3234,7 @@ export function BudgetingTab({ graph }: BudgetingTabProps) {
             <div style={{ display: 'flex', gap: '0.5rem' }}>
               <button
                 type="button"
-                className="button quiet budgeting-async-button"
+                className="inline-flex items-center justify-center gap-2 min-w-30 aria-busy:cursor-progress whitespace-nowrap rounded-[7px] font-medium cursor-pointer bg-transparent text-(--ui-text-97a7c2) hover:bg-(--ui-surface-hover-1a2536) hover:text-text transition-colors disabled:opacity-45 disabled:cursor-not-allowed"
                 onClick={handleGenerateDueOccurrences}
                 disabled={!userId}
                 aria-busy={generating}
@@ -2097,13 +3249,33 @@ export function BudgetingTab({ graph }: BudgetingTabProps) {
                   '⚡ Generate Due Occurrences'
                 )}
               </button>
+              {scenarioSalary.nodes.length > 0 && (
+                <button
+                  type="button"
+                  className="inline-flex items-center justify-center gap-1 whitespace-nowrap rounded-[7px] px-3 py-2 text-[11px] font-medium min-h-8.5 cursor-pointer bg-transparent text-mint border border-mint/40 hover:bg-mint/10 transition-colors"
+                  onClick={handleImportScenarioSalary}
+                  title="Import scenario salary node as monthly recurring income"
+                >
+                  📥 Import Salary ({dollars(scenarioSalary.totalMonthly)})
+                </button>
+              )}
+              {scenarioDebts.nodes.length > 0 && (
+                <button
+                  type="button"
+                  className="inline-flex items-center justify-center gap-1 whitespace-nowrap rounded-[7px] px-3 py-2 text-[11px] font-medium min-h-8.5 cursor-pointer bg-transparent text-coral border border-coral/40 hover:bg-coral/10 transition-colors"
+                  onClick={handleImportScenarioDebts}
+                  title="Import scenario debt payments as monthly recurring obligations"
+                >
+                  📥 Import Debts ({dollars(scenarioDebts.totalMonthlyPayment)})
+                </button>
+              )}
               <button
                 type="button"
-                className="button primary"
+                className="inline-flex items-center justify-center gap-1.75 whitespace-nowrap rounded-[7px] px-3.5 py-2.25 text-[11px] font-medium min-h-8.5 cursor-pointer bg-primary text-primary-fg hover:bg-(--ui-surface-hover-cbbcfc) transition-colors disabled:opacity-45 disabled:cursor-not-allowed"
                 onClick={handleOpenAddRecurring}
-                disabled={!userId}
+                disabled={!userId && !isDemo}
               >
-                + Add Recurring Rule
+                + Add Recurring Transaction
               </button>
             </div>
           </div>
@@ -2112,8 +3284,8 @@ export function BudgetingTab({ graph }: BudgetingTabProps) {
           {showRecurForm && (
             <div
               style={{
-                background: '#161d2b',
-                border: '1px solid #283347',
+                background: 'var(--ui-paint-161d2b)',
+                border: '1px solid var(--ui-paint-283347)',
                 borderRadius: '8px',
                 padding: '1.25rem',
                 marginBottom: '1.5rem',
@@ -2139,13 +3311,7 @@ export function BudgetingTab({ graph }: BudgetingTabProps) {
                     onChange={(e) =>
                       setRecurDraft((prev) => changeKind(prev, e.target.value as TransactionKind))
                     }
-                    style={{
-                      padding: '8px',
-                      borderRadius: '4px',
-                      background: '#0f141e',
-                      border: '1px solid #283347',
-                      color: 'white',
-                    }}
+                    style={formFieldStyle}
                   >
                     <option value="expense">Expense</option>
                     <option value="income">Income</option>
@@ -2164,13 +3330,7 @@ export function BudgetingTab({ graph }: BudgetingTabProps) {
                     onChange={(e) =>
                       setRecurDraft((prev) => ({ ...prev, description: e.target.value }))
                     }
-                    style={{
-                      padding: '8px',
-                      borderRadius: '4px',
-                      background: '#0f141e',
-                      border: '1px solid #283347',
-                      color: 'white',
-                    }}
+                    style={formFieldStyle}
                   />
                 </label>
 
@@ -2186,13 +3346,7 @@ export function BudgetingTab({ graph }: BudgetingTabProps) {
                     onChange={(e) =>
                       setRecurDraft((prev) => ({ ...prev, amount: Number(e.target.value) }))
                     }
-                    style={{
-                      padding: '8px',
-                      borderRadius: '4px',
-                      background: '#0f141e',
-                      border: '1px solid #283347',
-                      color: 'white',
-                    }}
+                    style={formFieldStyle}
                   />
                 </label>
 
@@ -2208,13 +3362,7 @@ export function BudgetingTab({ graph }: BudgetingTabProps) {
                         frequency: e.target.value as RecurrenceFrequency,
                       }))
                     }
-                    style={{
-                      padding: '8px',
-                      borderRadius: '4px',
-                      background: '#0f141e',
-                      border: '1px solid #283347',
-                      color: 'white',
-                    }}
+                    style={formFieldStyle}
                   >
                     <option value="daily">Daily</option>
                     <option value="weekly">Weekly</option>
@@ -2240,13 +3388,7 @@ export function BudgetingTab({ graph }: BudgetingTabProps) {
                         intervalCount: Math.max(1, Number(e.target.value)),
                       }))
                     }
-                    style={{
-                      padding: '8px',
-                      borderRadius: '4px',
-                      background: '#0f141e',
-                      border: '1px solid #283347',
-                      color: 'white',
-                    }}
+                    style={formFieldStyle}
                   />
                 </label>
 
@@ -2261,13 +3403,7 @@ export function BudgetingTab({ graph }: BudgetingTabProps) {
                     onChange={(e) =>
                       setRecurDraft((prev) => ({ ...prev, nextDueDate: e.target.value }))
                     }
-                    style={{
-                      padding: '8px',
-                      borderRadius: '4px',
-                      background: '#0f141e',
-                      border: '1px solid #283347',
-                      color: 'white',
-                    }}
+                    style={formFieldStyle}
                   />
                 </label>
 
@@ -2282,13 +3418,7 @@ export function BudgetingTab({ graph }: BudgetingTabProps) {
                     onChange={(e) =>
                       setRecurDraft((prev) => ({ ...prev, startDate: e.target.value }))
                     }
-                    style={{
-                      padding: '8px',
-                      borderRadius: '4px',
-                      background: '#0f141e',
-                      border: '1px solid #283347',
-                      color: 'white',
-                    }}
+                    style={formFieldStyle}
                   />
                 </label>
 
@@ -2302,15 +3432,30 @@ export function BudgetingTab({ graph }: BudgetingTabProps) {
                     onChange={(e) =>
                       setRecurDraft((prev) => ({ ...prev, endDate: e.target.value || null }))
                     }
-                    style={{
-                      padding: '8px',
-                      borderRadius: '4px',
-                      background: '#0f141e',
-                      border: '1px solid #283347',
-                      color: 'white',
-                    }}
+                    style={formFieldStyle}
                   />
                 </label>
+
+                {matchedRecurDebtNode && recurDraft.kind === 'expense' && (
+                  <div
+                    style={{
+                      gridColumn: '1 / -1',
+                      padding: '10px 14px',
+                      borderRadius: '6px',
+                      background: 'rgba(244, 63, 94, 0.12)',
+                      border: '1px solid var(--color-coral)',
+                      color: 'var(--color-coral)',
+                      fontSize: '12px',
+                    }}
+                  >
+                    💳 <strong>Linked Scenario Debt Account:</strong> {matchedRecurDebtNode.name}
+                    <div style={{ marginTop: '2px', color: 'var(--color-coral)' }}>
+                      Current Balance: <strong>{dollars(matchedRecurDebtNode.amountOrBalance)}</strong> • Interest:{' '}
+                      <strong>{matchedRecurDebtNode.interestRateApr}% APR</strong> • Minimum Monthly Payment:{' '}
+                      <strong>{dollars(debtPayment(matchedRecurDebtNode, graph))}</strong>.
+                    </div>
+                  </div>
+                )}
 
                 <div
                   style={{
@@ -2320,12 +3465,12 @@ export function BudgetingTab({ graph }: BudgetingTabProps) {
                     marginTop: '0.5rem',
                   }}
                 >
-                  <button type="submit" className="button primary">
+                  <button type="submit" className="inline-flex items-center justify-center gap-1.75 whitespace-nowrap rounded-[7px] px-3.5 py-2.25 text-[11px] font-medium min-h-8.5 cursor-pointer bg-primary text-primary-fg hover:bg-(--ui-surface-hover-cbbcfc) transition-colors">
                     {editingRecurId ? 'Save Changes' : 'Create Recurring Rule'}
                   </button>
                   <button
                     type="button"
-                    className="button quiet"
+                    className="inline-flex items-center justify-center gap-1.75 whitespace-nowrap rounded-[7px] px-3.25 py-2.25 text-[11px] font-medium min-h-8.5 cursor-pointer bg-transparent text-(--ui-text-97a7c2) border border-transparent hover:bg-(--ui-surface-hover-1a2536) hover:text-text transition-colors"
                     onClick={() => {
                       setShowRecurForm(false);
                       setEditingRecurId(null);
@@ -2336,7 +3481,7 @@ export function BudgetingTab({ graph }: BudgetingTabProps) {
                   {editingRecurId && (
                     <button
                       type="button"
-                      className="button danger"
+                      className="inline-flex items-center justify-center gap-1.75 whitespace-nowrap rounded-[7px] px-3.25 py-2.25 text-[11px] font-medium min-h-8.5 cursor-pointer text-coral border border-(--ui-border-633246) bg-(--ui-surface-2b1b28) hover:bg-(--ui-surface-hover-3d2034) transition-colors"
                       style={{ marginLeft: 'auto' }}
                       onClick={() => handleDeleteRecurring(editingRecurId)}
                     >
@@ -2354,22 +3499,22 @@ export function BudgetingTab({ graph }: BudgetingTabProps) {
               style={{
                 textAlign: 'center',
                 padding: '3rem',
-                background: '#161d2b',
+                background: 'var(--ui-paint-161d2b)',
                 borderRadius: '8px',
-                border: '1px dashed #283347',
-                color: '#8f9db3',
+                border: '1px dashed var(--ui-paint-283347)',
+                color: 'var(--ui-paint-8f9db3)',
               }}
             >
-              No recurring rules set up yet. Click <strong>+ Add Recurring Rule</strong> to template
+              No recurring transactions set up yet. Click <strong>+ Add Recurring Rule</strong> to template
               repetitive bills or paychecks.
             </div>
           ) : (
             <div
               style={{
                 overflowX: 'auto',
-                background: '#161d2b',
+                background: 'var(--ui-paint-161d2b)',
                 borderRadius: '8px',
-                border: '1px solid #283347',
+                border: '1px solid var(--ui-paint-283347)',
               }}
             >
               <table
@@ -2383,9 +3528,9 @@ export function BudgetingTab({ graph }: BudgetingTabProps) {
                 <thead>
                   <tr
                     style={{
-                      borderBottom: '1px solid #283347',
-                      background: '#121824',
-                      color: '#8f9db3',
+                      borderBottom: '1px solid var(--ui-paint-283347)',
+                      background: 'var(--ui-paint-121824)',
+                      color: 'var(--ui-paint-8f9db3)',
                     }}
                   >
                     <th style={{ padding: '12px' }}>Description</th>
@@ -2399,7 +3544,7 @@ export function BudgetingTab({ graph }: BudgetingTabProps) {
                 </thead>
                 <tbody>
                   {recurringList.map((r) => (
-                    <tr key={r.id} style={{ borderBottom: '1px solid #1f2737' }}>
+                    <tr key={r.id} style={{ borderBottom: '1px solid var(--ui-paint-1f2737)' }}>
                       <td style={{ padding: '10px 12px', fontWeight: 600 }}>{r.description}</td>
                       <td style={{ padding: '10px 12px' }}>
                         <span
@@ -2409,8 +3554,8 @@ export function BudgetingTab({ graph }: BudgetingTabProps) {
                             fontSize: '11px',
                             fontWeight: 600,
                             textTransform: 'uppercase',
-                            background: r.kind === 'income' ? '#064e3b' : '#7f1d1d',
-                            color: r.kind === 'income' ? '#86efac' : '#fca5a5',
+                            background: r.kind === 'income' ? 'var(--ui-paint-064e3b)' : 'var(--ui-paint-7f1d1d)',
+                            color: r.kind === 'income' ? 'var(--ui-paint-86efac)' : 'var(--ui-paint-fca5a5)',
                           }}
                         >
                           {r.kind}
@@ -2426,7 +3571,7 @@ export function BudgetingTab({ graph }: BudgetingTabProps) {
                       </td>
                       <td style={{ padding: '10px 12px' }}>{r.nextDueDate}</td>
                       <td style={{ padding: '10px 12px' }}>
-                        <span style={{ color: r.isActive ? '#4ade80' : '#8f9db3' }}>
+                        <span style={{ color: r.isActive ? 'var(--ui-paint-4ade80)' : 'var(--ui-paint-8f9db3)' }}>
                           {r.isActive ? '● Active' : '○ Inactive'}
                         </span>
                       </td>
@@ -2435,7 +3580,7 @@ export function BudgetingTab({ graph }: BudgetingTabProps) {
                       >
                         <button
                           type="button"
-                          className="button quiet"
+                          className="inline-flex items-center justify-center whitespace-nowrap rounded-[7px] font-medium cursor-pointer bg-transparent border border-transparent hover:bg-(--ui-surface-hover-1a2536) text-(--ui-text-97a7c2) hover:text-text transition-colors"
                           onClick={() => {
                             setEditingRecurId(r.id ?? null);
                             setRecurDraft(r);
@@ -2447,8 +3592,8 @@ export function BudgetingTab({ graph }: BudgetingTabProps) {
                         </button>
                         <button
                           type="button"
-                          className="button quiet"
-                          style={{ color: '#f87171', padding: '4px 8px', fontSize: '11px' }}
+                          className="inline-flex items-center justify-center whitespace-nowrap rounded-[7px] font-medium cursor-pointer bg-transparent border border-transparent hover:bg-(--ui-surface-hover-1a2536) transition-colors"
+                          style={{ color: 'var(--ui-paint-f87171)', padding: '4px 8px', fontSize: '11px' }}
                           onClick={() => r.id && handleDeleteRecurring(r.id)}
                         >
                           Delete

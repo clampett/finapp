@@ -118,7 +118,7 @@ public class AuthController {
 
         return ResponseEntity.ok(
             new AuthResponse(
-                "Registration successful. Please check your terminal/email for verification code.",
+                "Account created. Enter your verification code to continue.",
                 savedUser.getId()
             )
         );
@@ -199,9 +199,10 @@ public class AuthController {
         token.setExpiresAt(LocalDateTime.now().plusMinutes(15));
         authTokenRepository.save(token);
         emailService.sendVerificationEmail(user.getEmail(), code);
+        // Kept delivery details out of the customer-facing response.
         return ResponseEntity.ok(
             new AuthResponse(
-                "New code sent. In local development, check the Spring Boot terminal.",
+                "A new verification code was requested. Use the latest code to continue.",
                 userId
             )
         );

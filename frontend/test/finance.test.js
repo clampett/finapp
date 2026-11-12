@@ -364,3 +364,122 @@ test('trackpad policy distinguished two-finger hand panning from pinch zoom and 
   assert.equal(platform.canvasWheelAction('connect', true, false), 'block');
   assert.equal(platform.canvasWheelAction('box', false, true), 'block');
 });
+
+test('turning on and off payments affects Net worth, Take-home income, monthly commitments, and available surplus', () => {
+  const base = demo(2);
+  const initial = finance.totals(base);
+
+  // 1. Unticking/disabling an income node
+  const incomeNode = base.nodes.find((n) => n.nodeType === 'INCOME');
+  assert.ok(incomeNode);
+  const withoutIncome = {
+    ...base,
+    nodes: base.nodes.map((n) => (n.id === incomeNode.id ? { ...n, disabled: true } : n)),
+  };
+  const tWithoutIncome = finance.totals(withoutIncome);
+  assert.ok(tWithoutIncome.takeHome < initial.takeHome);
+  assert.ok(tWithoutIncome.surplus < initial.surplus);
+
+  // 2. Unticking/disabling an expense node
+  const expenseNode = base.nodes.find((n) => n.nodeType === 'EXPENSE');
+  assert.ok(expenseNode);
+  const withoutExpense = {
+    ...base,
+    nodes: base.nodes.map((n) => (n.id === expenseNode.id ? { ...n, disabled: true } : n)),
+  };
+  const tWithoutExpense = finance.totals(withoutExpense);
+  assert.ok(tWithoutExpense.expenses < initial.expenses);
+  assert.ok(tWithoutExpense.expenses + tWithoutExpense.payments < initial.expenses + initial.payments);
+  assert.ok(tWithoutExpense.surplus > initial.surplus);
+  close(tWithoutExpense.takeHome, initial.takeHome);
+
+  // 3. Unticking/disabling a debt node
+  const debtNode = base.nodes.find((n) => n.nodeType === 'DEBT');
+  assert.ok(debtNode);
+  const withoutDebt = {
+    ...base,
+    nodes: base.nodes.map((n) => (n.id === debtNode.id ? { ...n, disabled: true } : n)),
+  };
+  const tWithoutDebt = finance.totals(withoutDebt);
+  assert.ok(tWithoutDebt.netWorth > initial.netWorth);
+  assert.ok(tWithoutDebt.payments < initial.payments);
+  assert.ok(tWithoutDebt.expenses + tWithoutDebt.payments < initial.expenses + initial.payments);
+  assert.ok(tWithoutDebt.surplus > initial.surplus);
+
+  // 4. Unticking/disabling an asset node
+  const assetNode = base.nodes.find((n) => n.nodeType === 'SAVINGS');
+  assert.ok(assetNode);
+  const withoutAsset = {
+    ...base,
+    nodes: base.nodes.map((n) => (n.id === assetNode.id ? { ...n, disabled: true } : n)),
+  };
+  const tWithoutAsset = finance.totals(withoutAsset);
+  assert.ok(tWithoutAsset.netWorth < initial.netWorth);
+  close(tWithoutAsset.takeHome, initial.takeHome);
+  close(tWithoutAsset.surplus, initial.surplus);
+
+  // 5. Re-enabling restores original totals exactly
+  const reEnabled = {
+    ...withoutDebt,
+    nodes: withoutDebt.nodes.map((n) => (n.id === debtNode.id ? { ...n, disabled: false } : n)),
+  };
+  const tRestored = finance.totals(reEnabled);
+  close(tRestored.netWorth, initial.netWorth);
+  close(tRestored.takeHome, initial.takeHome);
+  close(tRestored.expenses + tRestored.payments, initial.expenses + initial.payments);
+  close(tRestored.surplus, initial.surplus);
+
+  // 6. parseGraph retains disabled: true
+  const parsed = finance.parseGraph(withoutExpense);
+  const parsedExpense = parsed.nodes.find((n) => n.id === expenseNode.id);
+  assert.equal(parsedExpense.disabled, true);
+});
+
+// Checked that imported overdrafts reached the debt chart without reducing positive assets.
+test("overdrawn cash validates and appears as a liability without hiding positive assets", () => {
+  const graph = finance.parseGraph({ nodes: [
+    { id: "checking", name: "Checking", nodeType: "CHECKING", amountOrBalance: -50 },
+    { id: "savings", name: "Savings", nodeType: "SAVINGS", amountOrBalance: 100 },
+  ], edges: [] });
+  assert.equal(finance.totals(graph).netWorth, 50);
+  assert.equal(finance.overviewBreakdown(graph, "assets").total, 100);
+  assert.equal(finance.overviewBreakdown(graph, "debt").total, 50);
+  assert.throws(() => finance.parseGraph({ ...graph, nodes: [{ ...graph.nodes[0], nodeType: "DEBT" }] }));
+});
+
+test('non-monthly frequencies on income and expense nodes convert accurately to monthly equivalents', () => {
+  const graph = finance.parseGraph({
+    nodes: [
+      { id: 'inc-biweekly', name: 'Biweekly Paycheck', nodeType: 'INCOME', amountOrBalance: 2000, interestRateApr: 0, frequency: 'biweekly', intervalCount: 1 },
+      { id: 'inc-weekly', name: 'Weekly Gig', nodeType: 'INCOME', amountOrBalance: 500, interestRateApr: 0, frequency: 'weekly', intervalCount: 1 },
+      { id: 'exp-yearly', name: 'Annual Insurance', nodeType: 'EXPENSE', amountOrBalance: 1200, interestRateApr: 0, frequency: 'yearly', intervalCount: 1 },
+      { id: 'exp-quarterly', name: 'Quarterly Utility', nodeType: 'EXPENSE', amountOrBalance: 300, interestRateApr: 0, frequency: 'quarterly', intervalCount: 1 },
+      { id: 'chk', name: 'Checking', nodeType: 'CHECKING', amountOrBalance: 1000, interestRateApr: 0 },
+    ],
+    edges: [],
+    assumptions: { incomeBasis: 'net', taxRate: 0, incomeGrowth: 0, expenseGrowth: 0 },
+  });
+
+  // Biweekly $2,000 = (2000 * 26) / 12 = $4,333.33/mo
+  // Weekly $500 = (500 * 52) / 12 = $2,166.67/mo
+  // Total income = 4333.33 + 2166.67 = $6,500.00/mo
+  // Yearly $1,200 = 1200 / 12 = $100.00/mo
+  // Quarterly $300 = (300 * 4) / 12 = $100.00/mo
+  // Total expenses = $200.00/mo
+  const t = finance.totals(graph);
+  assert.equal(t.income, 6500);
+  assert.equal(t.expenses, 200);
+  assert.equal(t.surplus, 6300);
+
+  // Individual expenseAmount
+  const annualExp = graph.nodes.find((n) => n.id === 'exp-yearly');
+  assert.equal(finance.expenseAmount(annualExp, graph), 100);
+
+  const quarterlyExp = graph.nodes.find((n) => n.id === 'exp-quarterly');
+  assert.equal(finance.expenseAmount(quarterlyExp, graph), 100);
+
+  // parseGraph preserves frequency and intervalCount
+  assert.equal(annualExp.frequency, 'yearly');
+  assert.equal(annualExp.intervalCount, 1);
+  assert.equal(graph.nodes.find((n) => n.id === 'inc-biweekly').frequency, 'biweekly');
+});

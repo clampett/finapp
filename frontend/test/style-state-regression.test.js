@@ -15,7 +15,8 @@ function renderedClasses(file, marker, state) {
       node.name.getText(tree) === 'className' &&
       node.initializer &&
       ts.isJsxExpression(node.initializer) &&
-      node.initializer.expression?.getText(tree).includes(marker)
+      node.initializer.expression?.getText(tree).includes(marker) &&
+      !expression
     ) {
       expression = node.initializer.expression.getText(tree);
     }
@@ -23,6 +24,7 @@ function renderedClasses(file, marker, state) {
   }
   visit(tree);
   assert.ok(expression, `Expected the actual ${marker} class expression in ${file}`);
+  // Selected the first matching navigation expression instead of overwriting it with the later profile menu.
   // Evaluated the component's actual class expression rather than a copied approximation.
   return new Set(vm.runInNewContext(expression, state).split(/\s+/));
 }

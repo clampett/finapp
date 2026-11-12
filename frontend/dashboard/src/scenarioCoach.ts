@@ -5,20 +5,25 @@ import type { GraphData } from './finance';
 export type CoachModel = 'monte_carlo' | 'markov';
 export const coachModels = { monte_carlo: 'Monte Carlo', markov: 'Markov regime' } as const;
 
-export const coachPresets = {
-  expenses: {
-    title: 'Higher expense growth',
-    description: 'Raised annual expense growth by up to 2 percentage points.',
-  },
-  returns: {
-    title: 'Lower market returns',
-    description: 'Reduced the assumed annual return from 7% to 4%.',
-  },
-  fees: {
-    title: 'Higher investment fees',
-    description: 'Increased the annual investment fee from 0% to 1%.',
-  },
-} as const;
+// Shared the supported stress choices with the model gateway.
+export { default as coachPresets } from '../../coach-options.json';
+import coachPresets from '../../coach-options.json';
+export interface CoachSettings {
+  annualReturn: number;
+  inflation: number;
+  fee: number;
+  target: number;
+  investmentRate: number;
+  intensity: number;
+}
+export const defaultCoachSettings: CoachSettings = {
+  annualReturn: 0.07,
+  inflation: 0.025,
+  fee: 0,
+  target: 500000,
+  investmentRate: 100,
+  intensity: 1,
+};
 export type CoachPreset = keyof typeof coachPresets;
 
 // Supplied synthetic inputs so the coach opened without reading the user's graph.
@@ -94,8 +99,10 @@ export function coachInputs(
   years: number,
   preset: CoachPreset,
   annualVolatility = 0.15,
+  options: Partial<CoachSettings> = {},
 ) {
   const settings = assumptionsFor(graph);
+  const controls = { ...defaultCoachSettings, ...options };
   // Replaced workspace IDs and names with temporary labels before sending model inputs.
   const ids = new Map(graph.nodes.map(({ id }, index) => [id, `coach-node-${index + 1}`]));
   // Kept the scope to graph inputs. Excluded stock holdings, ledger records, and account identity.
@@ -104,12 +111,12 @@ export function coachInputs(
     sim_type: model,
     years,
     market_source: 'manual',
-    annual_return: 0.07,
+    annual_return: controls.annualReturn,
     annual_volatility: annualVolatility,
-    annual_fee: 0,
-    inflation_rate: 0.025,
-    target: 500000,
-    investment_rate: 100,
+    annual_fee: controls.fee,
+    inflation_rate: controls.inflation,
+    target: controls.target,
+    investment_rate: controls.investmentRate,
     income_basis: settings.incomeBasis,
     tax_rate: settings.taxRate / 100,
     income_growth: settings.incomeGrowth / 100,
@@ -132,34 +139,47 @@ export function coachInputs(
     })),
   };
   // Held every input constant except the selected stress assumption.
-  const field =
-    preset === 'expenses'
-      ? 'expense_growth'
-      : preset === 'returns'
-        ? 'annual_return'
-        : 'annual_fee';
-  const adjusted =
-    preset === 'expenses'
-      ? Math.min(0.25, baseline.expense_growth + 0.02)
-      : preset === 'returns'
-        ? 0.04
-        : 0.01;
+  const choice = coachPresets[preset];
+  type StressField =
+    | 'expense_growth'
+    | 'annual_return'
+    | 'annual_fee'
+    | 'annual_volatility'
+    | 'income_growth'
+    | 'investment_rate'
+    | 'inflation_rate';
+  const field = choice.field as StressField;
+  // Applied the selected intensity to exactly one input and respected Python's validation limits.
+  // Rounded decimal stress inputs before comparing them with the baseline.
+  const adjusted = Number(
+    Math.min(
+      choice.max,
+      Math.max(choice.min, baseline[field] + choice.delta * controls.intensity),
+    ).toFixed(8),
+  );
   const percent = (value: number) =>
     new Intl.NumberFormat('en-US', { style: 'percent', maximumFractionDigits: 2 }).format(value);
   return {
     baseline,
     preset,
     stress: { ...baseline, [field]: adjusted },
-    before: percent(baseline[field]),
-    after: percent(adjusted),
+    before: percent(field === 'investment_rate' ? baseline[field] / 100 : baseline[field]),
+    after: percent(field === 'investment_rate' ? adjusted / 100 : adjusted),
     changed: baseline[field] !== adjusted,
   };
 }
 
+export interface CoachPoint {
+  year: number;
+  p10: number;
+  p50: number;
+  p90: number;
+}
 interface Outcome {
   downside: number;
   median: number;
   targetChance: number;
+  path?: CoachPoint[];
 }
 export interface CoachComparison {
   baseline: Outcome;
@@ -197,7 +217,11 @@ async function runForecast(
   ) {
     throw new Error('The forecast service returned an incomplete comparison.');
   }
-  return { downside: final.p10, median: final.p50, targetChance: chance };
+  // Kept the actual yearly percentile points for interactive comparison charts.
+  const path = data[payload.sim_type].filter((point: CoachPoint) =>
+    [point.year, point.p10, point.p50, point.p90].every(Number.isFinite),
+  );
+  return { downside: final.p10, median: final.p50, targetChance: chance, path };
 }
 
 export async function runCoachComparison(
@@ -277,6 +301,13 @@ function isGreeting(question: string): boolean {
 }
 
 const experimentByPreset: Record<CoachPreset, string> = {
+  volatility:
+    'Keep returns fixed and vary volatility to explore the spread between weaker and stronger outcomes.',
+  income:
+    'Keep expense growth fixed and vary income growth to explore how the monthly surplus changes.',
+  contributions:
+    'Vary the share of unallocated surplus invested while keeping the budget unchanged.',
+  inflation: 'Compare purchasing power at different inflation rates using the same horizon.',
   expenses:
     'Try a smaller expense-growth increase in the simulator, or use a shorter horizon to see when higher expenses start to matter.',
   returns:
@@ -354,13 +385,26 @@ type ComparisonContext = {
   targetChanceFell: boolean;
 };
 
-type CoachModelRequest =
-  | { topic: Exclude<CoachTopic, 'conversation'>; question: string; context?: ComparisonContext }
-  | {
-      topic: 'conversation';
-      question: string;
-      context?: { subject: CoachTopic; comparison?: ComparisonContext };
-    };
+export interface CoachTurn {
+  role: 'user' | 'assistant';
+  content: string;
+}
+export interface CoachModelRequest {
+  topic: 'conversation';
+  question: string;
+  context: {
+    subject: CoachTopic;
+    comparison?: ComparisonContext;
+    settings?: { preset: CoachPreset; years: number };
+    market?: boolean;
+  };
+  history?: CoachTurn[];
+}
+export interface CoachAnswer {
+  answer: string;
+  sources?: { title: string; url: string; published_at: string }[];
+  marketStatus?: string;
+}
 
 function asksForClarification(question: string): boolean {
   return /^(?:i do(?:n['’]?t| not) understand(?: (?:this|that|it))?|(?:can you )?explain (?:this|that|it|more)(?: (?:again|in detail|in simpler terms))?|what does (?:this|that|it) mean|(?:can you )?give me an example)[?!. ]*$/i.test(
@@ -374,6 +418,8 @@ export function coachConversationSubject(
   comparison: CoachComparison | null = null,
 ): CoachTopic | undefined {
   // Carried forward the last substantive topic without forwarding previous messages or answers.
+  // Added bounded conversation history separately in useCoachChat without including dashboard result summaries.
+  if (isGreeting(question)) return undefined;
   if (asksForClarification(question))
     return previousSubject ?? (comparison ? 'comparison' : undefined);
   if (asksAboutBuyingMoreStock(question)) return 'stockExposure';
@@ -382,6 +428,7 @@ export function coachConversationSubject(
   return matchCoachTopic(question);
 }
 
+// Shared only qualitative result signals and the experiment settings with Ollama.
 function comparisonContext(comparison: CoachComparison): ComparisonContext {
   return {
     preset: comparison.preset,
@@ -396,28 +443,18 @@ export function coachRequestForQuestion(
   comparison: CoachComparison | null,
   previousSubject?: CoachTopic,
 ): CoachModelRequest {
-  if (asksForNextStep(question) || readsExistingResult(question)) {
-    // Shared only qualitative result signals and the experiment settings with Ollama.
-    return {
-      topic: 'nextExperiment',
-      question,
-      context: comparison ? comparisonContext(comparison) : undefined,
-    };
-  }
-  const topic = coachTopicForModel(question);
-  if (topic && topic !== 'conversation') return { topic, question };
+  const subject = coachConversationSubject(question, previousSubject, comparison) ?? 'conversation';
   // Routed greetings, verified topics, and unmatched questions through local inference first.
-  const subject = coachConversationSubject(question, previousSubject, comparison);
+  // Routed every question to free-form local generation while retaining a reviewed factual reference.
   return {
     topic: 'conversation',
     question,
-    context: subject
-      ? {
-          subject,
-          comparison:
-            subject === 'comparison' && comparison ? comparisonContext(comparison) : undefined,
-        }
-      : undefined,
+    context: {
+      subject,
+      ...((subject === 'comparison' || subject === 'nextExperiment') && comparison
+        ? { comparison: comparisonContext(comparison) }
+        : {}),
+    },
   };
 }
 
@@ -429,9 +466,12 @@ export async function liveCoachReply(input: CoachModelRequest, signal: AbortSign
     body: JSON.stringify(input),
     signal: AbortSignal.any([signal, AbortSignal.timeout(30000)]),
   });
+  if (response.status === 429) {
+    throw new Error('You’ve sent several questions quickly. Please wait a minute and try again.');
+  }
   if (!response.ok) return null;
   const body = await response.json();
-  return typeof body.answer === 'string' && body.answer ? body.answer : null;
+  return typeof body.answer === 'string' && body.answer ? (body as CoachAnswer) : null;
 }
 
 export function coachReply(

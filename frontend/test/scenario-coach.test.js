@@ -109,10 +109,12 @@ test('matrix retrieval selected a grounded topic and sent the actual eligible qu
   assert.equal(coach.matchCoachTopic('banana sandwich'), undefined);
   assert.equal(coach.asksAboutComparison('What changed in my comparison?'), true);
   assert.equal(
-    await coach.liveCoachReply(
-      { topic: 'monteCarlo', question: 'How does Monte Carlo work?' },
-      new AbortController().signal,
-    ),
+    (
+      await coach.liveCoachReply(
+        { topic: 'monteCarlo', question: 'How does Monte Carlo work?' },
+        new AbortController().signal,
+      )
+    ).answer,
     'Generated answer.',
   );
   assert.deepEqual(sent, { topic: 'monteCarlo', question: 'How does Monte Carlo work?' });
@@ -183,9 +185,17 @@ test('a practical follow-up used the result to suggest another experiment', () =
     assert.match(coach.coachReply(greeting, null), /^Hey!/);
   }
   assert.deepEqual(JSON.parse(JSON.stringify(coach.coachRequestForQuestion(question, result))), {
-    topic: 'nextExperiment',
+    topic: 'conversation',
     question,
-    context: { preset: 'expenses', years: 50, downsideCrossedZero: true, targetChanceFell: true },
+    context: {
+      subject: 'comparison',
+      comparison: {
+        preset: 'expenses',
+        years: 50,
+        downsideCrossedZero: true,
+        targetChanceFell: true,
+      },
+    },
   });
   assert.deepEqual(
     JSON.parse(
@@ -230,4 +240,48 @@ test('explained extra stock exposure using the scenario balances that the coach 
   assert.match(coach.coachReply(followUp, null, 'stockExposure'), /\$80 in cash and \$20 in stock/);
   assert.equal(coach.coachRequestForQuestion('What is P10?', null).context.subject, 'percentiles');
   assert.equal(coach.coachRequestForQuestion('banana sandwich', null).topic, 'conversation');
+});
+
+test('all seven stress tests changed exactly one assumption with scaled intensity', () => {
+  const coach = loadCoach();
+  assert.equal(Object.keys(coach.coachPresets).length, 7);
+  for (const [preset, choice] of Object.entries(coach.coachPresets)) {
+    for (const model of Object.keys(coach.coachModels)) {
+      const inputs = coach.coachInputs(coach.sampleScenario, model, 10, preset, 0.2, {
+        intensity: 0.5,
+        target: 750000,
+      });
+      assert.deepEqual(
+        Object.keys(inputs.baseline).filter((key) => inputs.baseline[key] !== inputs.stress[key]),
+        [choice.field],
+      );
+      assert.ok(
+        Math.abs(inputs.stress[choice.field] - inputs.baseline[choice.field] - choice.delta * 0.5) <
+          1e-8,
+      );
+      assert.equal(inputs.baseline.target, 750000);
+      assert.equal(inputs.stress.target, 750000);
+      assert.ok(
+        inputs.stress[choice.field] >= choice.min && inputs.stress[choice.field] <= choice.max,
+      );
+    }
+  }
+});
+
+test('unmatched and conversational questions still reached free-form generation', () => {
+  const coach = loadCoach();
+  for (const question of [
+    'hello',
+    'How are you today?',
+    'I do not know where to begin',
+    'Tell me more about that',
+  ]) {
+    const input = coach.coachRequestForQuestion(question, null);
+    assert.equal(input.topic, 'conversation');
+    assert.equal(input.question, question);
+  }
+  assert.equal(
+    coach.coachRequestForQuestion('What are the recent market trends?', null).context.subject,
+    'markets',
+  );
 });

@@ -69,7 +69,10 @@ public class SecurityConfig {
                     .requestMatchers(
                         HttpMethod.GET,
                         "/api/v1/market/stocks",
+                        "/api/v1/market/context",
+                        "/api/v1/market/context/{symbol}/chart",
                         "/api/v1/market/stocks/{symbol}",
+                        "/api/v1/market/stocks/{symbol}/chart",
                         "/api/v1/market/crypto",
                         "/api/v1/market/crypto/{symbol}",
                         "/api/v1/market/currencies",

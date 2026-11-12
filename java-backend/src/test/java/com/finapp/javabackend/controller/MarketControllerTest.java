@@ -21,6 +21,35 @@ class MarketControllerTest {
     private MockRestServiceServer server;
 
     @Test
+    void forwardsTheFixedPublicBriefing() {
+        server
+            .expect(requestTo("http://localhost:5000/api/coach/market"))
+            .andRespond(withSuccess("{\"status\":\"pending\"}", MediaType.APPLICATION_JSON));
+        var response = controller.marketContext();
+        assertEquals(HttpStatus.OK, response.getStatusCode());
+        assertTrue(response.getBody().contains("pending"));
+        server.verify();
+    }
+
+    @Test
+    void forwardsEncodedBenchmarkChartPeriods() {
+        server
+            .expect(requestTo("http://localhost:5000/api/coach/chart/VOO?period=5y"))
+            .andRespond(withSuccess("{\"points\":[]}", MediaType.APPLICATION_JSON));
+        assertEquals(HttpStatus.OK, controller.benchmarkChart("VOO", "5y").getStatusCode());
+        server.verify();
+    }
+
+    @Test
+    void forwardsStockChartTimeframes() {
+        server
+            .expect(requestTo("http://localhost:5000/api/stocks/GOOGL/chart?period=5y"))
+            .andRespond(withSuccess("{\"points\":[]}", MediaType.APPLICATION_JSON));
+        assertEquals(HttpStatus.OK, controller.stockChart("GOOGL", "5y").getStatusCode());
+        server.verify();
+    }
+
+    @Test
     void forwardsStockLookups() {
         server
             .expect(requestTo("http://localhost:5000/api/stocks/AAPL"))

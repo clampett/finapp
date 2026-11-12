@@ -4,6 +4,7 @@ const fs = require('fs');
 const rateLimit = require('express-rate-limit');
 const { createApiProxy } = require('./api-proxy');
 const { createCoachService } = require('./coach-service');
+const { createCoachMarket } = require('./coach-market');
 
 const app = express();
 const PORT = process.env.PORT || 8080;
@@ -45,7 +46,20 @@ app.use(
 );
 
 // Grounded coach questions in reviewed topics and kept inference on the local runtime.
-const coach = createCoachService();
+const publicMarket = createCoachMarket({
+  upstream: process.env.FINAPP_API_UPSTREAM || 'http://127.0.0.1:8081',
+});
+const coach = createCoachService({ market: publicMarket });
+// Limited expensive model work per client without charging ordinary status checks against that budget.
+const coachLimit = rateLimit({
+  windowMs: 60000,
+  limit: 12,
+  standardHeaders: 'draft-7',
+  legacyHeaders: false,
+  message: {
+    message: 'You’ve sent several questions quickly. Please wait a minute and try again.',
+  },
+});
 // Reported gateway readiness independently of the proxied Spring Boot health endpoint.
 app.get('/api/v1/gateway/health', (_req, res) => {
   res.set('Cache-Control', 'no-store').json({
@@ -56,19 +70,34 @@ app.get('/api/v1/gateway/health', (_req, res) => {
 app.get('/api/v1/coach/status', async (_req, res) => {
   res.set('Cache-Control', 'no-store').json(await coach.status());
 });
-app.post('/api/v1/coach/explain', express.json({ limit: '4kb' }), async (req, res) => {
+app.post('/api/v1/coach/explain', coachLimit, express.json({ limit: '16kb' }), async (req, res) => {
   res.set('Cache-Control', 'no-store');
   if (
     !req.is('application/json') ||
     !req.body ||
     !Object.hasOwn(req.body, 'topic') ||
-    Object.keys(req.body).some((key) => !['topic', 'question', 'context'].includes(key))
+    Object.keys(req.body).some((key) => !['topic', 'question', 'context', 'history'].includes(key))
   ) {
     return res.status(400).json({ message: 'Choose a help topic.' });
   }
-  const result = await coach.explain(req.body.topic, req.body.question, req.body.context);
+  const result = await coach.explain(
+    req.body.topic,
+    req.body.question,
+    req.body.context,
+    req.body.history,
+  );
   if (!result) return res.status(503).json({ message: 'Local AI explanations are unavailable.' });
   return res.json(result);
+});
+// Returned bounded parser errors without exposing a development stack trace.
+app.use('/api/v1/coach', (error, _req, res, next) => {
+  if (error?.type === 'entity.too.large')
+    return res
+      .status(413)
+      .json({ message: 'This conversation is too long. Please shorten the message.' });
+  if (error?.type === 'entity.parse.failed')
+    return res.status(400).json({ message: 'Send a valid coach request.' });
+  return next(error);
 });
 
 app.use('/api', createApiProxy(process.env.FINAPP_API_UPSTREAM || 'http://127.0.0.1:8081'));

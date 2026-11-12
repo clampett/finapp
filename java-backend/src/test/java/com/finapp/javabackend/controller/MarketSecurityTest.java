@@ -28,6 +28,12 @@ class MarketSecurityTest {
 
         // Isolated route authorization from provider requests and database availability.
         @GetMapping({
+            "/api/v1/market/context/{symbol}/chart",
+            "/api/v1/market/context/{symbol}/chart/private",
+            "/api/v1/market/context",
+            "/api/v1/market/context/private",
+            "/api/v1/market/stocks/{symbol}/chart",
+            "/api/v1/market/stocks/{symbol}/chart/private",
             "/api/v1/market/stocks",
             "/api/v1/market/stocks/{symbol}",
             "/api/v1/market/private",
@@ -50,8 +56,25 @@ class MarketSecurityTest {
     }
 
     @Test
+    void onlyTheExactBriefingReadWasPublic() throws Exception {
+        mvc.perform(get("/api/v1/market/context")).andExpect(status().isOk());
+        mvc.perform(get("/api/v1/market/context/VOO/chart?period=5y")).andExpect(status().isOk());
+        mvc.perform(get("/api/v1/market/context/VOO/chart/private")).andExpect(
+            status().isUnauthorized()
+        );
+        mvc.perform(post("/api/v1/market/context/VOO/chart")).andExpect(status().isUnauthorized());
+        mvc.perform(get("/api/v1/market/context/private")).andExpect(status().isUnauthorized());
+        mvc.perform(post("/api/v1/market/context")).andExpect(status().isUnauthorized());
+    }
+
+    @Test
     void onlyQuoteReadsArePublic() throws Exception {
         mvc.perform(get("/api/v1/market/stocks")).andExpect(status().isOk());
+        mvc.perform(get("/api/v1/market/stocks/GOOGL/chart?period=5y")).andExpect(status().isOk());
+        mvc.perform(get("/api/v1/market/stocks/GOOGL/chart/private")).andExpect(
+            status().isUnauthorized()
+        );
+        mvc.perform(post("/api/v1/market/stocks/GOOGL/chart")).andExpect(status().isUnauthorized());
         mvc.perform(get("/api/v1/market/stocks/AAPL")).andExpect(status().isOk());
     }
 
@@ -73,8 +96,8 @@ class MarketSecurityTest {
     @Test
     void nestedCryptoAndCurrencyRoutesStillRequireAuthentication() throws Exception {
         mvc.perform(get("/api/v1/market/crypto/BTC/private")).andExpect(status().isUnauthorized());
-        mvc
-            .perform(get("/api/v1/market/currencies/EUR/private"))
-            .andExpect(status().isUnauthorized());
+        mvc.perform(get("/api/v1/market/currencies/EUR/private")).andExpect(
+            status().isUnauthorized()
+        );
     }
 }

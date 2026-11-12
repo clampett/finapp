@@ -1,0 +1,58 @@
+{
+  "expenses": {
+    "title": "Higher expense growth",
+    "description": "Explore what happens when everyday costs grow faster.",
+    "field": "expense_growth",
+    "delta": 0.02,
+    "min": -0.25,
+    "max": 0.25
+  },
+  "returns": {
+    "title": "Lower market returns",
+    "description": "Test a weaker long-term return assumption.",
+    "field": "annual_return",
+    "delta": -0.03,
+    "min": -0.5,
+    "max": 0.5
+  },
+  "fees": {
+    "title": "Higher investment fees",
+    "description": "See how recurring fees affect compounding.",
+    "field": "annual_fee",
+    "delta": 0.01,
+    "min": 0,
+    "max": 0.1
+  },
+  "volatility": {
+    "title": "More market volatility",
+    "description": "Explore a wider range of market paths at the same return assumption.",
+    "field": "annual_volatility",
+    "delta": 0.1,
+    "min": 0,
+    "max": 1
+  },
+  "income": {
+    "title": "Slower income growth",
+    "description": "See how slower earnings growth changes future saving capacity.",
+    "field": "income_growth",
+    "delta": -0.02,
+    "min": -0.5,
+    "max": 0.25
+  },
+  "contributions": {
+    "title": "Invest less surplus",
+    "description": "Invest a smaller share of surplus left after planned transfers.",
+    "field": "investment_rate",
+    "delta": -50,
+    "min": 0,
+    "max": 100
+  },
+  "inflation": {
+    "title": "Higher inflation",
+    "description": "Compare future purchasing power when inflation rises.",
+    "field": "inflation_rate",
+    "delta": 0.02,
+    "min": 0,
+    "max": 0.15
+  }
+}

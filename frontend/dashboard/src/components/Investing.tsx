@@ -1,15 +1,7 @@
 import { memo, useEffect, useRef, useState } from 'react';
 import type { FormEvent } from 'react';
-import {
-  CartesianGrid,
-  Line,
-  LineChart,
-  ResponsiveContainer,
-  Tooltip,
-  XAxis,
-  YAxis,
-} from 'recharts';
-import { API_BASE, colors, dollars, money } from '../finance';
+import { MarketPriceChart } from './MarketPriceChart';
+import { API_BASE, dollars } from '../finance';
 import {
   PORTFOLIO_UPDATED_EVENT,
   addStockUnified,
@@ -49,7 +41,6 @@ interface Suggestion {
 type QuoteState = Quote | { error: string } | 'loading';
 
 const MAX_HOLDINGS = 25;
-const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
 
 async function fetchQuote(symbol: string, signal?: AbortSignal): Promise<Quote> {
   const response = await fetch(`${API_BASE}/market/stocks/${encodeURIComponent(symbol)}`, {
@@ -65,9 +56,7 @@ async function fetchQuote(symbol: string, signal?: AbortSignal): Promise<Quote> 
   }
   // Rejected unverified currencies, including responses from an outdated backend.
   if (body?.currency !== 'USD') {
-    throw new Error(
-      'A verified USD price is unavailable for this stock. Try another symbol.',
-    );
+    throw new Error('A verified USD price is unavailable for this stock. Try another symbol.');
   }
   return body as Quote;
 }
@@ -82,13 +71,7 @@ const percent = (value: number | null | undefined) =>
   value === null || value === undefined ? '—' : `${(value * 100).toFixed(1)}%`;
 
 // One tick per month, so the same month label never repeats along the axis.
-const monthTicks = (history: { date: string }[]) =>
-  history
-    .filter((point, i) => i === 0 || point.date.slice(0, 7) !== history[i - 1].date.slice(0, 7))
-    .map((point) => point.date);
-
-const monthLabel = (date: string) => `${MONTHS[Number(date.slice(5, 7)) - 1]} ’${date.slice(2, 4)}`;
-
+// Replaced fixed monthly ticks with range-aware date ticks in the shared price chart.
 type InvestingProps = {
   storageKey: string;
   userId?: number;
@@ -105,11 +88,7 @@ export function Investing(props: InvestingProps) {
   );
 }
 
-function StockHoldings({
-  storageKey,
-  userId,
-  demo,
-}: InvestingProps) {
+function StockHoldings({ storageKey, userId, demo }: InvestingProps) {
   const [holdings, setHoldings] = useState<Holding[]>(() => parseLocalHoldings(storageKey));
   const [quotes, setQuotes] = useState<Record<string, QuoteState>>({});
   const [suggestions, setSuggestions] = useState<Suggestion[]>([]);
@@ -141,7 +120,11 @@ function StockHoldings({
                   setHoldings((curHoldings) => {
                     const updated = curHoldings.map((h) =>
                       h.symbol === sym
-                        ? { ...h, lastPrice: quote.latest_price, companyName: quote.name || h.companyName }
+                        ? {
+                            ...h,
+                            lastPrice: quote.latest_price,
+                            companyName: quote.name || h.companyName,
+                          }
                         : h,
                     );
                     saveLocalHoldings(storageKey, updated);
@@ -186,7 +169,11 @@ function StockHoldings({
                     setHoldings((curHoldings) => {
                       const updated = curHoldings.map((h) =>
                         h.symbol === sym
-                          ? { ...h, lastPrice: quote.latest_price, companyName: quote.name || h.companyName }
+                          ? {
+                              ...h,
+                              lastPrice: quote.latest_price,
+                              companyName: quote.name || h.companyName,
+                            }
                           : h,
                       );
                       saveLocalHoldings(storageKey, updated);
@@ -274,15 +261,16 @@ function StockHoldings({
     const value = Number(raw);
     if (!raw.trim() || !Number.isFinite(value) || value < 0) return;
     const newShares = value;
-    const currentHolding = stockId !== undefined
-      ? holdings.find((h) => h.stockId === stockId)
-      : holdings.find((h) => h.symbol === sym);
+    const currentHolding =
+      stockId !== undefined
+        ? holdings.find((h) => h.stockId === stockId)
+        : holdings.find((h) => h.symbol === sym);
     const currentShares = currentHolding?.shares ?? 0;
     if (currentShares === newShares) return;
     const quote = quotes[sym];
     const price = isQuote(quote) ? quote.latest_price : currentHolding?.lastPrice;
     if (!price || !Number.isFinite(price) || price <= 0) {
-      setMessage("A price is needed before shares can be updated.");
+      setMessage('A price is needed before shares can be updated.');
       return;
     }
     const previousHoldings = holdings;
@@ -312,9 +300,10 @@ function StockHoldings({
   }
 
   async function removeHolding(sym: string, stockId?: number) {
-    const target = stockId !== undefined
-      ? holdings.find((h) => h.stockId === stockId)
-      : holdings.find((h) => h.symbol === sym);
+    const target =
+      stockId !== undefined
+        ? holdings.find((h) => h.stockId === stockId)
+        : holdings.find((h) => h.symbol === sym);
     const otherLotsForSym = holdings.filter(
       (h) => h.symbol === sym && (stockId !== undefined ? h.stockId !== stockId : false),
     );
@@ -370,8 +359,12 @@ function StockHoldings({
   return (
     <section className="flex flex-col gap-4 mb-6" aria-label="Stock holdings">
       <div>
-        <div className="text-[9px] text-(--ui-text-a9b7ce) tracking-[1.7px] font-semibold mb-2">STOCKS</div>
-        <h3 className="text-[17px] font-semibold tracking-[-0.2px] text-text m-0">Your stock holdings</h3>
+        <div className="text-[9px] text-(--ui-text-a9b7ce) tracking-[1.7px] font-semibold mb-2">
+          STOCKS
+        </div>
+        <h3 className="text-[17px] font-semibold tracking-[-0.2px] text-text m-0">
+          Your stock holdings
+        </h3>
         <p className="text-xs text-(--ui-text-8998b0) m-0 mt-1.5">
           Search a USD-priced ticker symbol, enter your shares, and see its price, value, and
           history.
@@ -392,11 +385,19 @@ function StockHoldings({
           maxLength={10}
           onChange={(event) => setSymbol(event.target.value)}
         />
-        <button className="inline-flex items-center justify-center gap-1.75 whitespace-nowrap rounded-[7px] px-3.25 py-2.25 text-[11px] font-medium min-h-8.5 cursor-pointer bg-primary text-primary-fg border border-primary hover:bg-(--ui-surface-hover-cbbafa) disabled:opacity-40 disabled:cursor-not-allowed" type="submit" disabled={!symbol.trim()}>
+        <button
+          className="inline-flex items-center justify-center gap-1.75 whitespace-nowrap rounded-[7px] px-3.25 py-2.25 text-[11px] font-medium min-h-8.5 cursor-pointer bg-primary text-primary-fg border border-primary hover:bg-(--ui-surface-hover-cbbafa) disabled:opacity-40 disabled:cursor-not-allowed"
+          type="submit"
+          disabled={!symbol.trim()}
+        >
           Add stock
         </button>
       </form>
-      <div className="min-h-[1.4em] flex items-center gap-2 text-(--ui-text-91a3bd) text-[13px]" role="status" aria-live="polite">
+      <div
+        className="min-h-[1.4em] flex items-center gap-2 text-(--ui-text-91a3bd) text-[13px]"
+        role="status"
+        aria-live="polite"
+      >
         {pending.length > 0 && (
           <>
             <span className="stock-loading-spinner" aria-hidden="true" />
@@ -411,7 +412,9 @@ function StockHoldings({
       )}
       {available.length > 0 && (
         <div>
-          <div className="text-[9px] text-(--ui-text-a9b7ce) tracking-[1.7px] font-semibold mb-2">POPULAR STOCKS</div>
+          <div className="text-[9px] text-(--ui-text-a9b7ce) tracking-[1.7px] font-semibold mb-2">
+            POPULAR STOCKS
+          </div>
           <div className="flex flex-wrap gap-2">
             {available.map((s) => (
               <button
@@ -437,7 +440,9 @@ function StockHoldings({
       <div className="grid grid-cols-[repeat(auto-fit,minmax(200px,260px))] gap-3.5 mb-0">
         <div className="p-[18px_19px] bg-surface border border-(--ui-border-283145) rounded-[11px] flex flex-col gap-2.5 max-[760px]:p-3.5">
           <span className="text-[11px] text-(--ui-text-9cacbf)">Total stock value (USD)</span>
-          <strong className="text-[clamp(20px,2vw,28px)] tracking-[-0.7px] font-semibold text-text">{dollars(total)}</strong>
+          <strong className="text-[clamp(20px,2vw,28px)] tracking-[-0.7px] font-semibold text-text">
+            {dollars(total)}
+          </strong>
           <small className="text-[10px] text-(--ui-text-73839a)">
             {holdings.length} {holdings.length === 1 ? 'stock' : 'stocks'}
           </small>
@@ -452,12 +457,24 @@ function StockHoldings({
           <table className="w-full border-collapse text-left text-xs whitespace-nowrap">
             <thead>
               <tr>
-                <th className="text-(--ui-text-8192ad) text-[10px] font-medium p-[16px_20px] bg-(--ui-surface-161f2e) max-[760px]:p-[11px_14px]">Stock</th>
-                <th className="text-(--ui-text-8192ad) text-[10px] font-medium p-[16px_20px] bg-(--ui-surface-161f2e) max-[760px]:p-[11px_14px]">Shares</th>
-                <th className="text-(--ui-text-8192ad) text-[10px] font-medium p-[16px_20px] bg-(--ui-surface-161f2e) max-[760px]:p-[11px_14px]">Price</th>
-                <th className="text-(--ui-text-8192ad) text-[10px] font-medium p-[16px_20px] bg-(--ui-surface-161f2e) max-[760px]:p-[11px_14px]">Value</th>
-                <th className="text-(--ui-text-8192ad) text-[10px] font-medium p-[16px_20px] bg-(--ui-surface-161f2e) max-[760px]:p-[11px_14px]">Annualized return</th>
-                <th className="text-(--ui-text-8192ad) text-[10px] font-medium p-[16px_20px] bg-(--ui-surface-161f2e) max-[760px]:p-[11px_14px]">Annualized volatility</th>
+                <th className="text-(--ui-text-8192ad) text-[10px] font-medium p-[16px_20px] bg-(--ui-surface-161f2e) max-[760px]:p-[11px_14px]">
+                  Stock
+                </th>
+                <th className="text-(--ui-text-8192ad) text-[10px] font-medium p-[16px_20px] bg-(--ui-surface-161f2e) max-[760px]:p-[11px_14px]">
+                  Shares
+                </th>
+                <th className="text-(--ui-text-8192ad) text-[10px] font-medium p-[16px_20px] bg-(--ui-surface-161f2e) max-[760px]:p-[11px_14px]">
+                  Price
+                </th>
+                <th className="text-(--ui-text-8192ad) text-[10px] font-medium p-[16px_20px] bg-(--ui-surface-161f2e) max-[760px]:p-[11px_14px]">
+                  Value
+                </th>
+                <th className="text-(--ui-text-8192ad) text-[10px] font-medium p-[16px_20px] bg-(--ui-surface-161f2e) max-[760px]:p-[11px_14px]">
+                  Annualized return
+                </th>
+                <th className="text-(--ui-text-8192ad) text-[10px] font-medium p-[16px_20px] bg-(--ui-surface-161f2e) max-[760px]:p-[11px_14px]">
+                  Annualized volatility
+                </th>
                 <th className="p-[16px_20px] bg-(--ui-surface-161f2e) max-[760px]:p-[11px_14px]" />
               </tr>
             </thead>
@@ -469,7 +486,9 @@ function StockHoldings({
                   <tr key={stockId ?? `${sym}-${index}`}>
                     <td className="p-[13px_20px] border-t border-(--ui-border-263147) text-text max-[760px]:p-[11px_14px]">
                       <strong>{sym}</strong>
-                      {quote?.name && <small className="text-(--ui-text-8b9ab1)"> {quote.name}</small>}
+                      {quote?.name && (
+                        <small className="text-(--ui-text-8b9ab1)"> {quote.name}</small>
+                      )}
                       {problem && <small className="text-coral negative"> {problem}</small>}
                     </td>
                     <td className="p-[13px_20px] border-t border-(--ui-border-263147) text-text max-[760px]:p-[11px_14px]">
@@ -489,12 +508,26 @@ function StockHoldings({
                           void setShares(sym, value);
                         }}
                         onKeyDown={(event) => {
-                          if (event.key === "Enter") event.currentTarget.blur();
+                          if (event.key === 'Enter') event.currentTarget.blur();
                         }}
                       />
                     </td>
-                    <td className="p-[13px_20px] border-t border-(--ui-border-263147) text-text max-[760px]:p-[11px_14px]">{quote ? dollars(quote.latest_price) : lastPrice ? dollars(lastPrice) : problem ? '—' : 'Loading…'}</td>
-                    <td className="p-[13px_20px] border-t border-(--ui-border-263147) text-text max-[760px]:p-[11px_14px]">{quote ? dollars(quote.latest_price * shares) : lastPrice ? dollars(lastPrice * shares) : '—'}</td>
+                    <td className="p-[13px_20px] border-t border-(--ui-border-263147) text-text max-[760px]:p-[11px_14px]">
+                      {quote
+                        ? dollars(quote.latest_price)
+                        : lastPrice
+                          ? dollars(lastPrice)
+                          : problem
+                            ? '—'
+                            : 'Loading…'}
+                    </td>
+                    <td className="p-[13px_20px] border-t border-(--ui-border-263147) text-text max-[760px]:p-[11px_14px]">
+                      {quote
+                        ? dollars(quote.latest_price * shares)
+                        : lastPrice
+                          ? dollars(lastPrice * shares)
+                          : '—'}
+                    </td>
                     <td
                       className={`p-[13px_20px] border-t border-(--ui-border-263147) text-text max-[760px]:p-[11px_14px] ${
                         quote && quote.cagr !== null
@@ -507,11 +540,13 @@ function StockHoldings({
                       {percent(quote?.cagr)}
                       {quote?.stats_start_date && quote.stats_end_date && (
                         <small className="text-(--ui-text-8b9ab1)" style={{ display: 'block' }}>
-                           {quote.stats_start_date} to {quote.stats_end_date}
+                          {quote.stats_start_date} to {quote.stats_end_date}
                         </small>
                       )}
                     </td>
-                    <td className="p-[13px_20px] border-t border-(--ui-border-263147) text-text max-[760px]:p-[11px_14px]">{percent(quote?.annual_volatility)}</td>
+                    <td className="p-[13px_20px] border-t border-(--ui-border-263147) text-text max-[760px]:p-[11px_14px]">
+                      {percent(quote?.annual_volatility)}
+                    </td>
                     <td className="p-[13px_20px] border-t border-(--ui-border-263147) text-text max-[760px]:p-[11px_14px]">
                       <button
                         type="button"
@@ -543,7 +578,8 @@ function StockHoldings({
       )}
       {chartQuote && <StockPriceChart quote={chartQuote} />}
       <p className="text-[11px] text-(--ui-text-73839a) leading-relaxed m-0 mt-3">
-        Prices come from Yahoo Finance and refresh about once a day. Past performance does not
+        Daily prices come from Yahoo Finance and refresh about once a day; the 1D chart uses cached
+        five-minute bars from the latest available trading session. Past performance does not
         predict future results. Only verified USD-priced securities are supported; no currency
         conversion is performed. Annualized return is compounded yearly growth over the dates shown,
         using up to ten years of history. Volatility measures annualized daily price variation over
@@ -557,69 +593,14 @@ function StockHoldings({
 // Isolated the chart from form edits and loading updates so an unchanged quote was not redrawn.
 const StockPriceChart = memo(function StockPriceChart({ quote: chartQuote }: { quote: Quote }) {
   // Matched the line color to the net price change across the displayed history.
-  const chartHistory = chartQuote.history;
-  const chartChange =
-    chartHistory.length > 1
-      ? chartHistory[chartHistory.length - 1].close - chartHistory[0].close
-      : 0;
-  const chartColor = chartChange > 0 ? colors.INCOME : chartChange < 0 ? colors.DEBT : 'var(--ui-paint-91a3bd)';
+  // Reused the coach's grid, tracking cursor and timeframe controls for every supported USD holding.
   return (
-    <div>
-      <h4 className="text-[13px] font-semibold text-text m-0 mb-2">
-        {chartQuote.symbol} · recent adjusted prices (USD){' '}
-        <small className="text-(--ui-text-8b9ab1)">as of {chartQuote.latest_date}</small>
+    <div className="mt-5 rounded-xl border border-border bg-raised p-4">
+      <h4 className="m-0 text-base font-semibold text-text">
+        {chartQuote.symbol} price history{' '}
+        <span className="font-normal text-xs text-muted">· USD · adjusted prices</span>
       </h4>
-      <div className="h-65 mt-2.5" role="img" aria-label={`${chartQuote.symbol} price history`}>
-        <ResponsiveContainer width="100%" height="100%">
-          <LineChart
-            accessibilityLayer={false}
-            data={chartQuote.history}
-            margin={{ top: 10, right: 28, bottom: 10, left: 2 }}
-          >
-            <CartesianGrid strokeDasharray="3 7" stroke="var(--ui-paint-29364a)" vertical={false} />
-            <XAxis
-              dataKey="date"
-              ticks={monthTicks(chartQuote.history)}
-              tickFormatter={monthLabel}
-              tick={{ fill: 'var(--ui-paint-91a3bd)', fontSize: 11 }}
-              minTickGap={16}
-              axisLine={false}
-              tickLine={false}
-            />
-            <YAxis
-              domain={['auto', 'auto']}
-              tickFormatter={(value: number) => money(value)}
-              width={70}
-              tick={{ fill: 'var(--ui-paint-91a3bd)', fontSize: 11 }}
-              axisLine={false}
-              tickLine={false}
-            />
-            <Tooltip
-              content={({ active, payload }) => {
-                if (!active || !payload?.length) return null;
-                const point = payload[0]?.payload as { date: string; close: number };
-                return (
-                  <div className="p-[13px_15px] bg-(--ui-surface-1c2638) border border-(--ui-border-47536d) rounded-[9px] shadow-[0_10px_30px_var(--ui-shadow-0005)] min-w-50 text-[11px]">
-                    <strong className="block text-[11px] text-(--ui-text-d9e3f3) mb-3">{point.date}</strong>
-                    <div className="flex justify-between gap-5.5 mt-2.5">
-                      <span>Close</span>
-                      <b className="font-semibold text-text">{dollars(point.close)}</b>
-                    </div>
-                  </div>
-                );
-              }}
-            />
-            <Line
-              type="monotone"
-              dataKey="close"
-              stroke={chartColor}
-              strokeWidth={2}
-              dot={false}
-              isAnimationActive={false}
-            />
-          </LineChart>
-        </ResponsiveContainer>
-      </div>
+      <MarketPriceChart symbol={chartQuote.symbol} kind="stock" initialPeriod="1y" />
     </div>
   );
 });

@@ -337,8 +337,8 @@ const compiledDashboardCss = fs.readFileSync(
   'utf-8',
 );
 const appTsx = fs.readFileSync(path.join(ROOT, 'dashboard/src/App.tsx'), 'utf-8');
-const canvasTsx = fs.readFileSync(path.join(ROOT, 'dashboard/src/components/Canvas.tsx'), 'utf-8');
-const simulationModalTsx = fs.readFileSync(path.join(ROOT, 'dashboard/src/SimulationModal.tsx'), 'utf-8');
+const canvasTsx = fs.readFileSync(path.join(ROOT, 'dashboard/src/workspace/Canvas.tsx'), 'utf-8');
+const simulationModalTsx = fs.readFileSync(path.join(ROOT, 'dashboard/src/simulation/SimulationModal.tsx'), 'utf-8');
 
 // 2.1 Sidebar View Switching
 check('2.1.1 App.tsx defines active highlight utilities: bg-active-bg text-active-text border-active-border', () => {

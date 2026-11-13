@@ -1,4 +1,4 @@
-import type { SimulationType } from '../finance';
+import type { SimulationType } from '../common/finance';
 
 // Explained the model beside its results in everyday language; distinguished
 // calculated scenarios from promises and made the zero-investing case explicit.

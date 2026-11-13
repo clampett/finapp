@@ -1,5 +1,5 @@
 import { AuthError, authRequest, formError } from './main.js';
-import { clearSession } from '../../../dashboard/src/session.js';
+import { clearSession } from '../../../dashboard/src/common/session.js';
 import { setupGoogleSignIn } from './google-signin.js';
 
 const loginForm = document.getElementById('login-form') as HTMLFormElement | null;

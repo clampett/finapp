@@ -12,8 +12,8 @@ import {
   XAxis,
   YAxis,
 } from 'recharts';
-import { dollars, money } from '../finance';
-import type { ForecastPoint } from '../SimulationModal';
+import { dollars, money } from '../common/finance';
+import type { ForecastPoint } from './simulation-types';
 
 export const ForecastChart = memo(function ForecastChart({
   points,

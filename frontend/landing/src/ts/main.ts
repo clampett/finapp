@@ -1,4 +1,4 @@
-import { endSession, finishLogout } from '../../../dashboard/src/session.js';
+import { endSession, finishLogout } from '../../../dashboard/src/common/session.js';
 
 // Returning here with Back ends the private workspace session, including bfcache restores.
 void endSession();

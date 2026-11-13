@@ -9,8 +9,8 @@ import {
   XAxis,
   YAxis,
 } from 'recharts';
-import { dollars, money } from '../finance';
-import type { SimulationResult } from '../SimulationModal';
+import { dollars, money } from '../common/finance';
+import type { SimulationResult } from './simulation-types';
 
 export const ForecastInsights = memo(function ForecastInsights({
   forecast,

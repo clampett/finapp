@@ -1,8 +1,8 @@
 import React from 'react';
 import ReactDOM from 'react-dom/client';
 import App from './App.tsx';
-import { clearSession, endSession, installPrivateSessionGuard, validSession } from './session';
-import './index.css';
+import { clearSession, endSession, installPrivateSessionGuard, validSession } from './common/session';
+import './styles/index.css';
 
 async function startWorkspace() {
   // Allowed public demos immediately, but verified private sessions before React

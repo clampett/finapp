@@ -1,16 +1,16 @@
 import { useEffect, useLayoutEffect, useRef, useState } from 'react';
-import { ArchetypeGraph } from './graphs';
-import type { View } from './finance';
-import { demoProfile, API_BASE } from './finance';
-import { endSession, sessionHeaders } from './session';
+import { ArchetypeGraph } from './workspace/graphs';
+import type { View } from './common/finance';
+import { demoProfile, API_BASE } from './common/finance';
+import { endSession, sessionHeaders } from './common/session';
 import {
   DEFAULT_DEMO_HOLDINGS,
   notifyPortfolioUpdated,
   parseLocalHoldings,
   saveLocalHoldings,
-} from './portfolio';
-import { useTheme } from './useTheme';
-import type { UserProfile } from './components/SettingsTab';
+} from './investing/portfolio';
+import { useTheme } from './common/useTheme';
+import type { UserProfile } from './views/SettingsTab';
 
 const DEMO_PROFILES: Record<number, UserProfile> = {
   1: { username: 'alex_grad', displayName: 'Alex Rivera (Recent Grad)', profilePicture: null },

@@ -1,7 +1,7 @@
 const { spawn } = require('node:child_process');
 const { resolve } = require('node:path');
 const { setTimeout: sleep } = require('node:timers/promises');
-const { coachModel, ollamaOrigin } = require('../frontend/coach-service');
+const { coachModel, ollamaOrigin } = require('../frontend/server/coach/coach-service');
 
 const composeFile = resolve(__dirname, '../docker-compose.yml');
 

@@ -1,4 +1,4 @@
-import { finishLogout } from '../../../dashboard/src/session.js';
+import { finishLogout } from '../../../dashboard/src/common/session.js';
 
 type GoogleIdentity = {
   initialize: (options: {

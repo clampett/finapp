@@ -2,9 +2,9 @@ const express = require('express');
 const path = require('path');
 const fs = require('fs');
 const rateLimit = require('express-rate-limit');
-const { createApiProxy } = require('./api-proxy');
-const { createCoachService } = require('./coach-service');
-const { createCoachMarket } = require('./coach-market');
+const { createApiProxy } = require('./server/proxy/api-proxy');
+const { createCoachService } = require('./server/coach/coach-service');
+const { createCoachMarket } = require('./server/coach/coach-market');
 
 const app = express();
 const PORT = process.env.PORT || 8080;

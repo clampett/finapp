@@ -19,7 +19,7 @@
   "inflation": {
     "terms": "inflation purchasing power real dollars nominal prices",
     "question": "What does inflation adjustment mean in FinApp?",
-    "guide": "Inflation reduces purchasing power. The coach compares both cases in today's dollars using a fixed 2.5% annual inflation assumption."
+    "guide": "Inflation reduces purchasing power. The coach compares both cases in today's dollars using the selected annual inflation assumption (2.5% by default)."
   },
   "stress": {
     "terms": "fees fee expense expenses growth market returns stress stress-test compounding",
@@ -29,13 +29,13 @@
   "privacy": {
     "terms": "private privacy offline internet stored data send sharing ollama model",
     "question": "How does FinApp protect my scenario and chat?",
-    "guide": "FinApp keeps exact results and account records out of Ollama. When local AI is enabled, Ollama receives what you type and may receive a topic label or a limited description of the comparison. Sample data is selected by default. A scenario copy is sent only to the configured FinApp simulator when the user selects it and runs a comparison.",
+    "guide": "FinApp keeps exact results and account records out of Ollama. When local AI is enabled, Ollama receives what you type, up to two recent AI exchanges, selected horizon and stress-test labels, and limited qualitative comparison context. If enabled, it also receives dated public market context. Exact graph balances and dashboard-added result summaries are not attached. Sample data is selected by default. A scenario copy is sent only to the configured FinApp simulator when the user selects it and runs a comparison.",
     "verifiedOnly": true
   },
   "target": {
     "terms": "target probability chance goal likelihood odds",
     "question": "How does FinApp calculate the chance of reaching a target?",
-    "guide": "Target probability is the share of modeled paths that finish at or above the target. The coach uses a fixed $500,000 target in today's dollars for both runs.",
+    "guide": "Target probability is the share of modeled paths that finish at or above the target. The coach uses an editable target in today's dollars ($500,000 by default) for both runs.",
     "verifiedOnly": true
   },
   "debt": {
@@ -84,6 +84,11 @@
   "nextExperiment": {
     "terms": "",
     "question": "What would be a useful next experiment in FinApp?",
-    "guide": "Scenario Lab compares a baseline with one changed assumption: higher expense growth, lower market returns, or higher investment fees. Users can change the forecast model and pick a horizon of 5, 10, 20, 30, 40, or 50 years. Users can change expense growth for a scenario in the simulator, then use a fresh copy in AI Coach. Use a similar horizon to isolate an assumption or a shorter horizon to see whether an effect appears sooner. Suggest a single next experiment and describe which displayed metric to inspect. If no comparison has been run, suggest an initial comparison instead."
+    "guide": "Scenario lab compares a baseline with one changed assumption. Available stress tests include faster expense growth, lower market returns, higher fees, more volatility, slower income growth, a smaller share of surplus invested, and higher inflation. Users select a time horizon, intensity, return, inflation, fees, target and investment share. Suggest a useful test matching their question. If there is a completed comparison, build on it. Explain what to inspect in the actual table."
+  },
+  "markets": {
+    "terms": "market trends today news headlines latest recent economic events bonds stocks rates",
+    "question": "What can I learn from the latest market briefing?",
+    "guide": "Use only the attached dated public briefing for recent events. The benchmark cards show adjusted closes and changes over twenty trading sessions. The separate price chart offers 1D (five-minute regular-session bars from the latest available trading day, in Eastern Time), 1M, 1Y and 5Y (daily adjusted closes through the latest available date). Each chart shows its actual date range; the card’s twenty-session change can differ from the selected chart range. Prices may be delayed and are not live quotes. News is limited to the recent Yahoo Finance feed. Missing stories, stale data, or past returns cannot establish what markets will do next. Explain possible implications as possibilities and offer a related scenario experiment."
   }
 }

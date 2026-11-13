@@ -90,7 +90,10 @@ export function GraphWorkspace({
     <div
       className={`workspace-tab-content px-8 pb-4.5 max-[1100px]:px-5.5 max-[1100px]:pb-4.5 max-[760px]:px-4 max-[760px]:pb-4 2xl:px-11 fullscreen:bg-[var(--ui-surface-0c1018)] fullscreen:w-full fullscreen:h-full fullscreen:overflow-auto fullscreen:p-6 max-[650px]:fullscreen:p-3 ${view === 'settings' ? 'mx-auto w-full max-w-6xl' : ''}`}
     >
-      <WorkspaceIntro view={view} live={live} t={t} demo={demo} storageStatus={storageStatus} />
+      {/* Used the coach’s own interactive heading instead of duplicating the tab introduction. */}
+      {view !== 'ai' && (
+        <WorkspaceIntro view={view} live={live} t={t} demo={demo} storageStatus={storageStatus} />
+      )}
       {/* Kept scenario imports with the graph editor. */}
       {view === 'graph' && (
         <input
@@ -147,7 +150,7 @@ export function GraphWorkspace({
       {/* Mounted the sample coach and chat independently of account-graph availability. */}
       {view === 'ai' ? (
         <ScenarioCoach
-          graph={!demo && loaded && !error ? graph : undefined}
+          graph={loaded && !error ? graph : undefined}
           onOpenGraph={() => onNavigate('graph')}
         />
       ) : !loaded ? (

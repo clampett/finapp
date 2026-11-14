@@ -56,9 +56,7 @@ export function TransactionModal({
           gap: '1rem',
         }}
       >
-        <label
-          style={{ display: 'flex', flexDirection: 'column', gap: '4px', fontSize: '13px' }}
-        >
+        <label style={{ display: 'flex', flexDirection: 'column', gap: '4px', fontSize: '13px' }}>
           Kind
           <select
             value={transDraft.kind}
@@ -72,41 +70,31 @@ export function TransactionModal({
           </select>
         </label>
 
-        <label
-          style={{ display: 'flex', flexDirection: 'column', gap: '4px', fontSize: '13px' }}
-        >
+        <label style={{ display: 'flex', flexDirection: 'column', gap: '4px', fontSize: '13px' }}>
           Description / Payee
           <input
             type="text"
             required
             placeholder="e.g. Salary, Trader Joe's, Electric bill"
             value={transDraft.description}
-            onChange={(e) =>
-              setTransDraft((prev) => ({ ...prev, description: e.target.value }))
-            }
+            onChange={(e) => setTransDraft((prev) => ({ ...prev, description: e.target.value }))}
             style={formFieldStyle}
           />
         </label>
 
-        <label
-          style={{ display: 'flex', flexDirection: 'column', gap: '4px', fontSize: '13px' }}
-        >
+        <label style={{ display: 'flex', flexDirection: 'column', gap: '4px', fontSize: '13px' }}>
           Amount ($)
           <NumberField
             min="0.01"
             step="0.01"
             required
             value={String(transDraft.amount)}
-            onChange={(e) =>
-              setTransDraft((prev) => ({ ...prev, amount: Number(e.target.value) }))
-            }
+            onChange={(e) => setTransDraft((prev) => ({ ...prev, amount: Number(e.target.value) }))}
             style={formFieldStyle}
           />
         </label>
 
-        <label
-          style={{ display: 'flex', flexDirection: 'column', gap: '4px', fontSize: '13px' }}
-        >
+        <label style={{ display: 'flex', flexDirection: 'column', gap: '4px', fontSize: '13px' }}>
           Account
           <select
             value={transDraft.accountName || ''}
@@ -124,9 +112,7 @@ export function TransactionModal({
           </select>
         </label>
 
-        <label
-          style={{ display: 'flex', flexDirection: 'column', gap: '4px', fontSize: '13px' }}
-        >
+        <label style={{ display: 'flex', flexDirection: 'column', gap: '4px', fontSize: '13px' }}>
           Date
           <input
             type="date"
@@ -143,9 +129,7 @@ export function TransactionModal({
           />
         </label>
 
-        <label
-          style={{ display: 'flex', flexDirection: 'column', gap: '4px', fontSize: '13px' }}
-        >
+        <label style={{ display: 'flex', flexDirection: 'column', gap: '4px', fontSize: '13px' }}>
           Category (optional)
           <input
             type="text"
@@ -189,10 +173,10 @@ export function TransactionModal({
           >
             💳 <strong>Linked Scenario Debt Account:</strong> {matchedDebtNode.name}
             <div style={{ marginTop: '2px', color: 'var(--color-coral)' }}>
-              Current Balance: <strong>{dollars(matchedDebtNode.amountOrBalance)}</strong> • Interest:{' '}
-              <strong>{matchedDebtNode.interestRateApr}% APR</strong> • Minimum Monthly Payment:{' '}
-              <strong>{dollars(debtPayment(matchedDebtNode, graph))}</strong>.
-              Logging this expense will automatically pay down this debt balance and increase your net worth.
+              Current Balance: <strong>{dollars(matchedDebtNode.amountOrBalance)}</strong> •
+              Interest: <strong>{matchedDebtNode.interestRateApr}% APR</strong> • Minimum Monthly
+              Payment: <strong>{dollars(debtPayment(matchedDebtNode, graph))}</strong>. Logging this
+              expense will automatically pay down this debt balance and increase your net worth.
             </div>
           </div>
         )}

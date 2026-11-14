@@ -10,4 +10,3 @@ public interface StockTransactionService {
     StockTransactionDTO createStockTransaction(Long userId, CreateStockTransactionRequest request);
     void deleteStockTransaction(Long userId, Long id);
 }
-

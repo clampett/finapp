@@ -48,6 +48,7 @@ interface SimulationParametersProps {
   setError: (e: string) => void;
 }
 
+// Kept parameter changes in parent-owned state so the existing forecast refresh flow was preserved.
 export function SimulationParameters({
   graphData,
   simulationType,
@@ -87,7 +88,9 @@ export function SimulationParameters({
 }: SimulationParametersProps) {
   return (
     <section>
-      <div className="text-[8px] text-(--ui-text-889ab6) mb-1.5 font-semibold tracking-wider">YOUR ASSUMPTIONS</div>
+      <div className="text-[8px] text-(--ui-text-889ab6) mb-1.5 font-semibold tracking-wider">
+        YOUR ASSUMPTIONS
+      </div>
       <h3 className="text-sm font-semibold text-text mb-4 mt-0">Make it your scenario</h3>
       <BudgetControls graph={graphData} onChange={onAssumptionsChange} compact />
       {simulationType !== 'debt' && (
@@ -151,9 +154,7 @@ export function SimulationParameters({
               />
             </label>
             <label className="flex flex-col gap-2 text-[11px] text-(--ui-text-b9c5d9) mt-4.25">
-              {marketSource === 'historical'
-                ? 'Fallback volatility (%)'
-                : 'Annual volatility (%)'}
+              {marketSource === 'historical' ? 'Fallback volatility (%)' : 'Annual volatility (%)'}
               <NumberField
                 type="number"
                 min={0}
@@ -184,10 +185,15 @@ export function SimulationParameters({
           ))}
         </select>
       </label>
-      <label className="flex items-center justify-between gap-3 text-[11px] text-(--ui-text-b9c5d9) mt-4.25" htmlFor="allocation">
-        <span>{simulationType === 'debt'
-          ? 'Extra surplus toward debt'
-          : 'Invest still-unassigned money'}</span>
+      <label
+        className="flex items-center justify-between gap-3 text-[11px] text-(--ui-text-b9c5d9) mt-4.25"
+        htmlFor="allocation"
+      >
+        <span>
+          {simulationType === 'debt'
+            ? 'Extra surplus toward debt'
+            : 'Invest still-unassigned money'}
+        </span>
         <strong className="text-(--ui-text-cebeff)">{rate}%</strong>
       </label>
       {simulationType !== 'debt' && (
@@ -223,9 +229,9 @@ export function SimulationParameters({
       {simulationType !== 'debt' && (
         <p className="text-(--ui-text-8b9ab1) text-[11px] mt-2 mb-0 leading-[1.6]">
           For $0 in new investments, turn off scheduled transfers and set the slider to 0%.
-          Uninvested surplus stays in cash. Losses can still affect existing investments;
-          expenses above take-home income can drain assets and create debt. Set a negative
-          forward return to explore a prolonged market decline.
+          Uninvested surplus stays in cash. Losses can still affect existing investments; expenses
+          above take-home income can drain assets and create debt. Set a negative forward return to
+          explore a prolonged market decline.
         </p>
       )}
       {simulationType !== 'debt' && (
@@ -242,7 +248,9 @@ export function SimulationParameters({
             />
           </label>
           <details className="my-5 border border-(--ui-border-2d3f55) rounded-lg">
-            <summary className="text-[11px] p-3 text-(--ui-text-adbed0) cursor-pointer font-medium select-none">Growth, fees & shortfalls</summary>
+            <summary className="text-[11px] p-3 text-(--ui-text-adbed0) cursor-pointer font-medium select-none">
+              Growth, fees & shortfalls
+            </summary>
             <div className="px-3 pt-1 pb-3">
               <label className="flex flex-col gap-2 text-[11px] text-(--ui-text-b9c5d9) mt-4.25">
                 Annual income growth (%)
@@ -299,9 +307,9 @@ export function SimulationParameters({
                 />
               </label>
               <p className="text-(--ui-text-8b9ab1) text-[11px] mt-3 mb-0 leading-[1.6]">
-                Growth is nominal and applied annually. Income continues through the
-                horizon; retirement withdrawals are not modeled. The additional fee is
-                separate from costs already reflected in adjusted fund prices.
+                Growth is nominal and applied annually. Income continues through the horizon;
+                retirement withdrawals are not modeled. The additional fee is separate from costs
+                already reflected in adjusted fund prices.
               </p>
             </div>
           </details>
@@ -310,7 +318,10 @@ export function SimulationParameters({
       {simulationType !== 'debt' && (
         <label className="flex items-center justify-between gap-2.5 mt-5 text-[11px] cursor-pointer">
           <span>
-            Adjust for inflation<small className="block text-(--ui-text-7f91ac) text-[9px] mt-1">{inflationRate}% annually · today’s purchasing power</small>
+            Adjust for inflation
+            <small className="block text-(--ui-text-7f91ac) text-[9px] mt-1">
+              {inflationRate}% annually · today’s purchasing power
+            </small>
           </span>
           <input
             type="checkbox"
@@ -337,7 +348,9 @@ export function SimulationParameters({
               }`}
               onClick={() => setStrategy(s)}
             >
-              <strong className="block text-[11px] text-text font-semibold">{s === 'avalanche' ? 'Avalanche' : 'Snowball'}</strong>
+              <strong className="block text-[11px] text-text font-semibold">
+                {s === 'avalanche' ? 'Avalanche' : 'Snowball'}
+              </strong>
               <small className="block text-[10px] text-(--ui-text-97a5bd) mt-1">
                 {s === 'avalanche' ? 'Highest APR first' : 'Smallest balance first'}
               </small>

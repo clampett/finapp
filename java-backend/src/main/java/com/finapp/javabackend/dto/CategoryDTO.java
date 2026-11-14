@@ -12,4 +12,3 @@ public record CategoryDTO(
     String parentName,
     OffsetDateTime createdAt
 ) {}
-

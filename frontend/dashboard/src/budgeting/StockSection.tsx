@@ -101,11 +101,16 @@ export function StockSection({
                   }}
                 >
                   (Purchased Price:{' '}
-                  <strong style={{ color: 'var(--ui-paint-cbd5e1)' }}>{dollars(totalPurchasedValue)}</strong> |
-                  Current Price:{' '}
+                  <strong style={{ color: 'var(--ui-paint-cbd5e1)' }}>
+                    {dollars(totalPurchasedValue)}
+                  </strong>{' '}
+                  | Current Price:{' '}
                   <strong
                     style={{
-                      color: totalPortfolioValue >= totalPurchasedValue ? 'var(--ui-paint-4ade80)' : 'var(--ui-paint-f87171)',
+                      color:
+                        totalPortfolioValue >= totalPurchasedValue
+                          ? 'var(--ui-paint-4ade80)'
+                          : 'var(--ui-paint-f87171)',
                     }}
                   >
                     {dollars(totalPortfolioValue)}
@@ -207,9 +212,7 @@ export function StockSection({
             <tbody>
               {stocks.map((stock) => {
                 const pos = positions.find((p) => p.stockId === stock.id);
-                const shares = pos
-                  ? Number(pos.sharesOwned || 0)
-                  : Number(stock.sharesOwned || 0);
+                const shares = pos ? Number(pos.sharesOwned || 0) : Number(stock.sharesOwned || 0);
                 const sym = stock.ticker?.toUpperCase() || '';
                 const currentPrice =
                   currentPrices[sym] !== undefined
@@ -220,21 +223,22 @@ export function StockSection({
                     ? Number(pos.avgCostPerShare)
                     : Number(stock.purchasePrice ?? stock.lastPrice ?? 0);
                 const marketVal = shares * currentPrice;
-                const costBasis = pos?.costBasis
-                  ? Number(pos.costBasis)
-                  : shares * purchasedPrice;
+                const costBasis = pos?.costBasis ? Number(pos.costBasis) : shares * purchasedPrice;
                 const totalDiv = pos ? pos.totalDividends : 0;
 
-                const sameTickerStocks = stocks.filter(
-                  (s) => s.ticker?.toUpperCase() === sym,
-                );
+                const sameTickerStocks = stocks.filter((s) => s.ticker?.toUpperCase() === sym);
                 const isMultiLot = sameTickerStocks.length > 1;
-                const lotIndex =
-                  sameTickerStocks.findIndex((s) => s.id === stock.id) + 1;
+                const lotIndex = sameTickerStocks.findIndex((s) => s.id === stock.id) + 1;
 
                 return (
                   <tr key={stock.id} style={{ borderBottom: '1px solid var(--ui-paint-1f2737)' }}>
-                    <td style={{ padding: '10px 12px', fontWeight: 700, color: 'var(--ui-paint-38bdf8)' }}>
+                    <td
+                      style={{
+                        padding: '10px 12px',
+                        fontWeight: 700,
+                        color: 'var(--ui-paint-38bdf8)',
+                      }}
+                    >
                       <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
                         <span>{stock.ticker}</span>
                         {isMultiLot && (
@@ -270,7 +274,10 @@ export function StockSection({
                         padding: '10px 12px',
                         textAlign: 'right',
                         fontWeight: 600,
-                        color: currentPrice >= purchasedPrice ? 'var(--ui-paint-4ade80)' : 'var(--ui-paint-f87171)',
+                        color:
+                          currentPrice >= purchasedPrice
+                            ? 'var(--ui-paint-4ade80)'
+                            : 'var(--ui-paint-f87171)',
                       }}
                     >
                       {dollars(currentPrice)}
@@ -285,10 +292,22 @@ export function StockSection({
                     >
                       {dollars(marketVal)}
                     </td>
-                    <td style={{ padding: '10px 12px', textAlign: 'right', color: 'var(--ui-paint-8f9db3)' }}>
+                    <td
+                      style={{
+                        padding: '10px 12px',
+                        textAlign: 'right',
+                        color: 'var(--ui-paint-8f9db3)',
+                      }}
+                    >
                       {costBasis ? dollars(costBasis) : '—'}
                     </td>
-                    <td style={{ padding: '10px 12px', textAlign: 'right', color: 'var(--ui-paint-a7f3d0)' }}>
+                    <td
+                      style={{
+                        padding: '10px 12px',
+                        textAlign: 'right',
+                        color: 'var(--ui-paint-a7f3d0)',
+                      }}
+                    >
                       {totalDiv ? dollars(totalDiv) : '—'}
                     </td>
                     <td
@@ -335,7 +354,11 @@ export function StockSection({
                       <button
                         type="button"
                         className="inline-flex items-center justify-center whitespace-nowrap rounded-[7px] font-medium cursor-pointer bg-transparent border border-transparent hover:bg-(--ui-surface-hover-1a2536) transition-colors"
-                        style={{ color: 'var(--ui-paint-f87171)', padding: '4px 8px', fontSize: '11px' }}
+                        style={{
+                          color: 'var(--ui-paint-f87171)',
+                          padding: '4px 8px',
+                          fontSize: '11px',
+                        }}
                         onClick={() => stock.id && onDeleteStock(stock.id)}
                       >
                         Delete

@@ -4,5 +4,5 @@ public enum StockTxnType {
     buy,
     sell,
     dividend,
-    split
+    split,
 }

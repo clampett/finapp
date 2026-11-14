@@ -7,4 +7,3 @@ public interface UserService {
     UserProfileDTO getProfile(Long userId);
     UserProfileDTO updateProfile(Long userId, UpdateUserProfileRequest request);
 }
-

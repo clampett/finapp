@@ -1,14 +1,10 @@
 export const API_BASE = import.meta.env.VITE_API_URL || '/api/v1';
 export type NodeType = 'INCOME' | 'CHECKING' | 'SAVINGS' | 'INVESTMENT' | 'DEBT' | 'EXPENSE';
 export type SimulationType = 'monte_carlo' | 'markov' | 'debt';
-export type View = 'overview' | 'graph' | 'cashflow' | 'budgeting' | 'investing' | 'ai' | 'settings';
+export type View =
+  'overview' | 'graph' | 'cashflow' | 'budgeting' | 'investing' | 'ai' | 'settings';
 export type RecurrenceFrequency =
-  | 'daily'
-  | 'weekly'
-  | 'biweekly'
-  | 'monthly'
-  | 'quarterly'
-  | 'yearly';
+  'daily' | 'weekly' | 'biweekly' | 'monthly' | 'quarterly' | 'yearly';
 
 export function demoProfile(value: string | null): 1 | 2 | 3 {
   const profile = Number(value);
@@ -117,10 +113,14 @@ export function expenseAmount(node: GraphNode, graph: GraphData, ignoreDisabled 
           ['INCOME', 'CHECKING'].includes(source.nodeType),
       ),
   );
-  if (!routes.length) return recurringToMonthlyAmount(node.amountOrBalance, node.frequency, node.intervalCount);
+  if (!routes.length)
+    return recurringToMonthlyAmount(node.amountOrBalance, node.frequency, node.intervalCount);
   const income = graph.nodes
     .filter((n) => n.nodeType === 'INCOME' && (ignoreDisabled || !n.disabled))
-    .reduce((sum, n) => sum + recurringToMonthlyAmount(n.amountOrBalance, n.frequency, n.intervalCount), 0);
+    .reduce(
+      (sum, n) => sum + recurringToMonthlyAmount(n.amountOrBalance, n.frequency, n.intervalCount),
+      0,
+    );
   const settings = assumptionsFor(graph);
   const takeHome = income * (settings.incomeBasis === 'gross' ? 1 - settings.taxRate / 100 : 1);
   return routes.reduce(
@@ -231,11 +231,9 @@ export function debtPayment(node: GraphNode, graph: GraphData, ignoreDisabled = 
     graph.nodes
       .filter((n) => n.nodeType === 'INCOME' && (ignoreDisabled || !n.disabled))
       .reduce(
-        (sum, n) =>
-          sum + recurringToMonthlyAmount(n.amountOrBalance, n.frequency, n.intervalCount),
+        (sum, n) => sum + recurringToMonthlyAmount(n.amountOrBalance, n.frequency, n.intervalCount),
         0,
-      ) *
-    (settings.incomeBasis === 'gross' ? 1 - settings.taxRate / 100 : 1);
+      ) * (settings.incomeBasis === 'gross' ? 1 - settings.taxRate / 100 : 1);
   return Math.min(
     payoff,
     edges.length
@@ -255,13 +253,17 @@ export function totals(graph: GraphData, portfolioValue = 0) {
       .filter((n) => !n.disabled && types.includes(n.nodeType))
       .reduce((s, n) => s + n.amountOrBalance, 0);
   // Separated overdrawn balances from positive cash so assets and debt reconciled with net worth.
-  const cashNodes = graph.nodes.filter((node) => !node.disabled && ['CHECKING', 'SAVINGS'].includes(node.nodeType));
-  const overdraft = cashNodes.reduce((total, node) => total + Math.max(0, -node.amountOrBalance), 0);
+  const cashNodes = graph.nodes.filter(
+    (node) => !node.disabled && ['CHECKING', 'SAVINGS'].includes(node.nodeType),
+  );
+  const overdraft = cashNodes.reduce(
+    (total, node) => total + Math.max(0, -node.amountOrBalance),
+    0,
+  );
   const income = graph.nodes
       .filter((n) => !n.disabled && n.nodeType === 'INCOME')
       .reduce(
-        (sum, n) =>
-          sum + recurringToMonthlyAmount(n.amountOrBalance, n.frequency, n.intervalCount),
+        (sum, n) => sum + recurringToMonthlyAmount(n.amountOrBalance, n.frequency, n.intervalCount),
         0,
       ),
     expenses = graph.nodes
@@ -270,7 +272,9 @@ export function totals(graph: GraphData, portfolioValue = 0) {
     debt = sum(['DEBT']) + overdraft;
   const nodeInvestments = sum(['INVESTMENT']);
   const totalInvestments = nodeInvestments + (portfolioValue > 0 ? portfolioValue : 0);
-  const assets = cashNodes.reduce((total, node) => total + Math.max(0, node.amountOrBalance), 0) + totalInvestments;
+  const assets =
+    cashNodes.reduce((total, node) => total + Math.max(0, node.amountOrBalance), 0) +
+    totalInvestments;
   const payments = graph.nodes
     .filter((n) => !n.disabled && n.nodeType === 'DEBT')
     .reduce((s, n) => s + debtPayment(n, graph), 0);
@@ -302,7 +306,7 @@ export type OverviewMode = 'assets' | 'budget' | 'debt';
 export function overviewBreakdown(graph: GraphData, mode: OverviewMode, portfolioValue = 0) {
   graph = activeGraph(graph);
   const t = totals(graph, portfolioValue);
-  
+
   // Kept balance-sheet amounts separate from monthly flows; never encoded a
   // liability or shortfall as a negative pie wedge or counted transfers twice.
   const items =
@@ -330,20 +334,35 @@ export function overviewBreakdown(graph: GraphData, mode: OverviewMode, portfoli
         ]
       : mode === 'debt'
         ? [
-            ...graph.nodes.filter((node) => !node.disabled && node.nodeType === 'DEBT')
-            .map((node, index) => ({
-              label: node.name,
-              value: node.amountOrBalance,
-              color: ['var(--ui-paint-fb7185)', 'var(--ui-paint-fbbf24)', 'var(--ui-paint-b69dfa)', 'var(--ui-paint-59c9c1)', 'var(--ui-paint-7baaf5)'][index % 5],
-            })),
-            { label: "Cash overdraft", value: t.overdraft, color: "var(--ui-paint-fb7185)" },
+            ...graph.nodes
+              .filter((node) => !node.disabled && node.nodeType === 'DEBT')
+              .map((node, index) => ({
+                label: node.name,
+                value: node.amountOrBalance,
+                color: [
+                  'var(--ui-paint-fb7185)',
+                  'var(--ui-paint-fbbf24)',
+                  'var(--ui-paint-b69dfa)',
+                  'var(--ui-paint-59c9c1)',
+                  'var(--ui-paint-7baaf5)',
+                ][index % 5],
+              })),
+            { label: 'Cash overdraft', value: t.overdraft, color: 'var(--ui-paint-fb7185)' },
           ]
         : [
             { label: 'Estimated taxes', value: t.taxes, color: 'var(--ui-paint-a78bfa)' },
             { label: 'Living expenses', value: t.expenses, color: 'var(--ui-paint-fbbf24)' },
             { label: 'Loan payments', value: t.payments, color: 'var(--ui-paint-fb7185)' },
-            { label: 'Scheduled investing', value: t.plannedInvestment, color: 'var(--ui-paint-60a5fa)' },
-            { label: 'Scheduled savings', value: t.plannedSavings, color: 'var(--ui-paint-22d3ee)' },
+            {
+              label: 'Scheduled investing',
+              value: t.plannedInvestment,
+              color: 'var(--ui-paint-60a5fa)',
+            },
+            {
+              label: 'Scheduled savings',
+              value: t.plannedSavings,
+              color: 'var(--ui-paint-22d3ee)',
+            },
             { label: 'Unassigned cash', value: t.unassigned, color: 'var(--ui-paint-6ed9b5)' },
           ];
   const positive = items.filter((item) => item.value > 0);
@@ -390,7 +409,11 @@ export function parseGraph(value: unknown): GraphData {
       name: n.name.trim(),
       nodeType: n.nodeType,
       // Allowed a negative balance only on cash accounts.
-      amountOrBalance: number(n.amountOrBalance, 1e12, n.nodeType === "CHECKING" || n.nodeType === "SAVINGS" ? -1e12 : 0),
+      amountOrBalance: number(
+        n.amountOrBalance,
+        1e12,
+        n.nodeType === 'CHECKING' || n.nodeType === 'SAVINGS' ? -1e12 : 0,
+      ),
       interestRateApr: number(n.interestRateApr ?? 0, 100),
       ...(n.archived === true ? { archived: true } : {}),
       ...(n.disabled === true ? { disabled: true } : {}),
@@ -408,9 +431,7 @@ export function parseGraph(value: unknown): GraphData {
       )
         ? { frequency: n.frequency as RecurrenceFrequency }
         : {}),
-      ...(n.intervalCount != null &&
-      Number(n.intervalCount) >= 1 &&
-      Number(n.intervalCount) <= 365
+      ...(n.intervalCount != null && Number(n.intervalCount) >= 1 && Number(n.intervalCount) <= 365
         ? { intervalCount: Math.round(Number(n.intervalCount)) }
         : {}),
     };

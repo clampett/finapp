@@ -66,8 +66,8 @@ export function RecurringSection({
             Recurring Transaction Templates
           </h3>
           <p className="text-(--ui-text-8b9ab1) text-[11px] mt-0.5 mb-0">
-            Automate repeating expenses and income (e.g. rent, payroll, Netflix). Occurrences
-            are generated into Transactions.
+            Automate repeating expenses and income (e.g. rent, payroll, Netflix). Occurrences are
+            generated into Transactions.
           </p>
         </div>
         <div style={{ display: 'flex', gap: '0.5rem' }}>
@@ -144,8 +144,8 @@ export function RecurringSection({
             color: 'var(--ui-paint-8f9db3)',
           }}
         >
-          No recurring transactions set up yet. Click <strong>+ Add Recurring Rule</strong> to template
-          repetitive bills or paychecks.
+          No recurring transactions set up yet. Click <strong>+ Add Recurring Rule</strong> to
+          template repetitive bills or paychecks.
         </div>
       ) : (
         <div
@@ -193,8 +193,10 @@ export function RecurringSection({
                         fontSize: '11px',
                         fontWeight: 600,
                         textTransform: 'uppercase',
-                        background: r.kind === 'income' ? 'var(--ui-paint-064e3b)' : 'var(--ui-paint-7f1d1d)',
-                        color: r.kind === 'income' ? 'var(--ui-paint-86efac)' : 'var(--ui-paint-fca5a5)',
+                        background:
+                          r.kind === 'income' ? 'var(--ui-paint-064e3b)' : 'var(--ui-paint-7f1d1d)',
+                        color:
+                          r.kind === 'income' ? 'var(--ui-paint-86efac)' : 'var(--ui-paint-fca5a5)',
                       }}
                     >
                       {r.kind}
@@ -204,19 +206,19 @@ export function RecurringSection({
                     {dollars(r.amount)}
                   </td>
                   <td style={{ padding: '10px 12px', textTransform: 'capitalize' }}>
-                    {r.intervalCount > 1
-                      ? `Every ${r.intervalCount} ${r.frequency}`
-                      : r.frequency}
+                    {r.intervalCount > 1 ? `Every ${r.intervalCount} ${r.frequency}` : r.frequency}
                   </td>
                   <td style={{ padding: '10px 12px' }}>{r.nextDueDate}</td>
                   <td style={{ padding: '10px 12px' }}>
-                    <span style={{ color: r.isActive ? 'var(--ui-paint-4ade80)' : 'var(--ui-paint-8f9db3)' }}>
+                    <span
+                      style={{
+                        color: r.isActive ? 'var(--ui-paint-4ade80)' : 'var(--ui-paint-8f9db3)',
+                      }}
+                    >
                       {r.isActive ? '● Active' : '○ Inactive'}
                     </span>
                   </td>
-                  <td
-                    style={{ padding: '10px 12px', textAlign: 'center', whiteSpace: 'nowrap' }}
-                  >
+                  <td style={{ padding: '10px 12px', textAlign: 'center', whiteSpace: 'nowrap' }}>
                     <button
                       type="button"
                       className="inline-flex items-center justify-center whitespace-nowrap rounded-[7px] font-medium cursor-pointer bg-transparent border border-transparent hover:bg-(--ui-surface-hover-1a2536) text-(--ui-text-97a7c2) hover:text-text transition-colors"
@@ -228,7 +230,11 @@ export function RecurringSection({
                     <button
                       type="button"
                       className="inline-flex items-center justify-center whitespace-nowrap rounded-[7px] font-medium cursor-pointer bg-transparent border border-transparent hover:bg-(--ui-surface-hover-1a2536) transition-colors"
-                      style={{ color: 'var(--ui-paint-f87171)', padding: '4px 8px', fontSize: '11px' }}
+                      style={{
+                        color: 'var(--ui-paint-f87171)',
+                        padding: '4px 8px',
+                        fontSize: '11px',
+                      }}
                       onClick={() => r.id && onDeleteRecurring(r.id)}
                     >
                       Delete

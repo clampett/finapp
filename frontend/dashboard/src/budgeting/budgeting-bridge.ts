@@ -229,8 +229,7 @@ export function syncScenarioTransactionToGraph(
     cashNode ||
     graph.nodes.find(
       (n) =>
-        !n.archived &&
-        (n.nodeType === 'CHECKING' || n.name.toLowerCase().includes('checking')),
+        !n.archived && (n.nodeType === 'CHECKING' || n.name.toLowerCase().includes('checking')),
     );
 
   // 1. Debt check: Is this a payment to a known debt account, or reversing one?
@@ -261,7 +260,12 @@ export function syncScenarioTransactionToGraph(
       );
 
   // If debt node matched and transaction is income without a reversal or separate description, debt accounts cannot accept income deposits
-  if (matchedDebt && isIncome && !isReversal && (!desc || descLower === matchedDebt.name.toLowerCase())) {
+  if (
+    matchedDebt &&
+    isIncome &&
+    !isReversal &&
+    (!desc || descLower === matchedDebt.name.toLowerCase())
+  ) {
     return null;
   }
 
@@ -467,21 +471,28 @@ export function syncGraphNodesToRecurring(
   }
 
   for (const node of nodes) {
-    if (node.archived || !["INCOME", "EXPENSE", "DEBT"].includes(node.nodeType)) continue;
-    const isIncome = node.nodeType === "INCOME";
-    const isDebt = node.nodeType === "DEBT";
-    const kind = isIncome ? "income" : "expense";
-    const amount = isDebt ? debtPayment(node, graph, true) :
-      node.nodeType === "EXPENSE" ? expenseAmount(node, graph, true) : node.amountOrBalance;
-    const description = isDebt ? node.name + " Payment" : node.name;
-    const matching = existingRecurring.map((rule, index) => ({ rule, index }))
+    if (node.archived || !['INCOME', 'EXPENSE', 'DEBT'].includes(node.nodeType)) continue;
+    const isIncome = node.nodeType === 'INCOME';
+    const isDebt = node.nodeType === 'DEBT';
+    const kind = isIncome ? 'income' : 'expense';
+    const amount = isDebt
+      ? debtPayment(node, graph, true)
+      : node.nodeType === 'EXPENSE'
+        ? expenseAmount(node, graph, true)
+        : node.amountOrBalance;
+    const description = isDebt ? node.name + ' Payment' : node.name;
+    const matching = existingRecurring
+      .map((rule, index) => ({ rule, index }))
       .filter(({ rule }) => linkedNodeId(rule) === node.id);
 
     if (matching.length === 1) {
       const { rule, index } = matching[0];
       // Paused linked rules when their planned amount was zero or their schedule had ended.
       const active = !node.disabled && amount > 0 && (!rule.endDate || today <= rule.endDate);
-      const nextAmount = amount > 0 ? monthlyToRecurringAmount(amount, rule.frequency, rule.intervalCount) : rule.amount;
+      const nextAmount =
+        amount > 0
+          ? monthlyToRecurringAmount(amount, rule.frequency, rule.intervalCount)
+          : rule.amount;
       if (rule.isActive !== active || Number(rule.amount) !== nextAmount || rule.kind !== kind) {
         recordUpdate(index, { ...rule, kind, amount: nextAmount, isActive: active });
       }
@@ -489,24 +500,39 @@ export function syncGraphNodesToRecurring(
     }
 
     // Left ambiguous matches intact rather than guessing which schedule belonged to the node.
-    const possibleExisting = existingRecurring.some((rule) => !linkedNodeId(rule) && rule.kind === kind &&
-      [description, node.name, node.name + " Paycheck"].some((name) => name.toLowerCase() === rule.description.trim().toLowerCase()));
+    const possibleExisting = existingRecurring.some(
+      (rule) =>
+        !linkedNodeId(rule) &&
+        rule.kind === kind &&
+        [description, node.name, node.name + ' Paycheck'].some(
+          (name) => name.toLowerCase() === rule.description.trim().toLowerCase(),
+        ),
+    );
     if (matching.length > 0 || possibleExisting || amount <= 0) continue;
     const rule: RecurringTransactionItem = {
-      id: nextId++, kind, description, amount: Math.round(amount * 100) / 100,
-      accountName: isDebt ? node.name : "Checking",
-      categoryName: isDebt ? "Debt" : isIncome ? "Income" : "Living Expenses",
-      frequency: node.frequency || "monthly",
+      id: nextId++,
+      kind,
+      description,
+      amount: Math.round(amount * 100) / 100,
+      accountName: isDebt ? node.name : 'Checking',
+      categoryName: isDebt ? 'Debt' : isIncome ? 'Income' : 'Living Expenses',
+      frequency: node.frequency || 'monthly',
       intervalCount: node.intervalCount || 1,
-      startDate: today, nextDueDate: today,
+      startDate: today,
+      nextDueDate: today,
       isActive: !node.disabled,
-      notes: "[node-id:" + node.id + "] Scenario " + typeLabel(node.nodeType) + ": " + node.name,
+      notes: '[node-id:' + node.id + '] Scenario ' + typeLabel(node.nodeType) + ': ' + node.name,
     };
     updatedRecurring.push(rule);
     newRules.push(rule);
   }
 
-  return { updatedRecurring, hasChanges: newRules.length + updatedRules.length > 0, newRules, updatedRules };
+  return {
+    updatedRecurring,
+    hasChanges: newRules.length + updatedRules.length > 0,
+    newRules,
+    updatedRules,
+  };
 }
 
 /**
@@ -519,11 +545,7 @@ export function syncRecurringToGraphNode(
 ): { updatedGraph: GraphData; affectedNode: GraphNode; isNew: boolean } {
   const desc = (recur.description || '').trim();
   const rawAmount = Number(recur.amount || 0);
-  const monthlyAmount = recurringToMonthlyAmount(
-    rawAmount,
-    recur.frequency,
-    recur.intervalCount,
-  );
+  const monthlyAmount = recurringToMonthlyAmount(rawAmount, recur.frequency, recur.intervalCount);
   const isActive = isRecurringActive(recur);
   const disabled = !isActive;
   const isIncome = recur.kind === 'income';
@@ -560,7 +582,9 @@ export function syncRecurringToGraphNode(
         name: cleanName,
         amountOrBalance: isExistingDebt ? n.amountOrBalance : monthlyAmount,
         minPayment: isExistingDebt
-          ? (n.minPayment != null || !hasIncomingEdges ? monthlyAmount : n.minPayment)
+          ? n.minPayment != null || !hasIncomingEdges
+            ? monthlyAmount
+            : n.minPayment
           : n.minPayment,
         nodeType: isExistingDebt ? 'DEBT' : expectedType,
       };
@@ -590,7 +614,11 @@ export function syncRecurringToGraphNode(
   // Brand new node
   const newNodeId = `node-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`;
   const cleanName = desc.endsWith(' Payment') && isDebt ? desc.replace(/ Payment$/i, '') : desc;
-  const initialPos = isIncome ? { x: 80, y: 100 } : isDebt ? { x: 500, y: 220 } : { x: 350, y: 220 };
+  const initialPos = isIncome
+    ? { x: 80, y: 100 }
+    : isDebt
+      ? { x: 500, y: 220 }
+      : { x: 350, y: 220 };
   const newNode: GraphNode = {
     id: newNodeId,
     name: cleanName,
@@ -642,7 +670,8 @@ export function syncRecurringDeletionToGraph(
   graph: GraphData,
   deletedRecur: Partial<RecurringTransactionItem>,
 ): { updatedGraph: GraphData; removedNode: GraphNode } | null {
-  const linkedId = deletedRecur.notes?.match(/\[node-id:([^\]]+)\]/)?.[1] ??
+  const linkedId =
+    deletedRecur.notes?.match(/\[node-id:([^\]]+)\]/)?.[1] ??
     deletedRecur.notes?.match(/scenario (?:income|debt) node #([^\s]+)/)?.[1];
   const matchedNode = graph.nodes.find((node) => !node.archived && node.id === linkedId);
 
@@ -651,7 +680,7 @@ export function syncRecurringDeletionToGraph(
   // Preserved outstanding principal when its recurring payment was removed.
   const updatedNodes = graph.nodes.map((node) => {
     if (node.id !== matchedNode.id) return node;
-    return node.nodeType === "DEBT" ? { ...node, minPayment: 0 } : { ...node, archived: true };
+    return node.nodeType === 'DEBT' ? { ...node, minPayment: 0 } : { ...node, archived: true };
   });
 
   return {
@@ -683,19 +712,21 @@ export function getAvailableBudgetAccounts(
   for (const node of activeDebtNodes) {
     const trimmed = (node.name || '').trim();
     const lower = trimmed.toLowerCase();
-    if (
-      trimmed &&
-      lower !== 'checking' &&
-      lower !== 'savings' &&
-      lower !== 'checking account'
-    ) {
+    if (trimmed && lower !== 'checking' && lower !== 'savings' && lower !== 'checking account') {
       if (!activeLoanNames.some((name) => name.toLowerCase() === lower)) {
         activeLoanNames.push(trimmed);
       }
     }
   }
 
-  return Array.from(new Set(['Checking', 'Savings', ...(dbAccounts ?? []).map((account) => account.name.trim()).filter((name) => name && name.toLowerCase() !== 'checking account'), ...activeLoanNames]));
+  return Array.from(
+    new Set([
+      'Checking',
+      'Savings',
+      ...(dbAccounts ?? [])
+        .map((account) => account.name.trim())
+        .filter((name) => name && name.toLowerCase() !== 'checking account'),
+      ...activeLoanNames,
+    ]),
+  );
 }
-
-

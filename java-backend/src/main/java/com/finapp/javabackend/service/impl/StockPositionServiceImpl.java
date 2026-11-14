@@ -23,16 +23,20 @@ public class StockPositionServiceImpl implements StockPositionService {
 
     @Override
     public List<StockPositionDTO> getPositions(Long userId) {
-        return stockPositionRepository.findByUserId(userId).stream()
+        return stockPositionRepository
+            .findByUserId(userId)
+            .stream()
             .map(EntityDtoMapper::toDto)
             .toList();
     }
 
     @Override
     public StockPositionDTO getPositionForStock(Long userId, Long stockId) {
-        StockPosition pos = stockPositionRepository.findByUserIdAndStockId(userId, stockId)
-            .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Stock position not found"));
+        StockPosition pos = stockPositionRepository
+            .findByUserIdAndStockId(userId, stockId)
+            .orElseThrow(() ->
+                new ResponseStatusException(HttpStatus.NOT_FOUND, "Stock position not found")
+            );
         return EntityDtoMapper.toDto(pos);
     }
 }
-

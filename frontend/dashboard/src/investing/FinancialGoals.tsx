@@ -17,11 +17,7 @@ interface FinancialGoalsProps {
 
 type GoalState = Partial<Record<GoalKind, Goal>>;
 
-export function FinancialGoals({
-  netWorth,
-  income,
-  storageKey,
-}: FinancialGoalsProps) {
+export function FinancialGoals({ netWorth, income, storageKey }: FinancialGoalsProps) {
   const [goals, setGoals] = useState<GoalState>({});
 
   useEffect(() => {
@@ -33,12 +29,7 @@ export function FinancialGoals({
     }
   }, [storageKey]);
 
-  const saveGoal = (
-    kind: GoalKind,
-    target: number,
-    deadline: string,
-    currentValue: number,
-  ) => {
+  const saveGoal = (kind: GoalKind, target: number, deadline: string, currentValue: number) => {
     if (!Number.isFinite(target) || target <= currentValue) return;
 
     const next = {
@@ -65,9 +56,7 @@ export function FinancialGoals({
   return (
     <section className="mt-7">
       <div className="mb-4">
-        <h2 className="text-lg font-semibold tracking-[-0.35px] text-text m-0">
-          Financial Goals
-        </h2>
+        <h2 className="text-lg font-semibold tracking-[-0.35px] text-text m-0">Financial Goals</h2>
         <p className="text-xs text-(--ui-text-8998b0) mt-1.5">
           Set targets and track your progress over time.
         </p>
@@ -79,9 +68,7 @@ export function FinancialGoals({
           description="Build toward your target net worth."
           currentValue={netWorth}
           goal={goals.netWorth}
-          onSave={(target, deadline) =>
-            saveGoal('netWorth', target, deadline, netWorth)
-          }
+          onSave={(target, deadline) => saveGoal('netWorth', target, deadline, netWorth)}
           onRemove={() => removeGoal('netWorth')}
         />
 
@@ -90,9 +77,7 @@ export function FinancialGoals({
           description="Grow your monthly take-home income."
           currentValue={income}
           goal={goals.income}
-          onSave={(target, deadline) =>
-            saveGoal('income', target, deadline, income)
-          }
+          onSave={(target, deadline) => saveGoal('income', target, deadline, income)}
           onRemove={() => removeGoal('income')}
         />
       </div>
@@ -123,20 +108,12 @@ function GoalCard({
   const progress = goal
     ? Math.max(
         0,
-        Math.min(
-          100,
-          ((currentValue - goal.startValue) /
-            (goal.target - goal.startValue)) *
-            100,
-        ),
+        Math.min(100, ((currentValue - goal.startValue) / (goal.target - goal.startValue)) * 100),
       )
     : 0;
 
   const daysRemaining = goal?.deadline
-    ? Math.ceil(
-        (new Date(`${goal.deadline}T23:59:59`).getTime() - Date.now()) /
-          86400000,
-      )
+    ? Math.ceil((new Date(`${goal.deadline}T23:59:59`).getTime() - Date.now()) / 86400000)
     : null;
 
   return (
@@ -147,22 +124,14 @@ function GoalCard({
           <p className="text-[11px] text-(--ui-text-8998b0) mt-1">{description}</p>
         </div>
 
-        {reached && (
-          <span className="text-[10px] font-semibold text-mint">
-            GOAL REACHED 🎉
-          </span>
-        )}
+        {reached && <span className="text-[10px] font-semibold text-mint">GOAL REACHED 🎉</span>}
       </div>
 
       {goal ? (
         <>
           <div className="mt-5 flex justify-between text-xs">
-            <span className="text-(--ui-text-8fa0b8)">
-              Current: {money(currentValue)}
-            </span>
-            <span className="text-text font-medium">
-              Target: {money(goal.target)}
-            </span>
+            <span className="text-(--ui-text-8fa0b8)">Current: {money(currentValue)}</span>
+            <span className="text-text font-medium">Target: {money(goal.target)}</span>
           </div>
 
           <div className="h-2 bg-(--ui-surface-1b2535) rounded-full overflow-hidden mt-3">

@@ -1,5 +1,5 @@
 import { money } from '../common/finance';
-import type { CoachComparison, CoachSettings } from './scenarioCoach';
+import type { CoachComparison, CoachSettings } from './coach-engine';
 import { Comparison } from './CoachComparison';
 
 export interface SavedComparison {

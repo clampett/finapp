@@ -10,8 +10,8 @@ import {
   prepareCoachScenario,
   runCoachComparison,
   sampleScenario,
-} from './scenarioCoach';
-import type { CoachComparison, CoachModel, CoachPreset, CoachSettings } from './scenarioCoach';
+} from './coach-engine';
+import type { CoachComparison, CoachModel, CoachPreset, CoachSettings } from './coach-engine';
 import { CoachLab } from './CoachLab';
 import type { MarketAssumption } from './CoachLab';
 import { CoachBriefing } from './CoachBriefing';

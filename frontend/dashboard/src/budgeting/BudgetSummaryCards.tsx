@@ -60,7 +60,13 @@ export function BudgetSummaryCards({
             padding: '1rem',
           }}
         >
-          <span style={{ fontSize: '12px', color: 'var(--ui-paint-8f9db3)', textTransform: 'uppercase' }}>
+          <span
+            style={{
+              fontSize: '12px',
+              color: 'var(--ui-paint-8f9db3)',
+              textTransform: 'uppercase',
+            }}
+          >
             Overall Net Worth
           </span>
           <div
@@ -74,7 +80,9 @@ export function BudgetSummaryCards({
             {dollars(currentNetWorth)}
           </div>
           <div style={{ fontSize: '11px', color: 'var(--color-muted)', marginTop: '4px' }}>
-            Assets: <strong style={{ color: 'var(--color-text)' }}>{dollars(currentTotals.assets)}</strong> • Debt:{' '}
+            Assets:{' '}
+            <strong style={{ color: 'var(--color-text)' }}>{dollars(currentTotals.assets)}</strong>{' '}
+            • Debt:{' '}
             <strong style={{ color: 'var(--color-text)' }}>{dollars(currentTotals.debt)}</strong>
           </div>
         </div>
@@ -87,20 +95,38 @@ export function BudgetSummaryCards({
             padding: '1rem',
           }}
         >
-          <span style={{ fontSize: '12px', color: 'var(--ui-paint-8f9db3)', textTransform: 'uppercase' }}>
+          <span
+            style={{
+              fontSize: '12px',
+              color: 'var(--ui-paint-8f9db3)',
+              textTransform: 'uppercase',
+            }}
+          >
             Total Income
           </span>
-          <div style={{ fontSize: '1.5rem', fontWeight: 600, color: 'var(--ui-paint-4ade80)', marginTop: '4px' }}>
+          <div
+            style={{
+              fontSize: '1.5rem',
+              fontWeight: 600,
+              color: 'var(--ui-paint-4ade80)',
+              marginTop: '4px',
+            }}
+          >
             {dollars(totalIncome)}
           </div>
           <div style={{ fontSize: '11px', color: 'var(--color-muted)', marginTop: '4px' }}>
             Scenario Salary:{' '}
-            <strong style={{ color: 'var(--color-text)' }}>{dollars(scenarioSalary.totalMonthly)}/mo</strong>
+            <strong style={{ color: 'var(--color-text)' }}>
+              {dollars(scenarioSalary.totalMonthly)}/mo
+            </strong>
             {scenarioSalary.totalMonthly > 0 && (
               <span
                 style={{
                   marginLeft: '6px',
-                  color: totalIncome >= scenarioSalary.totalMonthly ? 'var(--color-mint)' : 'var(--ui-paint-fbbf24)',
+                  color:
+                    totalIncome >= scenarioSalary.totalMonthly
+                      ? 'var(--color-mint)'
+                      : 'var(--ui-paint-fbbf24)',
                 }}
               >
                 {totalIncome >= scenarioSalary.totalMonthly
@@ -119,10 +145,23 @@ export function BudgetSummaryCards({
             padding: '1rem',
           }}
         >
-          <span style={{ fontSize: '12px', color: 'var(--ui-paint-8f9db3)', textTransform: 'uppercase' }}>
+          <span
+            style={{
+              fontSize: '12px',
+              color: 'var(--ui-paint-8f9db3)',
+              textTransform: 'uppercase',
+            }}
+          >
             Total Expenses
           </span>
-          <div style={{ fontSize: '1.5rem', fontWeight: 600, color: 'var(--ui-paint-f87171)', marginTop: '4px' }}>
+          <div
+            style={{
+              fontSize: '1.5rem',
+              fontWeight: 600,
+              color: 'var(--ui-paint-f87171)',
+              marginTop: '4px',
+            }}
+          >
             {dollars(totalExpense)}
           </div>
           <div style={{ fontSize: '11px', color: 'var(--color-muted)', marginTop: '4px' }}>
@@ -146,7 +185,13 @@ export function BudgetSummaryCards({
             padding: '1rem',
           }}
         >
-          <span style={{ fontSize: '12px', color: 'var(--ui-paint-8f9db3)', textTransform: 'uppercase' }}>
+          <span
+            style={{
+              fontSize: '12px',
+              color: 'var(--ui-paint-8f9db3)',
+              textTransform: 'uppercase',
+            }}
+          >
             Net Cash Flow
           </span>
           <div
@@ -161,7 +206,9 @@ export function BudgetSummaryCards({
           </div>
           <div style={{ fontSize: '11px', color: 'var(--color-muted)', marginTop: '4px' }}>
             Scenario Surplus Target:{' '}
-            <strong style={{ color: 'var(--color-text)' }}>{dollars(budgetComparison.plannedSurplus)}/mo</strong>
+            <strong style={{ color: 'var(--color-text)' }}>
+              {dollars(budgetComparison.plannedSurplus)}/mo
+            </strong>
           </div>
         </div>
 
@@ -173,10 +220,23 @@ export function BudgetSummaryCards({
             padding: '1rem',
           }}
         >
-          <span style={{ fontSize: '12px', color: 'var(--ui-paint-8f9db3)', textTransform: 'uppercase' }}>
+          <span
+            style={{
+              fontSize: '12px',
+              color: 'var(--ui-paint-8f9db3)',
+              textTransform: 'uppercase',
+            }}
+          >
             Tracked holdings
           </span>
-          <div style={{ fontSize: '1.5rem', fontWeight: 600, color: 'var(--ui-paint-38bdf8)', marginTop: '4px' }}>
+          <div
+            style={{
+              fontSize: '1.5rem',
+              fontWeight: 600,
+              color: 'var(--ui-paint-38bdf8)',
+              marginTop: '4px',
+            }}
+          >
             {dollars(totalPortfolioValue)}
           </div>
           {totalPurchasedValue > 0 && (
@@ -184,7 +244,10 @@ export function BudgetSummaryCards({
               style={{
                 fontSize: '12px',
                 marginTop: '4px',
-                color: totalPortfolioValue >= totalPurchasedValue ? 'var(--ui-paint-4ade80)' : 'var(--ui-paint-f87171)',
+                color:
+                  totalPortfolioValue >= totalPurchasedValue
+                    ? 'var(--ui-paint-4ade80)'
+                    : 'var(--ui-paint-f87171)',
               }}
             >
               {totalPortfolioValue >= totalPurchasedValue ? '+' : ''}
@@ -231,7 +294,14 @@ export function BudgetSummaryCards({
               {scenarioSalary.nodes.length} Income • {scenarioDebts.nodes.length} Debt Accounts
             </span>
           </div>
-          <div style={{ fontSize: '12px', color: 'var(--color-muted)', marginTop: '6px', lineHeight: 1.5 }}>
+          <div
+            style={{
+              fontSize: '12px',
+              color: 'var(--color-muted)',
+              marginTop: '6px',
+              lineHeight: 1.5,
+            }}
+          >
             Scenario Monthly Salary:{' '}
             <strong style={{ color: 'var(--color-mint)' }}>
               {dollars(scenarioSalary.totalMonthly)}/mo
@@ -240,10 +310,15 @@ export function BudgetSummaryCards({
             <strong style={{ color: 'var(--color-coral)' }}>
               {dollars(scenarioDebts.totalMonthlyPayment)}/mo
             </strong>{' '}
-            across {scenarioDebts.nodes.length} loans ({dollars(scenarioDebts.totalBalance)} total balance)
+            across {scenarioDebts.nodes.length} loans ({dollars(scenarioDebts.totalBalance)} total
+            balance)
             {scenarioDebts.nodes.length > 0 && (
               <span style={{ color: 'var(--color-muted)', marginLeft: '6px' }}>
-                ({scenarioDebts.nodes.map((n) => `${n.name}: ${dollars(n.monthlyPayment)}/mo`).join(', ')})
+                (
+                {scenarioDebts.nodes
+                  .map((n) => `${n.name}: ${dollars(n.monthlyPayment)}/mo`)
+                  .join(', ')}
+                )
               </span>
             )}
           </div>
@@ -251,7 +326,14 @@ export function BudgetSummaryCards({
           {/* Active Nodes Display Chips */}
           {activeNodes.length > 0 && (
             <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px', marginTop: '10px' }}>
-              <span style={{ fontSize: '11px', color: 'var(--color-subtle)', alignSelf: 'center', marginRight: '4px' }}>
+              <span
+                style={{
+                  fontSize: '11px',
+                  color: 'var(--color-subtle)',
+                  alignSelf: 'center',
+                  marginRight: '4px',
+                }}
+              >
                 Linked plan:
               </span>
               {activeNodes.map((n) => {

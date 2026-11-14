@@ -4,12 +4,7 @@ import type { GraphData } from '../common/finance';
 export type TransactionKind = 'income' | 'expense';
 export type StockTxnType = 'buy' | 'sell' | 'dividend' | 'split';
 export type RecurrenceFrequency =
-  | 'daily'
-  | 'weekly'
-  | 'biweekly'
-  | 'monthly'
-  | 'quarterly'
-  | 'yearly';
+  'daily' | 'weekly' | 'biweekly' | 'monthly' | 'quarterly' | 'yearly';
 
 export interface Transaction {
   id?: number;

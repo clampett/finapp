@@ -1,5 +1,5 @@
 import { money } from '../common/finance';
-import type { CoachComparison } from './scenarioCoach';
+import type { CoachComparison } from './coach-engine';
 import { memo, useState } from 'react';
 import {
   CartesianGrid,

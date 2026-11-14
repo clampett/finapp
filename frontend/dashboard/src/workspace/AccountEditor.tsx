@@ -1,7 +1,13 @@
 import { NumberField } from '../common/NumberField';
 import { useState } from 'react';
 import type { FormEvent } from 'react';
-import { debtPayment, expenseAmount, money, recurringToMonthlyAmount, types } from '../common/finance';
+import {
+  debtPayment,
+  expenseAmount,
+  money,
+  recurringToMonthlyAmount,
+  types,
+} from '../common/finance';
 import type { GraphData, GraphNode, RecurrenceFrequency } from '../common/finance';
 
 export function AccountEditor({
@@ -41,10 +47,18 @@ export function AccountEditor({
     <aside className="w-71.25 border border-(--ui-border-334055) rounded-[11px] p-4.75 bg-(--ui-surface-151d2b) shrink-0 max-md:w-full">
       <div className="flex items-center justify-between gap-4">
         <div>
-          <div className="text-[9px] text-(--ui-text-a9b7ce) tracking-[1.7px] font-semibold mb-2.5 max-md:mb-1.25">NODE DETAILS</div>
-          <h3 className="text-[15px] font-semibold text-text m-0">{graph.nodes.some((n) => n.id === node.id) ? 'Edit node' : 'New node'}</h3>
+          <div className="text-[9px] text-(--ui-text-a9b7ce) tracking-[1.7px] font-semibold mb-2.5 max-md:mb-1.25">
+            NODE DETAILS
+          </div>
+          <h3 className="text-[15px] font-semibold text-text m-0">
+            {graph.nodes.some((n) => n.id === node.id) ? 'Edit node' : 'New node'}
+          </h3>
         </div>
-        <button className="p-0 leading-none bg-(--ui-surface-1d2737) hover:bg-(--ui-surface-hover-263346) border border-(--ui-border-334057) rounded-[7px] grid place-items-center w-7.5 h-7.5 text-[20px] text-(--ui-text-a5b5cd) hover:text-white shrink-0 cursor-pointer" aria-label="Close node editor" onClick={onClose}>
+        <button
+          className="p-0 leading-none bg-(--ui-surface-1d2737) hover:bg-(--ui-surface-hover-263346) border border-(--ui-border-334057) rounded-[7px] grid place-items-center w-7.5 h-7.5 text-[20px] text-(--ui-text-a5b5cd) hover:text-white shrink-0 cursor-pointer"
+          aria-label="Close node editor"
+          onClick={onClose}
+        >
           <svg
             className="block"
             width="16"
@@ -61,7 +75,10 @@ export function AccountEditor({
           </svg>
         </button>
       </div>
-      <form onSubmit={submit} className="flex flex-col gap-3.75 mt-5.5 max-md:grid max-md:grid-cols-2">
+      <form
+        onSubmit={submit}
+        className="flex flex-col gap-3.75 mt-5.5 max-md:grid max-md:grid-cols-2"
+      >
         <label className="flex items-center gap-2.5 text-xs text-[#cad6e8] cursor-pointer p-2.5 rounded-lg bg-[#101722] border border-[#283548]">
           <input
             type="checkbox"
@@ -130,7 +147,7 @@ export function AccountEditor({
             : 'Current balance ($)'}
           <NumberField
             type="number"
-            min={draft.nodeType === "CHECKING" || draft.nodeType === "SAVINGS" ? -1e12 : 0}
+            min={draft.nodeType === 'CHECKING' || draft.nodeType === 'SAVINGS' ? -1e12 : 0}
             max={1e12}
             step="0.01"
             required
@@ -142,7 +159,15 @@ export function AccountEditor({
             draft.frequency &&
             draft.frequency !== 'monthly' && (
               <small className="text-[10px] text-[#7d91ac] leading-normal block">
-                Monthly equivalent: {money(recurringToMonthlyAmount(draft.amountOrBalance, draft.frequency, draft.intervalCount))}/month
+                Monthly equivalent:{' '}
+                {money(
+                  recurringToMonthlyAmount(
+                    draft.amountOrBalance,
+                    draft.frequency,
+                    draft.intervalCount,
+                  ),
+                )}
+                /month
               </small>
             )}
         </label>
@@ -207,11 +232,18 @@ export function AccountEditor({
           Income follows the scenario’s gross/net setting. Expenses are monthly flows; other nodes
           hold balances.
         </p>
-        <button className="inline-flex items-center justify-center gap-1.75 whitespace-nowrap rounded-[7px] px-3.25 py-2.25 text-[11px] font-medium min-h-8.5 cursor-pointer bg-primary text-primary-fg border border-primary hover:bg-(--ui-surface-hover-cbbafa) disabled:opacity-40 disabled:cursor-not-allowed" disabled={!draft.name.trim()}>
+        <button
+          className="inline-flex items-center justify-center gap-1.75 whitespace-nowrap rounded-[7px] px-3.25 py-2.25 text-[11px] font-medium min-h-8.5 cursor-pointer bg-primary text-primary-fg border border-primary hover:bg-(--ui-surface-hover-cbbafa) disabled:opacity-40 disabled:cursor-not-allowed"
+          disabled={!draft.name.trim()}
+        >
           Apply to scenario
         </button>
         {graph.nodes.some((n) => n.id === node.id) && (
-          <button type="button" className="inline-flex items-center justify-center gap-1.75 whitespace-nowrap rounded-[7px] px-3.25 py-2.25 text-[11px] font-medium min-h-8.5 cursor-pointer text-coral border border-(--ui-border-633246) bg-(--ui-surface-2b1b28) hover:bg-(--ui-surface-hover-3d2034)" onClick={onDelete}>
+          <button
+            type="button"
+            className="inline-flex items-center justify-center gap-1.75 whitespace-nowrap rounded-[7px] px-3.25 py-2.25 text-[11px] font-medium min-h-8.5 cursor-pointer text-coral border border-(--ui-border-633246) bg-(--ui-surface-2b1b28) hover:bg-(--ui-surface-hover-3d2034)"
+            onClick={onDelete}
+          >
             Remove node
           </button>
         )}

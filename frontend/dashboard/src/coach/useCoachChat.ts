@@ -4,14 +4,14 @@ import {
   coachReply,
   coachRequestForQuestion,
   liveCoachReply,
-} from './scenarioCoach';
+} from './coach-engine';
 import type {
   CoachAnswer,
   CoachComparison,
   CoachPreset,
   CoachTopic,
   CoachTurn,
-} from './scenarioCoach';
+} from './coach-engine';
 
 export interface CoachChatEntry {
   id: number;

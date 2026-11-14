@@ -101,7 +101,9 @@ export function TransactionSection({
             No single transactions recorded yet.
           </p>
           <p style={{ margin: 0, fontSize: '13px', color: 'var(--color-muted)' }}>
-            Click <strong>+ Add Transaction</strong> above to log single, non-recurring expenses (such as grocery trips, dining, and retail). Recurring salary and bills are managed in the <strong>Recurring Transactions</strong> tab.
+            Click <strong>+ Add Transaction</strong> above to log single, non-recurring expenses
+            (such as grocery trips, dining, and retail). Recurring salary and bills are managed in
+            the <strong>Recurring Transactions</strong> tab.
           </p>
         </div>
       ) : (
@@ -153,8 +155,10 @@ export function TransactionSection({
                         fontSize: '11px',
                         fontWeight: 600,
                         textTransform: 'uppercase',
-                        background: t.kind === 'income' ? 'var(--ui-paint-064e3b)' : 'var(--ui-paint-7f1d1d)',
-                        color: t.kind === 'income' ? 'var(--ui-paint-86efac)' : 'var(--ui-paint-fca5a5)',
+                        background:
+                          t.kind === 'income' ? 'var(--ui-paint-064e3b)' : 'var(--ui-paint-7f1d1d)',
+                        color:
+                          t.kind === 'income' ? 'var(--ui-paint-86efac)' : 'var(--ui-paint-fca5a5)',
                       }}
                     >
                       {t.kind}
@@ -174,7 +178,8 @@ export function TransactionSection({
                       padding: '10px 12px',
                       textAlign: 'right',
                       fontWeight: 600,
-                      color: t.kind === 'income' ? 'var(--ui-paint-4ade80)' : 'var(--ui-paint-f87171)',
+                      color:
+                        t.kind === 'income' ? 'var(--ui-paint-4ade80)' : 'var(--ui-paint-f87171)',
                     }}
                   >
                     {t.kind === 'income' ? `+${dollars(t.amount)}` : `-${dollars(t.amount)}`}
@@ -191,9 +196,7 @@ export function TransactionSection({
                   >
                     {t.notes || '—'}
                   </td>
-                  <td
-                    style={{ padding: '10px 12px', textAlign: 'center', whiteSpace: 'nowrap' }}
-                  >
+                  <td style={{ padding: '10px 12px', textAlign: 'center', whiteSpace: 'nowrap' }}>
                     <button
                       type="button"
                       className="inline-flex items-center justify-center whitespace-nowrap rounded-[7px] font-medium cursor-pointer bg-transparent border border-transparent hover:bg-(--ui-surface-hover-1a2536) text-(--ui-text-97a7c2) hover:text-text transition-colors"
@@ -205,7 +208,11 @@ export function TransactionSection({
                     <button
                       type="button"
                       className="inline-flex items-center justify-center whitespace-nowrap rounded-[7px] font-medium cursor-pointer bg-transparent border border-transparent hover:bg-(--ui-surface-hover-1a2536) transition-colors"
-                      style={{ color: 'var(--ui-paint-f87171)', padding: '4px 8px', fontSize: '11px' }}
+                      style={{
+                        color: 'var(--ui-paint-f87171)',
+                        padding: '4px 8px',
+                        fontSize: '11px',
+                      }}
                       onClick={() => t.id && onDelete(t.id)}
                     >
                       Delete

@@ -5,5 +5,5 @@ public enum DividendFrequency {
     quarterly,
     semiannual,
     annual,
-    irregular
+    irregular,
 }

@@ -52,9 +52,7 @@ export function RecurringModal({
           gap: '1rem',
         }}
       >
-        <label
-          style={{ display: 'flex', flexDirection: 'column', gap: '4px', fontSize: '13px' }}
-        >
+        <label style={{ display: 'flex', flexDirection: 'column', gap: '4px', fontSize: '13px' }}>
           Kind
           <select
             value={recurDraft.kind}
@@ -68,41 +66,31 @@ export function RecurringModal({
           </select>
         </label>
 
-        <label
-          style={{ display: 'flex', flexDirection: 'column', gap: '4px', fontSize: '13px' }}
-        >
+        <label style={{ display: 'flex', flexDirection: 'column', gap: '4px', fontSize: '13px' }}>
           Description
           <input
             type="text"
             required
             placeholder="e.g. Monthly Rent, Bi-weekly Salary"
             value={recurDraft.description}
-            onChange={(e) =>
-              setRecurDraft((prev) => ({ ...prev, description: e.target.value }))
-            }
+            onChange={(e) => setRecurDraft((prev) => ({ ...prev, description: e.target.value }))}
             style={formFieldStyle}
           />
         </label>
 
-        <label
-          style={{ display: 'flex', flexDirection: 'column', gap: '4px', fontSize: '13px' }}
-        >
+        <label style={{ display: 'flex', flexDirection: 'column', gap: '4px', fontSize: '13px' }}>
           Amount ($)
           <NumberField
             min="0.01"
             step="0.01"
             required
             value={String(recurDraft.amount)}
-            onChange={(e) =>
-              setRecurDraft((prev) => ({ ...prev, amount: Number(e.target.value) }))
-            }
+            onChange={(e) => setRecurDraft((prev) => ({ ...prev, amount: Number(e.target.value) }))}
             style={formFieldStyle}
           />
         </label>
 
-        <label
-          style={{ display: 'flex', flexDirection: 'column', gap: '4px', fontSize: '13px' }}
-        >
+        <label style={{ display: 'flex', flexDirection: 'column', gap: '4px', fontSize: '13px' }}>
           Frequency
           <select
             value={recurDraft.frequency}
@@ -123,9 +111,7 @@ export function RecurringModal({
           </select>
         </label>
 
-        <label
-          style={{ display: 'flex', flexDirection: 'column', gap: '4px', fontSize: '13px' }}
-        >
+        <label style={{ display: 'flex', flexDirection: 'column', gap: '4px', fontSize: '13px' }}>
           Interval Count
           <NumberField
             min="1"
@@ -142,39 +128,29 @@ export function RecurringModal({
           />
         </label>
 
-        <label
-          style={{ display: 'flex', flexDirection: 'column', gap: '4px', fontSize: '13px' }}
-        >
+        <label style={{ display: 'flex', flexDirection: 'column', gap: '4px', fontSize: '13px' }}>
           Next Due Date
           <input
             type="date"
             required
             value={recurDraft.nextDueDate}
-            onChange={(e) =>
-              setRecurDraft((prev) => ({ ...prev, nextDueDate: e.target.value }))
-            }
+            onChange={(e) => setRecurDraft((prev) => ({ ...prev, nextDueDate: e.target.value }))}
             style={formFieldStyle}
           />
         </label>
 
-        <label
-          style={{ display: 'flex', flexDirection: 'column', gap: '4px', fontSize: '13px' }}
-        >
+        <label style={{ display: 'flex', flexDirection: 'column', gap: '4px', fontSize: '13px' }}>
           Start Date
           <input
             type="date"
             required
             value={recurDraft.startDate}
-            onChange={(e) =>
-              setRecurDraft((prev) => ({ ...prev, startDate: e.target.value }))
-            }
+            onChange={(e) => setRecurDraft((prev) => ({ ...prev, startDate: e.target.value }))}
             style={formFieldStyle}
           />
         </label>
 
-        <label
-          style={{ display: 'flex', flexDirection: 'column', gap: '4px', fontSize: '13px' }}
-        >
+        <label style={{ display: 'flex', flexDirection: 'column', gap: '4px', fontSize: '13px' }}>
           End Date (Optional)
           <input
             type="date"
@@ -200,9 +176,9 @@ export function RecurringModal({
           >
             💳 <strong>Linked Scenario Debt Account:</strong> {matchedRecurDebtNode.name}
             <div style={{ marginTop: '2px', color: 'var(--color-coral)' }}>
-              Current Balance: <strong>{dollars(matchedRecurDebtNode.amountOrBalance)}</strong> • Interest:{' '}
-              <strong>{matchedRecurDebtNode.interestRateApr}% APR</strong> • Minimum Monthly Payment:{' '}
-              <strong>{dollars(debtPayment(matchedRecurDebtNode, graph))}</strong>.
+              Current Balance: <strong>{dollars(matchedRecurDebtNode.amountOrBalance)}</strong> •
+              Interest: <strong>{matchedRecurDebtNode.interestRateApr}% APR</strong> • Minimum
+              Monthly Payment: <strong>{dollars(debtPayment(matchedRecurDebtNode, graph))}</strong>.
             </div>
           </div>
         )}

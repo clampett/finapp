@@ -8,6 +8,9 @@ import org.springframework.data.jpa.repository.JpaRepository;
 
 public interface RecurringTransactionRepository extends JpaRepository<RecurringTransaction, Long> {
     List<RecurringTransaction> findByUserId(Long userId);
-    List<RecurringTransaction> findByUserIdAndIsActiveTrueAndNextDueDateLessThanEqual(Long userId, LocalDate date);
+    List<RecurringTransaction> findByUserIdAndIsActiveTrueAndNextDueDateLessThanEqual(
+        Long userId,
+        LocalDate date
+    );
     Optional<RecurringTransaction> findByIdAndUserId(Long id, Long userId);
 }

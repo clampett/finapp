@@ -7,4 +7,3 @@ public record UserProfileDTO(
     String displayName,
     String profilePicture
 ) {}
-

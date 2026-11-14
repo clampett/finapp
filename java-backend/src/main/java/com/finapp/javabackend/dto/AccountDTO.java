@@ -14,4 +14,3 @@ public record AccountDTO(
     OffsetDateTime createdAt,
     OffsetDateTime updatedAt
 ) {}
-

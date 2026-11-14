@@ -27,12 +27,7 @@ import type { projectedDividendFlows } from '../investing/portfolio';
 import { decryptFromDemoStorage } from '../budgeting/budget-crypto';
 import type { RecurringTransactionItem } from '../budgeting/budgeting-bridge';
 import type { SimulationResult } from './simulation-types';
-import {
-  titles,
-  palette,
-  quantiles,
-  duration,
-} from './simulation-types';
+import { titles, palette, quantiles, duration } from './simulation-types';
 import { SimulationParameters } from './SimulationParameters';
 import { SimulationMarketData } from './SimulationMarketData';
 import { SimulationOutcomeTable } from './SimulationOutcomeTable';
@@ -69,7 +64,9 @@ export function SimulationModal({
   defaults?: SimulationDefaults;
 }) {
   const [forecast, setForecast] = useState<SimulationResult | null>(null);
-  const [strategy, setStrategy] = useState<'avalanche' | 'snowball'>(defaults?.strategy ?? 'avalanche');
+  const [strategy, setStrategy] = useState<'avalanche' | 'snowball'>(
+    defaults?.strategy ?? 'avalanche',
+  );
   const [rate, setRate] = useState(defaults?.contribution ?? 100);
   const [scheduledInvesting, setScheduledInvesting] = useState(true);
   const inflationRate = defaults?.inflation ?? 2.5;
@@ -81,8 +78,12 @@ export function SimulationModal({
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [retry, setRetry] = useState(0);
-  const [marketSource, setMarketSource] = useState<'historical' | 'manual'>(defaults?.marketSource ?? 'historical');
-  const [returnMode, setReturnMode] = useState<'forward' | 'observed'>(defaults?.returnMode ?? 'forward');
+  const [marketSource, setMarketSource] = useState<'historical' | 'manual'>(
+    defaults?.marketSource ?? 'historical',
+  );
+  const [returnMode, setReturnMode] = useState<'forward' | 'observed'>(
+    defaults?.returnMode ?? 'forward',
+  );
   const [assetClass, setAssetClass] = useState('US_STOCKS');
   const [annualReturn, setAnnualReturn] = useState(defaults?.annualReturn ?? 7);
   const [annualVolatility, setAnnualVolatility] = useState(defaults?.volatility ?? 15);
@@ -103,7 +104,7 @@ export function SimulationModal({
       try {
         if (typeof window === 'undefined') return;
         const params = new URLSearchParams(window.location?.search || '');
-        const isDemo = demo ?? (params.get('demo') === 'true');
+        const isDemo = demo ?? params.get('demo') === 'true';
         const profile = userId || Number(params.get('profile')) || 1;
         const uid = userId || Number(sessionStorage.getItem('finapp_user_id')) || 0;
         if (isDemo) {
@@ -140,7 +141,7 @@ export function SimulationModal({
       ? scope !== 'all'
       : Boolean(
           scopeLabel?.toLowerCase().includes('selected') ||
-            scopeLabel?.toLowerCase().includes('selection'),
+          scopeLabel?.toLowerCase().includes('selection'),
         );
   const effectivePortfolioValue = isSelectedScope ? 0 : Math.max(0, portfolioValue);
   const currentBudget = totals(graphData, effectivePortfolioValue);
@@ -252,25 +253,27 @@ export function SimulationModal({
                 ]
               : []),
           ],
-          recurring_transactions: isSelectedScope ? [] : [
-            ...recurringList
-              .filter((rule) => !rule.notes?.startsWith("Auto-generated dividend for "))
-              .map((rule) => ({
-                id: rule.id,
-                kind: rule.kind,
-                amount: rule.amount,
-                frequency: rule.frequency,
-                interval_count: rule.intervalCount || 1,
-                is_active: rule.isActive !== false,
-                start_date: rule.startDate,
-                end_date: rule.endDate,
-                description: rule.description,
-                category_name: rule.categoryName,
-                account_name: rule.accountName,
-                notes: rule.notes,
-              })),
-            ...(marketSource === "manual" ? dividendFlows ?? [] : []),
-          ],
+          recurring_transactions: isSelectedScope
+            ? []
+            : [
+                ...recurringList
+                  .filter((rule) => !rule.notes?.startsWith('Auto-generated dividend for '))
+                  .map((rule) => ({
+                    id: rule.id,
+                    kind: rule.kind,
+                    amount: rule.amount,
+                    frequency: rule.frequency,
+                    interval_count: rule.intervalCount || 1,
+                    is_active: rule.isActive !== false,
+                    start_date: rule.startDate,
+                    end_date: rule.endDate,
+                    description: rule.description,
+                    category_name: rule.categoryName,
+                    account_name: rule.accountName,
+                    notes: rule.notes,
+                  })),
+                ...(marketSource === 'manual' ? (dividendFlows ?? []) : []),
+              ],
           edges: scenarioEdges.map((e) => ({
             source: e.sourceNodeId,
             target: e.targetNodeId,
@@ -378,10 +381,20 @@ export function SimulationModal({
           <div>
             <div className="text-[8px] mb-2.25 text-(--ui-text-b7a4e9)">
               SCENARIO LAB{' '}
-              <span className="text-(--ui-text-6e7f99)"> / {simulationType === 'debt' ? 'REPAYMENT' : '1,000 SIMULATED PATHS'}</span>
+              <span className="text-(--ui-text-6e7f99)">
+                {' '}
+                / {simulationType === 'debt' ? 'REPAYMENT' : '1,000 SIMULATED PATHS'}
+              </span>
             </div>
-            <h2 id="simulation-title" className="text-[clamp(24px,2.5vw,34px)] font-semibold tracking-[-1px] max-[760px]:text-[22px] m-0">{titles[simulationType]}</h2>
-            {scopeLabel && <div className="text-(--ui-text-7de0bc) text-[11px] mt-2">{scopeLabel}</div>}
+            <h2
+              id="simulation-title"
+              className="text-[clamp(24px,2.5vw,34px)] font-semibold tracking-[-1px] max-[760px]:text-[22px] m-0"
+            >
+              {titles[simulationType]}
+            </h2>
+            {scopeLabel && (
+              <div className="text-(--ui-text-7de0bc) text-[11px] mt-2">{scopeLabel}</div>
+            )}
             <p className="text-xs max-w-180 leading-[1.6] text-(--ui-text-8798b3) mt-1.75 max-[760px]:text-[10px] max-[760px]:max-w-[90%] mb-0">
               {simulationType === 'monte_carlo'
                 ? 'A Monte Carlo simulation runs many possible market paths to show a range of financial outcomes. These 1,000 paths include your cash, investments, and debt; they are scenarios, not guarantees.'
@@ -428,18 +441,27 @@ export function SimulationModal({
                 <b>{dollars(currentBudget.payments)}</b>
               </span>
               <i>=</i>
-              <span className={currentBudget.surplus < 0 ? 'negative text-coral' : 'positive text-mint'}>
+              <span
+                className={currentBudget.surplus < 0 ? 'negative text-coral' : 'positive text-mint'}
+              >
                 <small>Available after bills</small>
                 <b>{dollars(currentBudget.surplus)}</b>
               </span>
             </div>
             {onOpenCoach && simulationType !== 'debt' && (
-              <button type="button" onClick={onOpenCoach} className="mb-4 cursor-pointer rounded-lg border border-border bg-surface px-3 py-2 text-xs font-medium text-active-text hover:bg-hover-bg">
+              <button
+                type="button"
+                onClick={onOpenCoach}
+                className="mb-4 cursor-pointer rounded-lg border border-border bg-surface px-3 py-2 text-xs font-medium text-active-text hover:bg-hover-bg"
+              >
                 Compare assumptions in AI Coach
               </button>
             )}
             {!!forecast?.warnings?.length && (
-              <div className="border-l-2 border-(--ui-border-bea16f) rounded-sm bg-(--ui-surface-30291c55) p-[10px_15px] mb-4.5 text-(--ui-text-d9bd90) text-[11px] leading-[1.7] [&>p]:m-0 [&>p]:leading-[1.7]" role="status">
+              <div
+                className="border-l-2 border-(--ui-border-bea16f) rounded-sm bg-(--ui-surface-30291c55) p-[10px_15px] mb-4.5 text-(--ui-text-d9bd90) text-[11px] leading-[1.7] [&>p]:m-0 [&>p]:leading-[1.7]"
+                role="status"
+              >
                 {forecast.warnings.map((warning) => (
                   <p key={warning}>{warning}</p>
                 ))}
@@ -449,14 +471,26 @@ export function SimulationModal({
               <div className="flex gap-3.75 flex-wrap max-[760px]:gap-2.5">
                 {simulationType !== 'debt'
                   ? [...quantiles].reverse().map((q) => (
-                      <span key={q.key} className="text-[10px] text-(--ui-text-afbdd3) max-[760px]:text-[9px] inline-flex items-center gap-1.5">
-                        <i className="w-1.75 h-1.75 rounded-full inline-block" style={{ background: q.color }} />
+                      <span
+                        key={q.key}
+                        className="text-[10px] text-(--ui-text-afbdd3) max-[760px]:text-[9px] inline-flex items-center gap-1.5"
+                      >
+                        <i
+                          className="w-1.75 h-1.75 rounded-full inline-block"
+                          style={{ background: q.color }}
+                        />
                         {q.label}
                       </span>
                     ))
                   : debtKeys.map((key, i) => (
-                      <span key={key} className="text-[10px] text-(--ui-text-afbdd3) max-[760px]:text-[9px] inline-flex items-center gap-1.5">
-                        <i className="w-1.75 h-1.75 rounded-full inline-block" style={{ background: palette[i % palette.length] }} />
+                      <span
+                        key={key}
+                        className="text-[10px] text-(--ui-text-afbdd3) max-[760px]:text-[9px] inline-flex items-center gap-1.5"
+                      >
+                        <i
+                          className="w-1.75 h-1.75 rounded-full inline-block"
+                          style={{ background: palette[i % palette.length] }}
+                        />
                         {labels[key]}
                       </span>
                     ))}
@@ -465,9 +499,15 @@ export function SimulationModal({
                 {inflation && simulationType !== 'debt' ? 'TODAY’S USD' : 'USD'}
               </span>
             </div>
-            <div className="h-[clamp(400px,49vh,590px)] min-h-100 relative flex-none max-[800px]:min-h-107.5" aria-busy={loading}>
+            <div
+              className="h-[clamp(400px,49vh,590px)] min-h-100 relative flex-none max-[800px]:min-h-107.5"
+              aria-busy={loading}
+            >
               {error ? (
-                <div className="absolute inset-0 flex items-center justify-center flex-col text-center p-8 gap-3.25 text-(--ui-text-a9b9d0) text-xs" role="alert">
+                <div
+                  className="absolute inset-0 flex items-center justify-center flex-col text-center p-8 gap-3.25 text-(--ui-text-a9b9d0) text-xs"
+                  role="alert"
+                >
                   <h3 className="text-base m-0">Let’s get this running</h3>
                   <p className="max-w-95 m-0">{error}</p>
                   <button
@@ -482,13 +522,19 @@ export function SimulationModal({
                   </button>
                 </div>
               ) : !forecast ? (
-                <div className="absolute inset-0 flex items-center justify-center flex-col text-center p-8 gap-3.25 text-(--ui-text-a9b9d0) text-xs" role="status">
+                <div
+                  className="absolute inset-0 flex items-center justify-center flex-col text-center p-8 gap-3.25 text-(--ui-text-a9b9d0) text-xs"
+                  role="status"
+                >
                   Calculating your scenario…
                 </div>
               ) : (
                 <>
                   {loading && (
-                    <span className="absolute right-2.5 top-0 text-[10px] bg-(--ui-surface-26314c) text-(--ui-text-d8d0f5) rounded-[5px] px-2 py-1.25 z-1" role="status">
+                    <span
+                      className="absolute right-2.5 top-0 text-[10px] bg-(--ui-surface-26314c) text-(--ui-text-d8d0f5) rounded-[5px] px-2 py-1.25 z-1"
+                      role="status"
+                    >
                       Updating scenario…
                     </span>
                   )}
@@ -505,7 +551,11 @@ export function SimulationModal({
                         data={debtRows}
                         margin={{ top: 20, right: 16, bottom: 8, left: 4 }}
                       >
-                        <CartesianGrid strokeDasharray="3 5" stroke="var(--ui-paint-263044)" vertical={false} />
+                        <CartesianGrid
+                          strokeDasharray="3 5"
+                          stroke="var(--ui-paint-263044)"
+                          vertical={false}
+                        />
                         <XAxis
                           dataKey="month"
                           minTickGap={30}
@@ -577,7 +627,11 @@ export function SimulationModal({
                     </div>
                     <div>
                       <span>Year {years} median</span>
-                      <strong className={final && final.p50 < 0 ? 'negative text-coral' : 'positive text-mint'}>
+                      <strong
+                        className={
+                          final && final.p50 < 0 ? 'negative text-coral' : 'positive text-mint'
+                        }
+                      >
                         {money(final?.p50 ?? 0)}
                       </strong>
                     </div>
@@ -594,7 +648,9 @@ export function SimulationModal({
                       <span>
                         {summary?.paid_off ? 'Debt-free in' : `Debt remaining after ${years} years`}
                       </span>
-                      <strong className={summary?.paid_off ? 'positive text-mint' : 'negative text-coral'}>
+                      <strong
+                        className={summary?.paid_off ? 'positive text-mint' : 'negative text-coral'}
+                      >
                         {summary?.paid_off
                           ? duration(summary.months!)
                           : money(summary?.remaining_balance ?? 0)}
@@ -613,7 +669,10 @@ export function SimulationModal({
               </div>
             )}
             {simulationType === 'debt' && summary && !summary.paid_off && (
-              <div className="border-l-2 border-(--ui-border-bea16f) rounded-sm bg-(--ui-surface-30291c55) p-[10px_15px] mt-3.5 mb-0 text-(--ui-text-d9bd90) text-[11px] leading-[1.7]" role="alert">
+              <div
+                className="border-l-2 border-(--ui-border-bea16f) rounded-sm bg-(--ui-surface-30291c55) p-[10px_15px] mt-3.5 mb-0 text-(--ui-text-d9bd90) text-[11px] leading-[1.7]"
+                role="alert"
+              >
                 This budget does not clear your debt within {years} years. The last chart point is
                 not a payoff date.
               </div>
@@ -671,8 +730,8 @@ export function SimulationModal({
             <SimulationMarketData
               simulationType={simulationType}
               forecast={forecast}
-              onOpenCoach={onOpenCoach}
-              exportForecastJson={() => downloadJson(forecast, `finapp-${simulationType}-${years}y.json`)}
+              loading={loading}
+              onRefresh={() => setRetry((attempt) => attempt + 1)}
             />
             <SimulationOutcomeTable
               simulationType={simulationType}

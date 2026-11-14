@@ -9,4 +9,3 @@ public record CreateAccountRequest(
     BigDecimal openingBalance,
     Boolean isActive
 ) {}
-

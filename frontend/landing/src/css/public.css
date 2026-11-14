@@ -722,7 +722,9 @@ body {
   margin-top: 28px;
 }
 @media (max-width: 1050px) {
-  .footer-bottom { grid-template-columns: 1fr auto; }
+  .footer-bottom {
+    grid-template-columns: 1fr auto;
+  }
   .footer-top {
     grid-template-columns: 1fr 1fr;
   }

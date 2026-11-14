@@ -14,10 +14,7 @@ import {
   syncRecurringToGraphNode,
   syncRecurringDeletionToGraph,
 } from './budgeting-bridge';
-import {
-  decryptFromDemoStorage,
-  encryptForDemoStorage,
-} from './budget-crypto';
+import { decryptFromDemoStorage, encryptForDemoStorage } from './budget-crypto';
 import type {
   Transaction,
   Stock,
@@ -26,17 +23,10 @@ import type {
   BudgetingTabProps,
   TransactionKind,
 } from './types';
-import {
-  initialTransaction,
-  initialStock,
-  initialRecurring,
-} from './types';
+import { initialTransaction, initialStock, initialRecurring } from './types';
 import type { useBudgetData } from './useBudgetData';
 
-export function useBudgetActions(
-  props: BudgetingTabProps,
-  data: ReturnType<typeof useBudgetData>,
-) {
+export function useBudgetActions(props: BudgetingTabProps, data: ReturnType<typeof useBudgetData>) {
   const { graph, rawGraph, onUpdateGraph } = props;
   const {
     userId,
@@ -94,12 +84,12 @@ export function useBudgetActions(
         t.accountName && t.accountName.trim().toLowerCase() === 'checking account'
           ? 'Checking'
           : t.accountName,
-      transactionDate:
-        t.transactionDate || t.date || new Date().toISOString().split('T')[0],
+      transactionDate: t.transactionDate || t.date || new Date().toISOString().split('T')[0],
     });
     setShowTransForm(true);
   };
 
+  // Validated the transaction draft before saving and synchronizing its scenario changes.
   const handleSaveTransaction = async (e?: FormEvent): Promise<void> => {
     if (e) e.preventDefault();
     if (!transDraft.description.trim()) {
@@ -114,14 +104,11 @@ export function useBudgetActions(
       return;
     }
 
-    let syncResult: ReturnType<typeof syncScenarioTransactionToGraph> | null =
-      null;
+    let syncResult: ReturnType<typeof syncScenarioTransactionToGraph> | null = null;
     let syncStatusMsg = '';
     const baseInitial = rawGraph || graph;
     if (onUpdateGraph && baseInitial) {
-      const prevTxn = editingTransId
-        ? transactions.find((t) => t.id === editingTransId)
-        : null;
+      const prevTxn = editingTransId ? transactions.find((t) => t.id === editingTransId) : null;
       let baseGraph = baseInitial;
       if (prevTxn) {
         const reverseTxn = {
@@ -135,10 +122,7 @@ export function useBudgetActions(
           categoryName: prevTxn.categoryName,
           isReversal: true,
         };
-        const reverseResult = syncScenarioTransactionToGraph(
-          baseGraph,
-          reverseTxn,
-        );
+        const reverseResult = syncScenarioTransactionToGraph(baseGraph, reverseTxn);
         if (reverseResult) {
           baseGraph = reverseResult.updatedGraph;
         }
@@ -207,9 +191,8 @@ export function useBudgetActions(
       setStatusMessage({
         type: 'success',
         text:
-          (editingTransId
-            ? 'Transaction updated successfully.'
-            : 'Transaction recorded.') + syncStatusMsg,
+          (editingTransId ? 'Transaction updated successfully.' : 'Transaction recorded.') +
+          syncStatusMsg,
       });
       setShowTransForm(false);
       setEditingTransId(null);
@@ -246,17 +229,15 @@ export function useBudgetActions(
       setStatusMessage({
         type: 'success',
         text:
-          (editingTransId
-            ? 'Transaction updated successfully.'
-            : 'Transaction recorded.') + syncStatusMsg,
+          (editingTransId ? 'Transaction updated successfully.' : 'Transaction recorded.') +
+          syncStatusMsg,
       });
       setShowTransForm(false);
       setEditingTransId(null);
       setTransDraft(initialTransaction());
       loadData();
     } catch (err: unknown) {
-      const msg =
-        err instanceof Error ? err.message : 'Error saving transaction';
+      const msg = err instanceof Error ? err.message : 'Error saving transaction';
       setStatusMessage({ type: 'error', text: msg });
     }
   };
@@ -264,8 +245,7 @@ export function useBudgetActions(
   const handleDeleteTransaction = async (id: number): Promise<void> => {
     if (!window.confirm('Delete this transaction?')) return;
     const transToDelete = transactions.find((t) => t.id === id);
-    let reverseSync: ReturnType<typeof syncScenarioTransactionToGraph> | null =
-      null;
+    let reverseSync: ReturnType<typeof syncScenarioTransactionToGraph> | null = null;
     const baseGraph = rawGraph || graph;
     if (transToDelete && onUpdateGraph && baseGraph) {
       const reverseTxn = {
@@ -332,8 +312,7 @@ export function useBudgetActions(
       }
       loadData();
     } catch (err: unknown) {
-      const msg =
-        err instanceof Error ? err.message : 'Error deleting transaction';
+      const msg = err instanceof Error ? err.message : 'Error deleting transaction';
       setStatusMessage({ type: 'error', text: msg });
     }
   };
@@ -380,6 +359,7 @@ export function useBudgetActions(
     setShowStockForm(true);
   };
 
+  // Routed stock edits through the shared portfolio so both investing views stayed consistent.
   const handleSaveStock = async (e?: FormEvent): Promise<void> => {
     if (e) e.preventDefault();
     const ticker = stockDraft.ticker.trim().toUpperCase();
@@ -395,15 +375,11 @@ export function useBudgetActions(
       let paysDividend = Boolean(stockDraft.paysDividend);
       let dividendFrequency = stockDraft.dividendFrequency || 'quarterly';
       let dividendPerShare =
-        stockDraft.dividendPerShare != null
-          ? Number(stockDraft.dividendPerShare)
-          : null;
+        stockDraft.dividendPerShare != null ? Number(stockDraft.dividendPerShare) : null;
 
       if (currentPrice == null) {
         try {
-          const res = await fetch(
-            `${API_BASE}/market/stocks/${encodeURIComponent(ticker)}`,
-          );
+          const res = await fetch(`${API_BASE}/market/stocks/${encodeURIComponent(ticker)}`);
           if (res.ok) {
             const data = await res.json();
             if (data && typeof data.latest_price === 'number') {
@@ -420,13 +396,9 @@ export function useBudgetActions(
       }
 
       const finalPrice =
-        currentPrice ||
-        Number(stockDraft.purchasePrice || stockDraft.lastPrice) ||
-        100;
+        currentPrice || Number(stockDraft.purchasePrice || stockDraft.lastPrice) || 100;
       const shares = Number(stockDraft.sharesOwned || 1);
-      const purchasePrice = Number(
-        stockDraft.purchasePrice ?? stockDraft.lastPrice ?? finalPrice,
-      );
+      const purchasePrice = Number(stockDraft.purchasePrice ?? stockDraft.lastPrice ?? finalPrice);
 
       await addStockUnified({
         storageKey,
@@ -464,19 +436,14 @@ export function useBudgetActions(
       let paysDividend = Boolean(stockDraft.paysDividend);
       let dividendFrequency = stockDraft.dividendFrequency || 'quarterly';
       let dividendPerShare =
-        stockDraft.dividendPerShare != null
-          ? Number(stockDraft.dividendPerShare)
-          : null;
+        stockDraft.dividendPerShare != null ? Number(stockDraft.dividendPerShare) : null;
 
       if (currentPrice == null) {
         try {
-          const res = await fetch(
-            `${API_BASE}/market/stocks/${encodeURIComponent(ticker)}`,
-            {
-              headers: sessionHeaders(),
-              credentials: 'include',
-            },
-          );
+          const res = await fetch(`${API_BASE}/market/stocks/${encodeURIComponent(ticker)}`, {
+            headers: sessionHeaders(),
+            credentials: 'include',
+          });
           if (res.ok) {
             const data = await res.json();
             if (data && typeof data.latest_price === 'number') {
@@ -494,8 +461,7 @@ export function useBudgetActions(
         } catch {}
       }
 
-      const purchasePrice =
-        Number(stockDraft.purchasePrice ?? stockDraft.lastPrice) || 0;
+      const purchasePrice = Number(stockDraft.purchasePrice ?? stockDraft.lastPrice) || 0;
       const finalLastPrice =
         currentPrice != null && currentPrice > 0 ? currentPrice : purchasePrice;
       const shares = Number(stockDraft.sharesOwned) || 0;
@@ -552,8 +518,7 @@ export function useBudgetActions(
                 stockId: editingStockId,
                 type: delta > 0 ? 'buy' : 'sell',
                 quantity: Math.abs(delta),
-                pricePerShare:
-                  purchasePrice > 0 ? purchasePrice : finalLastPrice,
+                pricePerShare: purchasePrice > 0 ? purchasePrice : finalLastPrice,
                 accountName: availableAccounts[0] || 'Brokerage',
                 transactionDate: new Date().toISOString().split('T')[0],
                 notes: 'Position adjusted via edit',
@@ -628,10 +593,7 @@ export function useBudgetActions(
   };
 
   // Trade Modal
-  const handleOpenTrade = (
-    s: Stock | StockPosition,
-    type: 'buy' | 'sell',
-  ) => {
+  const handleOpenTrade = (s: Stock | StockPosition, type: 'buy' | 'sell') => {
     const sId = 'stockId' in s ? s.stockId : s.id!;
     const sym = s.ticker?.toUpperCase() || '';
     const livePrice = currentPrices[sym] ?? s.lastPrice ?? 0;
@@ -647,6 +609,7 @@ export function useBudgetActions(
     });
   };
 
+  // Kept demo trades in browser storage and submitted signed-in trades to the transaction API.
   const handleExecuteTrade = async (e: FormEvent) => {
     e.preventDefault();
     if (!tradeModal.stockId || tradeModal.quantity <= 0) {
@@ -658,12 +621,9 @@ export function useBudgetActions(
       const storageKey = `finapp-holdings-v1:demo:${userId || 1}`;
       const stock = stocks.find((s) => s.id === tradeModal.stockId);
       const sym = stock?.ticker || tradeModal.ticker;
-      const currentPos = positions.find(
-        (p) => p.stockId === tradeModal.stockId,
-      );
+      const currentPos = positions.find((p) => p.stockId === tradeModal.stockId);
       const currentShares = currentPos?.sharesOwned ?? stock?.sharesOwned ?? 0;
-      const delta =
-        tradeModal.type === 'buy' ? tradeModal.quantity : -tradeModal.quantity;
+      const delta = tradeModal.type === 'buy' ? tradeModal.quantity : -tradeModal.quantity;
       const newShares = Math.max(0, currentShares + delta);
       await updateSharesUnified({
         storageKey,
@@ -743,15 +703,14 @@ export function useBudgetActions(
     }
 
     let activeRecurDraft = { ...recurDraft };
+    // Prepared the linked graph update and retained the node identifier in the recurring rule.
     let graphSync: ReturnType<typeof syncRecurringToGraphNode> | null = null;
     const baseGraph = rawGraph || graph;
     if (onUpdateGraph && baseGraph) {
       graphSync = syncRecurringToGraphNode(baseGraph, activeRecurDraft);
       if (
         graphSync.affectedNode &&
-        !activeRecurDraft.notes?.includes(
-          `[node-id:${graphSync.affectedNode.id}]`,
-        )
+        !activeRecurDraft.notes?.includes(`[node-id:${graphSync.affectedNode.id}]`)
       ) {
         activeRecurDraft.notes =
           `${activeRecurDraft.notes || ''} [node-id:${graphSync.affectedNode.id}]`.trim();
@@ -763,9 +722,7 @@ export function useBudgetActions(
       let updated: RecurringTransaction[];
       if (editingRecurId) {
         updated = recurringList.map((r) =>
-          r.id === editingRecurId
-            ? { ...activeRecurDraft, id: editingRecurId }
-            : r,
+          r.id === editingRecurId ? { ...activeRecurDraft, id: editingRecurId } : r,
         );
       } else {
         const newId = Math.max(0, ...recurringList.map((r) => r.id || 0)) + 1;
@@ -792,9 +749,7 @@ export function useBudgetActions(
       }
       setStatusMessage({
         type: 'success',
-        text: editingRecurId
-          ? 'Recurring rule updated.'
-          : 'Recurring rule created.',
+        text: editingRecurId ? 'Recurring rule updated.' : 'Recurring rule created.',
       });
       setShowRecurForm(false);
       setEditingRecurId(null);
@@ -825,19 +780,14 @@ export function useBudgetActions(
 
       setStatusMessage({
         type: 'success',
-        text: editingRecurId
-          ? 'Recurring rule updated.'
-          : 'Recurring rule created.',
+        text: editingRecurId ? 'Recurring rule updated.' : 'Recurring rule created.',
       });
       setShowRecurForm(false);
       setEditingRecurId(null);
       setRecurDraft(initialRecurring());
       loadData();
     } catch (err: unknown) {
-      const msg =
-        err instanceof Error
-          ? err.message
-          : 'Error saving recurring transaction';
+      const msg = err instanceof Error ? err.message : 'Error saving recurring transaction';
       setStatusMessage({ type: 'error', text: msg });
     }
   };
@@ -899,15 +849,14 @@ export function useBudgetActions(
   };
 
   const handleGenerateDueOccurrences = async (): Promise<void> => {
+    // Blocked overlapping generation requests while one batch was still being processed.
     if (!userId || activeGeneration.current) return;
     const controller = new AbortController();
     activeGeneration.current = controller;
     setGenerating(true);
     try {
       if (!(await loadData()) || controller.signal.aborted)
-        throw new Error(
-          'Could not synchronize recurring rules before generating.',
-        );
+        throw new Error('Could not synchronize recurring rules before generating.');
       const res = await fetch(`${API_BASE}/recurring-transactions/generate`, {
         signal: controller.signal,
         method: 'POST',
@@ -916,15 +865,13 @@ export function useBudgetActions(
       });
       if (!res.ok) throw new Error('Generation failed');
       const json = await res.json();
-      const occurrences: Transaction[] = Array.isArray(json.data)
-        ? json.data
-        : [];
+      const occurrences: Transaction[] = Array.isArray(json.data) ? json.data : [];
       const count = occurrences.length;
       const currentGraph = rawGraphRef.current ?? graphRef.current;
+      // Applied generated occurrences to the latest graph before reloading the budget records.
       const nextGraph = occurrences.reduce(
         (next, transaction) =>
-          syncScenarioTransactionToGraph(next, transaction)?.updatedGraph ??
-          next,
+          syncScenarioTransactionToGraph(next, transaction)?.updatedGraph ?? next,
         currentGraph,
       );
       if (nextGraph !== currentGraph) onUpdateGraph?.(nextGraph);
@@ -942,6 +889,7 @@ export function useBudgetActions(
         text: 'Failed to generate recurring transactions.',
       });
     } finally {
+      // Released the busy state only for the request that still owned the generation slot.
       if (activeGeneration.current === controller) {
         activeGeneration.current = null;
         setGenerating(false);
@@ -962,9 +910,7 @@ export function useBudgetActions(
     if (isDemo) {
       const budgetStorageKey = `finapp-budget-v1:demo:${userId || 1}`;
       let nextId = Math.max(0, ...recurringList.map((r) => r.id || 0)) + 1;
-      const created = newTemplates.map(
-        (t) => ({ ...t, id: nextId++ }) as RecurringTransaction,
-      );
+      const created = newTemplates.map((t) => ({ ...t, id: nextId++ }) as RecurringTransaction);
       const updated = [...created, ...recurringList];
       try {
         const saved =
@@ -1026,9 +972,7 @@ export function useBudgetActions(
     if (isDemo) {
       const budgetStorageKey = `finapp-budget-v1:demo:${userId || 1}`;
       let nextId = Math.max(0, ...recurringList.map((r) => r.id || 0)) + 1;
-      const created = newTemplates.map(
-        (t) => ({ ...t, id: nextId++ }) as RecurringTransaction,
-      );
+      const created = newTemplates.map((t) => ({ ...t, id: nextId++ }) as RecurringTransaction);
       const updated = [...created, ...recurringList];
       try {
         const saved =

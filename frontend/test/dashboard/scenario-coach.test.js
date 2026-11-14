@@ -5,7 +5,7 @@ const vm = require('node:vm');
 const { buildSync } = require('../../landing/node_modules/esbuild/lib/main');
 
 const compiled = buildSync({
-  entryPoints: [path.join(__dirname, '../../dashboard/src/coach/scenarioCoach.ts')],
+  entryPoints: [path.join(__dirname, '../../dashboard/src/coach/coach-engine.ts')],
   bundle: true,
   write: false,
   platform: 'node',

@@ -14,6 +14,7 @@ export function SimulationOutcomeTable({
   metrics,
   forecast,
 }: SimulationOutcomeTableProps) {
+  // Excluded investment percentile explanations from the separate debt payoff view.
   if (simulationType === 'debt') {
     return null;
   }
@@ -24,9 +25,14 @@ export function SimulationOutcomeTable({
         <h3 className="text-sm font-semibold text-text mb-4 mt-0">How to read this chart</h3>
         {quantiles.map((q) => (
           <div className="flex gap-2.5 mb-3.75" key={q.key}>
-            <i className="w-1.75 h-1.75 rounded-full mt-1.25 shrink-0" style={{ background: q.color }} />
+            <i
+              className="w-1.75 h-1.75 rounded-full mt-1.25 shrink-0"
+              style={{ background: q.color }}
+            />
             <div>
-              <strong className="text-[11px] font-[550]" style={{ color: q.color }}>{q.label}</strong>
+              <strong className="text-[11px] font-[550]" style={{ color: q.color }}>
+                {q.label}
+              </strong>
               <p className="text-[10px] text-(--ui-text-8e9fb9) mt-1.25 mb-0 leading-[1.65] max-[760px]:text-[11px]">
                 {q.key === 'p90'
                   ? '90% of modeled outcomes fall below this value. It is an optimistic outcome, not a guaranteed bull market.'
@@ -38,8 +44,8 @@ export function SimulationOutcomeTable({
           </div>
         ))}
         <p className="text-(--ui-text-8b9ab1) text-[9px] leading-[1.6] mt-2 mb-0">
-          The shaded band spans P10–P90 at each year. These curves are percentiles, not
-          three individual market paths.
+          The shaded band spans P10–P90 at each year. These curves are percentiles, not three
+          individual market paths.
         </p>
       </section>
 
@@ -81,14 +87,16 @@ export function SimulationOutcomeTable({
             </div>
           </dl>
           <p className="text-(--ui-text-8b9ab1) text-[11px] leading-[1.6] mt-2 mb-0">
-            The reference uses the same cash flows and debt schedule without asset growth,
-            expressed in the chart’s dollars.
+            The reference uses the same cash flows and debt schedule without asset growth, expressed
+            in the chart’s dollars.
           </p>
         </section>
       )}
 
       <details className="mt-4">
-        <summary className="cursor-pointer text-[11px] text-(--ui-text-b6c2d9) font-medium select-none">Model assumptions</summary>
+        <summary className="cursor-pointer text-[11px] text-(--ui-text-b6c2d9) font-medium select-none">
+          Model assumptions
+        </summary>
         <ul className="pl-3.75 text-[10px] text-(--ui-text-8fa1bb) leading-[1.8] my-2 [&>li]:mt-2.25">
           {(
             forecast?.assumptions ?? [
@@ -98,8 +106,8 @@ export function SimulationOutcomeTable({
             <li key={a}>{a}</li>
           ))}
           <li>
-            A fixed random seed makes comparisons repeatable. Market history is a modeling
-            input, not a prediction of future returns.
+            A fixed random seed makes comparisons repeatable. Market history is a modeling input,
+            not a prediction of future returns.
           </li>
         </ul>
       </details>

@@ -73,15 +73,21 @@ export const ForecastInsights = memo(function ForecastInsights({
       {summary && (
         <div className="grid grid-cols-3 gap-3 mb-4.75 max-[500px]:grid-cols-1">
           <article className="border border-(--ui-border-2e3b50) rounded-[10px] p-4.25 bg-(--ui-surface-131d2b)">
-            <span className="block text-(--ui-text-9aafc6) text-[10px] leading-relaxed">Paths ending with positive net worth</span>
+            <span className="block text-(--ui-text-9aafc6) text-[10px] leading-relaxed">
+              Paths ending with positive net worth
+            </span>
             <strong className="block text-[clamp(17px,1.8vw,25px)] font-medium text-(--ui-text-d6e9e2) my-[10px_7px]">
               {(summary.probability_positive * 100).toFixed(1)}
               <small className="text-[13px] text-(--ui-text-94b8aa) ml-0.75">%</small>
             </strong>
-            <p className="text-(--ui-text-778fa9) text-[9px] leading-[1.7] m-0">Share of 1,000 paths at the selected horizon.</p>
+            <p className="text-(--ui-text-778fa9) text-[9px] leading-[1.7] m-0">
+              Share of 1,000 paths at the selected horizon.
+            </p>
           </article>
           <article className="border border-(--ui-border-2e3b50) rounded-[10px] p-4.25 bg-(--ui-surface-131d2b)">
-            <span className="block text-(--ui-text-9aafc6) text-[10px] leading-relaxed">Paths reaching {money(summary.target, true)}</span>
+            <span className="block text-(--ui-text-9aafc6) text-[10px] leading-relaxed">
+              Paths reaching {money(summary.target, true)}
+            </span>
             <strong className="block text-[clamp(17px,1.8vw,25px)] font-medium text-(--ui-text-d6e9e2) my-[10px_7px]">
               {(summary.probability_target * 100).toFixed(1)}
               <small className="text-[13px] text-(--ui-text-94b8aa) ml-0.75">%</small>
@@ -92,7 +98,9 @@ export const ForecastInsights = memo(function ForecastInsights({
             </p>
           </article>
           <article className="border border-(--ui-border-2e3b50) rounded-[10px] p-4.25 bg-(--ui-surface-131d2b)">
-            <span className="block text-(--ui-text-9aafc6) text-[10px] leading-relaxed">Median net worth above zero</span>
+            <span className="block text-(--ui-text-9aafc6) text-[10px] leading-relaxed">
+              Median net worth above zero
+            </span>
             <strong className="block text-[clamp(17px,1.8vw,25px)] font-medium text-(--ui-text-d6e9e2) my-[10px_7px]">
               {summary.first_positive_median_year === null
                 ? 'Not reached'
@@ -100,7 +108,9 @@ export const ForecastInsights = memo(function ForecastInsights({
                   ? 'Already positive'
                   : `Year ${summary.first_positive_median_year}`}
             </strong>
-            <p className="text-(--ui-text-778fa9) text-[9px] leading-[1.7] m-0">A yearly observation, not an exact payoff date.</p>
+            <p className="text-(--ui-text-778fa9) text-[9px] leading-[1.7] m-0">
+              A yearly observation, not an exact payoff date.
+            </p>
           </article>
         </div>
       )}
@@ -108,14 +118,20 @@ export const ForecastInsights = memo(function ForecastInsights({
         <section className="bg-(--ui-surface-121c2a) border border-(--ui-border-2e4056) rounded-xl p-5">
           <div className="flex items-start justify-between gap-3.75">
             <div>
-              <div className="text-(--ui-text-86c7b5) text-[8px] tracking-[1.7px] font-semibold mb-2">AT THE FINISH LINE</div>
-              <h3 className="text-[15px] my-1.75 font-medium text-text">Different paths. Different outcomes.</h3>
+              <div className="text-(--ui-text-86c7b5) text-[8px] tracking-[1.7px] font-semibold mb-2">
+                AT THE FINISH LINE
+              </div>
+              <h3 className="text-[15px] my-1.75 font-medium text-text">
+                Different paths. Different outcomes.
+              </h3>
               <p className="text-(--ui-text-889eb8) text-[10px] leading-relaxed m-0">
                 Distribution of net worth after {final?.year} years ·{' '}
                 {realDollars ? 'today’s dollars' : 'nominal dollars'}
               </p>
             </div>
-            <span className="text-[9px] text-(--ui-text-a6c9c0) bg-(--ui-surface-203933) px-2.25 py-1.5 rounded-full whitespace-nowrap">1,000 paths</span>
+            <span className="text-[9px] text-(--ui-text-a6c9c0) bg-(--ui-surface-203933) px-2.25 py-1.5 rounded-full whitespace-nowrap">
+              1,000 paths
+            </span>
           </div>
           <div
             className="h-47.5 my-[12px_8px]"
@@ -127,7 +143,11 @@ export const ForecastInsights = memo(function ForecastInsights({
                 data={bins.map((bin) => ({ ...bin, midpoint: (bin.lower + bin.upper) / 2 }))}
                 margin={{ top: 12, right: 8, bottom: 0, left: -12 }}
               >
-                <CartesianGrid vertical={false} stroke="var(--ui-paint-26334a)" strokeDasharray="3 6" />
+                <CartesianGrid
+                  vertical={false}
+                  stroke="var(--ui-paint-26334a)"
+                  strokeDasharray="3 6"
+                />
                 <XAxis
                   dataKey="midpoint"
                   tickFormatter={(v) => money(Number(v), true)}
@@ -136,7 +156,11 @@ export const ForecastInsights = memo(function ForecastInsights({
                   axisLine={false}
                   tickLine={false}
                 />
-                <YAxis tick={{ fill: 'var(--ui-paint-91a1b8)', fontSize: 9 }} axisLine={false} tickLine={false} />
+                <YAxis
+                  tick={{ fill: 'var(--ui-paint-91a1b8)', fontSize: 9 }}
+                  axisLine={false}
+                  tickLine={false}
+                />
                 <Tooltip
                   content={({ active, payload }) => {
                     if (!active || !payload?.length) return null;
@@ -160,7 +184,11 @@ export const ForecastInsights = memo(function ForecastInsights({
                 />
                 <Bar dataKey="count" radius={[4, 4, 0, 0]} isAnimationActive={false}>
                   {bins.map((bin, i) => (
-                    <Cell key={i} fill={bin.upper <= 0 ? 'var(--ui-paint-ec849e)' : 'var(--ui-paint-82cdb8)'} fillOpacity={0.8} />
+                    <Cell
+                      key={i}
+                      fill={bin.upper <= 0 ? 'var(--ui-paint-ec849e)' : 'var(--ui-paint-82cdb8)'}
+                      fillOpacity={0.8}
+                    />
                   ))}
                 </Bar>
               </BarChart>
@@ -170,7 +198,9 @@ export const ForecastInsights = memo(function ForecastInsights({
             {(['p10', 'p50', 'p90'] as const).map((key, i) => (
               <span key={key} className="text-(--ui-text-88a0ba) text-[9px]">
                 {['P10 · lower', 'P50 · median', 'P90 · upper'][i]}
-                <b className={`block text-base font-medium mt-1.75 ${(final?.[key] ?? 0) < 0 ? 'negative text-coral' : 'text-(--ui-text-d5dfef)'}`}>
+                <b
+                  className={`block text-base font-medium mt-1.75 ${(final?.[key] ?? 0) < 0 ? 'negative text-coral' : 'text-(--ui-text-d5dfef)'}`}
+                >
                   {money(final?.[key] ?? 0, true)}
                 </b>
               </span>
@@ -180,14 +210,18 @@ export const ForecastInsights = memo(function ForecastInsights({
       )}
       <details className="mt-4.5 border border-(--ui-border-2b3c50) rounded-[10px] overflow-hidden bg-(--ui-surface-111a26)">
         <summary className="flex justify-between p-[15px_18px] text-xs cursor-pointer select-none [&::-webkit-details-marker]:hidden">
-          Check the math year by year <span className="text-(--ui-text-7790ac) text-[10px]">Budget, debt & forecast</span>
+          Check the math year by year{' '}
+          <span className="text-(--ui-text-7790ac) text-[10px]">Budget, debt & forecast</span>
         </summary>
         <div className="flex gap-3.75 items-center justify-between p-[15px_18px] border-t border-(--ui-border-29384c) max-[500px]:flex-col max-[500px]:items-stretch">
           <p className="text-[10px] leading-[1.7] text-(--ui-text-899fb8) m-0">
             Cash flows and loan balances below are nominal. Forecast values use the chart’s selected
             dollar basis.
           </p>
-          <button className="inline-flex items-center justify-center gap-1.75 whitespace-nowrap border border-(--ui-border-344056) rounded-[7px] px-3.25 py-2.25 bg-(--ui-surface-182131) hover:bg-(--ui-surface-hover-232f43) hover:border-(--ui-border-65738c) text-[11px] font-medium min-h-8.5 cursor-pointer text-text" onClick={csv}>
+          <button
+            className="inline-flex items-center justify-center gap-1.75 whitespace-nowrap border border-(--ui-border-344056) rounded-[7px] px-3.25 py-2.25 bg-(--ui-surface-182131) hover:bg-(--ui-surface-hover-232f43) hover:border-(--ui-border-65738c) text-[11px] font-medium min-h-8.5 cursor-pointer text-text"
+            onClick={csv}
+          >
             Export audit CSV ↓
           </button>
         </div>
@@ -195,27 +229,55 @@ export const ForecastInsights = memo(function ForecastInsights({
           <table className="w-full border-collapse text-[10px] whitespace-nowrap">
             <thead>
               <tr>
-                <th className="text-right p-[11px_15px] border-b border-(--ui-border-243246) tabular-nums text-(--ui-text-9fb3cb) bg-(--ui-surface-1a2737) sticky top-0 z-1 font-medium first:text-left">Year</th>
-                <th className="text-right p-[11px_15px] border-b border-(--ui-border-243246) tabular-nums text-(--ui-text-9fb3cb) bg-(--ui-surface-1a2737) sticky top-0 z-1 font-medium first:text-left">Income</th>
-                <th className="text-right p-[11px_15px] border-b border-(--ui-border-243246) tabular-nums text-(--ui-text-9fb3cb) bg-(--ui-surface-1a2737) sticky top-0 z-1 font-medium first:text-left">Tax estimate</th>
-                <th className="text-right p-[11px_15px] border-b border-(--ui-border-243246) tabular-nums text-(--ui-text-9fb3cb) bg-(--ui-surface-1a2737) sticky top-0 z-1 font-medium first:text-left">Living costs</th>
-                <th className="text-right p-[11px_15px] border-b border-(--ui-border-243246) tabular-nums text-(--ui-text-9fb3cb) bg-(--ui-surface-1a2737) sticky top-0 z-1 font-medium first:text-left">Loan payments</th>
-                <th className="text-right p-[11px_15px] border-b border-(--ui-border-243246) tabular-nums text-(--ui-text-9fb3cb) bg-(--ui-surface-1a2737) sticky top-0 z-1 font-medium first:text-left">Loans remaining</th>
-                <th className="text-right p-[11px_15px] border-b border-(--ui-border-243246) tabular-nums text-(--ui-text-9fb3cb) bg-(--ui-surface-1a2737) sticky top-0 z-1 font-medium first:text-left">Median net worth{realDollars ? ' (real)' : ''}</th>
+                <th className="text-right p-[11px_15px] border-b border-(--ui-border-243246) tabular-nums text-(--ui-text-9fb3cb) bg-(--ui-surface-1a2737) sticky top-0 z-1 font-medium first:text-left">
+                  Year
+                </th>
+                <th className="text-right p-[11px_15px] border-b border-(--ui-border-243246) tabular-nums text-(--ui-text-9fb3cb) bg-(--ui-surface-1a2737) sticky top-0 z-1 font-medium first:text-left">
+                  Income
+                </th>
+                <th className="text-right p-[11px_15px] border-b border-(--ui-border-243246) tabular-nums text-(--ui-text-9fb3cb) bg-(--ui-surface-1a2737) sticky top-0 z-1 font-medium first:text-left">
+                  Tax estimate
+                </th>
+                <th className="text-right p-[11px_15px] border-b border-(--ui-border-243246) tabular-nums text-(--ui-text-9fb3cb) bg-(--ui-surface-1a2737) sticky top-0 z-1 font-medium first:text-left">
+                  Living costs
+                </th>
+                <th className="text-right p-[11px_15px] border-b border-(--ui-border-243246) tabular-nums text-(--ui-text-9fb3cb) bg-(--ui-surface-1a2737) sticky top-0 z-1 font-medium first:text-left">
+                  Loan payments
+                </th>
+                <th className="text-right p-[11px_15px] border-b border-(--ui-border-243246) tabular-nums text-(--ui-text-9fb3cb) bg-(--ui-surface-1a2737) sticky top-0 z-1 font-medium first:text-left">
+                  Loans remaining
+                </th>
+                <th className="text-right p-[11px_15px] border-b border-(--ui-border-243246) tabular-nums text-(--ui-text-9fb3cb) bg-(--ui-surface-1a2737) sticky top-0 z-1 font-medium first:text-left">
+                  Median net worth{realDollars ? ' (real)' : ''}
+                </th>
               </tr>
             </thead>
             <tbody>
               {(forecast.yearly_cashflow ?? []).map((row) => (
                 <tr key={row.year}>
-                  <td className="text-right p-[11px_15px] border-b border-(--ui-border-243246) tabular-nums text-text first:text-left">{row.year}</td>
-                  <td className="text-right p-[11px_15px] border-b border-(--ui-border-243246) tabular-nums text-text first:text-left">{dollars(row.income)}</td>
-                  <td className="text-right p-[11px_15px] border-b border-(--ui-border-243246) tabular-nums text-text first:text-left">{dollars(row.taxes)}</td>
-                  <td className="text-right p-[11px_15px] border-b border-(--ui-border-243246) tabular-nums text-text first:text-left">{dollars(row.expenses)}</td>
-                  <td className="text-right p-[11px_15px] border-b border-(--ui-border-243246) tabular-nums text-text first:text-left">{dollars(row.debt_payments)}</td>
-                  <td className="text-right p-[11px_15px] border-b border-(--ui-border-243246) tabular-nums text-text first:text-left">{dollars(row.debt_remaining)}</td>
+                  <td className="text-right p-[11px_15px] border-b border-(--ui-border-243246) tabular-nums text-text first:text-left">
+                    {row.year}
+                  </td>
+                  <td className="text-right p-[11px_15px] border-b border-(--ui-border-243246) tabular-nums text-text first:text-left">
+                    {dollars(row.income)}
+                  </td>
+                  <td className="text-right p-[11px_15px] border-b border-(--ui-border-243246) tabular-nums text-text first:text-left">
+                    {dollars(row.taxes)}
+                  </td>
+                  <td className="text-right p-[11px_15px] border-b border-(--ui-border-243246) tabular-nums text-text first:text-left">
+                    {dollars(row.expenses)}
+                  </td>
+                  <td className="text-right p-[11px_15px] border-b border-(--ui-border-243246) tabular-nums text-text first:text-left">
+                    {dollars(row.debt_payments)}
+                  </td>
+                  <td className="text-right p-[11px_15px] border-b border-(--ui-border-243246) tabular-nums text-text first:text-left">
+                    {dollars(row.debt_remaining)}
+                  </td>
                   <td
                     className={`text-right p-[11px_15px] border-b border-(--ui-border-243246) tabular-nums first:text-left ${
-                      (points.find((p) => p.year === row.year)?.p50 ?? 0) < 0 ? 'negative text-coral' : 'text-text'
+                      (points.find((p) => p.year === row.year)?.p50 ?? 0) < 0
+                        ? 'negative text-coral'
+                        : 'text-text'
                     }`}
                   >
                     {dollars(points.find((p) => p.year === row.year)?.p50 ?? 0)}

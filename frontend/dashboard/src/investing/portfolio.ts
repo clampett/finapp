@@ -20,8 +20,14 @@ export function projectedDividendFlows(holdings: Holding[]) {
     const cadence = holding.dividendFrequency;
     if (!holding.paysDividend || !Number.isFinite(amount) || amount <= 0) return [];
     // Excluded irregular distributions because no reliable cadence was available.
-    if (cadence !== "monthly" && cadence !== "quarterly" && cadence !== "semiannual" && cadence !== "annual") return [];
-    return [{ kind: "income", amount, frequency: cadence, interval_count: 1 }];
+    if (
+      cadence !== 'monthly' &&
+      cadence !== 'quarterly' &&
+      cadence !== 'semiannual' &&
+      cadence !== 'annual'
+    )
+      return [];
+    return [{ kind: 'income', amount, frequency: cadence, interval_count: 1 }];
   });
 }
 
@@ -63,18 +69,74 @@ export function notifyPortfolioUpdated() {
 
 export const DEFAULT_DEMO_HOLDINGS: Record<number, Holding[]> = {
   1: [
-    { symbol: 'SPY', shares: 2, companyName: 'SPDR S&P 500 ETF Trust', lastPrice: 580, purchasePrice: 580, stockId: 1 },
-    { symbol: 'AAPL', shares: 3, companyName: 'Apple Inc.', lastPrice: 230, purchasePrice: 230, stockId: 2 },
+    {
+      symbol: 'SPY',
+      shares: 2,
+      companyName: 'SPDR S&P 500 ETF Trust',
+      lastPrice: 580,
+      purchasePrice: 580,
+      stockId: 1,
+    },
+    {
+      symbol: 'AAPL',
+      shares: 3,
+      companyName: 'Apple Inc.',
+      lastPrice: 230,
+      purchasePrice: 230,
+      stockId: 2,
+    },
   ],
   2: [
-    { symbol: 'VTI', shares: 150, companyName: 'Vanguard Total Stock Market ETF', lastPrice: 280, purchasePrice: 280, stockId: 1 },
-    { symbol: 'MSFT', shares: 40, companyName: 'Microsoft Corporation', lastPrice: 425, purchasePrice: 425, stockId: 2 },
-    { symbol: 'AAPL', shares: 50, companyName: 'Apple Inc.', lastPrice: 230, purchasePrice: 230, stockId: 3 },
+    {
+      symbol: 'VTI',
+      shares: 150,
+      companyName: 'Vanguard Total Stock Market ETF',
+      lastPrice: 280,
+      purchasePrice: 280,
+      stockId: 1,
+    },
+    {
+      symbol: 'MSFT',
+      shares: 40,
+      companyName: 'Microsoft Corporation',
+      lastPrice: 425,
+      purchasePrice: 425,
+      stockId: 2,
+    },
+    {
+      symbol: 'AAPL',
+      shares: 50,
+      companyName: 'Apple Inc.',
+      lastPrice: 230,
+      purchasePrice: 230,
+      stockId: 3,
+    },
   ],
   3: [
-    { symbol: 'VOO', shares: 200, companyName: 'Vanguard S&P 500 ETF', lastPrice: 530, purchasePrice: 530, stockId: 1 },
-    { symbol: 'QQQ', shares: 80, companyName: 'Invesco QQQ Trust', lastPrice: 490, purchasePrice: 490, stockId: 2 },
-    { symbol: 'NVDA', shares: 40, companyName: 'NVIDIA Corporation', lastPrice: 140, purchasePrice: 140, stockId: 3 },
+    {
+      symbol: 'VOO',
+      shares: 200,
+      companyName: 'Vanguard S&P 500 ETF',
+      lastPrice: 530,
+      purchasePrice: 530,
+      stockId: 1,
+    },
+    {
+      symbol: 'QQQ',
+      shares: 80,
+      companyName: 'Invesco QQQ Trust',
+      lastPrice: 490,
+      purchasePrice: 490,
+      stockId: 2,
+    },
+    {
+      symbol: 'NVDA',
+      shares: 40,
+      companyName: 'NVIDIA Corporation',
+      lastPrice: 140,
+      purchasePrice: 140,
+      stockId: 3,
+    },
   ],
 };
 
@@ -195,9 +257,9 @@ export async function loadUnifiedHoldings(
 
         const holdings: Holding[] = stocks.map((s, idx) => {
           const sym = s.ticker.toUpperCase();
-          const match = positions.find(
-            (p) => p.stockId === s.id,
-          ) || (s.id == null ? positions.find((p) => p.ticker?.toUpperCase() === sym) : undefined);
+          const match =
+            positions.find((p) => p.stockId === s.id) ||
+            (s.id == null ? positions.find((p) => p.ticker?.toUpperCase() === sym) : undefined);
           const shares = match ? Number(match.sharesOwned || 0) : Number(s.sharesOwned || 0);
           const purchasePrice =
             match?.avgCostPerShare != null && Number(match.avgCostPerShare) > 0
@@ -238,7 +300,8 @@ export async function loadUnifiedHoldings(
       const seeded = DEFAULT_DEMO_HOLDINGS[userId || 2] ?? DEFAULT_DEMO_HOLDINGS[2];
       localHoldings = localHoldings.map((holding) => ({
         ...holding,
-        lastPrice: holding.lastPrice ?? seeded.find((sample) => sample.symbol === holding.symbol)?.lastPrice,
+        lastPrice:
+          holding.lastPrice ?? seeded.find((sample) => sample.symbol === holding.symbol)?.lastPrice,
       }));
     }
   }
@@ -470,4 +533,3 @@ export async function removeStockUnified({
   saveLocalHoldings(storageKey, updated);
   notifyPortfolioUpdated();
 }
-

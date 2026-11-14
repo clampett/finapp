@@ -67,12 +67,29 @@
   outline: 2px solid var(--color-primary);
   outline-offset: 3px;
 }
-.workspace-sidebar-help svg { width: 20px; color: var(--color-primary); }
-.workspace-sidebar-help strong { display: block; font-size: 12px; font-weight: 600; }
-.workspace-sidebar-help small { display: block; margin-top: 2px; font-size: 10px; color: var(--color-muted); }
-.workspace-help-arrow { color: var(--color-muted); font-size: 13px; }
+.workspace-sidebar-help svg {
+  width: 20px;
+  color: var(--color-primary);
+}
+.workspace-sidebar-help strong {
+  display: block;
+  font-size: 12px;
+  font-weight: 600;
+}
+.workspace-sidebar-help small {
+  display: block;
+  margin-top: 2px;
+  font-size: 10px;
+  color: var(--color-muted);
+}
+.workspace-help-arrow {
+  color: var(--color-muted);
+  font-size: 13px;
+}
 @media (max-width: 760px) {
-  .workspace-sidebar-help { display: none; }
+  .workspace-sidebar-help {
+    display: none;
+  }
 }
 
 /* Retained graph-paper contrast and visible drawing states on the light canvas. */

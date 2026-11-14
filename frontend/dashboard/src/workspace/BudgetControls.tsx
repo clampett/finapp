@@ -15,10 +15,19 @@ export function BudgetControls({
     budget = totals(graph);
   const change = (patch: Partial<ScenarioAssumptions>) => onChange({ ...settings, ...patch });
   return (
-    <details className={`border border-(--ui-border-304253) rounded-xl bg-linear-to-r from-(--ui-surface-14232b) to-(--ui-surface-151d2b) mb-4.5 text-xs group ${compact ? 'compact' : ''}`} open={!compact}>
-      <summary className={`cursor-pointer flex justify-between gap-3.5 items-center list-none select-none after:content-['+'] group-open:after:content-['−'] after:text-(--ui-text-85d8bd) after:text-lg [&::-webkit-details-marker]:hidden ${compact ? 'flex-wrap p-[13px_14px] text-[11px]' : 'p-[15px_18px]'}`}>
+    <details
+      className={`border border-(--ui-border-304253) rounded-xl bg-linear-to-r from-(--ui-surface-14232b) to-(--ui-surface-151d2b) mb-4.5 text-xs group ${compact ? 'compact' : ''}`}
+      open={!compact}
+    >
+      <summary
+        className={`cursor-pointer flex justify-between gap-3.5 items-center list-none select-none after:content-['+'] group-open:after:content-['−'] after:text-(--ui-text-85d8bd) after:text-lg [&::-webkit-details-marker]:hidden ${compact ? 'flex-wrap p-[13px_14px] text-[11px]' : 'p-[15px_18px]'}`}
+      >
         <span>Income & monthly budget</span>
-        <strong className={`ml-auto text-(--ui-text-b1d9cb) font-medium ${compact ? 'text-[10px]' : 'text-xs'}`}>{dollars(budget.surplus)} after bills</strong>
+        <strong
+          className={`ml-auto text-(--ui-text-b1d9cb) font-medium ${compact ? 'text-[10px]' : 'text-xs'}`}
+        >
+          {dollars(budget.surplus)} after bills
+        </strong>
       </summary>
       <div className="px-4.5 pt-0.5 pb-4.25">
         <div className="grid grid-cols-2 gap-3 my-3">
@@ -61,29 +70,41 @@ export function BudgetControls({
           </div>
           <div className="flex justify-between gap-3 py-2 text-(--ui-text-98aac1)">
             <dt>Living expenses</dt>
-            <dd className="tabular-nums text-(--ui-text-e1eaf4) m-0">−{dollars(budget.expenses)}</dd>
+            <dd className="tabular-nums text-(--ui-text-e1eaf4) m-0">
+              −{dollars(budget.expenses)}
+            </dd>
           </div>
           <div className="flex justify-between gap-3 py-2 text-(--ui-text-98aac1)">
             <dt>Loan payments</dt>
-            <dd className="tabular-nums text-(--ui-text-e1eaf4) m-0">−{dollars(budget.payments)}</dd>
+            <dd className="tabular-nums text-(--ui-text-e1eaf4) m-0">
+              −{dollars(budget.payments)}
+            </dd>
           </div>
           <div className="flex justify-between gap-3 border-t border-(--ui-border-314052) text-(--ui-text-d5e5ef) pt-2.75 mt-0.75">
             <dt>{budget.surplus < 0 ? 'Monthly shortfall' : 'Available after bills'}</dt>
-            <dd className={`tabular-nums m-0 ${budget.surplus < 0 ? 'negative text-coral' : 'positive text-mint'}`}>
+            <dd
+              className={`tabular-nums m-0 ${budget.surplus < 0 ? 'negative text-coral' : 'positive text-mint'}`}
+            >
               {dollars(budget.surplus)}
             </dd>
           </div>
           <div className="flex justify-between gap-3 py-2 text-(--ui-text-98aac1)">
             <dt>Scheduled investment transfers</dt>
-            <dd className="tabular-nums text-(--ui-text-e1eaf4) m-0">−{dollars(budget.plannedInvestment)}</dd>
+            <dd className="tabular-nums text-(--ui-text-e1eaf4) m-0">
+              −{dollars(budget.plannedInvestment)}
+            </dd>
           </div>
           <div className="flex justify-between gap-3 py-2 text-(--ui-text-98aac1)">
             <dt>Scheduled cash savings</dt>
-            <dd className="tabular-nums text-(--ui-text-e1eaf4) m-0">−{dollars(budget.plannedSavings)}</dd>
+            <dd className="tabular-nums text-(--ui-text-e1eaf4) m-0">
+              −{dollars(budget.plannedSavings)}
+            </dd>
           </div>
           <div className="flex justify-between gap-3 border-t border-(--ui-border-314052) text-(--ui-text-d5e5ef) pt-2.75 mt-0.75">
             <dt>{budget.surplus < 0 ? 'Unfunded bills' : 'Still unassigned'}</dt>
-            <dd className="tabular-nums text-(--ui-text-e1eaf4) m-0">{dollars(budget.surplus < 0 ? budget.surplus : budget.unassigned)}</dd>
+            <dd className="tabular-nums text-(--ui-text-e1eaf4) m-0">
+              {dollars(budget.surplus < 0 ? budget.surplus : budget.unassigned)}
+            </dd>
           </div>
         </dl>
         <p className="text-[11px] leading-[1.7] text-(--ui-text-8da3ba) m-0">

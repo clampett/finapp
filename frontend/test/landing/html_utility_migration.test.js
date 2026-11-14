@@ -63,7 +63,11 @@ test('F3-T1-2 (Coverage): index.html eliminates preview component BEM classes', 
 
 test('F3-T1-3 (Coverage): index.html uses Tailwind layout utilities (flex, grid, max-w, mx-auto)', () => {
   const html = readPage('index.html');
-  assert.match(html, /\bmax-w-\[?1240px\]?|\bmax-w-7xl\b|\bmax-w-310\b/, 'Missing max-width container utility on main/sections');
+  assert.match(
+    html,
+    /\bmax-w-\[?1240px\]?|\bmax-w-7xl\b|\bmax-w-310\b/,
+    'Missing max-width container utility on main/sections',
+  );
   assert.match(html, /\bmx-auto\b/, 'Missing mx-auto centering utility');
   assert.match(html, /\bflex\b/, 'Missing flexbox utility');
   assert.match(html, /\bgrid\b/, 'Missing grid utility');
@@ -101,7 +105,11 @@ test('F3-T2-1 (Boundary): index.html preserves skip link with accessibility focu
 
 test('F3-T2-2 (Boundary): index.html preserves main semantic landmark with id="main"', () => {
   const html = readPage('index.html');
-  assert.match(html, /<main[^>]+id=["']main["']/i, 'Main landmark element with id="main" must be preserved');
+  assert.match(
+    html,
+    /<main[^>]+id=["']main["']/i,
+    'Main landmark element with id="main" must be preserved',
+  );
 });
 
 test('F3-T2-3 (Boundary): index.html links to dedicated information pages', () => {
@@ -114,8 +122,16 @@ test('F3-T2-3 (Boundary): index.html links to dedicated information pages', () =
 
 test('F3-T2-4 (Boundary): index.html preserves SVG preview graph and node structure', () => {
   const html = readPage('index.html');
-  assert.match(html, /class=["'][^"']*preview-edges[^"']*["']/, 'SVG path must preserve class preview-edges');
-  assert.match(html, /class=["'][^"']*sample-node[^"']*["']/, 'SVG groups must preserve class sample-node');
+  assert.match(
+    html,
+    /class=["'][^"']*preview-edges[^"']*["']/,
+    'SVG path must preserve class preview-edges',
+  );
+  assert.match(
+    html,
+    /class=["'][^"']*sample-node[^"']*["']/,
+    'SVG groups must preserve class sample-node',
+  );
   assert.match(html, /id=["']preview-worth["']/, 'Must preserve #preview-worth metric element');
   assert.match(html, /id=["']preview-surplus["']/, 'Must preserve #preview-surplus metric element');
   assert.match(html, /id=["']preview-debt["']/, 'Must preserve #preview-debt metric element');
@@ -175,7 +191,10 @@ test('F4-T1-2 (Coverage): registration.html eliminates bespoke auth BEM classes'
   ];
 
   for (const cls of forbidden) {
-    assert.ok(!html.includes(cls), `Bespoke auth class "${cls}" must be removed from registration.html`);
+    assert.ok(
+      !html.includes(cls),
+      `Bespoke auth class "${cls}" must be removed from registration.html`,
+    );
   }
 });
 
@@ -204,7 +223,11 @@ test('F4-T1-4 (Coverage): auth pages apply Tailwind utilities for form card and 
   assert.match(loginHtml, /\bborder\b/, 'login.html card must use border');
   assert.match(loginHtml, /\brounded-/, 'login.html card must use rounded utility');
   assert.match(loginHtml, /\bbg-primary\b/, 'login.html submit button must use bg-primary');
-  assert.match(loginHtml, /\btext-primary-fg\b/, 'login.html submit button must use text-primary-fg');
+  assert.match(
+    loginHtml,
+    /\btext-primary-fg\b/,
+    'login.html submit button must use text-primary-fg',
+  );
 });
 
 test('F4-T1-5 (Coverage): auth pages preserve password visibility toggle hooks', () => {
@@ -268,7 +291,11 @@ test('F4-T2-4 (Boundary): auth alert elements include role="alert" or role="stat
 
 test('F4-T2-5 (Boundary): auth forms retain submit button disabled state styling (disabled:opacity-50)', () => {
   const loginHtml = readPage('login.html');
-  assert.match(loginHtml, /disabled:opacity-50/, 'Submit button must style disabled state with utility');
+  assert.match(
+    loginHtml,
+    /disabled:opacity-50/,
+    'Submit button must style disabled state with utility',
+  );
 });
 
 // ============================================================================
@@ -277,7 +304,11 @@ test('F4-T2-5 (Boundary): auth forms retain submit button disabled state styling
 
 test('F5-T1-1 (Coverage): 404.html uses semantic token text-text instead of text-text_color', () => {
   const html = readPage('404.html');
-  assert.doesNotMatch(html, /\btext-text_color\b/, '404.html must not use deprecated text-text_color');
+  assert.doesNotMatch(
+    html,
+    /\btext-text_color\b/,
+    '404.html must not use deprecated text-text_color',
+  );
   assert.match(html, /\btext-text\b/, '404.html must use semantic token text-text');
 });
 
@@ -292,13 +323,21 @@ test('F5-T1-2 (Coverage): 404.html does not have duplicate closing anchor tag', 
 
 test('F5-T1-3 (Coverage): 404.html uses text-primary-fg instead of text-primary-foreground', () => {
   const html = readPage('404.html');
-  assert.doesNotMatch(html, /\btext-primary-foreground\b/, '404.html must not use text-primary-foreground');
+  assert.doesNotMatch(
+    html,
+    /\btext-primary-foreground\b/,
+    '404.html must not use text-primary-foreground',
+  );
   assert.match(html, /\btext-primary-fg\b/, '404.html must use semantic utility text-primary-fg');
 });
 
 test('F5-T1-4 (Coverage): 404.html uses text-foreground instead of non-existent text-muted-foreground', () => {
   const html = readPage('404.html');
-  assert.doesNotMatch(html, /\btext-muted-foreground\b/, '404.html must not use text-muted-foreground');
+  assert.doesNotMatch(
+    html,
+    /\btext-muted-foreground\b/,
+    '404.html must not use text-muted-foreground',
+  );
   assert.match(html, /\btext-foreground\b/, '404.html must use text-foreground');
 });
 
@@ -389,7 +428,10 @@ test('F14-T1-5 (Coverage): all landing pages load appropriate compiled JS asset'
 
 test('F14-T2-1 (Boundary): index.html mobile menu toggle has aria-controls and aria-expanded', () => {
   const html = readPage('index.html');
-  assert.match(html, /<button[^>]+id=["']menu-toggle["'][^>]*aria-controls=["']site-navigation["']/i);
+  assert.match(
+    html,
+    /<button[^>]+id=["']menu-toggle["'][^>]*aria-controls=["']site-navigation["']/i,
+  );
   assert.match(html, /<button[^>]+id=["']menu-toggle["'][^>]*aria-expanded=/i);
 });
 
@@ -406,7 +448,8 @@ test('F14-T2-3 (Boundary): index.html preview cards contain aria-live region or 
 
 test('F14-T2-4 (Boundary): login.html back link correctly links to home "/"', () => {
   const html = readPage('login.html');
-  assert.match(html, /<a[^>]+href=["']\/["'][^>]*>← Back to home<\/a>/);
+  // Accepted formatter-inserted whitespace around the link label and closing tag.
+  assert.match(html, /<a[^>]+href=["']\/["'][^>]*>\s*← Back to home\s*<\/a\s*>/);
 });
 
 test('F14-T2-5 (Boundary): verify.html verification input enforces numeric pattern and maxlength', () => {
@@ -421,7 +464,11 @@ test('F14-T2-5 (Boundary): verify.html verification input enforces numeric patte
 test('F3-F14-T3-1 (Combination): Landing data-theme attribute consistency across all 5 HTML files', () => {
   for (const page of ['index.html', 'login.html', 'registration.html', 'verify.html', '404.html']) {
     const html = readPage(page);
-    assert.match(html, /<link[^>]+href=["']\/assets\/styles\.css["']/, `${page} must link to /assets/styles.css`);
+    assert.match(
+      html,
+      /<link[^>]+href=["']\/assets\/styles\.css["']/,
+      `${page} must link to /assets/styles.css`,
+    );
   }
 });
 
@@ -437,14 +484,25 @@ test('F3-F14-T3-3 (Combination): Landing demo workspace links direct to /dashboa
   const indexHtml = readPage('index.html');
   const loginHtml = readPage('login.html');
 
-  assert.match(indexHtml, /href=["']\/dashboard\/\?demo=true/, 'index.html must link to /dashboard/?demo=true');
-  assert.match(loginHtml, /href=["']\/dashboard\/\?demo=true/, 'login.html must link to /dashboard/?demo=true');
+  assert.match(
+    indexHtml,
+    /href=["']\/dashboard\/\?demo=true/,
+    'index.html must link to /dashboard/?demo=true',
+  );
+  assert.match(
+    loginHtml,
+    /href=["']\/dashboard\/\?demo=true/,
+    'login.html must link to /dashboard/?demo=true',
+  );
 });
 
 test('F3-F14-T3-4 (Combination): Focus ring utility consistency across interactive elements in landing pages', () => {
   const loginHtml = readPage('login.html');
   const focusMatches = loginHtml.match(/focus-visible:outline/g);
-  assert.ok(focusMatches && focusMatches.length >= 3, 'Multiple interactive elements must define focus-visible ring utilities');
+  assert.ok(
+    focusMatches && focusMatches.length >= 3,
+    'Multiple interactive elements must define focus-visible ring utilities',
+  );
 });
 
 test('F3-F14-T4-1 (Workload Scenario): Landing Mobile Navigation interactive structure and ARIA contracts', () => {

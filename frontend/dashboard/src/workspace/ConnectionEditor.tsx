@@ -25,8 +25,12 @@ export function ConnectionEditor({
     <aside className="w-71.25 border border-(--ui-border-334055) rounded-[11px] p-4.75 bg-(--ui-surface-151d2b) shrink-0 max-md:w-full">
       <div className="flex items-center justify-between gap-4">
         <div>
-          <div className="text-[9px] text-(--ui-text-a9b7ce) tracking-[1.7px] font-semibold mb-2.5 max-md:mb-1.25">MONTHLY ROUTE</div>
-          <h3 className="text-[15px] font-semibold text-text m-0">{isNew ? 'New connection' : 'Edit connection'}</h3>
+          <div className="text-[9px] text-(--ui-text-a9b7ce) tracking-[1.7px] font-semibold mb-2.5 max-md:mb-1.25">
+            MONTHLY ROUTE
+          </div>
+          <h3 className="text-[15px] font-semibold text-text m-0">
+            {isNew ? 'New connection' : 'Edit connection'}
+          </h3>
         </div>
         <button
           className="p-0 leading-none bg-(--ui-surface-1d2737) hover:bg-(--ui-surface-hover-263346) border border-(--ui-border-334057) rounded-[7px] grid place-items-center w-7.5 h-7.5 text-[20px] text-(--ui-text-a5b5cd) hover:text-white shrink-0 cursor-pointer"
@@ -118,12 +122,21 @@ export function ConnectionEditor({
                 : 'This route describes the flow between accounts. It does not create extra income or change an account balance by itself.'}
         </p>
         {draft.sourceNodeId === draft.targetNodeId && (
-          <p className="text-xs text-coral m-0" role="alert">Choose two different nodes.</p>
+          <p className="text-xs text-coral m-0" role="alert">
+            Choose two different nodes.
+          </p>
         )}
-        <button className="inline-flex items-center justify-center gap-1.75 whitespace-nowrap rounded-[7px] px-3.25 py-2.25 text-[11px] font-medium min-h-8.5 cursor-pointer bg-primary text-primary-fg border border-primary hover:bg-(--ui-surface-hover-cbbafa) disabled:opacity-40 disabled:cursor-not-allowed" disabled={draft.sourceNodeId === draft.targetNodeId}>
+        <button
+          className="inline-flex items-center justify-center gap-1.75 whitespace-nowrap rounded-[7px] px-3.25 py-2.25 text-[11px] font-medium min-h-8.5 cursor-pointer bg-primary text-primary-fg border border-primary hover:bg-(--ui-surface-hover-cbbafa) disabled:opacity-40 disabled:cursor-not-allowed"
+          disabled={draft.sourceNodeId === draft.targetNodeId}
+        >
           Apply connection
         </button>
-        <button type="button" className="inline-flex items-center justify-center gap-1.75 whitespace-nowrap rounded-[7px] px-3.25 py-2.25 text-[11px] font-medium min-h-8.5 cursor-pointer text-coral border border-(--ui-border-633246) bg-(--ui-surface-2b1b28) hover:bg-(--ui-surface-hover-3d2034)" onClick={onDelete}>
+        <button
+          type="button"
+          className="inline-flex items-center justify-center gap-1.75 whitespace-nowrap rounded-[7px] px-3.25 py-2.25 text-[11px] font-medium min-h-8.5 cursor-pointer text-coral border border-(--ui-border-633246) bg-(--ui-surface-2b1b28) hover:bg-(--ui-surface-hover-3d2034)"
+          onClick={onDelete}
+        >
           {isNew ? 'Discard connection' : 'Remove connection'}
         </button>
         <small className="text-[10px] text-(--ui-text-7d91ac) leading-[1.6]">

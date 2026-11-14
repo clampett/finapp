@@ -22,4 +22,3 @@ public record UpdateRecurringTransactionRequest(
     Boolean isActive,
     String notes
 ) {}
-

@@ -1,5 +1,5 @@
-import { coachModels, coachPresets } from './scenarioCoach';
-import type { CoachModel, CoachPreset, CoachSettings, coachInputs } from './scenarioCoach';
+import { coachModels, coachPresets } from './coach-engine';
+import type { CoachModel, CoachPreset, CoachSettings, coachInputs } from './coach-engine';
 import { CoachMarket } from './CoachMarket';
 
 export type MarketAssumption = { symbol: string; volatility: number; date: string };

@@ -16,14 +16,29 @@ export default function OverviewComposition({
   const hovered = active === null ? null : breakdown.items[active];
   const labels = { budget: 'Monthly allocation', assets: 'Total assets', debt: 'Outstanding debt' };
   return (
-    <section className="my-6 p-[clamp(18px,3vw,30px)] border border-(--ui-border-2d4055) rounded-[18px] bg-[radial-gradient(ellipse_at_top_left,var(--ui-surface-223b3a4a),transparent_65%),var(--ui-surface-111b29)]" aria-labelledby="composition-title">
+    <section
+      className="my-6 p-[clamp(18px,3vw,30px)] border border-(--ui-border-2d4055) rounded-[18px] bg-[radial-gradient(ellipse_at_top_left,var(--ui-surface-223b3a4a),transparent_65%),var(--ui-surface-111b29)]"
+      aria-labelledby="composition-title"
+    >
       <header className="flex items-center justify-between gap-5 flex-wrap">
         <div>
-          <div className="text-[9px] text-(--ui-text-a9b7ce) tracking-[1.7px] font-semibold mb-2.5">YOUR MONEY AT A GLANCE</div>
-          <h3 id="composition-title" className="mt-2 text-[23px] tracking-[-0.5px] font-semibold text-text m-0">Your financial picture</h3>
-          <p className="mt-1.75 text-(--ui-text-91a6bf) text-xs m-0">Explore your monthly plan, assets, and debts separately.</p>
+          <div className="text-[9px] text-(--ui-text-a9b7ce) tracking-[1.7px] font-semibold mb-2.5">
+            YOUR MONEY AT A GLANCE
+          </div>
+          <h3
+            id="composition-title"
+            className="mt-2 text-[23px] tracking-[-0.5px] font-semibold text-text m-0"
+          >
+            Your financial picture
+          </h3>
+          <p className="mt-1.75 text-(--ui-text-91a6bf) text-xs m-0">
+            Explore your monthly plan, assets, and debts separately.
+          </p>
         </div>
-        <div className="flex p-1 gap-0.75 bg-(--ui-surface-0d1622) border border-(--ui-border-2e4157) rounded-[10px]" aria-label="Financial breakdown">
+        <div
+          className="flex p-1 gap-0.75 bg-(--ui-surface-0d1622) border border-(--ui-border-2e4157) rounded-[10px]"
+          aria-label="Financial breakdown"
+        >
           {(['budget', 'assets', 'debt'] as const).map((value) => (
             <button
               key={value}
@@ -77,10 +92,18 @@ export default function OverviewComposition({
           {/* Kept hover details inside the donut's reserved center, avoiding a
               second floating tooltip covering the same label and amount. */}
           <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-[60%] max-w-40 flex flex-col items-center justify-center gap-1.75 pointer-events-none text-center">
-            <span className="text-xs text-(--ui-text-9db1c9) min-h-8 flex items-center justify-center leading-4">{hovered?.label ?? labels[mode]}</span>
-            <strong className="text-[clamp(26px,3vw,38px)] tracking-[-1px] font-semibold text-text">{money(hovered?.value ?? breakdown.total, true)}</strong>
+            <span className="text-xs text-(--ui-text-9db1c9) min-h-8 flex items-center justify-center leading-4">
+              {hovered?.label ?? labels[mode]}
+            </span>
+            <strong className="text-[clamp(26px,3vw,38px)] tracking-[-1px] font-semibold text-text">
+              {money(hovered?.value ?? breakdown.total, true)}
+            </strong>
             <small className="text-[10px] text-(--ui-text-69839e)">
-              {hovered ? `${((hovered.value / breakdown.total) * 100).toFixed(1)}% of ${mode === 'budget' ? 'budget' : mode === 'assets' ? 'assets' : 'debt'}` : mode === 'budget' ? 'per month' : 'current balance'}
+              {hovered
+                ? `${((hovered.value / breakdown.total) * 100).toFixed(1)}% of ${mode === 'budget' ? 'budget' : mode === 'assets' ? 'assets' : 'debt'}`
+                : mode === 'budget'
+                  ? 'per month'
+                  : 'current balance'}
             </small>
           </div>
         </div>
@@ -96,10 +119,17 @@ export default function OverviewComposition({
                 onFocus={() => setActive(index)}
                 onBlur={() => setActive(null)}
               >
-                <i className="w-2 h-2 rounded-full inline-block" style={{ background: item.color }} />
+                <i
+                  className="w-2 h-2 rounded-full inline-block"
+                  style={{ background: item.color }}
+                />
                 <span className="text-(--ui-text-acbfd5)">{item.label}</span>
-                <strong className="font-semibold tabular-nums text-text">{dollars(item.value)}</strong>
-                <small className="text-(--ui-text-7993ae) text-right text-[11px]">{((item.value / breakdown.total) * 100).toFixed(1)}%</small>
+                <strong className="font-semibold tabular-nums text-text">
+                  {dollars(item.value)}
+                </strong>
+                <small className="text-(--ui-text-7993ae) text-right text-[11px]">
+                  {((item.value / breakdown.total) * 100).toFixed(1)}%
+                </small>
               </div>
             ))}
             {!breakdown.items.length && (
@@ -127,9 +157,10 @@ export default function OverviewComposition({
           </p>
           {breakdown.shortfall > 0 && (
             <p className="mt-3 p-3 bg-(--ui-surface-402832) text-(--ui-text-f2b1be) rounded-lg text-xs leading-[1.7]">
-              Monthly shortfall: <strong className="font-semibold">{dollars(breakdown.shortfall)}</strong>. Commitments exceed
-              take-home pay. The chart shows allocations; it does not create income to cover the
-              gap.
+              Monthly shortfall:{' '}
+              <strong className="font-semibold">{dollars(breakdown.shortfall)}</strong>. Commitments
+              exceed take-home pay. The chart shows allocations; it does not create income to cover
+              the gap.
             </p>
           )}
         </div>
@@ -137,7 +168,9 @@ export default function OverviewComposition({
       <footer className="border-t border-(--ui-border-293b50) pt-4.5 flex justify-between flex-wrap gap-3 text-[11px] text-(--ui-text-7e98b2)">
         <span>
           Net worth{' '}
-          <strong className={`ml-2.5 text-sm font-semibold ${t.netWorth < 0 ? 'negative text-coral' : 'positive text-mint'}`}>
+          <strong
+            className={`ml-2.5 text-sm font-semibold ${t.netWorth < 0 ? 'negative text-coral' : 'positive text-mint'}`}
+          >
             {dollars(t.netWorth)}
           </strong>
         </span>

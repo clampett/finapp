@@ -26,4 +26,3 @@ public record RecurringTransactionDTO(
     OffsetDateTime createdAt,
     OffsetDateTime updatedAt
 ) {}
-

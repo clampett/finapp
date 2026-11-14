@@ -8,14 +8,8 @@ import {
   loadUnifiedHoldings,
   saveStoredPortfolioValue,
 } from '../investing/portfolio';
-import {
-  syncGraphNodesToRecurring,
-  getAvailableBudgetAccounts,
-} from './budgeting-bridge';
-import {
-  decryptFromDemoStorage,
-  encryptForDemoStorage,
-} from './budget-crypto';
+import { syncGraphNodesToRecurring, getAvailableBudgetAccounts } from './budgeting-bridge';
+import { decryptFromDemoStorage, encryptForDemoStorage } from './budget-crypto';
 import type {
   Transaction,
   Stock,
@@ -24,11 +18,7 @@ import type {
   AccountOption,
   BudgetingTabProps,
 } from './types';
-import {
-  initialTransaction,
-  initialStock,
-  initialRecurring,
-} from './types';
+import { initialTransaction, initialStock, initialRecurring } from './types';
 import type { TradeModalData } from './TradeModal';
 
 export function useBudgetData({
@@ -39,28 +29,24 @@ export function useBudgetData({
   portfolioValue: propPortfolioValue,
 }: BudgetingTabProps) {
   const sessionUserId =
-    Number(
-      sessionStorage.getItem('finapp_user_id') ||
-        localStorage.getItem('finapp_user_id'),
-    ) || 0;
+    Number(sessionStorage.getItem('finapp_user_id') || localStorage.getItem('finapp_user_id')) || 0;
   const userId = propUserId || sessionUserId;
   const isDemo = Boolean(demo || !sessionUserId);
 
   // Active view section
-  const [activeSubTab, setActiveSubTab] = useState<
-    'transactions' | 'recurring' | 'stocks'
-  >('transactions');
+  const [activeSubTab, setActiveSubTab] = useState<'transactions' | 'recurring' | 'stocks'>(
+    'transactions',
+  );
 
   // Data states
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [stocks, setStocks] = useState<Stock[]>([]);
   const [positions, setPositions] = useState<StockPosition[]>([]);
-  const [recurringList, setRecurringList] = useState<RecurringTransaction[]>(
-    [],
-  );
+  const [recurringList, setRecurringList] = useState<RecurringTransaction[]>([]);
   const [dbAccounts, setDbAccounts] = useState<AccountOption[]>([]);
   const [refreshing, setRefreshing] = useState(false);
   const [generating, setGenerating] = useState(false);
+  // Tracked active requests so superseded loads and unmounted views could be cancelled.
   const activeLoad = useRef<AbortController | null>(null);
   const activeGeneration = useRef<AbortController | null>(null);
   const [statusMessage, setStatusMessage] = useState<{
@@ -77,9 +63,7 @@ export function useBudgetData({
   const [stockDraft, setStockDraft] = useState<Stock>(initialStock);
   const [showStockForm, setShowStockForm] = useState(false);
   const [editingStockId, setEditingStockId] = useState<number | null>(null);
-  const [currentPrices, setCurrentPrices] = useState<Record<string, number>>(
-    {},
-  );
+  const [currentPrices, setCurrentPrices] = useState<Record<string, number>>({});
   const [quotePrice, setQuotePrice] = useState<number | null>(null);
   const [fetchingQuote, setFetchingQuote] = useState(false);
   const [detectedDividend, setDetectedDividend] = useState<{
@@ -107,16 +91,14 @@ export function useBudgetData({
     const controller = new AbortController();
     setFetchingQuote(true);
 
+    // Debounced ticker edits before requesting a quote to avoid a request on every keystroke.
     const timer = setTimeout(async () => {
       try {
-        const res = await fetch(
-          `${API_BASE}/market/stocks/${encodeURIComponent(sym)}`,
-          {
-            signal: controller.signal,
-            headers: sessionHeaders(),
-            credentials: 'include',
-          },
-        );
+        const res = await fetch(`${API_BASE}/market/stocks/${encodeURIComponent(sym)}`, {
+          signal: controller.signal,
+          headers: sessionHeaders(),
+          credentials: 'include',
+        });
         if (res.ok) {
           const data = await res.json();
           if (data && typeof data.latest_price === 'number') {
@@ -124,9 +106,7 @@ export function useBudgetData({
             setCurrentPrices((prev) => ({ ...prev, [sym]: data.latest_price }));
             const hasDiv = Boolean(data.pays_dividend);
             const perShare =
-              typeof data.dividend_per_share === 'number'
-                ? data.dividend_per_share
-                : 0;
+              typeof data.dividend_per_share === 'number' ? data.dividend_per_share : 0;
             const freq = data.dividend_frequency || 'quarterly';
             setDetectedDividend({
               pays: hasDiv,
@@ -169,12 +149,14 @@ export function useBudgetData({
   const lastQuoteRefresh = useRef<number>(0);
   const graphRef = useRef(graph);
   graphRef.current = graph;
+  // Retained the latest unfiltered graph for asynchronous budget synchronization.
   const rawGraphRef = useRef(rawGraph);
   rawGraphRef.current = rawGraph;
 
   // Refresh current market prices for all tracked stocks
   const refreshCurrentPrices = useCallback(
     async (stockList: Stock[], signal?: AbortSignal, force = false) => {
+      // Limited automatic quote refreshes to once per minute while allowing explicit refreshes.
       if (!force && Date.now() - lastQuoteRefresh.current < 60000) {
         return;
       }
@@ -185,15 +167,13 @@ export function useBudgetData({
       lastQuoteRefresh.current = Date.now();
 
       const results = await Promise.allSettled(
+        // Collected successful quotes even when an individual ticker request failed.
         tickers.map(async (ticker) => {
-          const res = await fetch(
-            `${API_BASE}/market/stocks/${encodeURIComponent(ticker)}`,
-            {
-              ...(signal ? { signal } : {}),
-              headers: sessionHeaders(),
-              credentials: 'include',
-            },
-          );
+          const res = await fetch(`${API_BASE}/market/stocks/${encodeURIComponent(ticker)}`, {
+            ...(signal ? { signal } : {}),
+            headers: sessionHeaders(),
+            credentials: 'include',
+          });
           if (!res.ok) throw new Error('Not found');
           const data = await res.json().catch(() => null);
           if (data && typeof data.latest_price === 'number') {
@@ -217,11 +197,7 @@ export function useBudgetData({
         stockList.forEach((s) => {
           const sym = s.ticker.trim().toUpperCase();
           const livePrice = priceMap[sym];
-          if (
-            livePrice !== undefined &&
-            s.id &&
-            Number(s.lastPrice) !== livePrice
-          ) {
+          if (livePrice !== undefined && s.id && Number(s.lastPrice) !== livePrice) {
             fetch(`${API_BASE}/stocks/${s.id}`, {
               ...(signal ? { signal } : {}),
               method: 'PUT',
@@ -257,12 +233,12 @@ export function useBudgetData({
   });
 
   // Recurring form state
-  const [recurDraft, setRecurDraft] =
-    useState<RecurringTransaction>(initialRecurring);
+  const [recurDraft, setRecurDraft] = useState<RecurringTransaction>(initialRecurring);
   const [showRecurForm, setShowRecurForm] = useState(false);
   const [editingRecurId, setEditingRecurId] = useState<number | null>(null);
 
   // Load all budgeting and stock data from API or demo storage
+  // Centralized demo restoration and authenticated loading for refreshes and portfolio updates.
   const loadData = useCallback(
     async (includePrices = false, forcePrices = false) => {
       // Demo mode or unauthenticated fallback
@@ -274,13 +250,12 @@ export function useBudgetData({
         try {
           const storageKey = `finapp-holdings-v1:demo:${userId || 1}`;
           const budgetStorageKey = `finapp-budget-v1:demo:${userId || 1}`;
-          const { stocks: loadedStocks, positions: loadedPositions } =
-            await loadUnifiedHoldings(
-              storageKey,
-              userId || 1,
-              true,
-              controller.signal,
-            );
+          const { stocks: loadedStocks, positions: loadedPositions } = await loadUnifiedHoldings(
+            storageKey,
+            userId || 1,
+            true,
+            controller.signal,
+          );
           if (controller.signal.aborted) return false;
           setStocks(loadedStocks);
           setPositions(loadedPositions);
@@ -289,9 +264,10 @@ export function useBudgetData({
           let demoRecur: RecurringTransaction[] = [];
           try {
             const savedRaw = localStorage.getItem(budgetStorageKey);
-            const parsed = await decryptFromDemoStorage<
-              Record<string, unknown>
-            >(budgetStorageKey, savedRaw);
+            const parsed = await decryptFromDemoStorage<Record<string, unknown>>(
+              budgetStorageKey,
+              savedRaw,
+            );
             if (parsed) {
               demoTxns = Array.isArray(parsed.transactions)
                 ? (parsed.transactions as Transaction[])
@@ -362,11 +338,10 @@ export function useBudgetData({
             ];
           }
 
-          const { updatedRecurring: syncedDemoRecur, hasChanges } =
-            syncGraphNodesToRecurring(
-              rawGraphRef.current ?? graphRef.current,
-              demoRecur,
-            );
+          const { updatedRecurring: syncedDemoRecur, hasChanges } = syncGraphNodesToRecurring(
+            rawGraphRef.current ?? graphRef.current,
+            demoRecur,
+          );
           if (hasChanges || !localStorage.getItem(budgetStorageKey))
             try {
               localStorage.setItem(
@@ -383,11 +358,7 @@ export function useBudgetData({
           isInitialLoaded.current = true;
           lastSyncedGraph.current = graphRef.current;
           if (includePrices)
-            await refreshCurrentPrices(
-              loadedStocks,
-              controller.signal,
-              forcePrices,
-            );
+            await refreshCurrentPrices(loadedStocks, controller.signal, forcePrices);
           return true;
         } finally {
           if (activeLoad.current === controller) {
@@ -405,10 +376,7 @@ export function useBudgetData({
       try {
         const headers = { ...sessionHeaders() };
         let loadedStocks: Stock[] = [];
-        const read = async <T>(
-          path: string,
-          apply: (data: T) => void | Promise<void>,
-        ) => {
+        const read = async <T>(path: string, apply: (data: T) => void | Promise<void>) => {
           if (controller.signal.aborted) return;
           const response = await fetch(`${API_BASE}/${path}`, {
             headers,
@@ -430,15 +398,12 @@ export function useBudgetData({
           } catch {
             throw new Error(`Invalid response for ${path}.`);
           }
-          if (!Array.isArray(json?.data))
-            throw new Error(`Invalid response for ${path}.`);
+          if (!Array.isArray(json?.data)) throw new Error(`Invalid response for ${path}.`);
           if (!controller.signal.aborted) await apply(json.data);
         };
 
         const synchronizeRecurring = (task: () => Promise<void>) =>
-          navigator.locks
-            ? navigator.locks.request('finapp-recurring:' + userId, task)
-            : task();
+          navigator.locks ? navigator.locks.request('finapp-recurring:' + userId, task) : task();
 
         const results = await Promise.allSettled([
           read<Transaction[]>('transactions', setTransactions),
@@ -448,56 +413,49 @@ export function useBudgetData({
           }),
           read<StockPosition[]>('positions', setPositions),
           synchronizeRecurring(() =>
-            read<RecurringTransaction[]>(
-              'recurring-transactions',
-              async (data) => {
-                const { newRules, updatedRules } = syncGraphNodesToRecurring(
-                  rawGraphRef.current ?? graphRef.current,
-                  data,
-                );
-                const write = async (
-                  rule: RecurringTransaction,
-                  existing: boolean,
-                ) => {
-                  const path = existing
-                    ? '/recurring-transactions/' + rule.id
-                    : '/recurring-transactions';
-                  const response = await fetch(API_BASE + path, {
-                    method: existing ? 'PUT' : 'POST',
-                    headers: {
-                      'Content-Type': 'application/json',
-                      ...headers,
-                    },
-                    credentials: 'include',
-                    body: JSON.stringify(
-                      existing
-                        ? {
-                            amount: rule.amount,
-                            kind: rule.kind,
-                            isActive: rule.isActive,
-                          }
-                        : { ...rule, id: undefined, userId },
-                    ),
-                  });
-                  if (!response.ok)
-                    throw new Error('Could not synchronize recurring rules.');
-                  return (await response.json()).data as RecurringTransaction;
-                };
+            read<RecurringTransaction[]>('recurring-transactions', async (data) => {
+              const { newRules, updatedRules } = syncGraphNodesToRecurring(
+                rawGraphRef.current ?? graphRef.current,
+                data,
+              );
+              const write = async (rule: RecurringTransaction, existing: boolean) => {
+                const path = existing
+                  ? '/recurring-transactions/' + rule.id
+                  : '/recurring-transactions';
+                const response = await fetch(API_BASE + path, {
+                  method: existing ? 'PUT' : 'POST',
+                  headers: {
+                    'Content-Type': 'application/json',
+                    ...headers,
+                  },
+                  credentials: 'include',
+                  body: JSON.stringify(
+                    existing
+                      ? {
+                          amount: rule.amount,
+                          kind: rule.kind,
+                          isActive: rule.isActive,
+                        }
+                      : { ...rule, id: undefined, userId },
+                  ),
+                });
+                if (!response.ok) throw new Error('Could not synchronize recurring rules.');
+                return (await response.json()).data as RecurringTransaction;
+              };
 
-                const saved = [...data];
-                for (const rule of updatedRules) {
-                  if (controller.signal.aborted) return;
-                  const result = await write(rule, true);
-                  const index = saved.findIndex((row) => row.id === result.id);
-                  if (index >= 0) saved[index] = result;
-                }
-                for (const rule of newRules) {
-                  if (controller.signal.aborted) return;
-                  saved.push(await write(rule, false));
-                }
-                if (!controller.signal.aborted) setRecurringList(saved);
-              },
-            ),
+              const saved = [...data];
+              for (const rule of updatedRules) {
+                if (controller.signal.aborted) return;
+                const result = await write(rule, true);
+                const index = saved.findIndex((row) => row.id === result.id);
+                if (index >= 0) saved[index] = result;
+              }
+              for (const rule of newRules) {
+                if (controller.signal.aborted) return;
+                saved.push(await write(rule, false));
+              }
+              if (!controller.signal.aborted) setRecurringList(saved);
+            }),
           ),
           read<AccountOption[]>('accounts', setDbAccounts),
         ]);
@@ -510,12 +468,7 @@ export function useBudgetData({
         }
         isInitialLoaded.current = true;
         lastSyncedGraph.current = graphRef.current;
-        if (includePrices)
-          await refreshCurrentPrices(
-            loadedStocks,
-            controller.signal,
-            forcePrices,
-          );
+        if (includePrices) await refreshCurrentPrices(loadedStocks, controller.signal, forcePrices);
         return !controller.signal.aborted;
       } catch (err) {
         if (controller.signal.aborted) return false;
@@ -523,9 +476,7 @@ export function useBudgetData({
         setStatusMessage({
           type: 'error',
           text:
-            err instanceof Error
-              ? err.message
-              : 'We couldn’t load your budget. Please try again.',
+            err instanceof Error ? err.message : 'We couldn’t load your budget. Please try again.',
         });
         return false;
       } finally {
@@ -561,11 +512,7 @@ export function useBudgetData({
       void loadData(false);
     };
     window.addEventListener(PORTFOLIO_UPDATED_EVENT, handlePortfolioUpdated);
-    return () =>
-      window.removeEventListener(
-        PORTFOLIO_UPDATED_EVENT,
-        handlePortfolioUpdated,
-      );
+    return () => window.removeEventListener(PORTFOLIO_UPDATED_EVENT, handlePortfolioUpdated);
   }, [loadData]);
 
   // Reloaded recurring rules when the active graph changed while this tab was open.
@@ -609,24 +556,18 @@ export function useBudgetData({
       ? positions.reduce((sum, p) => {
           const sym = p.ticker?.toUpperCase() || '';
           const currentPrice =
-            currentPrices[sym] !== undefined
-              ? currentPrices[sym]
-              : Number(p.lastPrice || 0);
+            currentPrices[sym] !== undefined ? currentPrices[sym] : Number(p.lastPrice || 0);
           return sum + Number(p.sharesOwned || 0) * Number(currentPrice);
         }, 0)
       : stocks.reduce((sum, s) => {
           const sym = s.ticker?.toUpperCase() || '';
           const currentPrice =
-            currentPrices[sym] !== undefined
-              ? currentPrices[sym]
-              : Number(s.lastPrice || 0);
+            currentPrices[sym] !== undefined ? currentPrices[sym] : Number(s.lastPrice || 0);
           return sum + Number(s.sharesOwned || 0) * Number(currentPrice);
         }, 0);
 
   const activePortfolioValue =
-    propPortfolioValue !== undefined
-      ? propPortfolioValue
-      : totalPortfolioValue;
+    propPortfolioValue !== undefined ? propPortfolioValue : totalPortfolioValue;
   const currentTotals = totals(graph, activePortfolioValue);
   const currentNetWorth = currentTotals.netWorth;
 

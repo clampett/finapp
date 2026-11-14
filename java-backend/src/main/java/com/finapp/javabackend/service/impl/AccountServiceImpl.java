@@ -33,16 +33,17 @@ public class AccountServiceImpl implements AccountService {
     @Override
     @Transactional(readOnly = true)
     public List<AccountDTO> getAccounts(Long userId) {
-        return accountRepository.findByUserId(userId).stream()
-            .map(EntityDtoMapper::toDto)
-            .toList();
+        return accountRepository.findByUserId(userId).stream().map(EntityDtoMapper::toDto).toList();
     }
 
     @Override
     @Transactional(readOnly = true)
     public AccountDTO getAccount(Long userId, Long accountId) {
-        Account account = accountRepository.findByIdAndUserId(accountId, userId)
-            .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Account not found"));
+        Account account = accountRepository
+            .findByIdAndUserId(accountId, userId)
+            .orElseThrow(() ->
+                new ResponseStatusException(HttpStatus.NOT_FOUND, "Account not found")
+            );
         return EntityDtoMapper.toDto(account);
     }
 
@@ -53,16 +54,22 @@ public class AccountServiceImpl implements AccountService {
         }
         String trimmedName = request.name().trim();
         if (accountRepository.existsByUserIdAndName(userId, trimmedName)) {
-            throw new ResponseStatusException(HttpStatus.CONFLICT, "Account with name '" + trimmedName + "' already exists");
+            throw new ResponseStatusException(
+                HttpStatus.CONFLICT,
+                "Account with name '" + trimmedName + "' already exists"
+            );
         }
-        User user = userRepository.findById(userId)
+        User user = userRepository
+            .findById(userId)
             .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "User not found"));
 
         Account account = new Account();
         account.setUser(user);
         account.setName(trimmedName);
         account.setType(request.type() != null ? request.type() : AccountType.checking);
-        account.setOpeningBalance(request.openingBalance() != null ? request.openingBalance() : BigDecimal.ZERO);
+        account.setOpeningBalance(
+            request.openingBalance() != null ? request.openingBalance() : BigDecimal.ZERO
+        );
         account.setIsActive(request.isActive() != null ? request.isActive() : Boolean.TRUE);
         account.setCreatedAt(OffsetDateTime.now());
         account.setUpdatedAt(OffsetDateTime.now());
@@ -72,13 +79,22 @@ public class AccountServiceImpl implements AccountService {
 
     @Override
     public AccountDTO updateAccount(Long userId, Long accountId, UpdateAccountRequest request) {
-        Account account = accountRepository.findByIdAndUserId(accountId, userId)
-            .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Account not found"));
+        Account account = accountRepository
+            .findByIdAndUserId(accountId, userId)
+            .orElseThrow(() ->
+                new ResponseStatusException(HttpStatus.NOT_FOUND, "Account not found")
+            );
 
         if (request.name() != null && !request.name().trim().isEmpty()) {
             String trimmedName = request.name().trim();
-            if (!trimmedName.equalsIgnoreCase(account.getName()) && accountRepository.existsByUserIdAndName(userId, trimmedName)) {
-                throw new ResponseStatusException(HttpStatus.CONFLICT, "Account with name '" + trimmedName + "' already exists");
+            if (
+                !trimmedName.equalsIgnoreCase(account.getName()) &&
+                accountRepository.existsByUserIdAndName(userId, trimmedName)
+            ) {
+                throw new ResponseStatusException(
+                    HttpStatus.CONFLICT,
+                    "Account with name '" + trimmedName + "' already exists"
+                );
             }
             account.setName(trimmedName);
         }
@@ -98,9 +114,11 @@ public class AccountServiceImpl implements AccountService {
 
     @Override
     public void deleteAccount(Long userId, Long accountId) {
-        Account account = accountRepository.findByIdAndUserId(accountId, userId)
-            .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Account not found"));
+        Account account = accountRepository
+            .findByIdAndUserId(accountId, userId)
+            .orElseThrow(() ->
+                new ResponseStatusException(HttpStatus.NOT_FOUND, "Account not found")
+            );
         accountRepository.delete(account);
     }
 }
-

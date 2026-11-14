@@ -38,7 +38,10 @@ class SessionRestartTest {
         var session = session();
         authenticate(session, session.getCreatedAt().minusSeconds(1));
 
-        assertEquals(new SessionUser(9L, "fixture"), SecurityContextHolder.getContext().getAuthentication().getPrincipal());
+        assertEquals(
+            new SessionUser(9L, "fixture"),
+            SecurityContextHolder.getContext().getAuthentication().getPrincipal()
+        );
     }
 
     private UserSession session() {
@@ -58,7 +61,9 @@ class SessionRestartTest {
         request.setCookies(new Cookie("finapp_session", TOKEN));
         request.addHeader("X-FinApp-Session", TOKEN);
         new SessionCookieAuthenticationFilter(sessions, startup).doFilter(
-            request, new MockHttpServletResponse(), new MockFilterChain()
+            request,
+            new MockHttpServletResponse(),
+            new MockFilterChain()
         );
     }
 }

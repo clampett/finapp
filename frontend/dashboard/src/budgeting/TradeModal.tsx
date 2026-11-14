@@ -44,8 +44,7 @@ export function TradeModal({
       }}
     >
       <h4 style={{ margin: '0 0 1rem 0' }}>
-        Trade {tradeModal.ticker} —{' '}
-        {tradeModal.type === 'buy' ? 'Buy Shares' : 'Sell Shares'}
+        Trade {tradeModal.ticker} — {tradeModal.type === 'buy' ? 'Buy Shares' : 'Sell Shares'}
       </h4>
       <form
         onSubmit={onExecuteTrade}
@@ -55,9 +54,7 @@ export function TradeModal({
           gap: '1rem',
         }}
       >
-        <label
-          style={{ display: 'flex', flexDirection: 'column', gap: '4px', fontSize: '13px' }}
-        >
+        <label style={{ display: 'flex', flexDirection: 'column', gap: '4px', fontSize: '13px' }}>
           Action
           <select
             value={tradeModal.type}
@@ -71,9 +68,7 @@ export function TradeModal({
           </select>
         </label>
 
-        <label
-          style={{ display: 'flex', flexDirection: 'column', gap: '4px', fontSize: '13px' }}
-        >
+        <label style={{ display: 'flex', flexDirection: 'column', gap: '4px', fontSize: '13px' }}>
           Quantity of Shares
           <NumberField
             min="0.0001"
@@ -87,31 +82,23 @@ export function TradeModal({
           />
         </label>
 
-        <label
-          style={{ display: 'flex', flexDirection: 'column', gap: '4px', fontSize: '13px' }}
-        >
+        <label style={{ display: 'flex', flexDirection: 'column', gap: '4px', fontSize: '13px' }}>
           Price per Share ($)
           <NumberField
             min="0.01"
             step="0.01"
             required
             value={String(tradeModal.price)}
-            onChange={(e) =>
-              setTradeModal((prev) => ({ ...prev, price: Number(e.target.value) }))
-            }
+            onChange={(e) => setTradeModal((prev) => ({ ...prev, price: Number(e.target.value) }))}
             style={formFieldStyle}
           />
         </label>
 
-        <label
-          style={{ display: 'flex', flexDirection: 'column', gap: '4px', fontSize: '13px' }}
-        >
+        <label style={{ display: 'flex', flexDirection: 'column', gap: '4px', fontSize: '13px' }}>
           Account
           <select
             value={tradeModal.accountName}
-            onChange={(e) =>
-              setTradeModal((prev) => ({ ...prev, accountName: e.target.value }))
-            }
+            onChange={(e) => setTradeModal((prev) => ({ ...prev, accountName: e.target.value }))}
             style={formFieldStyle}
           >
             {availableAccounts.map((acc) => (

@@ -1,7 +1,12 @@
 import React from 'react';
 import ReactDOM from 'react-dom/client';
 import App from './App.tsx';
-import { clearSession, endSession, installPrivateSessionGuard, validSession } from './common/session';
+import {
+  clearSession,
+  endSession,
+  installPrivateSessionGuard,
+  validSession,
+} from './common/session';
 import './styles/index.css';
 
 async function startWorkspace() {

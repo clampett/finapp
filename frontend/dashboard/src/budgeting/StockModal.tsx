@@ -63,9 +63,7 @@ export function StockModal({
           gap: '1rem',
         }}
       >
-        <label
-          style={{ display: 'flex', flexDirection: 'column', gap: '4px', fontSize: '13px' }}
-        >
+        <label style={{ display: 'flex', flexDirection: 'column', gap: '4px', fontSize: '13px' }}>
           Ticker Symbol
           <input
             type="text"
@@ -80,9 +78,7 @@ export function StockModal({
           />
         </label>
 
-        <label
-          style={{ display: 'flex', flexDirection: 'column', gap: '4px', fontSize: '13px' }}
-        >
+        <label style={{ display: 'flex', flexDirection: 'column', gap: '4px', fontSize: '13px' }}>
           Price at Purchase ($)
           <NumberField
             min="0"
@@ -96,9 +92,7 @@ export function StockModal({
           />
         </label>
 
-        <label
-          style={{ display: 'flex', flexDirection: 'column', gap: '4px', fontSize: '13px' }}
-        >
+        <label style={{ display: 'flex', flexDirection: 'column', gap: '4px', fontSize: '13px' }}>
           Shares Owned
           <NumberField
             min="0"
@@ -112,9 +106,7 @@ export function StockModal({
           />
         </label>
 
-        <div
-          style={{ display: 'flex', flexDirection: 'column', gap: '4px', fontSize: '13px' }}
-        >
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', fontSize: '13px' }}>
           <span style={{ color: 'var(--ui-paint-8f9db3)' }}>Current Price ($)</span>
           <div
             style={{
@@ -144,17 +136,13 @@ export function StockModal({
           </div>
         </div>
 
-        <label
-          style={{ display: 'flex', flexDirection: 'column', gap: '4px', fontSize: '13px' }}
-        >
+        <label style={{ display: 'flex', flexDirection: 'column', gap: '4px', fontSize: '13px' }}>
           Company Name (optional)
           <input
             type="text"
             placeholder="e.g. Apple Inc."
             value={stockDraft.companyName || ''}
-            onChange={(e) =>
-              setStockDraft((prev) => ({ ...prev, companyName: e.target.value }))
-            }
+            onChange={(e) => setStockDraft((prev) => ({ ...prev, companyName: e.target.value }))}
             style={formFieldStyle}
           />
         </label>
@@ -175,9 +163,7 @@ export function StockModal({
               border: `1px solid ${
                 detectedDividend.pays ? 'rgba(74, 222, 128, 0.3)' : 'rgba(148, 163, 184, 0.2)'
               }`,
-              color: detectedDividend.pays
-                ? 'var(--ui-paint-4ade80)'
-                : '#94a3b8',
+              color: detectedDividend.pays ? 'var(--ui-paint-4ade80)' : '#94a3b8',
             }}
           >
             {detectedDividend.pays ? (
@@ -186,8 +172,7 @@ export function StockModal({
                 <span>
                   <strong>Dividend detected:</strong> ${detectedDividend.perShare.toFixed(4)}
                   /share ({detectedDividend.frequency})
-                  {detectedDividend.yieldPct != null &&
-                    ` • ~${detectedDividend.yieldPct}% yield`}
+                  {detectedDividend.yieldPct != null && ` • ~${detectedDividend.yieldPct}% yield`}
                   {Number(stockDraft.sharesOwned || 0) > 0 && (
                     <span style={{ color: 'var(--color-text)', marginLeft: '6px' }}>
                       → {dollars(Number(stockDraft.sharesOwned) * detectedDividend.perShare)}/
@@ -218,9 +203,7 @@ export function StockModal({
             type="checkbox"
             id="paysDividendCheckbox"
             checked={Boolean(stockDraft.paysDividend)}
-            onChange={(e) =>
-              setStockDraft((prev) => ({ ...prev, paysDividend: e.target.checked }))
-            }
+            onChange={(e) => setStockDraft((prev) => ({ ...prev, paysDividend: e.target.checked }))}
           />
           <label
             htmlFor="paysDividendCheckbox"
@@ -320,7 +303,8 @@ export function StockModal({
                     )}
                     /{stockDraft.dividendFrequency || 'quarterly'}
                   </strong>{' '}
-                  is included in full portfolio forecasts that use editable price returns. Record payouts as income after you receive them.
+                  is included in full portfolio forecasts that use editable price returns. Record
+                  payouts as income after you receive them.
                 </div>
               )}
           </>

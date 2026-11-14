@@ -30,4 +30,3 @@ public record CreateStockTransactionRequest(
         return LocalDate.now();
     }
 }
-

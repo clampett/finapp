@@ -25,4 +25,3 @@ public record UpdateTransactionRequest(
         return date;
     }
 }
-

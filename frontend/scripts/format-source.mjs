@@ -24,6 +24,7 @@ for (const directory of [
   'frontend/landing/src',
   'frontend/landing/pages',
   'frontend/scripts',
+  'frontend/server',
   'java-backend/src',
 ]) {
   await collect(path.join(root, directory));

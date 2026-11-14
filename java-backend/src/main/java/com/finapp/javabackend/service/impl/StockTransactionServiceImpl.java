@@ -52,21 +52,31 @@ public class StockTransactionServiceImpl implements StockTransactionService {
     @Override
     @Transactional(readOnly = true)
     public StockTransactionDTO getStockTransaction(Long userId, Long id) {
-        StockTransaction txn = stockTransactionRepository.findByIdAndUserId(id, userId)
-            .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Stock transaction not found"));
+        StockTransaction txn = stockTransactionRepository
+            .findByIdAndUserId(id, userId)
+            .orElseThrow(() ->
+                new ResponseStatusException(HttpStatus.NOT_FOUND, "Stock transaction not found")
+            );
         return EntityDtoMapper.toDto(txn);
     }
 
     @Override
-    public StockTransactionDTO createStockTransaction(Long userId, CreateStockTransactionRequest request) {
+    public StockTransactionDTO createStockTransaction(
+        Long userId,
+        CreateStockTransactionRequest request
+    ) {
         if (request == null) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Request cannot be empty");
         }
         if (request.type() == null) {
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Stock transaction type is required (buy/sell/dividend/split)");
+            throw new ResponseStatusException(
+                HttpStatus.BAD_REQUEST,
+                "Stock transaction type is required (buy/sell/dividend/split)"
+            );
         }
 
-        User user = userRepository.findById(userId)
+        User user = userRepository
+            .findById(userId)
             .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "User not found"));
 
         Stock stock = resolveStock(userId, user, request.stockId(), request.ticker());
@@ -89,13 +99,21 @@ public class StockTransactionServiceImpl implements StockTransactionService {
         switch (type) {
             case buy, sell -> {
                 if (quantity == null || quantity.compareTo(BigDecimal.ZERO) <= 0) {
-                    throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Quantity must be strictly greater than 0 for " + type);
+                    throw new ResponseStatusException(
+                        HttpStatus.BAD_REQUEST,
+                        "Quantity must be strictly greater than 0 for " + type
+                    );
                 }
                 if (pricePerShare == null || pricePerShare.compareTo(BigDecimal.ZERO) < 0) {
-                    throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Price per share must be >= 0 for " + type);
+                    throw new ResponseStatusException(
+                        HttpStatus.BAD_REQUEST,
+                        "Price per share must be >= 0 for " + type
+                    );
                 }
                 if (totalAmount == null) {
-                    totalAmount = quantity.multiply(pricePerShare).add(type == StockTxnType.buy ? fees : fees.negate());
+                    totalAmount = quantity
+                        .multiply(pricePerShare)
+                        .add(type == StockTxnType.buy ? fees : fees.negate());
                 }
                 // Update stock's last price
                 stock.setLastPrice(pricePerShare);
@@ -105,12 +123,18 @@ public class StockTransactionServiceImpl implements StockTransactionService {
             }
             case dividend -> {
                 if (totalAmount == null || totalAmount.compareTo(BigDecimal.ZERO) <= 0) {
-                    throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Total amount must be greater than 0 for dividend");
+                    throw new ResponseStatusException(
+                        HttpStatus.BAD_REQUEST,
+                        "Total amount must be greater than 0 for dividend"
+                    );
                 }
             }
             case split -> {
                 if (quantity == null || quantity.compareTo(BigDecimal.ZERO) <= 0) {
-                    throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Split ratio quantity must be strictly greater than 0");
+                    throw new ResponseStatusException(
+                        HttpStatus.BAD_REQUEST,
+                        "Split ratio quantity must be strictly greater than 0"
+                    );
                 }
             }
         }
@@ -134,22 +158,31 @@ public class StockTransactionServiceImpl implements StockTransactionService {
 
     @Override
     public void deleteStockTransaction(Long userId, Long id) {
-        StockTransaction txn = stockTransactionRepository.findByIdAndUserId(id, userId)
-            .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Stock transaction not found"));
+        StockTransaction txn = stockTransactionRepository
+            .findByIdAndUserId(id, userId)
+            .orElseThrow(() ->
+                new ResponseStatusException(HttpStatus.NOT_FOUND, "Stock transaction not found")
+            );
         stockTransactionRepository.delete(txn);
     }
 
     private Stock resolveStock(Long userId, User user, Long stockId, String ticker) {
         if (stockId != null) {
-            return stockRepository.findByIdAndUserId(stockId, userId)
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.BAD_REQUEST, "Stock not found for user"));
+            return stockRepository
+                .findByIdAndUserId(stockId, userId)
+                .orElseThrow(() ->
+                    new ResponseStatusException(HttpStatus.BAD_REQUEST, "Stock not found for user")
+                );
         }
         if (ticker != null && !ticker.trim().isEmpty()) {
             String symbol = ticker.trim().toUpperCase();
             List<Stock> stocks = stockRepository.findByUserIdAndTicker(userId, symbol);
             // Required an explicit lot when the ticker matched several positions.
             if (stocks.size() > 1) {
-                throw new ResponseStatusException(HttpStatus.CONFLICT, "Choose a stock lot for this trade.");
+                throw new ResponseStatusException(
+                    HttpStatus.CONFLICT,
+                    "Choose a stock lot for this trade."
+                );
             }
             if (!stocks.isEmpty()) {
                 return stocks.get(0);
@@ -166,8 +199,14 @@ public class StockTransactionServiceImpl implements StockTransactionService {
 
     private Account resolveAccount(Long userId, User user, Long accountId, String accountName) {
         if (accountId != null) {
-            return accountRepository.findByIdAndUserId(accountId, userId)
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.BAD_REQUEST, "Account not found for user"));
+            return accountRepository
+                .findByIdAndUserId(accountId, userId)
+                .orElseThrow(() ->
+                    new ResponseStatusException(
+                        HttpStatus.BAD_REQUEST,
+                        "Account not found for user"
+                    )
+                );
         }
         if (accountName != null && !accountName.trim().isEmpty()) {
             String name = accountName.trim();
@@ -186,4 +225,3 @@ public class StockTransactionServiceImpl implements StockTransactionService {
         return null;
     }
 }
-

@@ -38,7 +38,7 @@ To model **$0 in new investments**, turn off **Include scheduled investment tran
 
 While assumptions are changed, the screen retains its last completed charts, results, and open audit table. Requests are debounced and superseded requests are aborted; an updating indicator distinguishes the previous result from the pending calculation. The chart and outcome sections are memoized so dragging the slider does not repeatedly redraw unchanged charts. Detailed user guides for each simulation appear below the left-column results.
 
-The browser implementation in `frontend/dashboard/src/finance.ts` and the Python implementation in `python-backend/app/cashflow.py` share this order and are tested against the same SQL demo fixtures. Gross/net, tax, and growth settings are retained in scenario JSON and browser drafts.
+The browser implementation in `frontend/dashboard/src/common/finance.ts` and the Python implementation in `python-backend/app/cashflow.py` share this order and are tested against the same SQL demo fixtures. Gross/net, tax, and growth settings are retained in scenario JSON and browser drafts.
 
 ## Loans, asset balances, and negative results
 
@@ -112,7 +112,7 @@ The model includes only entered expense nodes. It does not invent grocery, trans
 ## Regression checks
 
 - `python-backend/tests/test_demo_models.py` reads the actual V2 SQL demo fixtures and checks gross/net budgets, transfers, loan payoff, shortfalls, checking/savings yields, annuity closed forms, inflation, reproducibility, regime consistency, long-history calibration, and explicit offline fallbacks.
-- `frontend/finance.test.js` checks the browser reconciliation against the same demo values, validates assumption imports, and checks affordable allocations and final loan payments.
+- `frontend/test/dashboard/finance.test.js` checks the browser reconciliation against the same demo values, validates assumption imports, and checks affordable allocations and final loan payments.
 - Existing simulation, cache, proxy, and session tests remain in place.
 
-Run Python tests with `python -m pytest tests` from `python-backend`. Run browser-side calculation tests with `node --test frontend/finance.test.js frontend/session.test.js frontend/api-proxy.test.js` from the repository root.
+Run Python tests with `python -m pytest tests` from `python-backend`. Run browser-side calculation tests with `node --test frontend/test/dashboard/finance.test.js frontend/test/dashboard/session.test.js frontend/test/server/api-proxy.test.js` from the repository root.

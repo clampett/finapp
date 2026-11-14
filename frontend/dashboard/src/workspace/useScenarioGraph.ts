@@ -1,8 +1,8 @@
 import { useEffect, useMemo, useState } from 'react';
-import { API_BASE, activeGraph, parseGraph } from '../finance';
-import type { GraphData } from '../finance';
-import { newHistory, recordGraph } from '../graph-workspace';
-import { clearSession, sessionHeaders } from '../session';
+import { API_BASE, activeGraph, parseGraph } from '../common/finance';
+import type { GraphData } from '../common/finance';
+import { newHistory, recordGraph } from './graph-workspace';
+import { clearSession, sessionHeaders } from '../common/session';
 
 export function useScenarioGraph(userId: number, demo: boolean) {
   const storageKey = `finapp-scenario-v2:${demo ? 'demo' : 'user'}:${userId}`;

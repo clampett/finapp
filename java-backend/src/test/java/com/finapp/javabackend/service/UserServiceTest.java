@@ -64,9 +64,12 @@ class UserServiceTest {
     @Test
     void updateProfile_success_updatesDisplayNameAndPicture() {
         when(userRepository.findById(42L)).thenReturn(Optional.of(user));
-        when(userRepository.save(any(User.class))).thenAnswer(invocation -> invocation.getArgument(0));
+        when(userRepository.save(any(User.class))).thenAnswer(invocation ->
+            invocation.getArgument(0)
+        );
 
-        String photoUri = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAIAAACQd1PeAAAADElEQVR4nGNgYGAAAAAEAAH2FzhVAAAAAElFTkSuQmCC";
+        String photoUri =
+            "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAIAAACQd1PeAAAADElEQVR4nGNgYGAAAAAEAAH2FzhVAAAAAElFTkSuQmCC";
         UpdateUserProfileRequest request = new UpdateUserProfileRequest("Alex Developer", photoUri);
 
         UserProfileDTO updated = userService.updateProfile(42L, request);
@@ -81,7 +84,9 @@ class UserServiceTest {
     void updateProfile_clearProfilePicture_setsNull() {
         user.setProfilePicture("data:image/png;base64,abc");
         when(userRepository.findById(42L)).thenReturn(Optional.of(user));
-        when(userRepository.save(any(User.class))).thenAnswer(invocation -> invocation.getArgument(0));
+        when(userRepository.save(any(User.class))).thenAnswer(invocation ->
+            invocation.getArgument(0)
+        );
 
         UpdateUserProfileRequest request = new UpdateUserProfileRequest(null, "");
 
@@ -122,7 +127,10 @@ class UserServiceTest {
     void updateProfile_invalidProfilePictureFormat_throwsBadRequest() {
         when(userRepository.findById(42L)).thenReturn(Optional.of(user));
 
-        UpdateUserProfileRequest request = new UpdateUserProfileRequest("Alex", "http://evil.com/pic.png");
+        UpdateUserProfileRequest request = new UpdateUserProfileRequest(
+            "Alex",
+            "http://evil.com/pic.png"
+        );
 
         ResponseStatusException ex = assertThrows(ResponseStatusException.class, () ->
             userService.updateProfile(42L, request)
@@ -136,7 +144,9 @@ class UserServiceTest {
         when(userRepository.findById(42L)).thenReturn(Optional.of(user));
 
         var request = new UpdateUserProfileRequest(null, "data:image/png;base64,AAAA");
-        var error = assertThrows(ResponseStatusException.class, () -> userService.updateProfile(42L, request));
+        var error = assertThrows(ResponseStatusException.class, () ->
+            userService.updateProfile(42L, request)
+        );
 
         assertEquals(HttpStatus.BAD_REQUEST, error.getStatusCode());
         verify(userRepository, never()).save(any(User.class));

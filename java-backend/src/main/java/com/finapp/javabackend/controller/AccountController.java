@@ -24,14 +24,21 @@ public class AccountController {
     }
 
     private Long getUserId(Authentication authentication) {
-        if (authentication == null || !(authentication.getPrincipal() instanceof SessionUser user)) {
-            throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Sign in to access accounts.");
+        if (
+            authentication == null || !(authentication.getPrincipal() instanceof SessionUser user)
+        ) {
+            throw new ResponseStatusException(
+                HttpStatus.UNAUTHORIZED,
+                "Sign in to access accounts."
+            );
         }
         return user.id();
     }
 
     @GetMapping
-    public ResponseEntity<ApiResponse<List<AccountDTO>>> getAccounts(Authentication authentication) {
+    public ResponseEntity<ApiResponse<List<AccountDTO>>> getAccounts(
+        Authentication authentication
+    ) {
         Long userId = getUserId(authentication);
         List<AccountDTO> accounts = accountService.getAccounts(userId);
         return ResponseEntity.ok(ApiResponse.success(accounts, "Accounts fetched successfully"));
@@ -54,8 +61,9 @@ public class AccountController {
     ) {
         Long userId = getUserId(authentication);
         AccountDTO created = accountService.createAccount(userId, request);
-        return ResponseEntity.status(HttpStatus.CREATED)
-            .body(ApiResponse.success(created, "Account created successfully"));
+        return ResponseEntity.status(HttpStatus.CREATED).body(
+            ApiResponse.success(created, "Account created successfully")
+        );
     }
 
     @PutMapping("/{id}")
@@ -79,4 +87,3 @@ public class AccountController {
         return ResponseEntity.ok(ApiResponse.success(null, "Account deleted successfully"));
     }
 }
-

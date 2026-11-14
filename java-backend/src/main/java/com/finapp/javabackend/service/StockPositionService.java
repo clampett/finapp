@@ -7,4 +7,3 @@ public interface StockPositionService {
     List<StockPositionDTO> getPositions(Long userId);
     StockPositionDTO getPositionForStock(Long userId, Long stockId);
 }
-

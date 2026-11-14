@@ -22,8 +22,13 @@ public class UserController {
     }
 
     private Long getUserId(Authentication authentication) {
-        if (authentication == null || !(authentication.getPrincipal() instanceof SessionUser user)) {
-            throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Sign in to access user settings.");
+        if (
+            authentication == null || !(authentication.getPrincipal() instanceof SessionUser user)
+        ) {
+            throw new ResponseStatusException(
+                HttpStatus.UNAUTHORIZED,
+                "Sign in to access user settings."
+            );
         }
         return user.id();
     }
@@ -32,7 +37,9 @@ public class UserController {
     public ResponseEntity<ApiResponse<UserProfileDTO>> getProfile(Authentication authentication) {
         Long userId = getUserId(authentication);
         UserProfileDTO profile = userService.getProfile(userId);
-        return ResponseEntity.ok(ApiResponse.success(profile, "User profile retrieved successfully"));
+        return ResponseEntity.ok(
+            ApiResponse.success(profile, "User profile retrieved successfully")
+        );
     }
 
     @PutMapping("/me")
@@ -45,4 +52,3 @@ public class UserController {
         return ResponseEntity.ok(ApiResponse.success(updated, "User profile updated successfully"));
     }
 }
-

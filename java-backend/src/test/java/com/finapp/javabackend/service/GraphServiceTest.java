@@ -15,14 +15,14 @@ import com.finapp.javabackend.service.impl.GraphServiceImpl;
 import java.math.BigDecimal;
 import java.util.List;
 import java.util.Optional;
-import org.springframework.jdbc.core.JdbcTemplate;
-import org.springframework.web.server.ResponseStatusException;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.jdbc.core.JdbcTemplate;
+import org.springframework.web.server.ResponseStatusException;
 
 @ExtendWith(MockitoExtension.class)
 class GraphServiceTest {
@@ -134,8 +134,13 @@ class GraphServiceTest {
         when(nodeRepository.saveAll(anyList())).thenReturn(List.of(sourceNode, targetNode));
         when(edgeRepository.saveAll(anyList())).thenReturn(List.of(savedEdge));
 
-        when(jdbc.queryForList("SELECT id FROM scenarios WHERE user_id = ? AND LOWER(name) = 'default'", Long.class, 7L))
-            .thenReturn(List.of(42L));
+        when(
+            jdbc.queryForList(
+                "SELECT id FROM scenarios WHERE user_id = ? AND LOWER(name) = 'default'",
+                Long.class,
+                7L
+            )
+        ).thenReturn(List.of(42L));
         when(nodeRepository.findByIdAndScenarioId(1L, 42L)).thenReturn(Optional.of(sourceNode));
         when(nodeRepository.findByIdAndScenarioId(2L, 42L)).thenReturn(Optional.of(targetNode));
         GraphDTO result = graphService.saveGraph(7L, inputGraph);
@@ -145,14 +150,30 @@ class GraphServiceTest {
         assertEquals("Salary", result.nodes().get(0).name());
         assertEquals(100L, result.edges().get(0).id());
 
-        verify(nodeRepository).saveAll(argThat(nodes -> nodes.iterator().next().getScenarioId().equals(42L)));
-        verify(edgeRepository).saveAll(argThat(edges -> edges.iterator().next().getScenarioId().equals(42L)));
+        verify(nodeRepository).saveAll(
+            argThat(nodes -> nodes.iterator().next().getScenarioId().equals(42L))
+        );
+        verify(edgeRepository).saveAll(
+            argThat(edges -> edges.iterator().next().getScenarioId().equals(42L))
+        );
     }
+
     @Test
     void rejectsNodeIdOutsideTheOwnersDefaultScenario() {
-        when(jdbc.queryForList("SELECT id FROM scenarios WHERE user_id = ? AND LOWER(name) = 'default'", Long.class, 7L))
-            .thenReturn(List.of(42L));
-        var foreignNode = new NodeDTO(99L, "Checking", "CHECKING", BigDecimal.ZERO, BigDecimal.ZERO);
+        when(
+            jdbc.queryForList(
+                "SELECT id FROM scenarios WHERE user_id = ? AND LOWER(name) = 'default'",
+                Long.class,
+                7L
+            )
+        ).thenReturn(List.of(42L));
+        var foreignNode = new NodeDTO(
+            99L,
+            "Checking",
+            "CHECKING",
+            BigDecimal.ZERO,
+            BigDecimal.ZERO
+        );
         assertThrows(ResponseStatusException.class, () ->
             graphService.saveGraph(7L, new GraphDTO(List.of(foreignNode), List.of()))
         );

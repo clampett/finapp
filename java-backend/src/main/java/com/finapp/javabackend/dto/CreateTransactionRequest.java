@@ -29,4 +29,3 @@ public record CreateTransactionRequest(
         return LocalDate.now();
     }
 }
-

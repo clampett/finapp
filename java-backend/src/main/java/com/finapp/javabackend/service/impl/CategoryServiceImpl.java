@@ -26,7 +26,10 @@ public class CategoryServiceImpl implements CategoryService {
     private final CategoryRepository categoryRepository;
     private final UserRepository userRepository;
 
-    public CategoryServiceImpl(CategoryRepository categoryRepository, UserRepository userRepository) {
+    public CategoryServiceImpl(
+        CategoryRepository categoryRepository,
+        UserRepository userRepository
+    ) {
         this.categoryRepository = categoryRepository;
         this.userRepository = userRepository;
     }
@@ -34,17 +37,21 @@ public class CategoryServiceImpl implements CategoryService {
     @Override
     @Transactional(readOnly = true)
     public List<CategoryDTO> getCategories(Long userId, TransactionKind kind) {
-        List<Category> categories = kind != null
-            ? categoryRepository.findByUserIdAndKind(userId, kind)
-            : categoryRepository.findByUserId(userId);
+        List<Category> categories =
+            kind != null
+                ? categoryRepository.findByUserIdAndKind(userId, kind)
+                : categoryRepository.findByUserId(userId);
         return categories.stream().map(EntityDtoMapper::toDto).toList();
     }
 
     @Override
     @Transactional(readOnly = true)
     public CategoryDTO getCategory(Long userId, Long categoryId) {
-        Category category = categoryRepository.findByIdAndUserId(categoryId, userId)
-            .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Category not found"));
+        Category category = categoryRepository
+            .findByIdAndUserId(categoryId, userId)
+            .orElseThrow(() ->
+                new ResponseStatusException(HttpStatus.NOT_FOUND, "Category not found")
+            );
         return EntityDtoMapper.toDto(category);
     }
 
@@ -54,22 +61,35 @@ public class CategoryServiceImpl implements CategoryService {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Category name is required");
         }
         if (request.kind() == null) {
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Category kind (income/expense) is required");
+            throw new ResponseStatusException(
+                HttpStatus.BAD_REQUEST,
+                "Category kind (income/expense) is required"
+            );
         }
         String trimmedName = request.name().trim();
         if (categoryRepository.existsByUserIdAndKindAndName(userId, request.kind(), trimmedName)) {
-            throw new ResponseStatusException(HttpStatus.CONFLICT, "Category '" + trimmedName + "' already exists for kind " + request.kind());
+            throw new ResponseStatusException(
+                HttpStatus.CONFLICT,
+                "Category '" + trimmedName + "' already exists for kind " + request.kind()
+            );
         }
 
-        User user = userRepository.findById(userId)
+        User user = userRepository
+            .findById(userId)
             .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "User not found"));
 
         Category parent = null;
         if (request.parentId() != null) {
-            parent = categoryRepository.findByIdAndUserId(request.parentId(), userId)
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.BAD_REQUEST, "Parent category not found"));
+            parent = categoryRepository
+                .findByIdAndUserId(request.parentId(), userId)
+                .orElseThrow(() ->
+                    new ResponseStatusException(HttpStatus.BAD_REQUEST, "Parent category not found")
+                );
             if (parent.getKind() != request.kind()) {
-                throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Parent category kind must match child category kind");
+                throw new ResponseStatusException(
+                    HttpStatus.BAD_REQUEST,
+                    "Parent category kind must match child category kind"
+                );
             }
         }
 
@@ -85,26 +105,47 @@ public class CategoryServiceImpl implements CategoryService {
 
     @Override
     public CategoryDTO updateCategory(Long userId, Long categoryId, UpdateCategoryRequest request) {
-        Category category = categoryRepository.findByIdAndUserId(categoryId, userId)
-            .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Category not found"));
+        Category category = categoryRepository
+            .findByIdAndUserId(categoryId, userId)
+            .orElseThrow(() ->
+                new ResponseStatusException(HttpStatus.NOT_FOUND, "Category not found")
+            );
 
         if (request.name() != null && !request.name().trim().isEmpty()) {
             String trimmedName = request.name().trim();
-            if (!trimmedName.equalsIgnoreCase(category.getName()) &&
-                categoryRepository.existsByUserIdAndKindAndName(userId, category.getKind(), trimmedName)) {
-                throw new ResponseStatusException(HttpStatus.CONFLICT, "Category '" + trimmedName + "' already exists for kind " + category.getKind());
+            if (
+                !trimmedName.equalsIgnoreCase(category.getName()) &&
+                categoryRepository.existsByUserIdAndKindAndName(
+                    userId,
+                    category.getKind(),
+                    trimmedName
+                )
+            ) {
+                throw new ResponseStatusException(
+                    HttpStatus.CONFLICT,
+                    "Category '" + trimmedName + "' already exists for kind " + category.getKind()
+                );
             }
             category.setName(trimmedName);
         }
 
         if (request.parentId() != null) {
             if (request.parentId().equals(categoryId)) {
-                throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Category cannot be its own parent");
+                throw new ResponseStatusException(
+                    HttpStatus.BAD_REQUEST,
+                    "Category cannot be its own parent"
+                );
             }
-            Category parent = categoryRepository.findByIdAndUserId(request.parentId(), userId)
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.BAD_REQUEST, "Parent category not found"));
+            Category parent = categoryRepository
+                .findByIdAndUserId(request.parentId(), userId)
+                .orElseThrow(() ->
+                    new ResponseStatusException(HttpStatus.BAD_REQUEST, "Parent category not found")
+                );
             if (parent.getKind() != category.getKind()) {
-                throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Parent category kind must match child category kind");
+                throw new ResponseStatusException(
+                    HttpStatus.BAD_REQUEST,
+                    "Parent category kind must match child category kind"
+                );
             }
             // Check cycle
             Category current = parent;
@@ -112,7 +153,10 @@ public class CategoryServiceImpl implements CategoryService {
             visited.add(categoryId);
             while (current != null) {
                 if (!visited.add(current.getId())) {
-                    throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Cycle detected in category hierarchy");
+                    throw new ResponseStatusException(
+                        HttpStatus.BAD_REQUEST,
+                        "Cycle detected in category hierarchy"
+                    );
                 }
                 current = current.getParent();
             }
@@ -124,9 +168,11 @@ public class CategoryServiceImpl implements CategoryService {
 
     @Override
     public void deleteCategory(Long userId, Long categoryId) {
-        Category category = categoryRepository.findByIdAndUserId(categoryId, userId)
-            .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Category not found"));
+        Category category = categoryRepository
+            .findByIdAndUserId(categoryId, userId)
+            .orElseThrow(() ->
+                new ResponseStatusException(HttpStatus.NOT_FOUND, "Category not found")
+            );
         categoryRepository.delete(category);
     }
 }
-

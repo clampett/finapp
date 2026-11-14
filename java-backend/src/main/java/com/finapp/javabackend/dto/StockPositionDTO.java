@@ -18,4 +18,3 @@ public record StockPositionDTO(
     BigDecimal lastPrice,
     BigDecimal marketValue
 ) {}
-

@@ -41,8 +41,6 @@ class StockServiceTest {
     @Mock
     private UserRepository userRepository;
 
-
-
     private StockService stockService;
 
     private User user;
@@ -170,7 +168,9 @@ class StockServiceTest {
         s2.setTicker("AAPL");
         s2.setCompanyName("Apple Lot 2");
 
-        when(stockRepository.findByUserIdAndTicker(3L, "AAPL")).thenReturn(java.util.List.of(s1, s2));
+        when(stockRepository.findByUserIdAndTicker(3L, "AAPL")).thenReturn(
+            java.util.List.of(s1, s2)
+        );
 
         StockDTO dto = stockService.getStockByTicker(3L, "AAPL");
         assertNotNull(dto);
@@ -268,14 +268,29 @@ class StockServiceTest {
     @Test
     void tickerOnlyTrade_rejectsAnAmbiguousLotBeforeSaving() {
         var tradeService = new StockTransactionServiceImpl(
-            stockTransactionRepository, stockRepository, mock(AccountRepository.class), userRepository
+            stockTransactionRepository,
+            stockRepository,
+            mock(AccountRepository.class),
+            userRepository
         );
         when(userRepository.findById(3L)).thenReturn(Optional.of(user));
-        when(stockRepository.findByUserIdAndTicker(3L, "KO"))
-            .thenReturn(java.util.List.of(new Stock(), new Stock()));
+        when(stockRepository.findByUserIdAndTicker(3L, "KO")).thenReturn(
+            java.util.List.of(new Stock(), new Stock())
+        );
         var request = new CreateStockTransactionRequest(
-            null, "KO", null, null, StockTxnType.buy, BigDecimal.ONE,
-            BigDecimal.TEN, null, null, null, null, null, 3L
+            null,
+            "KO",
+            null,
+            null,
+            StockTxnType.buy,
+            BigDecimal.ONE,
+            BigDecimal.TEN,
+            null,
+            null,
+            null,
+            null,
+            null,
+            3L
         );
         // Rejected the trade before it could change an arbitrary lot.
         var error = assertThrows(ResponseStatusException.class, () ->

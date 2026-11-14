@@ -1,0 +1,297 @@
+@import 'tailwindcss';
+@import './theme-palette.css';
+@import './theme.css';
+
+@theme {
+  --color-base: #0c1018;
+  --color-surface: #141b27;
+  --color-raised: #10151f;
+  --color-float: #172334;
+  --color-header: #0f141e;
+  --color-border: #232c3c;
+  --color-text: #e7edf8;
+  --color-muted: #96a6bf;
+  --color-subtle: #697991;
+  --color-primary: #b8a3fa;
+  --color-primary-fg: #1b1234;
+  --color-mint: #85e0bb;
+  --color-coral: #fb8296;
+  --color-blue: #7db9fa;
+  --color-brand: #00c9b7;
+  --color-active-bg: #242438;
+  --color-active-text: #c9bdff;
+  --color-active-border: #36324d;
+  --color-hover-bg: #192230;
+  --font-sans: Inter, ui-sans-serif, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  --breakpoint-2xl: 1600px;
+  --breakpoint-xl: 1100px;
+  --breakpoint-md: 800px;
+  --breakpoint-sm: 650px;
+  --breakpoint-xs: 600px;
+}
+
+:root {
+  font-family: var(--font-sans);
+  color: var(--color-text);
+  background: var(--color-base);
+  font-synthesis: none;
+  font-size: 14px;
+  color-scheme: dark;
+}
+
+body {
+  margin: 0;
+  min-width: 320px;
+}
+
+/* Global scrollbar styling */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: #3f4c65 transparent;
+}
+::-webkit-scrollbar {
+  width: 7px;
+  height: 7px;
+}
+::-webkit-scrollbar-thumb {
+  background: #3f4c65;
+  border-radius: 8px;
+}
+
+/* Accessible focus ring */
+button:focus-visible,
+a:focus-visible,
+input:focus-visible,
+select:focus-visible,
+[tabindex]:focus-visible {
+  outline: 2px solid #a78bfa;
+  outline-offset: 3px;
+}
+
+/* Details summary marker cleanup */
+summary::-webkit-details-marker {
+  display: none;
+}
+
+/* Canvas drawing grid pattern */
+.canvas-host {
+  background-color: #0e131d;
+  /* Layered fine and major rules to give the workspace a graph-paper finish. */
+  background-image:
+    linear-gradient(#34405766 1px, transparent 1px),
+    linear-gradient(90deg, #34405766 1px, transparent 1px),
+    linear-gradient(#34405730 1px, transparent 1px),
+    linear-gradient(90deg, #34405730 1px, transparent 1px);
+  background-size:
+    100px 100px,
+    100px 100px,
+    20px 20px,
+    20px 20px;
+}
+
+/* D3-rendered SVG Canvas nodes and edges */
+.canvas-node {
+  cursor: pointer;
+}
+.canvas-node:focus {
+  outline: none;
+}
+.canvas-node rect {
+  filter: drop-shadow(0 5px 7px #0006);
+}
+.canvas-node.is-disabled rect {
+  filter: none;
+}
+.canvas-node:hover rect {
+  fill: #20344a;
+  stroke-opacity: 1;
+}
+.canvas-node.is-disabled:hover rect {
+  fill: #151d2a;
+  stroke: #5a6e87;
+  stroke-opacity: 0.8;
+}
+.canvas-node.is-selected rect {
+  stroke: #8ce8d0;
+  stroke-width: 2.5;
+  stroke-opacity: 1;
+}
+.canvas-node:focus rect {
+  stroke: #fff;
+  stroke-width: 3;
+}
+
+.canvas-edge,
+.canvas-edge-label {
+  cursor: pointer;
+}
+.canvas-edge:focus,
+.canvas-edge:hover {
+  stroke-opacity: 1;
+  outline: none;
+  filter: drop-shadow(0 0 3px #6adbc6);
+}
+.canvas-edge.edge-selected {
+  stroke: #baf8e7;
+  stroke-opacity: 1;
+  filter: drop-shadow(0 0 4px #7de0bc66);
+}
+
+.node-port {
+  fill: #17283b;
+  stroke: #73cbb6;
+  stroke-width: 2;
+  cursor: crosshair;
+  opacity: 0.35;
+  transition:
+    opacity 0.12s,
+    fill 0.12s;
+}
+.node-port-in {
+  stroke: #7394b5;
+}
+.canvas-node:hover .node-port,
+.node-port:focus,
+.connect-mode .node-port,
+.is-linking .node-port {
+  opacity: 1;
+}
+.node-port:hover,
+.node-port:focus {
+  fill: #7de0bc;
+  stroke: #d7fff0;
+  outline: none;
+}
+
+.connection-target rect,
+.connection-source rect {
+  stroke: #89e6cc !important;
+  stroke-width: 2.5px;
+  stroke-opacity: 1;
+  filter: drop-shadow(0 0 9px #59cfb04d);
+}
+
+.connector-preview {
+  stroke: #90e4d2;
+  stroke-width: 2.5;
+  stroke-dasharray: 7 5;
+  animation: connector-flow 0.65s linear infinite;
+  filter: drop-shadow(0 0 4px #83f0cf66);
+}
+@keyframes connector-flow {
+  to {
+    stroke-dashoffset: -24;
+  }
+}
+
+.canvas-marquee {
+  fill: #73dcc41c;
+  stroke: #8ce8d0;
+  stroke-width: 1.5;
+  stroke-dasharray: 5 3;
+}
+
+/* Canvas pointer interaction modes */
+.financial-canvas {
+  user-select: none;
+  -webkit-user-select: none;
+  width: 100%;
+  height: 100%;
+  display: block;
+  cursor: grab;
+  touch-action: none;
+}
+.financial-canvas:active {
+  cursor: grabbing;
+}
+.tool-select .financial-canvas,
+.tool-select .financial-canvas:active {
+  cursor: default;
+}
+.tool-select .canvas-node.is-selected {
+  cursor: move;
+}
+.tool-box .financial-canvas,
+.tool-box .financial-canvas:active {
+  cursor: crosshair;
+}
+.tool-box .node-port,
+.tool-pan .node-port {
+  pointer-events: none;
+  opacity: 0.15;
+}
+.tool-pan .financial-canvas,
+.tool-pan .canvas-node,
+.tool-pan .canvas-edge {
+  cursor: grab;
+}
+.tool-pan .financial-canvas:active {
+  cursor: grabbing;
+}
+
+/* Async data loading spinner */
+@keyframes stock-loading-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+.stock-loading-spinner {
+  display: inline-block;
+  width: 12px;
+  height: 12px;
+  flex-shrink: 0;
+  border: 2px solid #344056;
+  border-top-color: #6ed9b5;
+  border-radius: 50%;
+  animation: stock-loading-spin 0.8s linear infinite;
+}
+
+/* Reduced motion preference */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    scroll-behavior: auto !important;
+    transition: none !important;
+    animation: none !important;
+  }
+  .connector-preview,
+  .stock-loading-spinner {
+    animation: none;
+  }
+}
+
+/* Applied each tab accent to its introduction using the workspace theme tokens. */
+/* Separated tab panels from the top bar when no overview or demo row preceded them. */
+header + .workspace-tab-content {
+  padding-block-start: clamp(1rem, 2.4vw, 1.75rem);
+}
+
+.workspace-tab-intro {
+  --tab-accent: var(--color-primary);
+  margin-bottom: 1.25rem;
+  padding: clamp(1rem, 2.6vw, 1.75rem);
+  border: 1px solid var(--color-border);
+  border-inline-start: 3px solid var(--tab-accent);
+  border-radius: 0.875rem;
+  background: linear-gradient(
+    112deg,
+    color-mix(in srgb, var(--tab-accent) 9%, var(--color-base)),
+    var(--color-base) 72%
+  );
+}
+.workspace-tab-overview {
+  --tab-accent: var(--color-mint);
+}
+.workspace-tab-cashflow {
+  --tab-accent: var(--ui-paint-60a5fa);
+}
+.workspace-tab-budgeting {
+  --tab-accent: var(--ui-paint-fbbf24);
+}
+.workspace-tab-investing {
+  --tab-accent: var(--ui-paint-22d3ee);
+}
+.workspace-tab-ai {
+  --tab-accent: var(--color-primary);
+}

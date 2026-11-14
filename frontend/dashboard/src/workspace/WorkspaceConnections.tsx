@@ -1,7 +1,7 @@
 import { useEffect, useRef } from 'react';
 import type { FormEvent } from 'react';
-import { money } from '../finance';
-import type { GraphData } from '../finance';
+import { money } from '../common/finance';
+import type { GraphData } from '../common/finance';
 
 export function WorkspaceConnections({
   graph,

@@ -1,5 +1,5 @@
-import { colors, debtPayment, expenseAmount, money, typeLabel } from '../finance';
-import type { GraphData, GraphNode, View } from '../finance';
+import { colors, debtPayment, expenseAmount, money, typeLabel } from '../common/finance';
+import type { GraphData, GraphNode, View } from '../common/finance';
 
 export function WorkspaceAccountTable({
   view,

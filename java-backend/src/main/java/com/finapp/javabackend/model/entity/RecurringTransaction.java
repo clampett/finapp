@@ -3,16 +3,17 @@ package com.finapp.javabackend.model.entity;
 import com.finapp.javabackend.model.enums.RecurrenceFrequency;
 import com.finapp.javabackend.model.enums.TransactionKind;
 import jakarta.persistence.*;
-import org.hibernate.annotations.JdbcTypeCode;
-import org.hibernate.type.SqlTypes;
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.OffsetDateTime;
+import org.hibernate.annotations.JdbcTypeCode;
+import org.hibernate.type.SqlTypes;
 
 @Entity
-@Table(name = "recurring_transactions", uniqueConstraints = {
-        @UniqueConstraint(columnNames = {"id", "user_id"})
-})
+@Table(
+    name = "recurring_transactions",
+    uniqueConstraints = { @UniqueConstraint(columnNames = { "id", "user_id" }) }
+)
 public class RecurringTransaction {
 
     @Id

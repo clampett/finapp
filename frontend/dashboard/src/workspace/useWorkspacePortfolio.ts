@@ -4,7 +4,7 @@ import {
   getStoredPortfolioValue,
   loadUnifiedHoldings,
   projectedDividendFlows,
-} from '../portfolio';
+} from '../investing/portfolio';
 
 export function useWorkspacePortfolio(userId: number, demo: boolean) {
   const holdingsKey = `finapp-holdings-v1:${demo ? 'demo' : 'user'}:${userId}`;

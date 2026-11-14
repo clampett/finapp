@@ -104,8 +104,10 @@ public class StockServiceImpl implements StockService {
         if (ticker == null) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Ticker cannot be null");
         }
-        List<Stock> stocks = stockRepository
-            .findByUserIdAndTicker(userId, ticker.trim().toUpperCase());
+        List<Stock> stocks = stockRepository.findByUserIdAndTicker(
+            userId,
+            ticker.trim().toUpperCase()
+        );
         if (stocks.isEmpty()) {
             throw new ResponseStatusException(
                 HttpStatus.NOT_FOUND,

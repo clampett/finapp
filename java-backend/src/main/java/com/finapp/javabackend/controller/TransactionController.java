@@ -26,22 +26,37 @@ public class TransactionController {
     }
 
     private Long getUserId(Authentication authentication) {
-        if (authentication == null || !(authentication.getPrincipal() instanceof SessionUser user)) {
-            throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Sign in to access transactions.");
+        if (
+            authentication == null || !(authentication.getPrincipal() instanceof SessionUser user)
+        ) {
+            throw new ResponseStatusException(
+                HttpStatus.UNAUTHORIZED,
+                "Sign in to access transactions."
+            );
         }
         return user.id();
     }
 
     @GetMapping
     public ResponseEntity<ApiResponse<List<TransactionDTO>>> getTransactions(
-        @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate startDate,
-        @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate endDate,
+        @RequestParam(required = false) @DateTimeFormat(
+            iso = DateTimeFormat.ISO.DATE
+        ) LocalDate startDate,
+        @RequestParam(required = false) @DateTimeFormat(
+            iso = DateTimeFormat.ISO.DATE
+        ) LocalDate endDate,
         @RequestParam(required = false) Long accountId,
         @RequestParam(required = false) Long categoryId,
         Authentication authentication
     ) {
         Long userId = getUserId(authentication);
-        List<TransactionDTO> list = transactionService.getTransactions(userId, startDate, endDate, accountId, categoryId);
+        List<TransactionDTO> list = transactionService.getTransactions(
+            userId,
+            startDate,
+            endDate,
+            accountId,
+            categoryId
+        );
         return ResponseEntity.ok(ApiResponse.success(list, "Transactions fetched successfully"));
     }
 
@@ -62,8 +77,9 @@ public class TransactionController {
     ) {
         Long userId = getUserId(authentication);
         TransactionDTO created = transactionService.createTransaction(userId, request);
-        return ResponseEntity.status(HttpStatus.CREATED)
-            .body(ApiResponse.success(created, "Transaction created successfully"));
+        return ResponseEntity.status(HttpStatus.CREATED).body(
+            ApiResponse.success(created, "Transaction created successfully")
+        );
     }
 
     @PutMapping("/{id}")
@@ -97,4 +113,3 @@ public class TransactionController {
         return ResponseEntity.ok(ApiResponse.success(null, "Transaction deleted successfully"));
     }
 }
-

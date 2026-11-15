@@ -24,7 +24,7 @@ cleanup() {
     kill "$AI_PID" 2>/dev/null || true
     wait "$AI_PID" 2>/dev/null || true
     # Stopped only the project container and retained downloaded models.
-    docker compose -f "$COMPOSE" stop ollama >/dev/null 2>&1 || true
+    docker compose --profile local-ai -f "$COMPOSE" stop ollama >/dev/null 2>&1 || true
   fi
   jobs -p | xargs kill 2>/dev/null || true
   docker compose -f "$COMPOSE" stop db python-backend >/dev/null 2>&1 || true

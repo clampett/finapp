@@ -20,15 +20,16 @@ async function readModels(request, signal) {
   }
 }
 
-function startContainer(signal) {
+function startContainer(signal, { spawnProcess = spawn } = {}) {
   return new Promise((resolveStart, reject) => {
     // Started only the optional AI service and reused the cached image when available.
-    const child = spawn(
+    const child = spawnProcess(
       'docker',
-      ['compose', '-f', composeFile, 'up', '-d', '--pull', 'missing', 'ollama'],
+      ['compose', '--profile', 'local-ai', '-f', composeFile, 'up', '-d', '--pull', 'missing', 'ollama'],
       {
         stdio: 'inherit',
         windowsHide: true,
+        env: { ...process.env, COMPOSE_PROFILES: 'local-ai' },
         signal: AbortSignal.any([signal, AbortSignal.timeout(20 * 60 * 1000)]),
       },
     );
@@ -96,4 +97,4 @@ if (require.main === module) {
   });
 }
 
-module.exports = { prepareOllama };
+module.exports = { prepareOllama, startContainer };

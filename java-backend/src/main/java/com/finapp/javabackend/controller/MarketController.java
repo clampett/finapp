@@ -102,6 +102,12 @@ public class MarketController {
         return forward(URI.create(pythonBaseUrl + "/api/currencies/" + encode(code)));
     }
 
+    @GetMapping("/news")
+    public ResponseEntity<String> news() {
+        // Forwarded one fixed public feed route without accepting arbitrary publisher URLs.
+        return forward(URI.create(pythonBaseUrl + "/api/news"));
+    }
+
     private String encode(String value) {
         // Encoded so a path value can never change which Python route is called.
         return UriUtils.encodePathSegment(value, StandardCharsets.UTF_8);

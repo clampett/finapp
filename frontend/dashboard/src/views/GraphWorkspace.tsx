@@ -287,6 +287,10 @@ export function GraphWorkspace({
             closeSimulation();
             onNavigate('ai');
           }}
+          onOpenHistory={() => {
+            closeSimulation();
+            onNavigate('history');
+          }}
           portfolioValue={portfolioValue}
           dividendFlows={dividendFlows}
           userId={userId}

@@ -1,0 +1,125 @@
+/* Carried the dashboard palette into a quieter, archive-oriented visual treatment. */
+.history-tab {
+  max-width: 1600px;
+  margin: auto;
+  padding: 30px clamp(16px, 3vw, 38px);
+  color: var(--color-text);
+}
+.history-hero {
+  padding: 32px 0 40px;
+  border-bottom: 1px solid var(--color-border);
+  display: flex;
+  justify-content: space-between;
+  gap: 30px;
+  align-items: center;
+}
+.history-eyebrow {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  font-size: 9px;
+  font-weight: 600;
+  letter-spacing: 2px;
+  color: var(--color-primary);
+}
+.history-hero h1 {
+  font-size: clamp(32px, 3.5vw, 50px);
+  font-weight: 600;
+  letter-spacing: -1.6px;
+  line-height: 1.13;
+  margin: 24px 0 18px;
+}
+.history-hero em {
+  font-style: normal;
+  color: var(--color-primary);
+}
+.history-hero p {
+  color: var(--color-muted);
+  font-size: 13px;
+  line-height: 1.9;
+  max-width: 480px;
+}
+.history-storage {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  font-size: 10px;
+  color: var(--color-subtle);
+  margin-top: 20px;
+}
+.history-hero-summary {
+  min-width: 190px;
+  padding: 30px;
+  border: 1px solid var(--color-border);
+  border-radius: 18px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+  background:
+    radial-gradient(
+      ellipse at top,
+      color-mix(in srgb, var(--color-primary) 10%, transparent),
+      transparent
+    ),
+    var(--color-surface);
+}
+.history-hero-summary > strong {
+  font-size: 54px;
+  font-weight: 500;
+  letter-spacing: -2px;
+}
+.history-hero-summary > span {
+  font-size: 11px;
+  color: var(--color-muted);
+  margin-bottom: 12px;
+}
+.history-button,
+.history-primary {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  border: 1px solid var(--color-border);
+  background: var(--color-surface);
+  color: var(--color-text);
+  padding: 10px 14px;
+  border-radius: 8px;
+  font-size: 11px;
+  cursor: pointer;
+  transition: background 0.18s;
+}
+.history-button:hover {
+  background: var(--color-hover-bg);
+}
+.history-primary {
+  background: var(--color-primary);
+  color: var(--color-primary-fg);
+  border-color: transparent;
+}
+.history-tab button:disabled {
+  opacity: 0.45;
+  cursor: default;
+}
+.history-tab :is(button, input, summary):focus-visible {
+  outline: 2px solid var(--color-primary);
+  outline-offset: 4px;
+}
+.history-toolbar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 16px;
+  padding: 28px 0 22px;
+}
+.history-toolbar h2 {
+  font-size: 17px;
+  font-weight: 550;
+  margin: 0;
+}
+.history-toolbar p {
+  color: var(--color-subtle);
+  font-size: 11px;
+  margin: 7px 0 0;
+}

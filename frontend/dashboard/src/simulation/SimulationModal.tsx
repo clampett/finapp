@@ -31,6 +31,7 @@ import { titles, palette, quantiles, duration } from './simulation-types';
 import { SimulationParameters } from './SimulationParameters';
 import { SimulationMarketData } from './SimulationMarketData';
 import { SimulationOutcomeTable } from './SimulationOutcomeTable';
+import { SaveRunControl } from '../history/SaveRunControl';
 
 export type { ForecastPoint, SimulationResult } from './simulation-types';
 
@@ -39,6 +40,7 @@ export function SimulationModal({
   simulationType,
   onClose,
   onOpenCoach,
+  onOpenHistory,
   onAssumptionsChange,
   scopeLabel,
   scope,
@@ -53,6 +55,7 @@ export function SimulationModal({
   simulationType: SimulationType;
   onClose: () => void;
   onOpenCoach?: () => void;
+  onOpenHistory?: () => void;
   onAssumptionsChange: (settings: ScenarioAssumptions) => void;
   scopeLabel?: string;
   scope?: 'all' | 'selected' | 'connected';
@@ -448,6 +451,13 @@ export function SimulationModal({
                 <b>{dollars(currentBudget.surplus)}</b>
               </span>
             </div>
+            <SaveRunControl
+              forecast={forecast}
+              kind={simulationType}
+              disabled={loading || Boolean(error)}
+              owner={{ userId: userId ?? 0, demo: Boolean(demo) }}
+              onOpenHistory={onOpenHistory}
+            />
             {onOpenCoach && simulationType !== 'debt' && (
               <button
                 type="button"

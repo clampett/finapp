@@ -70,6 +70,7 @@ public class SecurityConfig {
                         HttpMethod.GET,
                         "/api/v1/market/stocks",
                         "/api/v1/market/context",
+                        "/api/v1/market/news",
                         "/api/v1/market/context/{symbol}/chart",
                         "/api/v1/market/stocks/{symbol}",
                         "/api/v1/market/stocks/{symbol}/chart",

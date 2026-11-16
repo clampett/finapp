@@ -133,6 +133,14 @@ test('F9-T2-5 (Boundary): OverviewComposition.tsx preserves interactive slice se
   assert.match(tsx, /highlighted|selectedCategory/);
 });
 
+test('User Story 11: OverviewComposition.tsx provides secondary Overview/Breakdown toggle when Assets is selected', () => {
+  const tsx = readTsx('components/OverviewComposition.tsx');
+  assert.match(tsx, /aria-label=["']Asset breakdown view["']/);
+  assert.match(tsx, /setAssetView\(['"]overview['"]\)/);
+  assert.match(tsx, /setAssetView\(['"]breakdown['"]\)/);
+  assert.match(tsx, /mode === ['"]assets['"]/);
+});
+
 // ============================================================================
 // FEATURE 10: Dashboard Canvas & Editor Utility Migration (R1, R2, R3)
 // ============================================================================

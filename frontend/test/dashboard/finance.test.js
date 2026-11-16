@@ -483,3 +483,56 @@ test('non-monthly frequencies on income and expense nodes convert accurately to 
   assert.equal(annualExp.intervalCount, 1);
   assert.equal(graph.nodes.find((n) => n.id === 'inc-biweekly').frequency, 'biweekly');
 });
+
+test('User Story 11: overviewBreakdown supports specific asset breakdown with individual stocks and accounts', () => {
+  // Case 1: User has ONLY investments (stocks)
+  const investmentsOnlyGraph = finance.parseGraph({
+    nodes: [],
+    edges: [],
+  });
+  const holdings = [
+    { symbol: 'AAPL', shares: 10, lastPrice: 300 }, // $3,000 (30%)
+    { symbol: 'MSFT', shares: 10, lastPrice: 700 }, // $7,000 (70%)
+  ];
+  const portfolioVal = 10000;
+
+  // Default overview: 100% investments
+  const overviewResult = finance.overviewBreakdown(investmentsOnlyGraph, 'assets', portfolioVal, 'overview', holdings);
+  assert.equal(overviewResult.total, 10000);
+  assert.equal(overviewResult.items.length, 1);
+  assert.equal(overviewResult.items[0].label, 'Investments');
+  assert.equal(overviewResult.items[0].value, 10000);
+
+  // Breakdown option: specific stocks displayed as percentage of the pie
+  const breakdownResult = finance.overviewBreakdown(investmentsOnlyGraph, 'assets', portfolioVal, 'breakdown', holdings);
+  assert.equal(breakdownResult.total, 10000);
+  assert.equal(breakdownResult.items.length, 2);
+  const aapl = breakdownResult.items.find((i) => i.label === 'AAPL');
+  const msft = breakdownResult.items.find((i) => i.label === 'MSFT');
+  assert.ok(aapl, 'AAPL slice must be present');
+  assert.ok(msft, 'MSFT slice must be present');
+  assert.equal(aapl.value, 3000);
+  assert.equal(msft.value, 7000);
+  assert.equal(aapl.value / breakdownResult.total, 0.3);
+  assert.equal(msft.value / breakdownResult.total, 0.7);
+
+  // Case 2: User has mixed assets (checking, savings, and stocks)
+  const mixedGraph = finance.parseGraph({
+    nodes: [
+      { id: 'c1', name: 'Chase Checking', nodeType: 'CHECKING', amountOrBalance: 2000, interestRateApr: 0 },
+      { id: 's1', name: 'Emergency Fund', nodeType: 'SAVINGS', amountOrBalance: 8000, interestRateApr: 0 },
+    ],
+    edges: [],
+  });
+  const mixedOverview = finance.overviewBreakdown(mixedGraph, 'assets', portfolioVal, 'overview', holdings);
+  assert.equal(mixedOverview.total, 20000);
+  assert.equal(mixedOverview.items.length, 3); // Checking, Savings, Investments
+
+  const mixedBreakdown = finance.overviewBreakdown(mixedGraph, 'assets', portfolioVal, 'breakdown', holdings);
+  assert.equal(mixedBreakdown.total, 20000);
+  assert.equal(mixedBreakdown.items.length, 4); // Chase Checking, Emergency Fund, AAPL, MSFT
+  assert.ok(mixedBreakdown.items.some((i) => i.label === 'Chase Checking' && i.value === 2000));
+  assert.ok(mixedBreakdown.items.some((i) => i.label === 'Emergency Fund' && i.value === 8000));
+  assert.ok(mixedBreakdown.items.some((i) => i.label === 'AAPL' && i.value === 3000));
+  assert.ok(mixedBreakdown.items.some((i) => i.label === 'MSFT' && i.value === 7000));
+});

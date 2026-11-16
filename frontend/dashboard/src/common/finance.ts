@@ -303,68 +303,155 @@ export function totals(graph: GraphData, portfolioValue = 0) {
 }
 // Validate database responses and imported drafts before rendering or calculating.
 export type OverviewMode = 'assets' | 'budget' | 'debt';
-export function overviewBreakdown(graph: GraphData, mode: OverviewMode, portfolioValue = 0) {
+export type AssetViewMode = 'overview' | 'breakdown';
+
+export interface AssetHolding {
+  symbol: string;
+  shares: number;
+  lastPrice?: number;
+  purchasePrice?: number;
+  companyName?: string | null;
+}
+
+export const ASSET_BREAKDOWN_COLORS = [
+  'var(--ui-paint-a78bfa)',
+  'var(--ui-paint-60a5fa)',
+  'var(--ui-paint-22d3ee)',
+  'var(--ui-paint-34d399)',
+  'var(--ui-paint-fbbf24)',
+  'var(--ui-paint-fb7185)',
+  'var(--ui-paint-b69dfa)',
+  'var(--ui-paint-59c9c1)',
+  'var(--ui-paint-7baaf5)',
+  'var(--ui-paint-f87171)',
+];
+
+export function overviewBreakdown(
+  graph: GraphData,
+  mode: OverviewMode,
+  portfolioValue = 0,
+  assetView: AssetViewMode = 'overview',
+  holdings: AssetHolding[] = [],
+) {
   graph = activeGraph(graph);
   const t = totals(graph, portfolioValue);
 
   // Kept balance-sheet amounts separate from monthly flows; never encoded a
   // liability or shortfall as a negative pie wedge or counted transfers twice.
-  const items =
-    mode === 'assets'
-      ? [
-          {
-            label: 'Checking',
-            value: graph.nodes
-              .filter((node) => !node.disabled && node.nodeType === 'CHECKING')
-              .reduce((sum, node) => sum + Math.max(0, node.amountOrBalance), 0),
-            color: 'var(--ui-paint-60a5fa)',
-          },
-          {
-            label: 'Savings',
-            value: graph.nodes
-              .filter((node) => !node.disabled && node.nodeType === 'SAVINGS')
-              .reduce((sum, node) => sum + Math.max(0, node.amountOrBalance), 0),
-            color: 'var(--ui-paint-22d3ee)',
-          },
-          {
-            label: 'Investments',
-            value: t.totalInvestments,
-            color: 'var(--ui-paint-a78bfa)',
-          },
-        ]
-      : mode === 'debt'
-        ? [
-            ...graph.nodes
-              .filter((node) => !node.disabled && node.nodeType === 'DEBT')
-              .map((node, index) => ({
-                label: node.name,
-                value: node.amountOrBalance,
-                color: [
-                  'var(--ui-paint-fb7185)',
-                  'var(--ui-paint-fbbf24)',
-                  'var(--ui-paint-b69dfa)',
-                  'var(--ui-paint-59c9c1)',
-                  'var(--ui-paint-7baaf5)',
-                ][index % 5],
-              })),
-            { label: 'Cash overdraft', value: t.overdraft, color: 'var(--ui-paint-fb7185)' },
-          ]
-        : [
-            { label: 'Estimated taxes', value: t.taxes, color: 'var(--ui-paint-a78bfa)' },
-            { label: 'Living expenses', value: t.expenses, color: 'var(--ui-paint-fbbf24)' },
-            { label: 'Loan payments', value: t.payments, color: 'var(--ui-paint-fb7185)' },
-            {
-              label: 'Scheduled investing',
-              value: t.plannedInvestment,
-              color: 'var(--ui-paint-60a5fa)',
-            },
-            {
-              label: 'Scheduled savings',
-              value: t.plannedSavings,
-              color: 'var(--ui-paint-22d3ee)',
-            },
-            { label: 'Unassigned cash', value: t.unassigned, color: 'var(--ui-paint-6ed9b5)' },
-          ];
+  let items: { label: string; value: number; color: string }[];
+  if (mode === 'assets') {
+    if (assetView === 'breakdown') {
+      const breakdownItems: { label: string; value: number }[] = [];
+
+      for (const node of graph.nodes) {
+        if (!node.disabled && node.nodeType === 'CHECKING' && node.amountOrBalance > 0) {
+          breakdownItems.push({
+            label: node.name || 'Checking',
+            value: node.amountOrBalance,
+          });
+        }
+      }
+
+      for (const node of graph.nodes) {
+        if (!node.disabled && node.nodeType === 'SAVINGS' && node.amountOrBalance > 0) {
+          breakdownItems.push({
+            label: node.name || 'Savings',
+            value: node.amountOrBalance,
+          });
+        }
+      }
+
+      for (const node of graph.nodes) {
+        if (!node.disabled && node.nodeType === 'INVESTMENT' && node.amountOrBalance > 0) {
+          breakdownItems.push({
+            label: node.name || 'Investment Account',
+            value: node.amountOrBalance,
+          });
+        }
+      }
+
+      let stockSum = 0;
+      for (const h of holdings) {
+        const val = Math.round((h.shares || 0) * (h.lastPrice || 0) * 100) / 100;
+        if (val > 0) {
+          breakdownItems.push({
+            label: h.symbol.toUpperCase(),
+            value: val,
+          });
+          stockSum += val;
+        }
+      }
+
+      const remainingStockValue = Math.round(Math.max(0, portfolioValue - stockSum) * 100) / 100;
+      if (remainingStockValue > 0.01) {
+        breakdownItems.push({
+          label: 'Other Stocks',
+          value: remainingStockValue,
+        });
+      }
+
+      items = breakdownItems.map((item, index) => ({
+        ...item,
+        color: ASSET_BREAKDOWN_COLORS[index % ASSET_BREAKDOWN_COLORS.length],
+      }));
+    } else {
+      items = [
+        {
+          label: 'Checking',
+          value: graph.nodes
+            .filter((node) => !node.disabled && node.nodeType === 'CHECKING')
+            .reduce((sum, node) => sum + Math.max(0, node.amountOrBalance), 0),
+          color: 'var(--ui-paint-60a5fa)',
+        },
+        {
+          label: 'Savings',
+          value: graph.nodes
+            .filter((node) => !node.disabled && node.nodeType === 'SAVINGS')
+            .reduce((sum, node) => sum + Math.max(0, node.amountOrBalance), 0),
+          color: 'var(--ui-paint-22d3ee)',
+        },
+        {
+          label: 'Investments',
+          value: t.totalInvestments,
+          color: 'var(--ui-paint-a78bfa)',
+        },
+      ];
+    }
+  } else if (mode === 'debt') {
+    items = [
+      ...graph.nodes
+        .filter((node) => !node.disabled && node.nodeType === 'DEBT')
+        .map((node, index) => ({
+          label: node.name,
+          value: node.amountOrBalance,
+          color: [
+            'var(--ui-paint-fb7185)',
+            'var(--ui-paint-fbbf24)',
+            'var(--ui-paint-b69dfa)',
+            'var(--ui-paint-59c9c1)',
+            'var(--ui-paint-7baaf5)',
+          ][index % 5],
+        })),
+      { label: 'Cash overdraft', value: t.overdraft, color: 'var(--ui-paint-fb7185)' },
+    ];
+  } else {
+    items = [
+      { label: 'Estimated taxes', value: t.taxes, color: 'var(--ui-paint-a78bfa)' },
+      { label: 'Living expenses', value: t.expenses, color: 'var(--ui-paint-fbbf24)' },
+      { label: 'Loan payments', value: t.payments, color: 'var(--ui-paint-fb7185)' },
+      {
+        label: 'Scheduled investing',
+        value: t.plannedInvestment,
+        color: 'var(--ui-paint-60a5fa)',
+      },
+      {
+        label: 'Scheduled savings',
+        value: t.plannedSavings,
+        color: 'var(--ui-paint-22d3ee)',
+      },
+      { label: 'Unassigned cash', value: t.unassigned, color: 'var(--ui-paint-6ed9b5)' },
+    ];
+  }
   const positive = items.filter((item) => item.value > 0);
   return {
     items: positive,

@@ -47,7 +47,7 @@ export function GraphWorkspace({
   onNavigate: (view: View) => void;
 }) {
   // Composed the graph state, portfolio snapshot, and editor while keeping the active view here.
-  const { portfolioValue, dividendFlows } = useWorkspacePortfolio(userId, demo);
+  const { portfolioValue, dividendFlows, holdings } = useWorkspacePortfolio(userId, demo);
   const scenario = useScenarioGraph(userId, demo);
   const {
     storageKey,
@@ -174,6 +174,7 @@ export function GraphWorkspace({
                   graph={live}
                   portfolioValue={portfolioValue}
                   goalsStorageKey={`${storageKey}:goals`}
+                  holdings={holdings}
                 />
               ) : view === 'budgeting' ? (
                 <BudgetingTab

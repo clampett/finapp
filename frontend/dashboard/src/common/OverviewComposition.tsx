@@ -1,26 +1,39 @@
 import { useState } from 'react';
 import { PieChart, Pie, Cell, ResponsiveContainer } from 'recharts';
 import { dollars, money, overviewBreakdown, totals } from './finance';
-import type { GraphData, OverviewMode } from './finance';
+import type { AssetHolding, AssetViewMode, GraphData, OverviewMode } from './finance';
+
+// Presented monthly flows and balance-sheet views with separate percentage denominators.
 export default function OverviewComposition({
   graph,
   portfolioValue = 0,
+  holdings = [],
 }: {
   graph: GraphData;
   portfolioValue?: number;
+  holdings?: AssetHolding[];
 }) {
   const t = totals(graph, portfolioValue);
   const [mode, setMode] = useState<OverviewMode>('budget');
+  // Retained the asset detail level separately from the budget/assets/debt selector.
+  const [assetView, setAssetView] = useState<AssetViewMode>('overview');
   const [active, setActive] = useState<number | null>(null);
-  const breakdown = overviewBreakdown(graph, mode, portfolioValue);
+  // Derived chart slices and legend percentages from one reconciled breakdown.
+  const breakdown = overviewBreakdown(graph, mode, portfolioValue, assetView, holdings);
+  // Shared the highlighted slice between chart hover and keyboard focus in the legend.
   const hovered = active === null ? null : breakdown.items[active];
-  const labels = { budget: 'Monthly allocation', assets: 'Total assets', debt: 'Outstanding debt' };
+  const labels = {
+    budget: 'Monthly allocation',
+    assets: 'Assets',
+    debt: 'Outstanding debt',
+  };
+
   return (
     <section
       className="my-6 p-[clamp(18px,3vw,30px)] border border-(--ui-border-2d4055) rounded-[18px] bg-[radial-gradient(ellipse_at_top_left,var(--ui-surface-223b3a4a),transparent_65%),var(--ui-surface-111b29)]"
       aria-labelledby="composition-title"
     >
-      <header className="flex items-center justify-between gap-5 flex-wrap">
+      <header className="flex items-start justify-between gap-5 flex-wrap">
         <div>
           <div className="text-[9px] text-(--ui-text-a9b7ce) tracking-[1.7px] font-semibold mb-2.5">
             YOUR MONEY AT A GLANCE
@@ -35,23 +48,60 @@ export default function OverviewComposition({
             Explore your monthly plan, assets, and debts separately.
           </p>
         </div>
-        <div
-          className="flex p-1 gap-0.75 bg-(--ui-surface-0d1622) border border-(--ui-border-2e4157) rounded-[10px]"
-          aria-label="Financial breakdown"
-        >
-          {(['budget', 'assets', 'debt'] as const).map((value) => (
-            <button
-              key={value}
-              className="p-[9px_13px] border-0 rounded-[7px] bg-transparent text-(--ui-text-94aac1) text-xs cursor-pointer aria-pressed:bg-(--ui-surface-28433f) aria-pressed:text-(--ui-text-a3e9d1) hover:text-(--ui-text-edf2fa) transition-colors"
-              aria-pressed={mode === value}
-              onClick={() => {
-                setMode(value);
-                setActive(null);
-              }}
+        <div className="flex flex-col items-end gap-2 max-sm:items-start">
+          <div
+            className="flex p-1 gap-0.75 bg-(--ui-surface-0d1622) border border-(--ui-border-2e4157) rounded-[10px]"
+            role="group"
+            aria-label="Financial breakdown"
+          >
+            {(['budget', 'assets', 'debt'] as const).map((value) => (
+              <button
+                key={value}
+                type="button"
+                className="p-[9px_13px] border-0 rounded-[7px] bg-transparent text-(--ui-text-94aac1) text-xs cursor-pointer aria-pressed:bg-(--ui-surface-28433f) aria-pressed:text-(--ui-text-a3e9d1) hover:text-(--ui-text-edf2fa) transition-colors"
+                aria-pressed={mode === value}
+                onClick={() => {
+                  // Switched the financial view before clearing its previous slice highlight.
+                  setMode(value);
+                  setAssetView('overview');
+                  setActive(null);
+                }}
+              >
+                {value === 'budget' ? 'Monthly budget' : value === 'assets' ? 'Assets' : 'Debts'}
+              </button>
+            ))}
+          </div>
+          {mode === 'assets' && (
+            <div
+              className="flex p-1 gap-0.75 bg-(--ui-surface-0d1622) border border-(--ui-border-2e4157) rounded-[10px]"
+              role="group"
+              aria-label="Asset breakdown view"
             >
-              {value === 'budget' ? 'Monthly budget' : value === 'assets' ? 'Assets' : 'Debts'}
-            </button>
-          ))}
+              <button
+                type="button"
+                className="p-[9px_13px] border-0 rounded-[7px] bg-transparent text-(--ui-text-94aac1) text-xs cursor-pointer aria-pressed:bg-(--ui-surface-28433f) aria-pressed:text-(--ui-text-a3e9d1) hover:text-(--ui-text-edf2fa) transition-colors"
+                aria-pressed={assetView === 'overview'}
+                onClick={() => {
+                  setAssetView('overview');
+                  setActive(null);
+                }}
+              >
+                By category
+              </button>
+              <button
+                type="button"
+                className="p-[9px_13px] border-0 rounded-[7px] bg-transparent text-(--ui-text-94aac1) text-xs cursor-pointer aria-pressed:bg-(--ui-surface-28433f) aria-pressed:text-(--ui-text-a3e9d1) hover:text-(--ui-text-edf2fa) transition-colors"
+                aria-pressed={assetView === 'breakdown'}
+                onClick={() => {
+                  // Expanded accounts and holdings without changing the total asset valuation.
+                  setAssetView('breakdown');
+                  setActive(null);
+                }}
+              >
+                By account &amp; holding
+              </button>
+            </div>
+          )}
         </div>
       </header>
       <div className="grid grid-cols-[minmax(240px,0.9fr)_minmax(270px,1.1fr)] items-center gap-7.5 py-6 max-md:grid-cols-1 max-md:gap-1.25">
@@ -112,7 +162,7 @@ export default function OverviewComposition({
             {breakdown.items.map((item, index) => (
               <div
                 key={item.label + index}
-                className={`grid grid-cols-[9px_minmax(90px,1fr)_auto_44px] items-center gap-3 p-[11px_9px] rounded-lg text-xs cursor-pointer hover:bg-(--ui-surface-hover-1a2838) transition-colors ${active === index ? 'highlighted bg-(--ui-surface-263b4d)' : ''}`}
+                className={`grid grid-cols-[9px_minmax(0,1fr)_auto_44px] items-center gap-3 p-[11px_9px] rounded-lg text-xs cursor-pointer hover:bg-(--ui-surface-hover-1a2838) transition-colors ${active === index ? 'highlighted bg-(--ui-surface-263b4d)' : ''}`}
                 onMouseEnter={() => setActive(index)}
                 onMouseLeave={() => setActive(null)}
                 tabIndex={0}
@@ -123,7 +173,9 @@ export default function OverviewComposition({
                   className="w-2 h-2 rounded-full inline-block"
                   style={{ background: item.color }}
                 />
-                <span className="text-(--ui-text-acbfd5)">{item.label}</span>
+                <span className="text-(--ui-text-acbfd5) min-w-0 truncate" title={item.label}>
+                  {item.label}
+                </span>
                 <strong className="font-semibold tabular-nums text-text">
                   {dollars(item.value)}
                 </strong>
@@ -152,7 +204,9 @@ export default function OverviewComposition({
             {mode === 'budget'
               ? 'Taxes, bills, required loan payments, scheduled transfers, and unassigned cash reconcile your starting monthly plan. Saving transfers are allocations, not living expenses. Extra investing chosen inside a simulation is not included here.'
               : mode === 'assets'
-                ? 'Checking, savings, and investment balances are shown here. Debts are shown separately; net worth subtracts debt from these assets.'
+                ? assetView === 'breakdown'
+                  ? 'Accounts and stock holdings are shown separately. Percentages use total assets, not net worth. Unavailable holding details are grouped under stock holdings; debts are shown separately.'
+                  : 'Checking, savings, and investments are grouped by category. Percentages use total assets; net worth is total assets minus outstanding debt.'
                 : 'Each slice is a loan’s remaining principal, not its monthly payment. Monthly payments are shown under Monthly budget.'}
           </p>
           {breakdown.shortfall > 0 && (

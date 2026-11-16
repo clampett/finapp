@@ -244,6 +244,7 @@ export function debtPayment(node: GraphNode, graph: GraphData, ignoreDisabled = 
       : node.amountOrBalance * 0.02,
   );
 }
+// Reconciled active scenario balances and tracked stocks into assets, debt, and net worth.
 export function totals(graph: GraphData, portfolioValue = 0) {
   graph = activeGraph(graph);
   // Kept monthly flows separate from point-in-time balances. Loan minimums were
@@ -270,8 +271,12 @@ export function totals(graph: GraphData, portfolioValue = 0) {
       .filter((node) => !node.disabled && node.nodeType === 'EXPENSE')
       .reduce((sum, node) => sum + expenseAmount(node, graph), 0),
     debt = sum(['DEBT']) + overdraft;
+  // Kept graph investment accounts separate from tracked stocks before combining their balances.
   const nodeInvestments = sum(['INVESTMENT']);
-  const totalInvestments = nodeInvestments + (portfolioValue > 0 ? portfolioValue : 0);
+  // Excluded invalid cached valuations before calculating assets and net worth.
+  const totalInvestments =
+    nodeInvestments + (Number.isFinite(portfolioValue) && portfolioValue > 0 ? portfolioValue : 0);
+  // Included positive cash and investments while treating overdrawn cash as a liability.
   const assets =
     cashNodes.reduce((total, node) => total + Math.max(0, node.amountOrBalance), 0) +
     totalInvestments;
@@ -291,6 +296,7 @@ export function totals(graph: GraphData, portfolioValue = 0) {
     overdraft,
     assets,
     payments,
+    // Subtracted liabilities from assets rather than using net worth as a pie denominator.
     netWorth: assets - debt,
     taxes,
     takeHome,
@@ -303,68 +309,166 @@ export function totals(graph: GraphData, portfolioValue = 0) {
 }
 // Validate database responses and imported drafts before rendering or calculating.
 export type OverviewMode = 'assets' | 'budget' | 'debt';
-export function overviewBreakdown(graph: GraphData, mode: OverviewMode, portfolioValue = 0) {
+export type AssetViewMode = 'overview' | 'breakdown';
+
+// Limited chart inputs to holding fields used for valuation and identification.
+export interface AssetHolding {
+  symbol: string;
+  shares: number;
+  lastPrice?: number;
+  purchasePrice?: number;
+  companyName?: string | null;
+}
+
+// Reused theme-aware colors so both appearances retained consistent chart styling.
+export const ASSET_BREAKDOWN_COLORS = [
+  'var(--ui-paint-a78bfa)',
+  'var(--ui-paint-60a5fa)',
+  'var(--ui-paint-22d3ee)',
+  'var(--ui-paint-34d399)',
+  'var(--ui-paint-fbbf24)',
+  'var(--ui-paint-fb7185)',
+  'var(--ui-paint-b69dfa)',
+  'var(--ui-paint-59c9c1)',
+  'var(--ui-paint-7baaf5)',
+  'var(--ui-paint-f87171)',
+];
+
+// Built category and account-level slices from the same balance sheet used by summary cards.
+export function overviewBreakdown(
+  graph: GraphData,
+  mode: OverviewMode,
+  portfolioValue = 0,
+  assetView: AssetViewMode = 'overview',
+  holdings: AssetHolding[] = [],
+) {
   graph = activeGraph(graph);
   const t = totals(graph, portfolioValue);
 
   // Kept balance-sheet amounts separate from monthly flows; never encoded a
   // liability or shortfall as a negative pie wedge or counted transfers twice.
-  const items =
-    mode === 'assets'
-      ? [
-          {
-            label: 'Checking',
-            value: graph.nodes
-              .filter((node) => !node.disabled && node.nodeType === 'CHECKING')
-              .reduce((sum, node) => sum + Math.max(0, node.amountOrBalance), 0),
-            color: 'var(--ui-paint-60a5fa)',
-          },
-          {
-            label: 'Savings',
-            value: graph.nodes
-              .filter((node) => !node.disabled && node.nodeType === 'SAVINGS')
-              .reduce((sum, node) => sum + Math.max(0, node.amountOrBalance), 0),
-            color: 'var(--ui-paint-22d3ee)',
-          },
-          {
-            label: 'Investments',
-            value: t.totalInvestments,
-            color: 'var(--ui-paint-a78bfa)',
-          },
-        ]
-      : mode === 'debt'
-        ? [
-            ...graph.nodes
-              .filter((node) => !node.disabled && node.nodeType === 'DEBT')
-              .map((node, index) => ({
-                label: node.name,
-                value: node.amountOrBalance,
-                color: [
-                  'var(--ui-paint-fb7185)',
-                  'var(--ui-paint-fbbf24)',
-                  'var(--ui-paint-b69dfa)',
-                  'var(--ui-paint-59c9c1)',
-                  'var(--ui-paint-7baaf5)',
-                ][index % 5],
-              })),
-            { label: 'Cash overdraft', value: t.overdraft, color: 'var(--ui-paint-fb7185)' },
-          ]
-        : [
-            { label: 'Estimated taxes', value: t.taxes, color: 'var(--ui-paint-a78bfa)' },
-            { label: 'Living expenses', value: t.expenses, color: 'var(--ui-paint-fbbf24)' },
-            { label: 'Loan payments', value: t.payments, color: 'var(--ui-paint-fb7185)' },
-            {
-              label: 'Scheduled investing',
-              value: t.plannedInvestment,
-              color: 'var(--ui-paint-60a5fa)',
-            },
-            {
-              label: 'Scheduled savings',
-              value: t.plannedSavings,
-              color: 'var(--ui-paint-22d3ee)',
-            },
-            { label: 'Unassigned cash', value: t.unassigned, color: 'var(--ui-paint-6ed9b5)' },
-          ];
+  let items: { label: string; value: number; color: string }[];
+  if (mode === 'assets') {
+    if (assetView === 'breakdown') {
+      // Retained positive account balances and kept overdrafts in the separate debt view.
+      const breakdownItems: { label: string; value: number }[] = graph.nodes
+        .filter(
+          (node) =>
+            !node.disabled &&
+            ['CHECKING', 'SAVINGS', 'INVESTMENT'].includes(node.nodeType) &&
+            node.amountOrBalance > 0,
+        )
+        .map((node) => ({
+          label:
+            node.name ||
+            (node.nodeType === 'INVESTMENT'
+              ? 'Investment account'
+              : node.nodeType === 'SAVINGS'
+                ? 'Savings'
+                : 'Checking'),
+          value: node.amountOrBalance,
+        }));
+
+      // Combined repeated ticker lots and excluded malformed or unpriced holdings.
+      const stocks = new Map<string, number>();
+      for (const holding of holdings) {
+        const symbol =
+          typeof holding.symbol === 'string' ? holding.symbol.trim().toUpperCase() : '';
+        // Preserved fractional-share precision until currency values were formatted for display.
+        const value = holding.shares * (holding.lastPrice ?? 0);
+        if (
+          !symbol ||
+          !Number.isFinite(holding.shares) ||
+          holding.shares <= 0 ||
+          !Number.isFinite(holding.lastPrice) ||
+          (holding.lastPrice ?? 0) <= 0 ||
+          !Number.isFinite(value) ||
+          value <= 0
+        )
+          continue;
+        // Merged independent lots under one normalized ticker without discarding their value.
+        stocks.set(symbol, (stocks.get(symbol) ?? 0) + value);
+      }
+      // Summed priced holdings before checking them against the portfolio snapshot.
+      const stockSum = [...stocks.values()].reduce((sum, value) => sum + value, 0);
+      if (Number.isFinite(portfolioValue) && portfolioValue > 0) {
+        // Preserved the summary valuation when stale holding prices exceeded that snapshot.
+        // Avoided inventing scaled prices or counting stock value twice during a refresh.
+        if (!Number.isFinite(stockSum) || stockSum > portfolioValue) {
+          breakdownItems.push({ label: 'Stock holdings', value: portfolioValue });
+        } else {
+          stocks.forEach((value, label) => breakdownItems.push({ label, value }));
+          // Retained even a one-cent remainder so the detailed and category totals reconciled.
+          const remainder = portfolioValue - stockSum;
+          if (remainder > 0)
+            breakdownItems.push({ label: 'Other stock holdings', value: remainder });
+        }
+      }
+
+      // Assigned a theme token to each slice, cycling through the available palette.
+      items = breakdownItems.map((item, index) => ({
+        ...item,
+        color: ASSET_BREAKDOWN_COLORS[index % ASSET_BREAKDOWN_COLORS.length],
+      }));
+    } else {
+      items = [
+        {
+          label: 'Checking',
+          value: graph.nodes
+            .filter((node) => !node.disabled && node.nodeType === 'CHECKING')
+            .reduce((sum, node) => sum + Math.max(0, node.amountOrBalance), 0),
+          color: 'var(--ui-paint-60a5fa)',
+        },
+        {
+          label: 'Savings',
+          value: graph.nodes
+            .filter((node) => !node.disabled && node.nodeType === 'SAVINGS')
+            .reduce((sum, node) => sum + Math.max(0, node.amountOrBalance), 0),
+          color: 'var(--ui-paint-22d3ee)',
+        },
+        {
+          label: 'Investments',
+          value: t.totalInvestments,
+          color: 'var(--ui-paint-a78bfa)',
+        },
+      ];
+    }
+  } else if (mode === 'debt') {
+    items = [
+      ...graph.nodes
+        .filter((node) => !node.disabled && node.nodeType === 'DEBT')
+        .map((node, index) => ({
+          label: node.name,
+          value: node.amountOrBalance,
+          color: [
+            'var(--ui-paint-fb7185)',
+            'var(--ui-paint-fbbf24)',
+            'var(--ui-paint-b69dfa)',
+            'var(--ui-paint-59c9c1)',
+            'var(--ui-paint-7baaf5)',
+          ][index % 5],
+        })),
+      { label: 'Cash overdraft', value: t.overdraft, color: 'var(--ui-paint-fb7185)' },
+    ];
+  } else {
+    items = [
+      { label: 'Estimated taxes', value: t.taxes, color: 'var(--ui-paint-a78bfa)' },
+      { label: 'Living expenses', value: t.expenses, color: 'var(--ui-paint-fbbf24)' },
+      { label: 'Loan payments', value: t.payments, color: 'var(--ui-paint-fb7185)' },
+      {
+        label: 'Scheduled investing',
+        value: t.plannedInvestment,
+        color: 'var(--ui-paint-60a5fa)',
+      },
+      {
+        label: 'Scheduled savings',
+        value: t.plannedSavings,
+        color: 'var(--ui-paint-22d3ee)',
+      },
+      { label: 'Unassigned cash', value: t.unassigned, color: 'var(--ui-paint-6ed9b5)' },
+    ];
+  }
+  // Removed empty slices before calculating the positive total used by every percentage.
   const positive = items.filter((item) => item.value > 0);
   return {
     items: positive,

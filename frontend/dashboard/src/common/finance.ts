@@ -244,6 +244,7 @@ export function debtPayment(node: GraphNode, graph: GraphData, ignoreDisabled = 
       : node.amountOrBalance * 0.02,
   );
 }
+// Reconciled active scenario balances and tracked stocks into assets, debt, and net worth.
 export function totals(graph: GraphData, portfolioValue = 0) {
   graph = activeGraph(graph);
   // Kept monthly flows separate from point-in-time balances. Loan minimums were
@@ -270,8 +271,12 @@ export function totals(graph: GraphData, portfolioValue = 0) {
       .filter((node) => !node.disabled && node.nodeType === 'EXPENSE')
       .reduce((sum, node) => sum + expenseAmount(node, graph), 0),
     debt = sum(['DEBT']) + overdraft;
+  // Kept graph investment accounts separate from tracked stocks before combining their balances.
   const nodeInvestments = sum(['INVESTMENT']);
-  const totalInvestments = nodeInvestments + (portfolioValue > 0 ? portfolioValue : 0);
+  // Excluded invalid cached valuations before calculating assets and net worth.
+  const totalInvestments =
+    nodeInvestments + (Number.isFinite(portfolioValue) && portfolioValue > 0 ? portfolioValue : 0);
+  // Included positive cash and investments while treating overdrawn cash as a liability.
   const assets =
     cashNodes.reduce((total, node) => total + Math.max(0, node.amountOrBalance), 0) +
     totalInvestments;
@@ -291,6 +296,7 @@ export function totals(graph: GraphData, portfolioValue = 0) {
     overdraft,
     assets,
     payments,
+    // Subtracted liabilities from assets rather than using net worth as a pie denominator.
     netWorth: assets - debt,
     taxes,
     takeHome,
@@ -305,6 +311,7 @@ export function totals(graph: GraphData, portfolioValue = 0) {
 export type OverviewMode = 'assets' | 'budget' | 'debt';
 export type AssetViewMode = 'overview' | 'breakdown';
 
+// Limited chart inputs to holding fields used for valuation and identification.
 export interface AssetHolding {
   symbol: string;
   shares: number;
@@ -313,6 +320,7 @@ export interface AssetHolding {
   companyName?: string | null;
 }
 
+// Reused theme-aware colors so both appearances retained consistent chart styling.
 export const ASSET_BREAKDOWN_COLORS = [
   'var(--ui-paint-a78bfa)',
   'var(--ui-paint-60a5fa)',
@@ -326,6 +334,7 @@ export const ASSET_BREAKDOWN_COLORS = [
   'var(--ui-paint-f87171)',
 ];
 
+// Built category and account-level slices from the same balance sheet used by summary cards.
 export function overviewBreakdown(
   graph: GraphData,
   mode: OverviewMode,
@@ -341,55 +350,62 @@ export function overviewBreakdown(
   let items: { label: string; value: number; color: string }[];
   if (mode === 'assets') {
     if (assetView === 'breakdown') {
-      const breakdownItems: { label: string; value: number }[] = [];
+      // Retained positive account balances and kept overdrafts in the separate debt view.
+      const breakdownItems: { label: string; value: number }[] = graph.nodes
+        .filter(
+          (node) =>
+            !node.disabled &&
+            ['CHECKING', 'SAVINGS', 'INVESTMENT'].includes(node.nodeType) &&
+            node.amountOrBalance > 0,
+        )
+        .map((node) => ({
+          label:
+            node.name ||
+            (node.nodeType === 'INVESTMENT'
+              ? 'Investment account'
+              : node.nodeType === 'SAVINGS'
+                ? 'Savings'
+                : 'Checking'),
+          value: node.amountOrBalance,
+        }));
 
-      for (const node of graph.nodes) {
-        if (!node.disabled && node.nodeType === 'CHECKING' && node.amountOrBalance > 0) {
-          breakdownItems.push({
-            label: node.name || 'Checking',
-            value: node.amountOrBalance,
-          });
+      // Combined repeated ticker lots and excluded malformed or unpriced holdings.
+      const stocks = new Map<string, number>();
+      for (const holding of holdings) {
+        const symbol =
+          typeof holding.symbol === 'string' ? holding.symbol.trim().toUpperCase() : '';
+        // Preserved fractional-share precision until currency values were formatted for display.
+        const value = holding.shares * (holding.lastPrice ?? 0);
+        if (
+          !symbol ||
+          !Number.isFinite(holding.shares) ||
+          holding.shares <= 0 ||
+          !Number.isFinite(holding.lastPrice) ||
+          (holding.lastPrice ?? 0) <= 0 ||
+          !Number.isFinite(value) ||
+          value <= 0
+        )
+          continue;
+        // Merged independent lots under one normalized ticker without discarding their value.
+        stocks.set(symbol, (stocks.get(symbol) ?? 0) + value);
+      }
+      // Summed priced holdings before checking them against the portfolio snapshot.
+      const stockSum = [...stocks.values()].reduce((sum, value) => sum + value, 0);
+      if (Number.isFinite(portfolioValue) && portfolioValue > 0) {
+        // Preserved the summary valuation when stale holding prices exceeded that snapshot.
+        // Avoided inventing scaled prices or counting stock value twice during a refresh.
+        if (!Number.isFinite(stockSum) || stockSum > portfolioValue) {
+          breakdownItems.push({ label: 'Stock holdings', value: portfolioValue });
+        } else {
+          stocks.forEach((value, label) => breakdownItems.push({ label, value }));
+          // Retained even a one-cent remainder so the detailed and category totals reconciled.
+          const remainder = portfolioValue - stockSum;
+          if (remainder > 0)
+            breakdownItems.push({ label: 'Other stock holdings', value: remainder });
         }
       }
 
-      for (const node of graph.nodes) {
-        if (!node.disabled && node.nodeType === 'SAVINGS' && node.amountOrBalance > 0) {
-          breakdownItems.push({
-            label: node.name || 'Savings',
-            value: node.amountOrBalance,
-          });
-        }
-      }
-
-      for (const node of graph.nodes) {
-        if (!node.disabled && node.nodeType === 'INVESTMENT' && node.amountOrBalance > 0) {
-          breakdownItems.push({
-            label: node.name || 'Investment Account',
-            value: node.amountOrBalance,
-          });
-        }
-      }
-
-      let stockSum = 0;
-      for (const h of holdings) {
-        const val = Math.round((h.shares || 0) * (h.lastPrice || 0) * 100) / 100;
-        if (val > 0) {
-          breakdownItems.push({
-            label: h.symbol.toUpperCase(),
-            value: val,
-          });
-          stockSum += val;
-        }
-      }
-
-      const remainingStockValue = Math.round(Math.max(0, portfolioValue - stockSum) * 100) / 100;
-      if (remainingStockValue > 0.01) {
-        breakdownItems.push({
-          label: 'Other Stocks',
-          value: remainingStockValue,
-        });
-      }
-
+      // Assigned a theme token to each slice, cycling through the available palette.
       items = breakdownItems.map((item, index) => ({
         ...item,
         color: ASSET_BREAKDOWN_COLORS[index % ASSET_BREAKDOWN_COLORS.length],
@@ -452,6 +468,7 @@ export function overviewBreakdown(
       { label: 'Unassigned cash', value: t.unassigned, color: 'var(--ui-paint-6ed9b5)' },
     ];
   }
+  // Removed empty slices before calculating the positive total used by every percentage.
   const positive = items.filter((item) => item.value > 0);
   return {
     items: positive,

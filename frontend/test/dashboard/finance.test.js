@@ -536,3 +536,94 @@ test('User Story 11: overviewBreakdown supports specific asset breakdown with in
   assert.ok(mixedBreakdown.items.some((i) => i.label === 'AAPL' && i.value === 3000));
   assert.ok(mixedBreakdown.items.some((i) => i.label === 'MSFT' && i.value === 7000));
 });
+
+test('asset details reconcile stale, partial, empty and fractional holdings with the summary', () => {
+  const graph = finance.parseGraph({ nodes: [], edges: [] });
+  const check = (value, holdings) => {
+    const summary = finance.overviewBreakdown(graph, 'assets', value);
+    const detail = finance.overviewBreakdown(graph, 'assets', value, 'breakdown', holdings);
+    assert.ok(
+      Math.abs(detail.total - summary.total) < 1e-8,
+      'Both views must use the same asset valuation',
+    );
+    assert.ok(detail.items.every((item) => Number.isFinite(item.value) && item.value > 0));
+    return detail;
+  };
+  assert.equal(check(0, [{ symbol: 'AAPL', shares: 10, lastPrice: 200 }]).items.length, 0);
+  assert.equal(
+    check(100, [{ symbol: 'AAPL', shares: 10, lastPrice: 200 }]).items[0].label,
+    'Stock holdings',
+  );
+  assert.equal(check(100, []).items[0].value, 100);
+  assert.ok(
+    check(100.01, [{ symbol: 'AAPL', shares: 1, lastPrice: 100 }]).items.some(
+      (item) => Math.abs(item.value - 0.01) < 1e-8,
+    ),
+  );
+  check(0.012, [
+    { symbol: 'A', shares: 1, lastPrice: 0.006 },
+    { symbol: 'B', shares: 1, lastPrice: 0.006 },
+  ]);
+  const lots = check(300, [
+    { symbol: 'aapl', shares: 1, lastPrice: 100 },
+    { symbol: ' AAPL ', shares: 2, lastPrice: 100 },
+  ]);
+  assert.equal(lots.items.length, 1);
+  assert.equal(lots.items[0].label, 'AAPL');
+  assert.equal(lots.items[0].value, 300);
+  check(50, [
+    { symbol: 'BAD', shares: Infinity, lastPrice: 1 },
+    { symbol: 'BAD', shares: -1, lastPrice: -5 },
+    { symbol: 'BAD', shares: 2, lastPrice: NaN },
+  ]);
+  check(Infinity, [{ symbol: 'AAPL', shares: 1, lastPrice: 100 }]);
+});
+
+test('asset percentages exclude inactive accounts and overdrafts while net worth includes debt', () => {
+  const graph = finance.parseGraph({
+    nodes: [
+      {
+        id: 'cash',
+        name: 'Checking',
+        nodeType: 'CHECKING',
+        amountOrBalance: 100,
+        interestRateApr: 0,
+      },
+      {
+        id: 'overdraft',
+        name: 'Overdraft',
+        nodeType: 'CHECKING',
+        amountOrBalance: -50,
+        interestRateApr: 0,
+      },
+      {
+        id: 'investment',
+        name: 'Retirement',
+        nodeType: 'INVESTMENT',
+        amountOrBalance: 200,
+        interestRateApr: 0,
+      },
+      {
+        id: 'off',
+        name: 'Inactive',
+        nodeType: 'SAVINGS',
+        amountOrBalance: 500,
+        interestRateApr: 0,
+        disabled: true,
+      },
+      { id: 'loan', name: 'Loan', nodeType: 'DEBT', amountOrBalance: 1000, interestRateApr: 0 },
+    ],
+    edges: [],
+  });
+  const detail = finance.overviewBreakdown(graph, 'assets', 100, 'breakdown', [
+    { symbol: 'AAPL', shares: 1, lastPrice: 100 },
+  ]);
+  assert.equal(detail.total, 400);
+  assert.equal(detail.netWorth, -650);
+  assert.equal(finance.overviewBreakdown(graph, 'debt', 100).total, 1050);
+  assert.ok(!detail.items.some((item) => ['Inactive', 'Overdraft', 'Loan'].includes(item.label)));
+  assert.equal(
+    detail.items.reduce((sum, item) => sum + (item.value / detail.total) * 100, 0),
+    100,
+  );
+});

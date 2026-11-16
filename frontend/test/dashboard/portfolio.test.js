@@ -1221,3 +1221,27 @@ test("dividend forecasts reflect current shares across independent lots", () => 
   assert.equal(flows.length, 2);
   assert.equal(flows.reduce((total, flow) => total + flow.amount, 0), 7);
 });
+
+test('portfolio: cancelled responses cannot overwrite a newer cached holding snapshot', async () => {
+  const key = 'cancelled-refresh';
+  const newer = [{ symbol: 'NEW', shares: 2, lastPrice: 50 }];
+  runtime.module.exports.saveLocalHoldings(key, newer);
+  const controller = new AbortController();
+  let deliverStocks;
+  runtime.fetch = async (url) => ({
+    ok: true,
+    json: () =>
+      String(url).endsWith('/stocks')
+        ? new Promise((resolve) => {
+            deliverStocks = resolve;
+          })
+        : Promise.resolve({ data: [] }),
+  });
+  const pending = loadUnifiedHoldings(key, 7, false, controller.signal);
+  while (!deliverStocks) await new Promise((resolve) => setImmediate(resolve));
+  controller.abort();
+  deliverStocks({ data: [{ id: 1, ticker: 'OLD', sharesOwned: 100, lastPrice: 100 }] });
+  await assert.rejects(pending, (error) => error.name === 'AbortError');
+  assert.equal(parseLocalHoldings(key)[0].symbol, 'NEW');
+  assert.equal(getStoredPortfolioValue(key), 100);
+});

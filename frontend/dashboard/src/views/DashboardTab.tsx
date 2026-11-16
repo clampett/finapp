@@ -18,6 +18,7 @@ export function DashboardTab({
   goalsStorageKey,
   holdings = [],
 }: DashboardTabProps) {
+  // Used the same scenario and portfolio valuation for summary cards and the asset chart.
   const t = totals(graph, portfolioValue);
 
   return (

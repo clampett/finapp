@@ -1,4 +1,4 @@
-import { useEffect, useLayoutEffect, useRef, useState } from 'react';
+import { lazy, Suspense, useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { ArchetypeGraph } from './workspace/graphs';
 import type { View } from './common/finance';
 import { demoProfile, API_BASE } from './common/finance';
@@ -11,6 +11,10 @@ import {
 } from './investing/portfolio';
 import { useTheme } from './common/useTheme';
 import type { UserProfile } from './views/SettingsTab';
+
+// Deferred the independent news desk and forecast library until their tabs were opened.
+const NewsTab = lazy(() => import('./news/NewsTab'));
+const HistoryTab = lazy(() => import('./history/HistoryTab'));
 
 const DEMO_PROFILES: Record<number, UserProfile> = {
   1: { username: 'alex_grad', displayName: 'Alex Rivera (Recent Grad)', profilePicture: null },
@@ -34,6 +38,8 @@ const views: {
   { id: 'budgeting', label: 'Budgeting', icon: '▤' },
   { id: 'investing', label: 'Investments', icon: '↗' },
   { id: 'ai', label: 'AI Coach', icon: '✦' },
+  { id: 'news', label: 'Financial News', icon: '▧' },
+  { id: 'history', label: 'Simulation History', icon: '◷' },
 ];
 export default function App() {
   const { theme, selectTheme } = useTheme();
@@ -476,20 +482,42 @@ export default function App() {
             )}
           </div>
         )}
-        <ArchetypeGraph
-          key={`${demo}-${profile}`}
-          userId={profile}
-          demo={demo}
-          view={view}
-          search={search}
-          userProfile={userProfile}
-          profileStatus={demo ? 'ready' : profileStatus}
-          onRetryProfile={() => retryProfile((attempt) => attempt + 1)}
-          onUpdateProfile={setUserProfile}
-          activeTheme={theme}
-          onSelectTheme={selectTheme}
-          onNavigate={openView}
-        />
+        <Suspense
+          fallback={
+            <p className="p-8 text-sm text-muted" role="status">
+              Opening your workspace…
+            </p>
+          }
+        >
+          {view === 'news' ? (
+            <NewsTab
+              key={`news-${demo}-${profile}`}
+              storageKey={`finapp-reading-list-v1:${demo ? 'demo' : 'user'}:${profile}`}
+            />
+          ) : view === 'history' ? (
+            <HistoryTab
+              key={`history-${demo}-${profile}`}
+              userId={profile}
+              demo={demo}
+              onOpenGraph={() => openView('graph')}
+            />
+          ) : (
+            <ArchetypeGraph
+              key={`${demo}-${profile}`}
+              userId={profile}
+              demo={demo}
+              view={view}
+              search={search}
+              userProfile={userProfile}
+              profileStatus={demo ? 'ready' : profileStatus}
+              onRetryProfile={() => retryProfile((attempt) => attempt + 1)}
+              onUpdateProfile={setUserProfile}
+              activeTheme={theme}
+              onSelectTheme={selectTheme}
+              onNavigate={openView}
+            />
+          )}
+        </Suspense>
       </main>
     </div>
   );

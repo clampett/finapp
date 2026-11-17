@@ -2,7 +2,15 @@ export const API_BASE = import.meta.env.VITE_API_URL || '/api/v1';
 export type NodeType = 'INCOME' | 'CHECKING' | 'SAVINGS' | 'INVESTMENT' | 'DEBT' | 'EXPENSE';
 export type SimulationType = 'monte_carlo' | 'markov' | 'debt';
 export type View =
-  'overview' | 'graph' | 'cashflow' | 'budgeting' | 'investing' | 'ai' | 'settings';
+  | 'overview'
+  | 'graph'
+  | 'cashflow'
+  | 'budgeting'
+  | 'investing'
+  | 'news'
+  | 'history'
+  | 'ai'
+  | 'settings';
 export type RecurrenceFrequency =
   'daily' | 'weekly' | 'biweekly' | 'monthly' | 'quarterly' | 'yearly';
 

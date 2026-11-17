@@ -1,6 +1,7 @@
 import type { GraphData } from '../common/finance';
 import { money, totals } from '../common/finance';
 import { FinancialGoals } from '../investing/FinancialGoals';
+import type { Holding } from '../investing/portfolio';
 import { lazy, Suspense } from 'react';
 const OverviewComposition = lazy(() => import('../common/OverviewComposition'));
 
@@ -8,9 +9,16 @@ interface DashboardTabProps {
   graph: GraphData;
   portfolioValue?: number;
   goalsStorageKey: string;
+  holdings?: Holding[];
 }
 
-export function DashboardTab({ graph, portfolioValue = 0, goalsStorageKey }: DashboardTabProps) {
+export function DashboardTab({
+  graph,
+  portfolioValue = 0,
+  goalsStorageKey,
+  holdings = [],
+}: DashboardTabProps) {
+  // Used the same scenario and portfolio valuation for summary cards and the asset chart.
   const t = totals(graph, portfolioValue);
 
   return (
@@ -72,7 +80,7 @@ export function DashboardTab({ graph, portfolioValue = 0, goalsStorageKey }: Das
           </div>
         }
       >
-        <OverviewComposition graph={graph} portfolioValue={portfolioValue} />
+        <OverviewComposition graph={graph} portfolioValue={portfolioValue} holdings={holdings} />
       </Suspense>
 
       <FinancialGoals netWorth={t.netWorth} income={t.takeHome} storageKey={goalsStorageKey} />

@@ -232,6 +232,7 @@ export function holdingsToSynthetic(
   return { stocks, positions };
 }
 
+// Loaded server positions when signed in and retained scoped browser data as a fallback.
 export async function loadUnifiedHoldings(
   storageKey: string,
   userId?: number,
@@ -278,6 +279,8 @@ export async function loadUnifiedHoldings(
           };
         });
 
+        // Rejected cancelled responses before they could overwrite a newer cached portfolio.
+        signal?.throwIfAborted();
         saveLocalHoldings(storageKey, holdings);
         return { holdings, stocks, positions };
       }
@@ -287,6 +290,8 @@ export async function loadUnifiedHoldings(
     }
   }
 
+  // Stopped cancelled requests before restoring or seeding browser data.
+  signal?.throwIfAborted();
   // 2. Demo mode or offline fallback: Load from localStorage or defaults
   const rawStorage = typeof localStorage !== 'undefined' ? localStorage.getItem(storageKey) : null;
   let localHoldings: Holding[];

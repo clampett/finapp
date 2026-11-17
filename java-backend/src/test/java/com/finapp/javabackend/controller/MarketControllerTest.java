@@ -21,6 +21,18 @@ class MarketControllerTest {
     private MockRestServiceServer server;
 
     @Test
+    void forwardsTheNewsFeed() {
+        server
+            .expect(requestTo("http://localhost:5000/api/news"))
+            .andRespond(withSuccess("{\"status\":\"ready\",\"articles\":[]}", MediaType.APPLICATION_JSON));
+        var response = controller.news();
+        assertEquals(HttpStatus.OK, response.getStatusCode());
+        assertEquals(MediaType.APPLICATION_JSON, response.getHeaders().getContentType());
+        assertTrue(response.getBody().contains("ready"));
+        server.verify();
+    }
+
+    @Test
     void forwardsTheFixedPublicBriefing() {
         server
             .expect(requestTo("http://localhost:5000/api/coach/market"))

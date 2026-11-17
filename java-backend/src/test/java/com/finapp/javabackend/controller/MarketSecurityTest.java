@@ -31,6 +31,7 @@ class MarketSecurityTest {
             "/api/v1/market/context/{symbol}/chart",
             "/api/v1/market/context/{symbol}/chart/private",
             "/api/v1/market/context",
+            "/api/v1/market/news",
             "/api/v1/market/context/private",
             "/api/v1/market/stocks/{symbol}/chart",
             "/api/v1/market/stocks/{symbol}/chart/private",
@@ -53,6 +54,11 @@ class MarketSecurityTest {
         String write() {
             return "{}";
         }
+    }
+
+    @Test
+    void newsReadIsPublic() throws Exception {
+        mvc.perform(get("/api/v1/market/news")).andExpect(status().isOk());
     }
 
     @Test

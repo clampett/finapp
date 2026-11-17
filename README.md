@@ -2,7 +2,7 @@
 
 **Software Engineering Project · Team 1 · Version 2.2.0**
 
-**Last updated: 11/14/2026**
+**Last updated: 11/16/2026**
 
 A visual, interactive personal finance dashboard that maps your finances as an interconnected web using nodes. Trace where your income flows, organize accounts and debts, build financial scenarios, and explore possible future outcomes.
 
@@ -18,6 +18,8 @@ A visual, interactive personal finance dashboard that maps your finances as an i
 - **Budgeting:** Manage income and expense transactions, recurring rules, and generated due occurrences. Review stock positions and record trades, with linked scenario updates where supported.
 - **Investments & Market Data:** Manage stock holdings shared with Budgeting, inspect estimated dividend income, and review historical returns and volatility. Explore stock charts over 1D, 1M, 1Y, or 5Y with date-tracking tooltips and green/red price changes. View public cryptocurrency and foreign-exchange quotes.
 - **AI Coach:** Use a guided scenario review, a comparative Scenario lab, local Ollama chat, a result notebook, and a dated markets/news briefing. The built-in guide remains available when local inference is unavailable.
+- **Financial News:** Browse headlines from Yahoo Finance, CNBC, BBC Business, and the Federal Reserve. Search, filter by topic/publisher, switch grid/list views, and keep a browser-local reading list. Dates and source health remain visible when a feed is delayed or unavailable.
+- **Simulation History:** Name and save completed Monte Carlo and Markov forecasts, reopen their original charts and inputs, compare compatible runs, rename entries, export JSON, and delete saved runs. Signed-in history is stored in PostgreSQL; demo history stays in this browser.
 - **Pre-Loaded Archetypes:** Explore _Recent Grad with Loans_, _Mid-Career Family_, and _FIRE Strategist_. The family scenario is the default demo.
 - **Monte Carlo Simulation:** Explore 1,000 simulated paths over an adjustable horizon using cached historical market data or explicit return assumptions.
 - **Markov Regime Simulation:** Explore modeled bull/bear persistence and transitions, with the calibration source and transition probabilities shown alongside results.
@@ -259,6 +261,28 @@ Chat requests are limited to 12 per client per minute, one concurrent inference,
 
 Ollama runs beside the Express gateway, not inside each visitor’s browser. The current integration targets loopback on that gateway’s machine. A deployed frontend therefore needs an available runtime in that environment to generate answers; otherwise the labeled built-in guide is used. The local launchers do not provision a hosted AI service.
 
+## News and Saved Simulations
+
+### Financial news
+
+Open **Financial news** in the sidebar. The feed combines public publisher headlines; full articles open directly at the original publisher. Use topic chips, publisher/search filters, newest/oldest sorting, and grid/list controls to explore. Bookmark up to 50 articles in a reading list scoped to the current user or demo profile in this browser.
+
+The Python service polls only fixed RSS URLs, shares one background refresh across readers, and waits five minutes between refresh batches. Each publisher has its own success/failure state; recent cached stories remain visible during a partial outage and expire after 24 hours. Headlines older than seven days are excluded from the current feed. Saved articles may remain in the reading list after that period. The open tab refreshes periodically. No API key is needed. Publisher subscriptions may be required to read an article.
+
+### Simulation history
+
+1. Open **Node Graph** and run a Monte Carlo or Markov simulation.
+2. Wait for the calculation to finish. Enter a name in **Keep this perspective**, then choose **Save run**.
+3. Open **Simulation history** or use **View history** in the simulation panel.
+4. Open a saved run to see its original percentile chart, model context, input assumptions, and included account balances. Renaming changes only its title; changing today's graph does not alter saved results.
+5. Select two runs to compare their medians and ending percentiles. The comparison requires matching horizons and inflation adjustments.
+
+Saving is explicit: slider previews are not automatically archived. Signed-in users can retain 100 runs per account, with account ownership enforced on every API operation. Demo profiles can retain 20 runs per browser. Reaching a limit requires deleting an old run; existing records are never silently overwritten. JSON export is available in each saved detail view. AI Coach comparison notebooks remain a separate temporary feature and are not automatically added to history.
+
+Flyway migration **V10** creates the saved-run table on backend startup. Existing migrations were left unchanged. Restart/rebuild the normal local stack after pulling this feature so Python news routes, Java routes, and the migration are loaded.
+
+---
+
 ## Access Points
 
 | Service                           | URL                              |
@@ -293,6 +317,8 @@ The frontend is organized by responsibility so tab views, domain logic, canvas c
 | `frontend/dashboard/src/budgeting/`  | Data/actions hooks, transaction and recurring forms, holdings/trades, and graph synchronization.     |
 | `frontend/dashboard/src/investing/`  | Shared holdings, market quotes/charts, goals, and financial preferences.                             |
 | `frontend/dashboard/src/simulation/` | Simulation dialog, parameter controls, calibration details, outcome tables, charts, and defaults.    |
+| `frontend/dashboard/src/news/`       | News desk components, filters, reading-list state, publisher validation, and editorial styles.       |
+| `frontend/dashboard/src/history/`    | Saved-run storage adapters, save controls, history cards, immutable details, and comparisons.        |
 | `frontend/dashboard/src/coach/`      | AI tab components, chat/lab state, and the `coach-engine.ts` scenario helper.                        |
 | `frontend/dashboard/src/styles/`     | Dashboard styles and light/dark theme tokens.                                                        |
 | `frontend/landing/`                  | Public pages, authentication screens, and their TypeScript/CSS sources.                              |
@@ -355,7 +381,7 @@ python -m pytest tests
 - Scenario graph edits remain browser-local and do not currently synchronize to PostgreSQL or another computer.
 - Market quotes and historical downloads depend on external provider availability.
 - Forecasts use explicit modeling assumptions and simplified effective taxes.
-- Full transaction routing through every connection, authenticated graph-save integration, durable simulation history, tax brackets, and retirement withdrawals remain separate integration work. Scenario database tables alone do not make the graph editor synchronize its browser drafts.
+- Full transaction routing through every connection, authenticated graph-save integration, tax brackets, and retirement withdrawals remain separate integration work. Scenario database tables alone do not make the graph editor synchronize its browser drafts.
 - Stock holdings and graph investment nodes are distinct inputs. Editing shares in Investments does not automatically change the graph balances used by AI scenario comparisons.
 - Currency previews do not perform automatic portfolio conversion or change the simulator’s USD accounting.
 - Local AI quality and latency depend on the installed model and available hardware. Cached market context can be stale or unavailable; the model is not continuously retrained on news.
@@ -368,3 +394,5 @@ python -m pytest tests
 - [Code and Debugging Guide](docs/sprint-2/code-guide.md): File map, request flow, calculation responsibilities, and formatting commands.
 - [Current Implementation](docs/sprint-2/current-implementation.md): Scenario behavior, storage, authentication, and integration limits.
 - [Simulation Model](docs/sprint-2/simulation-model.md): Equations, assumptions, market data, and reference budgets.
+
+- [News and Simulation History](docs/sprint-2/news-and-simulation-history.md): Feed sources, persistence, API ownership, limits, and focused test commands.

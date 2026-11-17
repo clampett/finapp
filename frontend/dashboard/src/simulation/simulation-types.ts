@@ -28,6 +28,8 @@ export type DebtSummary = {
 };
 
 export interface SimulationResult {
+  model_version?: number;
+  inputs?: Record<string, unknown>;
   status: string;
   metrics: {
     initial_investment: number;

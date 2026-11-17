@@ -41,6 +41,7 @@ services:
       - PRICE_CACHE_DB=/data/price_cache.db
     volumes:
       - market_cache:/data
+      - ./python-backend/app:/code/app
     networks:
       - finapp-network
 

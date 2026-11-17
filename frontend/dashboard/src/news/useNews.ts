@@ -20,18 +20,27 @@ export function useNews() {
         if (!Array.isArray(body.articles) || !Array.isArray(body.sources))
           throw new Error('News could not be loaded.');
         if (controller.signal.aborted) return;
+        const articles = body.articles.filter(validArticle);
         setFeed({
           ...body,
-          articles: body.articles.filter(validArticle),
+          articles,
           sources: body.sources.slice(0, 4),
         });
         setError('');
-        // Polled only an initial background refresh and stopped after a bounded number of attempts.
-        // Refreshed the open news desk periodically without bypassing the server-side cache.
-        poll = setTimeout(load, body.pending && ++attempts < 6 ? 3000 : 300000);
+        // Polled during background refresh, retried quickly on empty/unavailable feed,
+        // and refreshed periodically once articles loaded without bypassing cache.
+        const delay =
+          body.pending && ++attempts < 10
+            ? 3000
+            : articles.length === 0
+              ? Math.max(3000, Math.min((body.refresh_after_seconds || 10) * 1000, 15000))
+              : Math.max(30000, (body.refresh_after_seconds ?? 300) * 1000);
+        poll = setTimeout(load, delay);
       } catch (reason) {
-        if (!controller.signal.aborted)
+        if (!controller.signal.aborted) {
           setError(reason instanceof Error ? reason.message : 'News could not be loaded.');
+          poll = setTimeout(load, 10000);
+        }
       } finally {
         if (!controller.signal.aborted) setBusy(false);
       }

@@ -17,25 +17,34 @@ class NewsService:
         self.health = {}
 
     def refresh(self):
-        # Fetched each publisher independently so one outage could not erase the other feeds.
-        def load(source):
-            return parse_feed(self.fetch(source), source, self.clock())
+        try:
+            # Fetched each publisher independently so one outage could not erase the other feeds.
+            def load(source):
+                return parse_feed(self.fetch(source), source, self.clock())
 
-        with ThreadPoolExecutor(max_workers=4) as pool:
-            jobs = [(source, pool.submit(load, source)) for source in SOURCES]
-            for source, future in jobs:
-                try:
-                    stories = future.result()
-                    with self.lock:
-                        self.cache[source["id"]] = (self.clock(), stories)
-                        self.health[source["id"]] = "ready"
-                except Exception:
-                    with self.lock:
-                        self.health[source["id"]] = "unavailable"
-        with self.lock:
-            # Applied a five-minute shared cooldown; browser refreshes never bypassed provider limits.
-            self.retry_at = self.clock() + 300
-            self.pending = False
+            with ThreadPoolExecutor(max_workers=4) as pool:
+                jobs = [(source, pool.submit(load, source)) for source in SOURCES]
+                for source, future in jobs:
+                    try:
+                        stories = future.result()
+                        with self.lock:
+                            self.cache[source["id"]] = (self.clock(), stories)
+                            self.health[source["id"]] = "ready"
+                    except Exception:
+                        with self.lock:
+                            self.health[source["id"]] = "unavailable"
+        finally:
+            with self.lock:
+                now = self.clock()
+                has_stories = any(
+                    stories
+                    for ts, stories in self.cache.values()
+                    if now - ts <= 86400 and stories
+                )
+                # Applied a five-minute shared cooldown when cache has valid stories;
+                # on total failure or empty cache, retry in 10s so outages recover quickly.
+                self.retry_at = now + (300 if has_stories else 10)
+                self.pending = False
 
     def get(self):
         with self.lock:

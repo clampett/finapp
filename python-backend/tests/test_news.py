@@ -110,3 +110,33 @@ def test_duplicate_headlines_from_different_publishers_were_collapsed():
     service = NewsService(lambda source: feed(source), lambda: NOW.timestamp())
     service.refresh()
     assert len(service.get()["articles"]) == 1
+
+
+def test_total_outage_retries_quickly_without_five_minute_lockout():
+    clock = [NOW.timestamp()]
+    calls = []
+
+    def failing_fetch(source):
+        calls.append(source["id"])
+        raise OSError("network down")
+
+    service = NewsService(failing_fetch, lambda: clock[0])
+    service.refresh()
+    result = service.get()
+    assert result["status"] == "unavailable"
+    assert result["articles"] == []
+    assert len(calls) == 4
+    # On total failure or empty cache, cooldown is 10s, never a 5-minute lockout.
+    assert result["refresh_after_seconds"] <= 10
+    # Next get within 10s does not refetch yet.
+    service.get()
+    assert len(calls) == 4
+    # Advancing by 11 seconds triggers a new refresh attempt.
+    clock[0] += 11
+    retrying = service.get()
+    assert retrying["pending"] is True
+    # Wait for the background refresh thread to complete.
+    deadline = time.monotonic() + 2
+    while service.pending and time.monotonic() < deadline:
+        time.sleep(0.005)
+    assert len(calls) == 8

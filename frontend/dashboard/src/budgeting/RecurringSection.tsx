@@ -67,7 +67,7 @@ export function RecurringSection({
           </h3>
           <p className="text-(--ui-text-8b9ab1) text-[11px] mt-0.5 mb-0">
             Automate repeating expenses and income (e.g. rent, payroll, Netflix). Occurrences are
-            generated into Transactions.
+            generated into Assets/Transactions.
           </p>
         </div>
         <div style={{ display: 'flex', gap: '0.5rem' }}>

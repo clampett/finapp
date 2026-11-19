@@ -76,6 +76,8 @@ export function BudgetingTab(props: BudgetingTabProps) {
     setTransDraft,
     showTransForm,
     setShowTransForm,
+    showAiAssetForm,
+    setShowAiAssetForm,
     editingTransId,
     setEditingTransId,
     stockDraft,
@@ -106,6 +108,7 @@ export function BudgetingTab(props: BudgetingTabProps) {
 
   const {
     handleOpenAddTransaction,
+    handleOpenAiAsset,
     handleEditTransaction,
     handleSaveTransaction,
     handleDeleteTransaction,
@@ -239,7 +242,7 @@ export function BudgetingTab(props: BudgetingTabProps) {
           className={`inline-flex items-center justify-center gap-1.5 whitespace-nowrap rounded-[7px] font-medium cursor-pointer transition-colors ${activeSubTab === 'transactions' ? 'bg-primary text-primary-fg' : 'bg-transparent text-(--ui-text-97a7c2) hover:bg-(--ui-surface-hover-1a2536) hover:text-text'}`}
           style={{ padding: '6px 16px', fontSize: '14px' }}
         >
-          Transactions ({transactions.length})
+          Assets/Transactions ({transactions.length})
         </button>
         <button
           type="button"
@@ -289,16 +292,18 @@ export function BudgetingTab(props: BudgetingTabProps) {
             : ''}
       </div>
 
-      {/* SECTION 1: TRANSACTIONS */}
+      {/* SECTION 1: ASSETS & TRANSACTIONS */}
       {activeSubTab === 'transactions' && (
         <TransactionSection
           transactions={transactions}
           userId={userId}
           isDemo={isDemo}
           onOpenAdd={handleOpenAddTransaction}
+          onOpenAiAsset={handleOpenAiAsset}
           onEdit={handleEditTransaction}
           onDelete={handleDeleteTransaction}
           showTransForm={showTransForm}
+          showAiAssetForm={showAiAssetForm}
           editingTransId={editingTransId}
           transDraft={transDraft}
           setTransDraft={setTransDraft}
@@ -310,6 +315,9 @@ export function BudgetingTab(props: BudgetingTabProps) {
           onCancelTrans={() => {
             setShowTransForm(false);
             setEditingTransId(null);
+          }}
+          onCancelAiAsset={() => {
+            setShowAiAssetForm(false);
           }}
         />
       )}

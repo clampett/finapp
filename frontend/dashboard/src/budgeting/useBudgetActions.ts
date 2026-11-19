@@ -44,6 +44,7 @@ export function useBudgetActions(props: BudgetingTabProps, data: ReturnType<type
     transDraft,
     setTransDraft,
     setShowTransForm,
+    setShowAiAssetForm,
     editingTransId,
     setEditingTransId,
     stockDraft,
@@ -73,7 +74,15 @@ export function useBudgetActions(props: BudgetingTabProps, data: ReturnType<type
   const handleOpenAddTransaction = () => {
     setEditingTransId(null);
     setTransDraft(initialTransaction());
+    setShowAiAssetForm(false);
     setShowTransForm(true);
+  };
+
+  const handleOpenAiAsset = () => {
+    setEditingTransId(null);
+    setTransDraft(initialTransaction());
+    setShowTransForm(false);
+    setShowAiAssetForm(true);
   };
 
   const handleEditTransaction = (t: Transaction) => {
@@ -86,6 +95,7 @@ export function useBudgetActions(props: BudgetingTabProps, data: ReturnType<type
           : t.accountName,
       transactionDate: t.transactionDate || t.date || new Date().toISOString().split('T')[0],
     });
+    setShowAiAssetForm(false);
     setShowTransForm(true);
   };
 
@@ -191,10 +201,12 @@ export function useBudgetActions(props: BudgetingTabProps, data: ReturnType<type
       setStatusMessage({
         type: 'success',
         text:
-          (editingTransId ? 'Transaction updated successfully.' : 'Transaction recorded.') +
-          syncStatusMsg,
+          (editingTransId
+            ? 'Asset/Transaction updated successfully.'
+            : 'Asset/Transaction recorded.') + syncStatusMsg,
       });
       setShowTransForm(false);
+      setShowAiAssetForm(false);
       setEditingTransId(null);
       setTransDraft(initialTransaction());
       return;
@@ -229,10 +241,12 @@ export function useBudgetActions(props: BudgetingTabProps, data: ReturnType<type
       setStatusMessage({
         type: 'success',
         text:
-          (editingTransId ? 'Transaction updated successfully.' : 'Transaction recorded.') +
-          syncStatusMsg,
+          (editingTransId
+            ? 'Asset/Transaction updated successfully.'
+            : 'Asset/Transaction recorded.') + syncStatusMsg,
       });
       setShowTransForm(false);
+      setShowAiAssetForm(false);
       setEditingTransId(null);
       setTransDraft(initialTransaction());
       loadData();
@@ -284,9 +298,10 @@ export function useBudgetActions(props: BudgetingTabProps, data: ReturnType<type
       if (reverseSync && onUpdateGraph) {
         onUpdateGraph(reverseSync.updatedGraph);
       }
-      setStatusMessage({ type: 'success', text: 'Transaction deleted.' });
+      setStatusMessage({ type: 'success', text: 'Asset/Transaction deleted.' });
       if (editingTransId === id) {
         setShowTransForm(false);
+        setShowAiAssetForm(false);
         setEditingTransId(null);
       }
       return;
@@ -305,9 +320,10 @@ export function useBudgetActions(props: BudgetingTabProps, data: ReturnType<type
       if (reverseSync && onUpdateGraph) {
         onUpdateGraph(reverseSync.updatedGraph);
       }
-      setStatusMessage({ type: 'success', text: 'Transaction deleted.' });
+      setStatusMessage({ type: 'success', text: 'Asset/Transaction deleted.' });
       if (editingTransId === id) {
         setShowTransForm(false);
+        setShowAiAssetForm(false);
         setEditingTransId(null);
       }
       loadData();
@@ -1023,6 +1039,7 @@ export function useBudgetActions(props: BudgetingTabProps, data: ReturnType<type
 
   return {
     handleOpenAddTransaction,
+    handleOpenAiAsset,
     handleEditTransaction,
     handleSaveTransaction,
     handleDeleteTransaction,

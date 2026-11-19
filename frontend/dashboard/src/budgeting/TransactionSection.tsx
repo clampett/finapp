@@ -3,16 +3,19 @@ import type { GraphData, GraphNode } from '../common/finance';
 import { dollars } from '../common/finance';
 import type { AccountOption, Transaction } from './types';
 import { TransactionModal } from './TransactionModal';
+import { AiAssetModal } from './AiAssetModal';
 
 export interface TransactionSectionProps {
   transactions: Transaction[];
   userId?: number;
   isDemo: boolean;
   onOpenAdd: () => void;
+  onOpenAiAsset?: () => void;
   onEdit: (t: Transaction) => void;
   onDelete: (id: number) => Promise<void>;
-  // Form props forwarded to TransactionModal
+  // Form props forwarded to TransactionModal / AiAssetModal
   showTransForm: boolean;
+  showAiAssetForm?: boolean;
   editingTransId: number | null;
   transDraft: Transaction;
   setTransDraft: Dispatch<SetStateAction<Transaction>>;
@@ -22,6 +25,7 @@ export interface TransactionSectionProps {
   graph: GraphData;
   onSaveTrans: (e?: FormEvent) => Promise<void>;
   onCancelTrans: () => void;
+  onCancelAiAsset?: () => void;
 }
 
 export function TransactionSection({
@@ -29,9 +33,11 @@ export function TransactionSection({
   userId,
   isDemo,
   onOpenAdd,
+  onOpenAiAsset,
   onEdit,
   onDelete,
   showTransForm,
+  showAiAssetForm = false,
   editingTransId,
   transDraft,
   setTransDraft,
@@ -41,6 +47,7 @@ export function TransactionSection({
   graph,
   onSaveTrans,
   onCancelTrans,
+  onCancelAiAsset,
 }: TransactionSectionProps) {
   return (
     <section aria-labelledby="transactions-section-heading">
@@ -50,25 +57,52 @@ export function TransactionSection({
           justifyContent: 'space-between',
           alignItems: 'center',
           marginBottom: '1rem',
+          flexWrap: 'wrap',
+          gap: '0.75rem',
         }}
       >
         <div>
           <h3 id="transactions-section-heading" style={{ margin: 0 }}>
-            Recorded Transactions
+            Recorded Assets/Transactions
           </h3>
           <p className="text-(--ui-text-8b9ab1) text-[11px] mt-0.5 mb-0">
-            Income and expenses linked to your accounts.
+            Assets, income, and expenses linked to your accounts.
           </p>
         </div>
-        <button
-          type="button"
-          className="inline-flex items-center justify-center gap-1.75 whitespace-nowrap rounded-[7px] px-3.5 py-2.25 text-[11px] font-medium min-h-8.5 cursor-pointer bg-primary text-primary-fg hover:bg-(--ui-surface-hover-cbbcfc) transition-colors disabled:opacity-45 disabled:cursor-not-allowed"
-          onClick={onOpenAdd}
-          disabled={!userId && !isDemo}
-        >
-          + Add Transaction
-        </button>
+        <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
+          <button
+            type="button"
+            className="inline-flex items-center justify-center gap-1.75 whitespace-nowrap rounded-[7px] px-3.5 py-2.25 text-[11px] font-medium min-h-8.5 cursor-pointer bg-primary text-primary-fg hover:bg-(--ui-surface-hover-cbbcfc) transition-colors disabled:opacity-45 disabled:cursor-not-allowed"
+            onClick={onOpenAiAsset}
+            disabled={!userId && !isDemo}
+          >
+            ✨ Value Asset with AI
+          </button>
+          <button
+            type="button"
+            className="inline-flex items-center justify-center gap-1.75 whitespace-nowrap rounded-[7px] px-3.5 py-2.25 text-[11px] font-medium min-h-8.5 cursor-pointer bg-primary text-primary-fg hover:bg-(--ui-surface-hover-cbbcfc) transition-colors disabled:opacity-45 disabled:cursor-not-allowed"
+            onClick={onOpenAdd}
+            disabled={!userId && !isDemo}
+          >
+            + Add Asset/Transaction
+          </button>
+        </div>
       </div>
+
+      {/* AI Asset Prompting Window */}
+      {showAiAssetForm && (
+        <AiAssetModal
+          isOpen={showAiAssetForm}
+          transDraft={transDraft}
+          setTransDraft={setTransDraft}
+          availableAccounts={availableAccounts}
+          dbAccounts={dbAccounts}
+          matchedDebtNode={matchedDebtNode}
+          graph={graph}
+          onSave={onSaveTrans}
+          onCancel={onCancelAiAsset || onCancelTrans}
+        />
+      )}
 
       {/* Transaction Form (Create / Edit) */}
       <TransactionModal
@@ -98,12 +132,13 @@ export function TransactionSection({
           }}
         >
           <p style={{ margin: '0 0 0.5rem 0', fontSize: '15px', color: 'var(--color-text)' }}>
-            No single transactions recorded yet.
+            No single assets or transactions recorded yet.
           </p>
           <p style={{ margin: 0, fontSize: '13px', color: 'var(--color-muted)' }}>
-            Click <strong>+ Add Transaction</strong> above to log single, non-recurring expenses
-            (such as grocery trips, dining, and retail). Recurring salary and bills are managed in
-            the <strong>Recurring Transactions</strong> tab.
+            Click <strong>+ Add Asset/Transaction</strong> or{' '}
+            <strong>✨ Value Asset with AI</strong> above to log single assets, expenses, or income
+            (such as vehicles, property, grocery trips, and dining). Recurring salary and bills are
+            managed in the <strong>Recurring Transactions</strong> tab.
           </p>
         </div>
       ) : (

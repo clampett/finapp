@@ -46,7 +46,7 @@ export function TransactionModal({
       }}
     >
       <h4 style={{ margin: '0 0 1rem 0' }}>
-        {editingTransId ? 'Edit Transaction' : 'Record New Transaction'}
+        {editingTransId ? 'Edit Asset/Transaction' : 'Record New Asset/Transaction'}
       </h4>
       <form
         onSubmit={onSave}
@@ -193,7 +193,7 @@ export function TransactionModal({
             type="submit"
             className="inline-flex items-center justify-center gap-1.75 whitespace-nowrap rounded-[7px] px-3.5 py-2.25 text-[11px] font-medium min-h-8.5 cursor-pointer bg-primary text-primary-fg hover:bg-(--ui-surface-hover-cbbcfc) transition-colors"
           >
-            {editingTransId ? 'Save Changes' : 'Record Transaction'}
+            {editingTransId ? 'Save Changes' : 'Record Asset/Transaction'}
           </button>
           <button
             type="button"
@@ -209,7 +209,7 @@ export function TransactionModal({
               style={{ marginLeft: 'auto' }}
               onClick={() => onDelete(editingTransId)}
             >
-              Delete Transaction
+              Delete Asset/Transaction
             </button>
           )}
         </div>

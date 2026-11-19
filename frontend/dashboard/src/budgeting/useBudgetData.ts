@@ -57,6 +57,7 @@ export function useBudgetData({
   // Transaction form state
   const [transDraft, setTransDraft] = useState<Transaction>(initialTransaction);
   const [showTransForm, setShowTransForm] = useState(false);
+  const [showAiAssetForm, setShowAiAssetForm] = useState(false);
   const [editingTransId, setEditingTransId] = useState<number | null>(null);
 
   // Stock form state
@@ -609,6 +610,8 @@ export function useBudgetData({
     setTransDraft,
     showTransForm,
     setShowTransForm,
+    showAiAssetForm,
+    setShowAiAssetForm,
     editingTransId,
     setEditingTransId,
     stockDraft,

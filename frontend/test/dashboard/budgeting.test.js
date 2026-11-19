@@ -43,3 +43,61 @@ test('changing income/expense kind cleared the incompatible category', () => {
   assert.equal(result.categoryId, null);
   assert.equal(result.categoryName, '');
 });
+
+test('User Story 34: BudgetingTab renames Transactions tab to Assets/Transactions', () => {
+  const fs = require('node:fs');
+  const budgetingTsx = fs.readFileSync(
+    path.join(__dirname, '../../dashboard/src/views/BudgetingTab.tsx'),
+    'utf8',
+  );
+  assert.match(budgetingTsx, /Assets\/Transactions\s*\(\{transactions\.length\}\)/);
+  assert.doesNotMatch(budgetingTsx, />\s*Transactions\s*\(\{transactions\.length\}\)/);
+});
+
+test('User Story 34: TransactionSection has Value Asset with AI button to the left of Add Asset/Transaction', () => {
+  const fs = require('node:fs');
+  const sectionTsx = fs.readFileSync(
+    path.join(__dirname, '../../dashboard/src/budgeting/TransactionSection.tsx'),
+    'utf8',
+  );
+  assert.match(sectionTsx, /Recorded Assets\/Transactions/);
+  assert.match(sectionTsx, /\+\s*Add Asset\/Transaction/);
+  assert.match(sectionTsx, /Value Asset with AI/);
+
+  // Verify Value Asset button precedes Add Asset/Transaction in markup
+  const aiButtonIndex = sectionTsx.indexOf('Value Asset with AI');
+  const addTxnIndex = sectionTsx.indexOf('+ Add Asset/Transaction');
+  assert.ok(aiButtonIndex !== -1, 'Value Asset with AI button must exist');
+  assert.ok(addTxnIndex !== -1, '+ Add Asset/Transaction button must exist');
+  assert.ok(
+    aiButtonIndex < addTxnIndex,
+    'Value Asset with AI button must be positioned to the left of + Add Asset/Transaction',
+  );
+
+  // Verify both buttons share the same primary styling classes
+  assert.match(
+    sectionTsx,
+    /<button[^>]*bg-primary text-primary-fg[^>]*>\s*✨ Value Asset with AI\s*<\/button>/,
+  );
+});
+
+test('User Story 34: AiAssetModal prompts for asset description and mirrors TransactionModal fields', () => {
+  const fs = require('node:fs');
+  const aiModalTsx = fs.readFileSync(
+    path.join(__dirname, '../../dashboard/src/budgeting/AiAssetModal.tsx'),
+    'utf8',
+  );
+  assert.match(aiModalTsx, /Value Asset with Local AI/);
+  assert.match(aiModalTsx, /Describe your asset/);
+  assert.match(aiModalTsx, /\/api\/v1\/coach\/value-asset/);
+  assert.match(aiModalTsx, /Approve Asset\/Transaction/);
+
+  // Check that all required fields from TransactionModal are present
+  assert.match(aiModalTsx, /transDraft\.kind/);
+  assert.match(aiModalTsx, /transDraft\.description/);
+  assert.match(aiModalTsx, /transDraft\.amount/);
+  assert.match(aiModalTsx, /transDraft\.accountName/);
+  assert.match(aiModalTsx, /transDraft\.transactionDate/);
+  assert.match(aiModalTsx, /transDraft\.categoryName/);
+  assert.match(aiModalTsx, /transDraft\.notes/);
+});

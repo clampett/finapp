@@ -5,6 +5,7 @@ const rateLimit = require('express-rate-limit');
 const { createApiProxy } = require('./server/proxy/api-proxy');
 const { createCoachService } = require('./server/coach/coach-service');
 const { createCoachMarket } = require('./server/coach/coach-market');
+const { createAssetValuationService } = require('./server/coach/coach-asset-valuation');
 
 const app = express();
 const PORT = process.env.PORT || 8080;
@@ -50,6 +51,7 @@ const publicMarket = createCoachMarket({
   upstream: process.env.FINAPP_API_UPSTREAM || 'http://127.0.0.1:8081',
 });
 const coach = createCoachService({ market: publicMarket });
+const assetValuer = createAssetValuationService();
 // Limited expensive model work per client without charging ordinary status checks against that budget.
 const coachLimit = rateLimit({
   windowMs: 60000,
@@ -89,6 +91,28 @@ app.post('/api/v1/coach/explain', coachLimit, express.json({ limit: '16kb' }), a
   if (!result) return res.status(503).json({ message: 'Local AI explanations are unavailable.' });
   return res.json(result);
 });
+app.post(
+  '/api/v1/coach/value-asset',
+  coachLimit,
+  express.json({ limit: '16kb' }),
+  async (req, res) => {
+    res.set('Cache-Control', 'no-store');
+    if (
+      !req.is('application/json') ||
+      !req.body ||
+      typeof req.body.description !== 'string' ||
+      !req.body.description.trim() ||
+      req.body.description.length > 500
+    ) {
+      return res
+        .status(400)
+        .json({ message: 'Provide an asset description up to 500 characters.' });
+    }
+    const result = await assetValuer.valueAsset(req.body.description);
+    if (!result) return res.status(503).json({ message: 'Asset valuation is unavailable.' });
+    return res.json({ success: true, data: result });
+  },
+);
 // Returned bounded parser errors without exposing a development stack trace.
 app.use('/api/v1/coach', (error, _req, res, next) => {
   if (error?.type === 'entity.too.large')

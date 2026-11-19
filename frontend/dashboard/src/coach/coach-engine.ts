@@ -127,6 +127,10 @@ export function coachInputs(
       type: node.nodeType,
       balance: node.amountOrBalance,
       apr: node.interestRateApr,
+      // Preserved property assumptions in baseline and stress comparisons.
+      ...(node.nodeType === 'ASSET'
+        ? { asset_growth_rate: (node.assetGrowthRate ?? 0) / 100 }
+        : {}),
       frequency: node.frequency,
       interval_count: node.intervalCount,
       min_payment: node.minPayment,

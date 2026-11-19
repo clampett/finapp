@@ -2,7 +2,7 @@
 
 **Software Engineering Project · Team 1 · Version 2.2.0**
 
-**Last updated: 11/16/2026**
+**Last updated: 11/19/2026**
 
 A visual, interactive personal finance dashboard that maps your finances as an interconnected web using nodes. Trace where your income flows, organize accounts and debts, build financial scenarios, and explore possible future outcomes.
 
@@ -17,6 +17,7 @@ A visual, interactive personal finance dashboard that maps your finances as an i
 - **Cash Flow:** Review how income funds expenses, debt payments, and savings allocations. Choose gross or take-home income and adjust effective taxes and growth assumptions.
 - **Budgeting:** Manage income and expense transactions, recurring rules, and generated due occurrences. Review stock positions and record trades, with linked scenario updates where supported.
 - **Investments & Market Data:** Manage stock holdings shared with Budgeting, inspect estimated dividend income, and review historical returns and volatility. Explore stock charts over 1D, 1M, 1Y, or 5Y with date-tracking tooltips and green/red price changes. View public cryptocurrency and foreign-exchange quotes.
+- **Asset Estimator:** Request an illustrative local AI valuation in Budgeting, review or enter a USD reference value, and copy/export it. Quoted prices are labeled as user-provided references. Offline mode never invents market comparables. Reviewed estimates can become personal asset balances without becoming income or altering cash.
 - **AI Coach:** Use a guided scenario review, a comparative Scenario lab, local Ollama chat, a result notebook, and a dated markets/news briefing. The built-in guide remains available when local inference is unavailable.
 - **Financial News:** Browse headlines from Yahoo Finance, CNBC, BBC Business, and the Federal Reserve. Search, filter by topic/publisher, switch grid/list views, and keep a browser-local reading list. Dates and source health remain visible when a feed is delayed or unavailable.
 - **Simulation History:** Name and save completed Monte Carlo and Markov forecasts, reopen their original charts and inputs, compare compatible runs, rename entries, export JSON, and delete saved runs. Signed-in history is stored in PostgreSQL; demo history stays in this browser.
@@ -257,7 +258,7 @@ Markets & news uses four fixed benchmark funds from the existing Investments cac
 
 ### Request limits and limitations
 
-Chat requests are limited to 12 per client per minute, one concurrent inference, and 30 inference attempts per server process per minute. Messages, history, HTTP bodies, model context, generated output and timeouts are bounded. Recent chat is kept in memory rather than the database. No paid APIs or API keys were added. The Python simulator remains the source of forecast results. Historical benchmark volatility can be applied to both cases without changing the expected return. AI responses may be inaccurate; the chat displays an educational-use notice and does not provide personalized financial advice.
+Chat and asset-estimation requests share a limit of 12 requests per client per minute, one concurrent inference, and 30 inference attempts per server process per minute. Messages, history, HTTP bodies, model context, generated output and timeouts are bounded. Recent chat is kept in memory rather than the database. No paid APIs or API keys were added. The Python simulator remains the source of forecast results. Historical benchmark volatility can be applied to both cases without changing the expected return. AI responses may be inaccurate; the chat displays an educational-use notice and does not provide personalized financial advice.
 
 Ollama runs beside the Express gateway, not inside each visitor’s browser. The current integration targets loopback on that gateway’s machine. A deployed frontend therefore needs an available runtime in that environment to generate answers; otherwise the labeled built-in guide is used. The local launchers do not provision a hosted AI service.
 
@@ -282,6 +283,12 @@ Saving is explicit: slider previews are not automatically archived. Signed-in us
 Flyway migration **V10** creates the saved-run table on backend startup. Existing migrations were left unchanged. Restart/rebuild the normal local stack after pulling this feature so Python news routes, Java routes, and the migration are loaded.
 
 ---
+
+### Asset value estimates
+
+In **Budgeting → Assets**, choose **Add asset** for a manual balance or **Estimate asset value** for a reviewed estimate. Describe the brand/model, age, condition, mileage/specifications, or an optional explicit USD reference price. A local model can produce an illustrative estimate; no live resale listings, property comparables, or appraisals are retrieved. If you quote a price, FinApp labels it as your reference amount instead of asking the model to reinterpret it. If local AI is unavailable or cannot produce a valid value, the panel asks for more information or lets you enter your own reference.
+
+Review the amount and choose **Add asset balance** to include it in the scenario, or use **Copy value** / **Export estimate** to keep a reference. Adding a balance does not record a cash transaction. Record actual sale proceeds separately only after a sale. Only the entered description is sent to Ollama, with bounded responses, timeouts, cancellation, failure backoff, and the same inference budget as AI Coach. No cloud key is required.
 
 ## Access Points
 
@@ -396,3 +403,11 @@ python -m pytest tests
 - [Simulation Model](docs/sprint-2/simulation-model.md): Equations, assumptions, market data, and reference budgets.
 
 - [News and Simulation History](docs/sprint-2/news-and-simulation-history.md): Feed sources, persistence, API ownership, limits, and focused test commands.
+
+### Personal asset balances
+
+Budgeting → Assets manages owned property, vehicles, and valuables in the active scenario. Add an owned asset, revalue its existing balance, exclude it temporarily, or archive and restore it. Enter the full asset value and a separate DEBT node for any related loan. Avoid duplicating assets already recorded elsewhere. The estimator requires explicit review and **Add asset balance** before changing the scenario.
+
+Personal assets appear in Overview and Node Graph, and are included in Monte Carlo, Markov, and AI Coach wealth comparisons. Each asset has its own annual growth/depreciation assumption (−100% to 100%, default 0%). It receives no stock-market return or portfolio fee and is never sold automatically to cover bills. Values are adjusted by the simulation's inflation setting. The no-growth reference holds their nominal opening values constant. Debt strategy simulations continue to use monthly cash flow, not property liquidation. Saved simulation inputs retain these asset assumptions.
+
+Like other scenario edits, asset balances are saved to this browser's scenario draft and can be exported/imported with the graph. This does not add cloud synchronization or independently verified appraisals.

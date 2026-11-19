@@ -24,7 +24,9 @@ class MarketControllerTest {
     void forwardsTheNewsFeed() {
         server
             .expect(requestTo("http://localhost:5000/api/news"))
-            .andRespond(withSuccess("{\"status\":\"ready\",\"articles\":[]}", MediaType.APPLICATION_JSON));
+            .andRespond(
+                withSuccess("{\"status\":\"ready\",\"articles\":[]}", MediaType.APPLICATION_JSON)
+            );
         var response = controller.news();
         assertEquals(HttpStatus.OK, response.getStatusCode());
         assertEquals(MediaType.APPLICATION_JSON, response.getHeaders().getContentType());

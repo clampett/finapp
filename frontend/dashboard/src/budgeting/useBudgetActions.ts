@@ -44,6 +44,7 @@ export function useBudgetActions(props: BudgetingTabProps, data: ReturnType<type
     transDraft,
     setTransDraft,
     setShowTransForm,
+    setShowAiAssetForm,
     editingTransId,
     setEditingTransId,
     stockDraft,
@@ -73,7 +74,14 @@ export function useBudgetActions(props: BudgetingTabProps, data: ReturnType<type
   const handleOpenAddTransaction = () => {
     setEditingTransId(null);
     setTransDraft(initialTransaction());
+    setShowAiAssetForm(false);
     setShowTransForm(true);
+  };
+
+  // Opened a standalone estimate without modifying or recording the transaction draft.
+  const handleOpenAiAsset = () => {
+    setShowTransForm(false);
+    setShowAiAssetForm(true);
   };
 
   const handleEditTransaction = (t: Transaction) => {
@@ -86,6 +94,7 @@ export function useBudgetActions(props: BudgetingTabProps, data: ReturnType<type
           : t.accountName,
       transactionDate: t.transactionDate || t.date || new Date().toISOString().split('T')[0],
     });
+    setShowAiAssetForm(false);
     setShowTransForm(true);
   };
 
@@ -195,6 +204,7 @@ export function useBudgetActions(props: BudgetingTabProps, data: ReturnType<type
           syncStatusMsg,
       });
       setShowTransForm(false);
+      setShowAiAssetForm(false);
       setEditingTransId(null);
       setTransDraft(initialTransaction());
       return;
@@ -233,6 +243,7 @@ export function useBudgetActions(props: BudgetingTabProps, data: ReturnType<type
           syncStatusMsg,
       });
       setShowTransForm(false);
+      setShowAiAssetForm(false);
       setEditingTransId(null);
       setTransDraft(initialTransaction());
       loadData();
@@ -287,6 +298,7 @@ export function useBudgetActions(props: BudgetingTabProps, data: ReturnType<type
       setStatusMessage({ type: 'success', text: 'Transaction deleted.' });
       if (editingTransId === id) {
         setShowTransForm(false);
+        setShowAiAssetForm(false);
         setEditingTransId(null);
       }
       return;
@@ -308,6 +320,7 @@ export function useBudgetActions(props: BudgetingTabProps, data: ReturnType<type
       setStatusMessage({ type: 'success', text: 'Transaction deleted.' });
       if (editingTransId === id) {
         setShowTransForm(false);
+        setShowAiAssetForm(false);
         setEditingTransId(null);
       }
       loadData();
@@ -1023,6 +1036,7 @@ export function useBudgetActions(props: BudgetingTabProps, data: ReturnType<type
 
   return {
     handleOpenAddTransaction,
+    handleOpenAiAsset,
     handleEditTransaction,
     handleSaveTransaction,
     handleDeleteTransaction,

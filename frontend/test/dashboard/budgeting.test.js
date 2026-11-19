@@ -43,3 +43,40 @@ test('changing income/expense kind cleared the incompatible category', () => {
   assert.equal(result.categoryId, null);
   assert.equal(result.categoryName, '');
 });
+
+// Checked the estimate response contract independently of mutable budget transaction drafts.
+const estimateRuntime = { module: { exports: {} } };
+vm.runInNewContext(
+  buildSync({
+    entryPoints: [path.join(__dirname, '../../dashboard/src/budgeting/asset-estimate.ts')],
+    bundle: true,
+    write: false,
+    platform: 'node',
+    format: 'cjs',
+  }).outputFiles[0].text,
+  estimateRuntime,
+);
+test('asset estimate responses required bounded values and honest provenance', () => {
+  const valid = {
+    description: 'Car',
+    amount: 15000,
+    categoryName: 'Vehicles',
+    source: 'local_ai',
+    notes: 'Illustrative only',
+    currency: 'USD',
+    verified: false,
+  };
+  const accepts = estimateRuntime.module.exports.isAssetEstimate;
+  assert.equal(accepts(valid), true);
+  assert.equal(accepts({ ...valid, amount: null, source: 'unavailable' }), true);
+  for (const changed of [
+    { amount: Infinity },
+    { amount: -100 },
+    { amount: 1e12 },
+    { verified: true },
+    { source: 'live_market' },
+    { categoryName: { bad: true } },
+    { notes: { bad: true } },
+  ])
+    assert.equal(accepts({ ...valid, ...changed }), false);
+});

@@ -18,6 +18,8 @@ export function WorkspaceConnections({
   connections: boolean;
   onToggle: () => void;
 }) {
+  // Excluded illiquid property from cash allocation controls.
+  const routableNodes = live.nodes.filter((node) => node.nodeType !== 'ASSET');
   const justOpened = useRef(false);
   const routesRef = useRef<HTMLElement>(null);
   useEffect(() => {
@@ -114,7 +116,7 @@ export function WorkspaceConnections({
             <label>
               From
               <select name="source" required>
-                {live.nodes.map((n) => (
+                {routableNodes.map((n) => (
                   <option key={n.id} value={n.id}>
                     {n.name}
                   </option>
@@ -123,8 +125,8 @@ export function WorkspaceConnections({
             </label>
             <label>
               To
-              <select name="target" required defaultValue={live.nodes[1]?.id}>
-                {live.nodes.map((n) => (
+              <select name="target" required defaultValue={routableNodes[1]?.id}>
+                {routableNodes.map((n) => (
                   <option key={n.id} value={n.id}>
                     {n.name}
                   </option>
@@ -144,7 +146,7 @@ export function WorkspaceConnections({
             </label>
             <button
               className="inline-flex items-center justify-center gap-1.75 whitespace-nowrap rounded-[7px] px-3.5 py-1.75 text-[11px] font-medium min-h-8.5 cursor-pointer bg-(--ui-surface-20293a) text-text border border-(--ui-border-37445c) hover:bg-(--ui-surface-hover-28354c) transition-colors disabled:opacity-45 disabled:cursor-not-allowed"
-              disabled={live.nodes.length < 2}
+              disabled={routableNodes.length < 2}
             >
               + Connect
             </button>

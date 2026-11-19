@@ -163,7 +163,9 @@ class ForecastTests(unittest.TestCase):
             )
             self.assertAlmostEqual(result["metrics"]["monthly_income"], 4333.33, places=1)
             self.assertAlmostEqual(result["metrics"]["monthly_expenses"], 100.0, places=1)
-            self.assertAlmostEqual(result["metrics"]["monthly_surplus"], 4333.33 - 100.0 - 100.0, places=1)
+            self.assertAlmostEqual(
+                result["metrics"]["monthly_surplus"], 4333.33 - 100.0 - 100.0, places=1
+            )
 
     def test_linked_recurring_transactions_avoid_double_counting(self):
         nodes = [
@@ -211,7 +213,9 @@ class ForecastTests(unittest.TestCase):
         # Weekly $500 -> ~$2166.67/mo
         # Annual $1200 -> $100/mo
         # Net cash flow = ~2066.67/mo
-        res = process_and_simulate(nodes, investment_rate=50, annual_return=0.0, annual_volatility=0.0, years=1, seed=42)
+        res = process_and_simulate(
+            nodes, investment_rate=50, annual_return=0.0, annual_volatility=0.0, years=1, seed=42
+        )
         # Year 0 balance is 2000
         self.assertEqual(res[0]["p50"], 2000.0)
         # Year 1 balance should be 2000 + 12 * (2066.67 * 0.5) = 2000 + 12400 = 14400
@@ -232,3 +236,51 @@ class ForecastTests(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class PersonalAssetTests(unittest.TestCase):
+    # Exercised actual endpoint accounting with deterministic property values and no market positions.
+    def simulate(self, nodes, mode="monte_carlo", **kwargs):
+        return run_simulation(SimulationRequest(nodes=nodes, sim_type=mode, years=2, **kwargs))
+
+    def test_property_growth_and_depreciation_are_independent_of_markets(self):
+        for mode in ("monte_carlo", "markov"):
+            result = self.simulate(
+                [
+                    node("ASSET", 100000, asset_growth_rate=0.05),
+                    node("ASSET", 20000, id="car", asset_growth_rate=-0.2),
+                ],
+                mode,
+            )
+            self.assertEqual(result["metrics"]["initial_personal_assets"], 120000)
+            self.assertEqual(result["metrics"]["initial_market_assets"], 0)
+            self.assertEqual(result["metrics"]["monthly_income"], 0)
+            self.assertAlmostEqual(result[mode][-1]["p50"], 100000 * 1.05**2 + 20000 * 0.8**2)
+            self.assertEqual(result[mode][-1]["p10"], result[mode][-1]["p90"])
+            self.assertEqual(result["inputs"]["nodes"][1]["asset_growth_rate"], -0.2)
+
+    def test_illiquid_property_does_not_pay_bills(self):
+        result = self.simulate(
+            [node("ASSET", 100000), node("EXPENSE", 100, id="bill")], borrowing_apr=0
+        )
+        self.assertAlmostEqual(result["monte_carlo"][-1]["p50"], 97600)
+        self.assertEqual(result["summary"]["median_borrowing"], 2400)
+
+    def test_total_depreciation_and_inflation_remain_finite(self):
+        result = self.simulate([node("ASSET", 1000, asset_growth_rate=-1)])
+        self.assertEqual(result["monte_carlo"][-1]["p50"], 0)
+        result = self.simulate([node("ASSET", 1000)], inflation_rate=0.1)
+        self.assertAlmostEqual(result["monte_carlo"][-1]["p50"], 1000 / 1.1**2)
+
+    def test_property_routes_and_invalid_balances_are_rejected(self):
+        for value, rate in ((-1, 0), (100, 1.01), (100, float("nan"))):
+            with self.assertRaises(ValidationError):
+                SimulationRequest(
+                    nodes=[node("ASSET", value, asset_growth_rate=rate)], sim_type="monte_carlo"
+                )
+        with self.assertRaises(ValidationError):
+            SimulationRequest(
+                nodes=[node("ASSET", 100), node("CHECKING", 100, id="cash")],
+                edges=[dict(source="cash", target="1", monthly_fixed_flow=10)],
+                sim_type="monte_carlo",
+            )

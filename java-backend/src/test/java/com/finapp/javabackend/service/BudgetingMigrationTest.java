@@ -66,6 +66,25 @@ class BudgetingMigrationTest {
         }
     }
 
+    @Test
+    void personalPropertyTypeWasAcceptedWithoutRelaxingUnknownTypes() throws Exception {
+        // Verified the new balance type after upgrading an existing schema.
+        try (var statement = connection.createStatement()) {
+            assertEquals(
+                1,
+                statement.executeUpdate(
+                    "INSERT INTO financial_nodes(user_id,scenario_id,node_type,name,current_balance) SELECT user_id,scenario_id,'ASSET','Car',15000 FROM financial_nodes WHERE user_id=1 LIMIT 1"
+                )
+            );
+            // Retained the allowlist so arbitrary node types remained invalid.
+            assertThrows(SQLException.class, () ->
+                statement.executeUpdate(
+                    "INSERT INTO financial_nodes(user_id,scenario_id,node_type,name,current_balance) SELECT user_id,scenario_id,'UNKNOWN','Invalid',10 FROM financial_nodes WHERE user_id=1 LIMIT 1"
+                )
+            );
+        }
+    }
+
     private long stock(String ticker) throws Exception {
         try (
             var statement = connection.prepareStatement(

@@ -3,16 +3,20 @@ import type { GraphData, GraphNode } from '../common/finance';
 import { dollars } from '../common/finance';
 import type { AccountOption, Transaction } from './types';
 import { TransactionModal } from './TransactionModal';
+import { AiAssetModal } from './AiAssetModal';
+import { FeatureIcon } from '../common/FeatureIcon';
 
 export interface TransactionSectionProps {
   transactions: Transaction[];
   userId?: number;
   isDemo: boolean;
   onOpenAdd: () => void;
+  onOpenAiAsset?: () => void;
   onEdit: (t: Transaction) => void;
   onDelete: (id: number) => Promise<void>;
-  // Form props forwarded to TransactionModal
+  // Form props forwarded to TransactionModal / AiAssetModal
   showTransForm: boolean;
+  showAiAssetForm?: boolean;
   editingTransId: number | null;
   transDraft: Transaction;
   setTransDraft: Dispatch<SetStateAction<Transaction>>;
@@ -22,6 +26,7 @@ export interface TransactionSectionProps {
   graph: GraphData;
   onSaveTrans: (e?: FormEvent) => Promise<void>;
   onCancelTrans: () => void;
+  onCancelAiAsset?: () => void;
 }
 
 export function TransactionSection({
@@ -29,9 +34,11 @@ export function TransactionSection({
   userId,
   isDemo,
   onOpenAdd,
+  onOpenAiAsset,
   onEdit,
   onDelete,
   showTransForm,
+  showAiAssetForm = false,
   editingTransId,
   transDraft,
   setTransDraft,
@@ -41,34 +48,42 @@ export function TransactionSection({
   graph,
   onSaveTrans,
   onCancelTrans,
+  onCancelAiAsset,
 }: TransactionSectionProps) {
   return (
     <section aria-labelledby="transactions-section-heading">
-      <div
-        style={{
-          display: 'flex',
-          justifyContent: 'space-between',
-          alignItems: 'center',
-          marginBottom: '1rem',
-        }}
-      >
+      <header className="flex flex-wrap items-center justify-between gap-3 mb-4">
         <div>
-          <h3 id="transactions-section-heading" style={{ margin: 0 }}>
+          <h3 id="transactions-section-heading" className="m-0 text-sm font-semibold text-text">
             Recorded Transactions
           </h3>
-          <p className="text-(--ui-text-8b9ab1) text-[11px] mt-0.5 mb-0">
-            Income and expenses linked to your accounts.
-          </p>
+          <p className="text-xs text-muted mt-1">Income and expenses linked to your accounts.</p>
         </div>
-        <button
-          type="button"
-          className="inline-flex items-center justify-center gap-1.75 whitespace-nowrap rounded-[7px] px-3.5 py-2.25 text-[11px] font-medium min-h-8.5 cursor-pointer bg-primary text-primary-fg hover:bg-(--ui-surface-hover-cbbcfc) transition-colors disabled:opacity-45 disabled:cursor-not-allowed"
-          onClick={onOpenAdd}
-          disabled={!userId && !isDemo}
-        >
-          + Add Transaction
-        </button>
-      </div>
+        <div className="flex flex-wrap gap-2 items-center">
+          <button
+            type="button"
+            className="inline-flex items-center gap-2 rounded-lg border border-border bg-surface text-text px-3 py-2 text-xs cursor-pointer hover:bg-hover-bg disabled:opacity-50"
+            onClick={onOpenAiAsset}
+            disabled={!onOpenAiAsset || (!userId && !isDemo)}
+          >
+            <FeatureIcon name="spark" />
+            Manage assets
+          </button>
+          <button
+            type="button"
+            className="rounded-lg bg-primary text-primary-fg px-3 py-2 text-xs cursor-pointer disabled:opacity-50"
+            onClick={onOpenAdd}
+            disabled={!userId && !isDemo}
+          >
+            + Add Transaction
+          </button>
+        </div>
+      </header>
+
+      {/* Kept estimates separate from the transaction draft and its save handler. */}
+      {showAiAssetForm && (
+        <AiAssetModal isOpen={showAiAssetForm} onCancel={onCancelAiAsset || onCancelTrans} />
+      )}
 
       {/* Transaction Form (Create / Edit) */}
       <TransactionModal
@@ -101,9 +116,9 @@ export function TransactionSection({
             No single transactions recorded yet.
           </p>
           <p style={{ margin: 0, fontSize: '13px', color: 'var(--color-muted)' }}>
-            Click <strong>+ Add Transaction</strong> above to log single, non-recurring expenses
-            (such as grocery trips, dining, and retail). Recurring salary and bills are managed in
-            the <strong>Recurring Transactions</strong> tab.
+            Click <strong>+ Add Transaction</strong> to record actual income or expenses. Recurring
+            salary and bills are managed in the <strong>Recurring Transactions</strong> tab. Use the
+            separate asset estimator for planning references.
           </p>
         </div>
       ) : (

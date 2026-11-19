@@ -129,7 +129,11 @@ export function useGraphEditing(
     }
   };
   const arrange = () => {
-    const columns = [['INCOME'], ['CHECKING', 'SAVINGS'], ['EXPENSE', 'DEBT', 'INVESTMENT']];
+    const columns = [
+      ['INCOME'],
+      ['CHECKING', 'SAVINGS'],
+      ['EXPENSE', 'DEBT', 'INVESTMENT', 'ASSET'],
+    ];
     update({
       ...graph,
       nodes: graph.nodes.map((node) => {

@@ -55,11 +55,13 @@ export function ConnectionEditor({
             value={draft.sourceNodeId}
             onChange={(event) => setDraft({ ...draft, sourceNodeId: event.target.value })}
           >
-            {graph.nodes.map((node) => (
-              <option key={node.id} value={node.id}>
-                {node.name}
-              </option>
-            ))}
+            {graph.nodes
+              .filter((node) => node.nodeType !== 'ASSET')
+              .map((node) => (
+                <option key={node.id} value={node.id}>
+                  {node.name}
+                </option>
+              ))}
           </select>
         </label>
         <label className="flex flex-col gap-1.75 text-[11px] text-(--ui-text-a9b6cc)">
@@ -69,11 +71,13 @@ export function ConnectionEditor({
             value={draft.targetNodeId}
             onChange={(event) => setDraft({ ...draft, targetNodeId: event.target.value })}
           >
-            {graph.nodes.map((node) => (
-              <option key={node.id} value={node.id} disabled={node.id === draft.sourceNodeId}>
-                {node.name}
-              </option>
-            ))}
+            {graph.nodes
+              .filter((node) => node.nodeType !== 'ASSET')
+              .map((node) => (
+                <option key={node.id} value={node.id} disabled={node.id === draft.sourceNodeId}>
+                  {node.name}
+                </option>
+              ))}
           </select>
         </label>
         <label className="flex flex-col gap-1.75 text-[11px] text-(--ui-text-a9b6cc)">

@@ -117,7 +117,7 @@ export function Canvas({
     const groups = [
       graph.nodes.filter((n) => n.nodeType === 'INCOME'),
       graph.nodes.filter((n) => ['CHECKING', 'SAVINGS'].includes(n.nodeType)),
-      graph.nodes.filter((n) => ['EXPENSE', 'DEBT', 'INVESTMENT'].includes(n.nodeType)),
+      graph.nodes.filter((n) => ['EXPENSE', 'DEBT', 'INVESTMENT', 'ASSET'].includes(n.nodeType)),
     ];
     const positions = new Map<
       string,
@@ -340,9 +340,11 @@ export function Canvas({
             ? '✓ SELECTED FOR SIMULATION'
             : node.nodeType === 'DEBT'
               ? `${node.interestRateApr}% APR · click to edit`
-              : node.nodeType === 'INVESTMENT'
-                ? 'Market-linked asset · click to edit'
-                : `Click to edit · ${shortcuts.select} to select`,
+              : node.nodeType === 'ASSET'
+                ? `${node.assetGrowthRate ?? 0}% annual growth · illiquid`
+                : node.nodeType === 'INVESTMENT'
+                  ? 'Market-linked asset · click to edit'
+                  : `Click to edit · ${shortcuts.select} to select`,
       );
     cards
       .append('title')
@@ -359,7 +361,13 @@ export function Canvas({
       .attr('fill', 'none')
       .attr('pointer-events', 'none');
     function chooseEndpoint(id: string) {
-      if (tool === 'pan' || tool === 'box') return;
+      // Excluded balance-only property from connector gestures.
+      if (
+        tool === 'pan' ||
+        tool === 'box' ||
+        graph.nodes.find((n) => n.id === id)?.nodeType === 'ASSET'
+      )
+        return;
       if (!sourceId) {
         sourceId = id;
         cards.classed('connection-source', (node) => node.id === id);
@@ -374,6 +382,7 @@ export function Canvas({
       }
     }
     cards
+      .filter((n) => n.nodeType !== 'ASSET')
       .append('circle')
       .attr('class', 'node-port node-port-in')
       .attr('cx', 0)
@@ -395,6 +404,7 @@ export function Canvas({
         }
       });
     const ports = cards
+      .filter((n) => n.nodeType !== 'ASSET')
       .append('circle')
       .attr('class', 'node-port node-port-out')
       .attr('cx', cardWidth)
@@ -434,6 +444,7 @@ export function Canvas({
       return graph.nodes.find((node) => {
         const position = positions.get(node.id)!;
         return (
+          node.nodeType !== 'ASSET' &&
           node.id !== source &&
           x >= position.x - 20 &&
           x <= position.x + cardWidth + 20 &&
@@ -446,7 +457,8 @@ export function Canvas({
       return d3
         .drag<ElementType, GraphNode>()
         .filter(
-          (event) =>
+          (event, node) =>
+            node.nodeType !== 'ASSET' &&
             (tool === 'select' || tool === 'connect') &&
             !event.ctrlKey &&
             !event.metaKey &&

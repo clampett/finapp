@@ -206,7 +206,7 @@ export default function OverviewComposition({
               : mode === 'assets'
                 ? assetView === 'breakdown'
                   ? 'Accounts and stock holdings are shown separately. Percentages use total assets, not net worth. Unavailable holding details are grouped under stock holdings; debts are shown separately.'
-                  : 'Checking, savings, and investments are grouped by category. Percentages use total assets; net worth is total assets minus outstanding debt.'
+                  : 'Checking, savings, investments, and personal assets are grouped by category. Percentages use total assets; net worth is total assets minus outstanding debt.'
                 : 'Each slice is a loan’s remaining principal, not its monthly payment. Monthly payments are shown under Monthly budget.'}
           </p>
           {breakdown.shortfall > 0 && (

@@ -189,7 +189,7 @@ export function AccountEditor({
             ))}
           </div>
         )}
-        {!['INCOME', 'EXPENSE'].includes(draft.nodeType) && (
+        {!['INCOME', 'EXPENSE', 'ASSET'].includes(draft.nodeType) && (
           <label className="flex flex-col gap-1.75 text-[11px] text-(--ui-text-a9b6cc)">
             {draft.nodeType === 'INVESTMENT'
               ? 'Reference return (%; model uses market settings)'
@@ -203,6 +203,21 @@ export function AccountEditor({
               value={draft.interestRateApr}
               onChange={(e) => setDraft({ ...draft, interestRateApr: Number(e.target.value) })}
             />
+          </label>
+        )}
+        {/* Exposed signed appreciation independently of loan APR and simulated market returns. */}
+        {draft.nodeType === 'ASSET' && (
+          <label className="flex flex-col gap-2 text-xs text-muted">
+            Annual growth / depreciation (%)
+            <NumberField
+              required
+              min={-100}
+              max={100}
+              step="0.01"
+              value={draft.assetGrowthRate ?? 0}
+              onChange={(e) => setDraft({ ...draft, assetGrowthRate: Number(e.target.value) })}
+            />
+            <small>Balance-only property; not automatically sold to cover expenses.</small>
           </label>
         )}
         {draft.nodeType === 'DEBT' && (

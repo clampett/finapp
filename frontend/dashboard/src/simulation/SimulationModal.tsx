@@ -240,6 +240,10 @@ export function SimulationModal({
               type: n.nodeType,
               balance: n.amountOrBalance,
               apr: n.interestRateApr,
+              // Converted property growth percentages to the API fraction.
+              ...(n.nodeType === 'ASSET'
+                ? { asset_growth_rate: (n.assetGrowthRate ?? 0) / 100 }
+                : {}),
               ...(n.frequency ? { frequency: n.frequency } : {}),
               ...(n.intervalCount ? { interval_count: n.intervalCount } : {}),
               ...(n.minPayment != null ? { min_payment: n.minPayment } : {}),
@@ -400,7 +404,7 @@ export function SimulationModal({
             )}
             <p className="text-xs max-w-180 leading-[1.6] text-(--ui-text-8798b3) mt-1.75 max-[760px]:text-[10px] max-[760px]:max-w-[90%] mb-0">
               {simulationType === 'monte_carlo'
-                ? 'A Monte Carlo simulation runs many possible market paths to show a range of financial outcomes. These 1,000 paths include your cash, investments, and debt; they are scenarios, not guarantees.'
+                ? 'A Monte Carlo simulation runs many possible market paths to show a range of financial outcomes. These 1,000 paths include your cash, investments, personal assets, and debt; they are scenarios, not guarantees.'
                 : simulationType === 'markov'
                   ? 'Explore how changing bull and bear markets affect your financial plan.'
                   : 'Compare repayment priorities using the same monthly budget.'}

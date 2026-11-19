@@ -389,7 +389,9 @@ test('turning on and off payments affects Net worth, Take-home income, monthly c
   };
   const tWithoutExpense = finance.totals(withoutExpense);
   assert.ok(tWithoutExpense.expenses < initial.expenses);
-  assert.ok(tWithoutExpense.expenses + tWithoutExpense.payments < initial.expenses + initial.payments);
+  assert.ok(
+    tWithoutExpense.expenses + tWithoutExpense.payments < initial.expenses + initial.payments,
+  );
   assert.ok(tWithoutExpense.surplus > initial.surplus);
   close(tWithoutExpense.takeHome, initial.takeHome);
 
@@ -436,25 +438,68 @@ test('turning on and off payments affects Net worth, Take-home income, monthly c
 });
 
 // Checked that imported overdrafts reached the debt chart without reducing positive assets.
-test("overdrawn cash validates and appears as a liability without hiding positive assets", () => {
-  const graph = finance.parseGraph({ nodes: [
-    { id: "checking", name: "Checking", nodeType: "CHECKING", amountOrBalance: -50 },
-    { id: "savings", name: "Savings", nodeType: "SAVINGS", amountOrBalance: 100 },
-  ], edges: [] });
+test('overdrawn cash validates and appears as a liability without hiding positive assets', () => {
+  const graph = finance.parseGraph({
+    nodes: [
+      { id: 'checking', name: 'Checking', nodeType: 'CHECKING', amountOrBalance: -50 },
+      { id: 'savings', name: 'Savings', nodeType: 'SAVINGS', amountOrBalance: 100 },
+    ],
+    edges: [],
+  });
   assert.equal(finance.totals(graph).netWorth, 50);
-  assert.equal(finance.overviewBreakdown(graph, "assets").total, 100);
-  assert.equal(finance.overviewBreakdown(graph, "debt").total, 50);
-  assert.throws(() => finance.parseGraph({ ...graph, nodes: [{ ...graph.nodes[0], nodeType: "DEBT" }] }));
+  assert.equal(finance.overviewBreakdown(graph, 'assets').total, 100);
+  assert.equal(finance.overviewBreakdown(graph, 'debt').total, 50);
+  assert.throws(() =>
+    finance.parseGraph({ ...graph, nodes: [{ ...graph.nodes[0], nodeType: 'DEBT' }] }),
+  );
 });
 
 test('non-monthly frequencies on income and expense nodes convert accurately to monthly equivalents', () => {
   const graph = finance.parseGraph({
     nodes: [
-      { id: 'inc-biweekly', name: 'Biweekly Paycheck', nodeType: 'INCOME', amountOrBalance: 2000, interestRateApr: 0, frequency: 'biweekly', intervalCount: 1 },
-      { id: 'inc-weekly', name: 'Weekly Gig', nodeType: 'INCOME', amountOrBalance: 500, interestRateApr: 0, frequency: 'weekly', intervalCount: 1 },
-      { id: 'exp-yearly', name: 'Annual Insurance', nodeType: 'EXPENSE', amountOrBalance: 1200, interestRateApr: 0, frequency: 'yearly', intervalCount: 1 },
-      { id: 'exp-quarterly', name: 'Quarterly Utility', nodeType: 'EXPENSE', amountOrBalance: 300, interestRateApr: 0, frequency: 'quarterly', intervalCount: 1 },
-      { id: 'chk', name: 'Checking', nodeType: 'CHECKING', amountOrBalance: 1000, interestRateApr: 0 },
+      {
+        id: 'inc-biweekly',
+        name: 'Biweekly Paycheck',
+        nodeType: 'INCOME',
+        amountOrBalance: 2000,
+        interestRateApr: 0,
+        frequency: 'biweekly',
+        intervalCount: 1,
+      },
+      {
+        id: 'inc-weekly',
+        name: 'Weekly Gig',
+        nodeType: 'INCOME',
+        amountOrBalance: 500,
+        interestRateApr: 0,
+        frequency: 'weekly',
+        intervalCount: 1,
+      },
+      {
+        id: 'exp-yearly',
+        name: 'Annual Insurance',
+        nodeType: 'EXPENSE',
+        amountOrBalance: 1200,
+        interestRateApr: 0,
+        frequency: 'yearly',
+        intervalCount: 1,
+      },
+      {
+        id: 'exp-quarterly',
+        name: 'Quarterly Utility',
+        nodeType: 'EXPENSE',
+        amountOrBalance: 300,
+        interestRateApr: 0,
+        frequency: 'quarterly',
+        intervalCount: 1,
+      },
+      {
+        id: 'chk',
+        name: 'Checking',
+        nodeType: 'CHECKING',
+        amountOrBalance: 1000,
+        interestRateApr: 0,
+      },
     ],
     edges: [],
     assumptions: { incomeBasis: 'net', taxRate: 0, incomeGrowth: 0, expenseGrowth: 0 },
@@ -497,14 +542,26 @@ test('User Story 11: overviewBreakdown supports specific asset breakdown with in
   const portfolioVal = 10000;
 
   // Default overview: 100% investments
-  const overviewResult = finance.overviewBreakdown(investmentsOnlyGraph, 'assets', portfolioVal, 'overview', holdings);
+  const overviewResult = finance.overviewBreakdown(
+    investmentsOnlyGraph,
+    'assets',
+    portfolioVal,
+    'overview',
+    holdings,
+  );
   assert.equal(overviewResult.total, 10000);
   assert.equal(overviewResult.items.length, 1);
   assert.equal(overviewResult.items[0].label, 'Investments');
   assert.equal(overviewResult.items[0].value, 10000);
 
   // Breakdown option: specific stocks displayed as percentage of the pie
-  const breakdownResult = finance.overviewBreakdown(investmentsOnlyGraph, 'assets', portfolioVal, 'breakdown', holdings);
+  const breakdownResult = finance.overviewBreakdown(
+    investmentsOnlyGraph,
+    'assets',
+    portfolioVal,
+    'breakdown',
+    holdings,
+  );
   assert.equal(breakdownResult.total, 10000);
   assert.equal(breakdownResult.items.length, 2);
   const aapl = breakdownResult.items.find((i) => i.label === 'AAPL');
@@ -519,16 +576,40 @@ test('User Story 11: overviewBreakdown supports specific asset breakdown with in
   // Case 2: User has mixed assets (checking, savings, and stocks)
   const mixedGraph = finance.parseGraph({
     nodes: [
-      { id: 'c1', name: 'Chase Checking', nodeType: 'CHECKING', amountOrBalance: 2000, interestRateApr: 0 },
-      { id: 's1', name: 'Emergency Fund', nodeType: 'SAVINGS', amountOrBalance: 8000, interestRateApr: 0 },
+      {
+        id: 'c1',
+        name: 'Chase Checking',
+        nodeType: 'CHECKING',
+        amountOrBalance: 2000,
+        interestRateApr: 0,
+      },
+      {
+        id: 's1',
+        name: 'Emergency Fund',
+        nodeType: 'SAVINGS',
+        amountOrBalance: 8000,
+        interestRateApr: 0,
+      },
     ],
     edges: [],
   });
-  const mixedOverview = finance.overviewBreakdown(mixedGraph, 'assets', portfolioVal, 'overview', holdings);
+  const mixedOverview = finance.overviewBreakdown(
+    mixedGraph,
+    'assets',
+    portfolioVal,
+    'overview',
+    holdings,
+  );
   assert.equal(mixedOverview.total, 20000);
   assert.equal(mixedOverview.items.length, 3); // Checking, Savings, Investments
 
-  const mixedBreakdown = finance.overviewBreakdown(mixedGraph, 'assets', portfolioVal, 'breakdown', holdings);
+  const mixedBreakdown = finance.overviewBreakdown(
+    mixedGraph,
+    'assets',
+    portfolioVal,
+    'breakdown',
+    holdings,
+  );
   assert.equal(mixedBreakdown.total, 20000);
   assert.equal(mixedBreakdown.items.length, 4); // Chase Checking, Emergency Fund, AAPL, MSFT
   assert.ok(mixedBreakdown.items.some((i) => i.label === 'Chase Checking' && i.value === 2000));
@@ -626,4 +707,49 @@ test('asset percentages exclude inactive accounts and overdrafts while net worth
     detail.items.reduce((sum, item) => sum + (item.value / detail.total) * 100, 0),
     100,
   );
+});
+
+test('reconciled personal assets without creating income or scheduled transfers', () => {
+  const graph = finance.parseGraph({
+    nodes: [
+      { id: 'cash', name: 'Cash', nodeType: 'CHECKING', amountOrBalance: 1000 },
+      { id: 'car', name: 'Car', nodeType: 'ASSET', amountOrBalance: 15000, assetGrowthRate: -15 },
+      { id: 'loan', name: 'Loan', nodeType: 'DEBT', amountOrBalance: 5000 },
+    ],
+    edges: [],
+  });
+  const totals = finance.totals(graph);
+  assert.equal(totals.assets, 16000);
+  assert.equal(totals.netWorth, 11000);
+  assert.equal(totals.income, 0);
+  assert.equal(totals.personalAssets, 15000);
+  assert.equal(finance.overviewBreakdown(graph, 'assets').total, 16000);
+  assert.equal(finance.overviewBreakdown(graph, 'assets', 0, 'breakdown').total, 16000);
+  const restored = finance.parseGraph(JSON.parse(JSON.stringify(graph)));
+  assert.equal(restored.nodes[1].assetGrowthRate, -15);
+  assert.ok(Number.isFinite(restored.nodes[1].position.x));
+  graph.nodes[1].archived = true;
+  assert.equal(finance.totals(graph).assets, 1000);
+  graph.nodes[1].archived = false;
+  graph.nodes[1].disabled = true;
+  assert.equal(finance.totals(graph).assets, 1000);
+});
+
+test('rejected unsupported property assumptions and illiquid cash routes', () => {
+  const graph = {
+    nodes: [
+      { id: 'cash', name: 'Cash', nodeType: 'CHECKING', amountOrBalance: 1000 },
+      { id: 'car', name: 'Car', nodeType: 'ASSET', amountOrBalance: 15000, assetGrowthRate: -101 },
+    ],
+    edges: [],
+  };
+  assert.throws(() => finance.parseGraph(graph));
+  graph.nodes[1].assetGrowthRate = 0;
+  graph.edges.push({
+    sourceNodeId: 'cash',
+    targetNodeId: 'car',
+    monthlyFixedFlow: 100,
+    percentageFlow: null,
+  });
+  assert.throws(() => finance.parseGraph(graph), /balance-only/);
 });

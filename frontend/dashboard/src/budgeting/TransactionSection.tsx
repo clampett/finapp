@@ -67,7 +67,7 @@ export function TransactionSection({
             disabled={!onOpenAiAsset || (!userId && !isDemo)}
           >
             <FeatureIcon name="spark" />
-            Estimate asset value
+            Manage assets
           </button>
           <button
             type="button"

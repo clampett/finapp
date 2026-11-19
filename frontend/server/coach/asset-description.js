@@ -16,7 +16,8 @@ const MAX_AMOUNT = 1000000000;
 function cleanText(value, limit) {
   return typeof value === 'string'
     ? value
-        .replace(/<[^>]*>/g, '')
+        // Removed unmatched and nested delimiters; retained plain text without enabling HTML rendering.
+        .replace(/[<>]/g, '')
         .replace(/[\x00-\x1f\x7f]/g, ' ')
         .replace(/\s+/g, ' ')
         .trim()

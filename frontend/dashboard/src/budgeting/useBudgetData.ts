@@ -34,9 +34,9 @@ export function useBudgetData({
   const isDemo = Boolean(demo || !sessionUserId);
 
   // Active view section
-  const [activeSubTab, setActiveSubTab] = useState<'transactions' | 'recurring' | 'stocks'>(
-    'transactions',
-  );
+  const [activeSubTab, setActiveSubTab] = useState<
+    'transactions' | 'recurring' | 'stocks' | 'assets'
+  >('transactions');
 
   // Data states
   const [transactions, setTransactions] = useState<Transaction[]>([]);

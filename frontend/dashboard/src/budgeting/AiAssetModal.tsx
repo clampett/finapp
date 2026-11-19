@@ -8,10 +8,11 @@ import type { AssetEstimate } from './asset-estimate';
 export interface AiAssetModalProps {
   isOpen: boolean;
   onCancel: () => void;
+  onSaveAsset?: (name: string, amount: number) => void;
 }
 
-// Kept valuation references separate from the income/expense ledger and scenario cash balances.
-export function AiAssetModal({ isOpen, onCancel }: AiAssetModalProps) {
+// Kept reviewed property balances separate from income and spendable cash.
+export function AiAssetModal({ isOpen, onCancel, onSaveAsset }: AiAssetModalProps) {
   const [description, setDescription] = useState('');
   const [estimate, setEstimate] = useState<AssetEstimate | null>(null);
   const [amount, setAmount] = useState('');
@@ -179,6 +180,17 @@ export function AiAssetModal({ isOpen, onCancel }: AiAssetModalProps) {
             className="w-full max-w-sm rounded-lg border border-border bg-surface px-3 py-2 text-sm text-text mt-2"
           />
           <div className="flex gap-2 flex-wrap mt-4">
+            {/* Required explicit review before adding an illiquid balance to the scenario. */}
+            {onSaveAsset && (
+              <button
+                type="button"
+                className={action}
+                disabled={!valid}
+                onClick={() => onSaveAsset(estimate.description, reviewed)}
+              >
+                Add asset balance
+              </button>
+            )}
             <button
               type="button"
               className={action}
@@ -217,8 +229,8 @@ export function AiAssetModal({ isOpen, onCancel }: AiAssetModalProps) {
           </div>
           <p className="text-[11px] leading-relaxed text-muted mt-4">
             An estimated asset value is not cash income. Record a transaction separately only when
-            money actually changes hands. Personal-property balances are not added to net worth by
-            this tool.
+            money actually changes hands. Add a reviewed balance to include it in net worth and
+            simulations; growth starts at 0% and can be edited in Assets.
           </p>
         </div>
       )}

@@ -22,9 +22,11 @@ class NodeInput(BaseModel):
     model_config = ConfigDict(allow_inf_nan=False)
     id: str = Field(min_length=1, max_length=100)
     name: str = Field(min_length=1, max_length=100)
-    type: Literal["INCOME", "EXPENSE", "DEBT", "CHECKING", "SAVINGS", "INVESTMENT"]
+    type: Literal["INCOME", "EXPENSE", "DEBT", "CHECKING", "SAVINGS", "INVESTMENT", "ASSET"]
     balance: float = Field(ge=-1e12, le=1e12)
     apr: float = Field(default=0, ge=0, le=100)
+    # Bounded property growth independently of market returns.
+    asset_growth_rate: float = Field(default=0, ge=-1, le=1)
     min_payment: float | None = Field(default=None, ge=0, le=1e9)
     frequency: (
         Literal[
@@ -40,7 +42,6 @@ class NodeInput(BaseModel):
         | None
     ) = "monthly"
     interval_count: int | None = Field(default=1, ge=1, le=365)
-
 
     # Matched the browser by permitting signed balances only on cash accounts.
     @model_validator(mode="after")
@@ -118,7 +119,11 @@ class SimulationRequest(BaseModel):
             raise ValueError("Account ID conflicts with a reserved chart field")
         if len(ids) != len(set(ids)):
             raise ValueError("Every account needs a unique ID")
+        asset_ids = {n.id for n in self.nodes if n.type == "ASSET"}
         for e in self.edges:
+            # Rejected illiquid-property routes before calculating the budget.
+            if e.source in asset_ids or e.target in asset_ids:
+                raise ValueError("Personal assets cannot have cash-flow connections")
             if e.source not in ids or e.target not in ids or e.source == e.target:
                 raise ValueError("Connections must reference two different existing accounts")
             if (e.monthly_fixed_flow is None) == (e.percentage_flow is None):
@@ -214,7 +219,7 @@ def run_simulation(payload: SimulationRequest):
     surplus = budget["monthly_surplus"]
     contribution = max(0, surplus) * payload.investment_rate / 100
     initial = sum(
-        n.balance for n in payload.nodes if n.type in ("CHECKING", "SAVINGS", "INVESTMENT")
+        n.balance for n in payload.nodes if n.type in ("CHECKING", "SAVINGS", "INVESTMENT", "ASSET")
     ) - sum(d.balance for d in debts)
     result = {
         "status": "success",
@@ -229,10 +234,13 @@ def run_simulation(payload: SimulationRequest):
             "initial_market_assets": sum(
                 n.balance for n in payload.nodes if n.type == "INVESTMENT"
             ),
+            # Reported property separately from liquid reserves and market assets.
+            "initial_personal_assets": sum(n.balance for n in payload.nodes if n.type == "ASSET"),
             "initial_debt": sum(d.balance for d in debts),
             "years": payload.years,
         },
         "assumptions": [
+            "Personal assets follow their entered annual growth/depreciation rate, defaulting to 0%. They are not sold to cover shortfalls or charged portfolio fees.",
             f"Income basis: {payload.income_basis}; estimated effective tax {budget['effective_tax_rate']:.1%}. This is not a tax-bracket calculation.",
             f"Income grows {payload.income_growth:.1%} and living expenses grow {payload.expense_growth:.1%} annually; debt payments stay nominal until payoff.",
             "Investments earn simulated returns. Checking and savings are pooled separately at their starting balance-weighted annual yields (equal account weights if initially empty). Loans accrue their own APR.",

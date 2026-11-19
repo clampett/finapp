@@ -23,6 +23,7 @@ import type {
   AccountOption,
   BudgetingTabProps,
 } from '../budgeting/types';
+import { PersonalAssets } from '../assets/PersonalAssets';
 import { BudgetSummaryCards } from '../budgeting/BudgetSummaryCards';
 import { TransactionSection } from '../budgeting/TransactionSection';
 import { StockSection } from '../budgeting/StockSection';
@@ -76,8 +77,6 @@ export function BudgetingTab(props: BudgetingTabProps) {
     setTransDraft,
     showTransForm,
     setShowTransForm,
-    showAiAssetForm,
-    setShowAiAssetForm,
     editingTransId,
     setEditingTransId,
     stockDraft,
@@ -108,7 +107,6 @@ export function BudgetingTab(props: BudgetingTabProps) {
 
   const {
     handleOpenAddTransaction,
-    handleOpenAiAsset,
     handleEditTransaction,
     handleSaveTransaction,
     handleDeleteTransaction,
@@ -262,6 +260,13 @@ export function BudgetingTab(props: BudgetingTabProps) {
         </button>
         <button
           type="button"
+          onClick={() => setActiveSubTab('assets')}
+          className={`rounded-lg px-4 py-2 text-sm cursor-pointer ${activeSubTab === 'assets' ? 'bg-primary text-primary-fg' : 'text-muted hover:bg-hover-bg'}`}
+        >
+          Assets
+        </button>
+        <button
+          type="button"
           onClick={() => {
             if (!activeLoad.current) void loadData(true, true);
           }}
@@ -292,6 +297,10 @@ export function BudgetingTab(props: BudgetingTabProps) {
             : ''}
       </div>
 
+      {/* Connected owned property to the canonical scenario instead of the income ledger. */}
+      {activeSubTab === 'assets' && (
+        <PersonalAssets graph={props.rawGraph ?? graph} onUpdate={props.onUpdateGraph} />
+      )}
       {/* SECTION 1: TRANSACTIONS */}
       {activeSubTab === 'transactions' && (
         <TransactionSection
@@ -299,11 +308,10 @@ export function BudgetingTab(props: BudgetingTabProps) {
           userId={userId}
           isDemo={isDemo}
           onOpenAdd={handleOpenAddTransaction}
-          onOpenAiAsset={handleOpenAiAsset}
+          onOpenAiAsset={() => setActiveSubTab('assets')}
           onEdit={handleEditTransaction}
           onDelete={handleDeleteTransaction}
           showTransForm={showTransForm}
-          showAiAssetForm={showAiAssetForm}
           editingTransId={editingTransId}
           transDraft={transDraft}
           setTransDraft={setTransDraft}
@@ -315,9 +323,6 @@ export function BudgetingTab(props: BudgetingTabProps) {
           onCancelTrans={() => {
             setShowTransForm(false);
             setEditingTransId(null);
-          }}
-          onCancelAiAsset={() => {
-            setShowAiAssetForm(false);
           }}
         />
       )}

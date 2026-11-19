@@ -1,5 +1,6 @@
 export const API_BASE = import.meta.env.VITE_API_URL || '/api/v1';
-export type NodeType = 'INCOME' | 'CHECKING' | 'SAVINGS' | 'INVESTMENT' | 'DEBT' | 'EXPENSE';
+export type NodeType =
+  'INCOME' | 'CHECKING' | 'SAVINGS' | 'INVESTMENT' | 'DEBT' | 'EXPENSE' | 'ASSET';
 export type SimulationType = 'monte_carlo' | 'markov' | 'debt';
 export type View =
   | 'overview'
@@ -82,6 +83,8 @@ export interface GraphNode {
   nodeType: NodeType;
   amountOrBalance: number;
   interestRateApr: number;
+  // Separated property growth from stock returns and cash APR.
+  assetGrowthRate?: number;
   minPayment?: number;
   frequency?: RecurrenceFrequency;
   intervalCount?: number;
@@ -213,7 +216,15 @@ export const money = (value: number, compact = false) =>
     maximumFractionDigits: compact ? 1 : 0,
     notation: compact ? 'compact' : 'standard',
   }).format(value);
-export const types: NodeType[] = ['INCOME', 'CHECKING', 'SAVINGS', 'INVESTMENT', 'DEBT', 'EXPENSE'];
+export const types: NodeType[] = [
+  'INCOME',
+  'CHECKING',
+  'SAVINGS',
+  'INVESTMENT',
+  'DEBT',
+  'EXPENSE',
+  'ASSET',
+];
 export const colors: Record<NodeType, string> = {
   INCOME: 'var(--ui-paint-34d399)',
   CHECKING: 'var(--ui-paint-60a5fa)',
@@ -221,6 +232,7 @@ export const colors: Record<NodeType, string> = {
   INVESTMENT: 'var(--ui-paint-a78bfa)',
   DEBT: 'var(--ui-paint-fb7185)',
   EXPENSE: 'var(--ui-paint-fbbf24)',
+  ASSET: 'var(--ui-paint-59c9c1)',
 };
 export const typeLabel = (type: NodeType) => type.charAt(0) + type.slice(1).toLowerCase();
 export function debtPayment(node: GraphNode, graph: GraphData, ignoreDisabled = false): number {
@@ -281,13 +293,16 @@ export function totals(graph: GraphData, portfolioValue = 0) {
     debt = sum(['DEBT']) + overdraft;
   // Kept graph investment accounts separate from tracked stocks before combining their balances.
   const nodeInvestments = sum(['INVESTMENT']);
+  // Included owned property once without creating monthly income.
+  const personalAssets = sum(['ASSET']);
   // Excluded invalid cached valuations before calculating assets and net worth.
   const totalInvestments =
     nodeInvestments + (Number.isFinite(portfolioValue) && portfolioValue > 0 ? portfolioValue : 0);
   // Included positive cash and investments while treating overdrawn cash as a liability.
   const assets =
     cashNodes.reduce((total, node) => total + Math.max(0, node.amountOrBalance), 0) +
-    totalInvestments;
+    totalInvestments +
+    personalAssets;
   const payments = graph.nodes
     .filter((n) => !n.disabled && n.nodeType === 'DEBT')
     .reduce((s, n) => s + debtPayment(n, graph), 0);
@@ -311,6 +326,7 @@ export function totals(graph: GraphData, portfolioValue = 0) {
     surplus,
     portfolioValue,
     nodeInvestments,
+    personalAssets,
     totalInvestments,
     ...allocations(graph, surplus),
   };
@@ -363,7 +379,7 @@ export function overviewBreakdown(
         .filter(
           (node) =>
             !node.disabled &&
-            ['CHECKING', 'SAVINGS', 'INVESTMENT'].includes(node.nodeType) &&
+            ['CHECKING', 'SAVINGS', 'INVESTMENT', 'ASSET'].includes(node.nodeType) &&
             node.amountOrBalance > 0,
         )
         .map((node) => ({
@@ -439,6 +455,7 @@ export function overviewBreakdown(
           value: t.totalInvestments,
           color: 'var(--ui-paint-a78bfa)',
         },
+        { label: 'Personal assets', value: t.personalAssets, color: colors.ASSET },
       ];
     }
   } else if (mode === 'debt') {
@@ -526,7 +543,11 @@ export function parseGraph(value: unknown): GraphData {
         1e12,
         n.nodeType === 'CHECKING' || n.nodeType === 'SAVINGS' ? -1e12 : 0,
       ),
-      interestRateApr: number(n.interestRateApr ?? 0, 100),
+      // Validated signed property growth independently of bank APR.
+      interestRateApr: n.nodeType === 'ASSET' ? 0 : number(n.interestRateApr ?? 0, 100),
+      ...(n.nodeType === 'ASSET'
+        ? { assetGrowthRate: number(n.assetGrowthRate ?? 0, 100, -100) }
+        : {}),
       ...(n.archived === true ? { archived: true } : {}),
       ...(n.disabled === true ? { disabled: true } : {}),
       ...(n.position &&
@@ -553,6 +574,11 @@ export function parseGraph(value: unknown): GraphData {
   const edges = data.edges.map((e, i) => {
     const source = String(e.sourceNodeId),
       target = String(e.targetNodeId);
+    // Rejected illiquid-property cash routes before budget calculations.
+    if (nodes.some((n) => n.nodeType === 'ASSET' && [source, target].includes(n.id)))
+      throw new Error(
+        'Personal assets are balance-only accounts and cannot have cash-flow connections.',
+      );
     if (
       !ids.has(source) ||
       !ids.has(target) ||
@@ -589,7 +615,7 @@ export function parseGraph(value: unknown): GraphData {
   }
   // Assigned missing coordinates once during validation, making first-drag undo
   // and exported layouts reproducible instead of depending on a canvas cache.
-  const columns = [['INCOME'], ['CHECKING', 'SAVINGS'], ['EXPENSE', 'DEBT', 'INVESTMENT']];
+  const columns = [['INCOME'], ['CHECKING', 'SAVINGS'], ['EXPENSE', 'DEBT', 'INVESTMENT', 'ASSET']];
   const positioned = nodes.map((node) => {
     if (node.position) return node;
     const col = columns.findIndex((column) => column.includes(node.nodeType));

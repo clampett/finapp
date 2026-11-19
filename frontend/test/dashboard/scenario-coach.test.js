@@ -285,3 +285,28 @@ test('unmatched and conversational questions still reached free-form generation'
     'markets',
   );
 });
+
+test('preserved reviewed property growth in redacted baseline and stress inputs', () => {
+  const coach = loadCoach();
+  const input = coach.coachInputs(
+    {
+      nodes: [
+        {
+          id: 'private-property',
+          name: 'Private address',
+          nodeType: 'ASSET',
+          amountOrBalance: 200000,
+          interestRateApr: 0,
+          assetGrowthRate: -5,
+        },
+      ],
+      edges: [],
+    },
+    'monte_carlo',
+    10,
+    'expenses',
+  );
+  assert.equal(input.baseline.nodes[0].asset_growth_rate, -0.05);
+  assert.equal(input.stress.nodes[0].asset_growth_rate, -0.05);
+  assert.doesNotMatch(JSON.stringify(input), /Private address|private-property/);
+});

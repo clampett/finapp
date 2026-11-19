@@ -180,3 +180,16 @@ test('failed runtime probes were cached instead of retried on every click', asyn
   await service.valueAsset('My phone');
   assert.equal(requests, 1);
 });
+
+test('removed nested and unmatched angle brackets from untrusted valuation descriptions', () => {
+  const { cleanText } = require('../../server/coach/asset-description');
+  for (const input of [
+    '<script',
+    '<<script>alert(1)</script>',
+    '<img src=x onerror=alert(1)',
+    '<><<b>>',
+  ]) {
+    assert.doesNotMatch(cleanText(input, 100), /[<>]/);
+    assert.doesNotMatch(heuristicAssetValuation(input).description, /[<>]/);
+  }
+});

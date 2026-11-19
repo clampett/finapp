@@ -221,7 +221,7 @@ export function BalancePreferences({
   const [notice, setNotice] = useState('');
   const [currency, setCurrency] = useState(display.currency);
   const nodes = graph.nodes.filter(({ nodeType }) =>
-    ['CHECKING', 'SAVINGS', 'INVESTMENT', 'DEBT'].includes(nodeType),
+    ['CHECKING', 'SAVINGS', 'INVESTMENT', 'DEBT', 'ASSET'].includes(nodeType),
   );
   const converted = new Intl.NumberFormat(undefined, {
     style: 'currency',

@@ -242,7 +242,7 @@ export function BudgetingTab(props: BudgetingTabProps) {
           className={`inline-flex items-center justify-center gap-1.5 whitespace-nowrap rounded-[7px] font-medium cursor-pointer transition-colors ${activeSubTab === 'transactions' ? 'bg-primary text-primary-fg' : 'bg-transparent text-(--ui-text-97a7c2) hover:bg-(--ui-surface-hover-1a2536) hover:text-text'}`}
           style={{ padding: '6px 16px', fontSize: '14px' }}
         >
-          Assets/Transactions ({transactions.length})
+          Transactions ({transactions.length})
         </button>
         <button
           type="button"
@@ -292,7 +292,7 @@ export function BudgetingTab(props: BudgetingTabProps) {
             : ''}
       </div>
 
-      {/* SECTION 1: ASSETS & TRANSACTIONS */}
+      {/* SECTION 1: TRANSACTIONS */}
       {activeSubTab === 'transactions' && (
         <TransactionSection
           transactions={transactions}

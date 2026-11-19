@@ -78,9 +78,8 @@ export function useBudgetActions(props: BudgetingTabProps, data: ReturnType<type
     setShowTransForm(true);
   };
 
+  // Opened a standalone estimate without modifying or recording the transaction draft.
   const handleOpenAiAsset = () => {
-    setEditingTransId(null);
-    setTransDraft(initialTransaction());
     setShowTransForm(false);
     setShowAiAssetForm(true);
   };
@@ -201,9 +200,8 @@ export function useBudgetActions(props: BudgetingTabProps, data: ReturnType<type
       setStatusMessage({
         type: 'success',
         text:
-          (editingTransId
-            ? 'Asset/Transaction updated successfully.'
-            : 'Asset/Transaction recorded.') + syncStatusMsg,
+          (editingTransId ? 'Transaction updated successfully.' : 'Transaction recorded.') +
+          syncStatusMsg,
       });
       setShowTransForm(false);
       setShowAiAssetForm(false);
@@ -241,9 +239,8 @@ export function useBudgetActions(props: BudgetingTabProps, data: ReturnType<type
       setStatusMessage({
         type: 'success',
         text:
-          (editingTransId
-            ? 'Asset/Transaction updated successfully.'
-            : 'Asset/Transaction recorded.') + syncStatusMsg,
+          (editingTransId ? 'Transaction updated successfully.' : 'Transaction recorded.') +
+          syncStatusMsg,
       });
       setShowTransForm(false);
       setShowAiAssetForm(false);
@@ -298,7 +295,7 @@ export function useBudgetActions(props: BudgetingTabProps, data: ReturnType<type
       if (reverseSync && onUpdateGraph) {
         onUpdateGraph(reverseSync.updatedGraph);
       }
-      setStatusMessage({ type: 'success', text: 'Asset/Transaction deleted.' });
+      setStatusMessage({ type: 'success', text: 'Transaction deleted.' });
       if (editingTransId === id) {
         setShowTransForm(false);
         setShowAiAssetForm(false);
@@ -320,7 +317,7 @@ export function useBudgetActions(props: BudgetingTabProps, data: ReturnType<type
       if (reverseSync && onUpdateGraph) {
         onUpdateGraph(reverseSync.updatedGraph);
       }
-      setStatusMessage({ type: 'success', text: 'Asset/Transaction deleted.' });
+      setStatusMessage({ type: 'success', text: 'Transaction deleted.' });
       if (editingTransId === id) {
         setShowTransForm(false);
         setShowAiAssetForm(false);

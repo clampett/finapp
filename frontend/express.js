@@ -6,6 +6,7 @@ const { createApiProxy } = require('./server/proxy/api-proxy');
 const { createCoachService } = require('./server/coach/coach-service');
 const { createCoachMarket } = require('./server/coach/coach-market');
 const { createAssetValuationService } = require('./server/coach/coach-asset-valuation');
+const { createInferenceBudget } = require('./server/coach/coach-inference-budget');
 
 const app = express();
 const PORT = process.env.PORT || 8080;
@@ -50,8 +51,9 @@ app.use(
 const publicMarket = createCoachMarket({
   upstream: process.env.FINAPP_API_UPSTREAM || 'http://127.0.0.1:8081',
 });
-const coach = createCoachService({ market: publicMarket });
-const assetValuer = createAssetValuationService();
+const inferenceBudget = createInferenceBudget();
+const coach = createCoachService({ market: publicMarket, inferenceBudget });
+const assetValuer = createAssetValuationService({ inferenceBudget });
 // Limited expensive model work per client without charging ordinary status checks against that budget.
 const coachLimit = rateLimit({
   windowMs: 60000,
@@ -108,9 +110,22 @@ app.post(
         .status(400)
         .json({ message: 'Provide an asset description up to 500 characters.' });
     }
-    const result = await assetValuer.valueAsset(req.body.description);
-    if (!result) return res.status(503).json({ message: 'Asset valuation is unavailable.' });
-    return res.json({ success: true, data: result });
+    const controller = new AbortController();
+    const disconnected = () => {
+      if (!res.writableEnded) controller.abort();
+    };
+    res.on('close', disconnected);
+    try {
+      // Cancelled local inference when the browser abandoned the estimate request.
+      const result = await assetValuer.valueAsset(req.body.description, {
+        signal: controller.signal,
+      });
+      if (controller.signal.aborted) return;
+      if (!result) return res.status(503).json({ message: 'Asset estimation is unavailable.' });
+      return res.json({ success: true, data: result });
+    } finally {
+      res.off('close', disconnected);
+    }
   },
 );
 // Returned bounded parser errors without exposing a development stack trace.

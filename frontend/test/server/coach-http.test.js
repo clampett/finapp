@@ -88,14 +88,18 @@ test('coach HTTP value-asset validates input and returns structured estimation',
     assert.equal((await post(JSON.stringify({ description: 'a'.repeat(600) }))).status, 400);
 
     // Valid asset estimation request
-    const res = await post(JSON.stringify({ description: '2019 Toyota RAV4 with 45k miles' }));
+    const res = await post(
+      JSON.stringify({ description: '2019 Toyota RAV4; my reference amount is $15,000' }),
+    );
     assert.equal(res.status, 200);
     const body = await res.json();
     assert.equal(body.success, true);
     assert.ok(body.data);
     assert.equal(body.data.categoryName, 'Vehicles');
-    assert.ok(body.data.amount > 0);
-    assert.equal(body.data.kind, 'income');
+    assert.equal(body.data.amount, 15000);
+    assert.equal(body.data.source, 'provided');
+    assert.equal(body.data.verified, false);
+    assert.equal(Object.hasOwn(body.data, 'kind'), false);
   } finally {
     child.kill();
     await new Promise((resolve) =>

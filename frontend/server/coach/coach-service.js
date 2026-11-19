@@ -1,3 +1,4 @@
+const { createInferenceBudget } = require('./coach-inference-budget');
 const scenarioChoices = require('./data/coach-options.json');
 const {
   topics,
@@ -22,6 +23,7 @@ const {
 function createCoachService({
   request = fetch,
   now = Date.now,
+  inferenceBudget = createInferenceBudget(now),
   market = { get: async () => null },
 } = {}) {
   // Cached reusable guide answers in memory and kept personalized requests out of the cache.
@@ -30,8 +32,6 @@ function createCoachService({
   let cooldownUntil = 0;
   let lastStatus;
   let statusProbe;
-  let budgetStart = now();
-  let requestsInWindow = 0;
 
   async function status() {
     if (lastStatus && now() - lastStatus.at < 5000) return lastStatus.value;
@@ -264,13 +264,9 @@ function createCoachService({
     if (pending.has(job)) return pending.get(job);
     // Coalesced stock requests and limited local inference to one job at a time.
     if (now() < cooldownUntil || pending.size) return null;
-    // Bounded total inference work across clients as well as the per-client HTTP limit.
-    if (now() - budgetStart >= 60000) {
-      budgetStart = now();
-      requestsInWindow = 0;
-    }
-    if (requestsInWindow >= 30) return null;
-    requestsInWindow++;
+    // Acquired the same runtime slot used by asset estimation before probing or generating.
+    const release = inferenceBudget.acquire();
+    if (!release) return null;
     const run = (async () => {
       try {
         if ((await status()).enabled) {
@@ -294,6 +290,7 @@ function createCoachService({
       return await run;
     } finally {
       pending.delete(job);
+      release();
     }
   }
 

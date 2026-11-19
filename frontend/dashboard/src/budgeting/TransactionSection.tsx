@@ -76,7 +76,7 @@ export function TransactionSection({
             onClick={onOpenAiAsset}
             disabled={!userId && !isDemo}
           >
-            ✨ Value Asset with AI
+            ✨ Add Asset with AI
           </button>
           <button
             type="button"
@@ -136,7 +136,7 @@ export function TransactionSection({
           </p>
           <p style={{ margin: 0, fontSize: '13px', color: 'var(--color-muted)' }}>
             Click <strong>+ Add Asset/Transaction</strong> or{' '}
-            <strong>✨ Value Asset with AI</strong> above to log single assets, expenses, or income
+            <strong>✨ Add Asset with AI</strong> above to log single assets, expenses, or income
             (such as vehicles, property, grocery trips, and dining). Recurring salary and bills are
             managed in the <strong>Recurring Transactions</strong> tab.
           </p>

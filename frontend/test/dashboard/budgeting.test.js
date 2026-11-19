@@ -54,7 +54,7 @@ test('User Story 34: BudgetingTab renames Transactions tab to Assets/Transaction
   assert.doesNotMatch(budgetingTsx, />\s*Transactions\s*\(\{transactions\.length\}\)/);
 });
 
-test('User Story 34: TransactionSection has Value Asset with AI button to the left of Add Asset/Transaction', () => {
+test('User Story 34: TransactionSection has Add Asset with AI button to the left of Add Asset/Transaction', () => {
   const fs = require('node:fs');
   const sectionTsx = fs.readFileSync(
     path.join(__dirname, '../../dashboard/src/budgeting/TransactionSection.tsx'),
@@ -62,22 +62,22 @@ test('User Story 34: TransactionSection has Value Asset with AI button to the le
   );
   assert.match(sectionTsx, /Recorded Assets\/Transactions/);
   assert.match(sectionTsx, /\+\s*Add Asset\/Transaction/);
-  assert.match(sectionTsx, /Value Asset with AI/);
+  assert.match(sectionTsx, /Add Asset with AI/);
 
   // Verify Value Asset button precedes Add Asset/Transaction in markup
-  const aiButtonIndex = sectionTsx.indexOf('Value Asset with AI');
+  const aiButtonIndex = sectionTsx.indexOf('Add Asset with AI');
   const addTxnIndex = sectionTsx.indexOf('+ Add Asset/Transaction');
-  assert.ok(aiButtonIndex !== -1, 'Value Asset with AI button must exist');
+  assert.ok(aiButtonIndex !== -1, 'Add Asset with AI button must exist');
   assert.ok(addTxnIndex !== -1, '+ Add Asset/Transaction button must exist');
   assert.ok(
     aiButtonIndex < addTxnIndex,
-    'Value Asset with AI button must be positioned to the left of + Add Asset/Transaction',
+    'Add Asset with AI button must be positioned to the left of + Add Asset/Transaction',
   );
 
   // Verify both buttons share the same primary styling classes
   assert.match(
     sectionTsx,
-    /<button[^>]*bg-primary text-primary-fg[^>]*>\s*✨ Value Asset with AI\s*<\/button>/,
+    /<button[^>]*bg-primary text-primary-fg[^>]*>\s*✨ Add Asset with AI\s*<\/button>/,
   );
 });
 

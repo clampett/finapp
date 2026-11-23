@@ -83,7 +83,7 @@ export function Investing(props: InvestingProps) {
   return (
     <>
       <StockHoldings {...props} />
-      <MarketPrices />
+      <MarketPrices storageKey={props.storageKey} />
     </>
   );
 }

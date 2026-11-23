@@ -148,23 +148,31 @@ function Status({ items, error }: { items: unknown[] | null; error: string }) {
   return null;
 }
 
-const DEFAULT_COINS = ['BTC', 'ETH', 'SOL', 'XRP', 'ADA', 'LTC', 'BNB'];
+const POPULAR_COINS = [
+  { symbol: 'BTC', name: 'Bitcoin' },
+  { symbol: 'ETH', name: 'Ethereum' },
+  { symbol: 'SOL', name: 'Solana' },
+  { symbol: 'XRP', name: 'XRP' },
+  { symbol: 'ADA', name: 'Cardano' },
+  { symbol: 'LTC', name: 'Litecoin' },
+  { symbol: 'BNB', name: 'BNB' },
+];
 const MAX_COINS = 25;
 const COIN_PATTERN = /^[A-Z0-9]{1,15}$/;
 
-// Loaded the user's saved coin list, falling back to the default coins the first time.
+// Loaded the user's saved coin list, which starts empty like the stock holdings.
 function readCoins(key: string): string[] {
   try {
     const raw = localStorage.getItem(key);
-    if (raw === null) return DEFAULT_COINS;
+    if (raw === null) return [];
     const parsed: unknown = JSON.parse(raw);
-    if (!Array.isArray(parsed)) return DEFAULT_COINS;
+    if (!Array.isArray(parsed)) return [];
     const coins = parsed.filter(
       (item): item is string => typeof item === 'string' && COIN_PATTERN.test(item),
     );
     return [...new Set(coins)].slice(0, MAX_COINS);
   } catch {
-    return DEFAULT_COINS;
+    return [];
   }
 }
 
@@ -366,7 +374,7 @@ export function MarketPrices({ storageKey }: { storageKey: string }) {
     }
   }
 
-  const missingDefaults = DEFAULT_COINS.filter((coin) => !coins.includes(coin));
+  const popularCoins = POPULAR_COINS.filter((coin) => !coins.includes(coin.symbol));
 
   return (
     <>
@@ -403,21 +411,29 @@ export function MarketPrices({ storageKey }: { storageKey: string }) {
             {message}
           </p>
         )}
+        {popularCoins.length > 0 && (
+          <div>
+            <div className={LABEL}>POPULAR COINS</div>
+            <div className="flex flex-wrap gap-2">
+              {popularCoins.map((coin) => (
+                <button
+                  key={coin.symbol}
+                  type="button"
+                  className={CHIP}
+                  title={coin.name}
+                  disabled={busy}
+                  onClick={() => void addCoin(coin.symbol)}
+                >
+                  + {coin.symbol}
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
         {coins.length > 0 ? (
           <CryptoTable coins={coins} quotes={quotes} errors={errors} onRemove={removeCoin} />
         ) : (
-          <p className={COPY}>Your list is empty. Add a coin above.</p>
-        )}
-        {missingDefaults.length > 0 && (
-          <div>
-            <button
-              type="button"
-              className={CHIP}
-              onClick={() => updateCoins([...coins, ...missingDefaults].slice(0, MAX_COINS))}
-            >
-              Restore default coins
-            </button>
-          </div>
+          <p className={COPY}>Your list is empty. Add a coin above or pick a popular coin.</p>
         )}
       </section>
       <section className="flex flex-col gap-4 mb-6" aria-label="Foreign currency prices">

@@ -469,4 +469,4 @@ export function MarketPrices({ storageKey }: { storageKey: string }) {
       </section>
     </>
   );
-}m
+}

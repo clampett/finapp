@@ -167,7 +167,8 @@ export function MarketPriceChart({
         live quote.
       </p>
       <div
-        className="relative h-64 overflow-hidden rounded-xl border border-border bg-surface [&_.recharts-surface]:outline-none focus-within:ring-2 focus-within:ring-active-border"
+        // Identified the shared market plot for a white-paper finish in the light theme.
+        className="market-chart-paper relative h-64 overflow-hidden rounded-xl border border-border bg-surface [&_.recharts-surface]:outline-none focus-within:ring-2 focus-within:ring-active-border"
         aria-busy={loading}
         style={{
           backgroundImage:

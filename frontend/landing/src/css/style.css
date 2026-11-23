@@ -1,5 +1,6 @@
 @import 'tailwindcss';
 @import './public.css';
+@import './materials.css';
 @source "../../pages";
 
 @theme {

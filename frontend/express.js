@@ -7,6 +7,7 @@ const { createCoachService } = require('./server/coach/coach-service');
 const { createCoachMarket } = require('./server/coach/coach-market');
 const { createAssetValuationService } = require('./server/coach/coach-asset-valuation');
 const { createInferenceBudget } = require('./server/coach/coach-inference-budget');
+const { createPulseService, validPulseContext } = require('./server/coach/pulse-service');
 
 const app = express();
 const PORT = process.env.PORT || 8080;
@@ -54,6 +55,21 @@ const publicMarket = createCoachMarket({
 const inferenceBudget = createInferenceBudget();
 const coach = createCoachService({ market: publicMarket, inferenceBudget });
 const assetValuer = createAssetValuationService({ inferenceBudget });
+const pulse = createPulseService({
+  inferenceBudget,
+  ready: async () => (await coach.status()).state === 'ready',
+});
+// Limited optional sidebar suggestions separately so animation never became unbounded model polling.
+const pulseLimit = rateLimit({
+  windowMs: 300000,
+  limit: 3,
+  standardHeaders: 'draft-7',
+  legacyHeaders: false,
+  message: {
+    code: 'rate_limit',
+    message: 'AI Pulse needs a moment. Please try again in a few minutes.',
+  },
+});
 // Limited expensive model work per client without charging ordinary status checks against that budget.
 const coachLimit = rateLimit({
   windowMs: 60000,
@@ -123,6 +139,41 @@ app.post(
       if (controller.signal.aborted) return;
       if (!result) return res.status(503).json({ message: 'Asset estimation is unavailable.' });
       return res.json({ success: true, data: result });
+    } finally {
+      res.off('close', disconnected);
+    }
+  },
+);
+app.post(
+  '/api/v1/coach/pulse',
+  pulseLimit,
+  coachLimit,
+  express.json({ limit: '2kb' }),
+  async (req, res) => {
+    res.set('Cache-Control', 'no-store');
+    if (!req.is('application/json') || !validPulseContext(req.body))
+      return res.status(400).json({ message: 'Choose valid Pulse signals.' });
+    const controller = new AbortController();
+    const disconnected = () => {
+      if (!res.writableEnded) controller.abort();
+    };
+    res.on('close', disconnected);
+    try {
+      // Cancelled inference on disconnect and accepted qualitative flags only, never raw account data.
+      let failure = 'unavailable';
+      const result = await pulse.suggest(req.body, {
+        signal: controller.signal,
+        onFailure: (code) => {
+          failure = code;
+        },
+      });
+      if (controller.signal.aborted) return;
+      if (!result)
+        return res.status(503).json({
+          code: failure,
+          message: 'The AI suggestion could not be completed. Please try again.',
+        });
+      return res.json(result);
     } finally {
       res.off('close', disconnected);
     }

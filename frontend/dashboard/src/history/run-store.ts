@@ -1,4 +1,5 @@
 import { API_BASE } from '../common/finance';
+import { notifyPulseUpdate, runPulseKey } from '../pulse/pulse-events';
 import { sessionHeaders } from '../common/session';
 import type { SimulationResult } from '../simulation/simulation-types';
 
@@ -149,11 +150,15 @@ export async function saveRun(
     }),
   );
   if (!validRun(run)) throw new Error('Wait for a complete forecast before saving.');
-  if (!owner.demo)
-    return api('', {
+  if (!owner.demo) {
+    const saved = await api<SavedRun>('', {
       method: 'POST',
       body: JSON.stringify({ title: name, kind, inputs: run.inputs, result: run.result }),
     });
+    // Refreshed the sidebar only after the authenticated snapshot was saved successfully.
+    notifyPulseUpdate(runPulseKey(owner.userId, owner.demo));
+    return saved;
+  }
   const rows = readDemo(owner);
   if (rows.length >= 20)
     throw new Error('Demo history holds 20 runs. Delete one before saving another.');
@@ -164,6 +169,7 @@ export async function saveRun(
       'Browser storage is full or unavailable. Export this result or delete an older demo run.',
     );
   }
+  notifyPulseUpdate(runPulseKey(owner.userId, owner.demo));
   return run;
 }
 export async function renameRun(owner: RunOwner, id: string, title: string) {
@@ -182,9 +188,14 @@ export async function renameRun(owner: RunOwner, id: string, title: string) {
   return run.summary;
 }
 export async function deleteRun(owner: RunOwner, id: string) {
-  if (!owner.demo) return api<void>(`/${encodeURIComponent(id)}`, { method: 'DELETE' });
+  if (!owner.demo) {
+    await api<void>(`/${encodeURIComponent(id)}`, { method: 'DELETE' });
+    notifyPulseUpdate(runPulseKey(owner.userId, owner.demo));
+    return;
+  }
   localStorage.setItem(
     key(owner),
     JSON.stringify(readDemo(owner).filter((item) => item.summary.id !== id)),
   );
+  notifyPulseUpdate(runPulseKey(owner.userId, owner.demo));
 }

@@ -142,7 +142,13 @@ test('simulation defaults restore valid account preferences and reject out-of-ra
     localStorage: {
       getItem(key) {
         return key === 'finapp-simulation-defaults:42'
-          ? JSON.stringify({ years: 17, contribution: 0, inflation: 0, fee: 30, strategy: 'snowball' })
+          ? JSON.stringify({
+              years: 17,
+              contribution: 0,
+              inflation: 0,
+              fee: 30,
+              strategy: 'snowball',
+            })
           : null;
       },
     },
@@ -156,4 +162,30 @@ test('simulation defaults restore valid account preferences and reject out-of-ra
   assert.equal(saved.strategy, 'snowball');
   assert.equal(exports.loadSimulationDefaults(43).years, 30);
   assert.equal(exports.normalizeSimulationDefaults({ years: 12.5 }).years, 30);
+});
+
+test('settings return restored context while rejecting invalid or mismatched destinations', () => {
+  const compiled = ts.transpileModule(readTsx('settings/settings-return.ts'), {
+    compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022 },
+  }).outputText;
+  const exports = {};
+  require('node:vm').runInNewContext(compiled, { exports });
+  const read = (value, requested) =>
+    exports.readSettingsReturn(value, ['overview', 'graph', 'news'], requested);
+  const snapshot = JSON.stringify({ view: 'graph', search: 'Checking', scrollY: 420 });
+  assert.equal(JSON.stringify(read(snapshot, 'graph')), snapshot);
+  assert.equal(read(snapshot, 'news').view, 'news');
+  assert.equal(read(snapshot, 'news').search, '');
+  for (const raw of [
+    'broken',
+    'null',
+    '{}',
+    JSON.stringify({ view: 'settings', search: '', scrollY: 0 }),
+    JSON.stringify({ view: 'https://example.com', search: '', scrollY: 0 }),
+    JSON.stringify({ view: 'graph', search: '', scrollY: -1 }),
+  ]) {
+    assert.equal(read(raw).view, 'overview');
+  }
+  assert.equal(read(null, 'https://example.com').view, 'overview');
+  assert.notEqual(exports.settingsReturnKey('user:7'), exports.settingsReturnKey('demo:7'));
 });

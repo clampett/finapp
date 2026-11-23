@@ -20,6 +20,8 @@ import { WorkspaceConnections } from '../workspace/WorkspaceConnections';
 import { WorkspaceIntro } from '../workspace/WorkspaceIntro';
 import { WorkspaceForecastControls, WorkspaceForecastModal } from '../workspace/WorkspaceForecasts';
 import type { ForecastScope } from '../workspace/WorkspaceForecasts';
+import { SettingsReturnBar } from '../settings/SettingsReturnBar';
+import type { SettingsLeaveGuard } from '../settings/settings-return';
 
 export function GraphWorkspace({
   userId,
@@ -33,6 +35,9 @@ export function GraphWorkspace({
   activeTheme,
   onSelectTheme,
   onNavigate,
+  settingsReturnLabel,
+  onCloseSettings,
+  registerSettingsGuard,
 }: {
   userId: number;
   demo: boolean;
@@ -45,6 +50,9 @@ export function GraphWorkspace({
   activeTheme: 'light' | 'dark';
   onSelectTheme: (theme: 'light' | 'dark' | 'system') => void;
   onNavigate: (view: View) => void;
+  settingsReturnLabel: string;
+  onCloseSettings: () => void;
+  registerSettingsGuard: (guard: SettingsLeaveGuard | null) => void;
 }) {
   // Composed the graph state, portfolio snapshot, and editor while keeping the active view here.
   const { portfolioValue, dividendFlows, holdings } = useWorkspacePortfolio(userId, demo);
@@ -91,6 +99,9 @@ export function GraphWorkspace({
       className={`workspace-tab-content px-8 pb-4.5 max-[1100px]:px-5.5 max-[1100px]:pb-4.5 max-[760px]:px-4 max-[760px]:pb-4 2xl:px-11 fullscreen:bg-[var(--ui-surface-0c1018)] fullscreen:w-full fullscreen:h-full fullscreen:overflow-auto fullscreen:p-6 max-[650px]:fullscreen:p-3 ${view === 'settings' ? 'mx-auto w-full max-w-6xl' : ''}`}
     >
       {/* Used the coach’s own interactive heading instead of duplicating the tab introduction. */}
+      {view === 'settings' && (
+        <SettingsReturnBar label={settingsReturnLabel} onClose={onCloseSettings} />
+      )}
       {view !== 'ai' && (
         <WorkspaceIntro view={view} live={live} t={t} demo={demo} storageStatus={storageStatus} />
       )}
@@ -195,6 +206,7 @@ export function GraphWorkspace({
                   onUpdateProfile={onUpdateProfile}
                   activeTheme={activeTheme}
                   onSelectTheme={onSelectTheme}
+                  registerLeaveGuard={registerSettingsGuard}
                   simulationSettings={
                     !demo &&
                     simulationDefaults && (

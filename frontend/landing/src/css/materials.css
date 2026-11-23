@@ -1,0 +1,182 @@
+@import '../../../shared/visual-tokens.css';
+
+/* Connected marketing and authentication to the same finishes as the dashboard,
+   leaving Google's independently rendered sign-in control untouched. */
+html:root {
+  --background: var(--finish-base);
+  --card: var(--finish-surface);
+  --muted: var(--finish-float);
+  --foreground: var(--finish-muted);
+  --text_color: var(--finish-text);
+  --primary: var(--finish-primary);
+  --primary-foreground: var(--finish-primary-fg);
+  --border: var(--finish-border);
+  --header: var(--finish-header);
+  --shadow: var(--finish-deep-shadow);
+}
+body {
+  background-image:
+    radial-gradient(ellipse 950px 650px at 82% 0, var(--finish-violet-light), transparent 75%),
+    radial-gradient(ellipse 850px 850px at 0 45%, var(--finish-blue-light), transparent 75%);
+  -webkit-font-smoothing: antialiased;
+}
+.marketing .site-header {
+  background: var(--finish-panel-light), var(--header);
+  box-shadow:
+    0 1px 0 var(--finish-edge),
+    0 8px 30px var(--finish-shadow);
+}
+/* Extended the same quiet material to account forms without styling Google's iframe. */
+body:not(.marketing) :is(div, section, form).bg-card {
+  background-image: var(--finish-panel-light);
+  box-shadow: var(--finish-elevated-shadow);
+}
+
+/* Placed ambient light behind the hero rather than above its interactive demo.
+   Animated only the compositor transform, with no polling or pointer listeners. */
+.marketing #about {
+  position: relative;
+  isolation: isolate;
+}
+.marketing #about::before {
+  content: '';
+  position: absolute;
+  z-index: -1;
+  pointer-events: none;
+  inset: 2% 0 5% 25%;
+  /* Feathered the light field so no oval boundary appeared behind the preview. */
+  mask-image: radial-gradient(ellipse at center, #000 15%, transparent 72%);
+  background:
+    radial-gradient(ellipse at 65% 40%, var(--finish-violet-light), transparent 70%),
+    radial-gradient(ellipse at 20% 75%, var(--finish-blue-light), transparent 65%);
+}
+.marketing :is(#about h1, .guide-hero h1) {
+  text-wrap: balance;
+}
+.marketing :is(#about h1 span, .guide-hero h1 span) {
+  /* Retained solid fallback text before applying the decorative ink gradient. */
+  color: var(--primary);
+  background: linear-gradient(
+    110deg,
+    var(--primary) 10%,
+    color-mix(in srgb, var(--primary) 55%, var(--blue)) 85%
+  );
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+
+/* Added a polished rim and layered contact shadow to the product preview. */
+.marketing #about > div:last-child > div:first-child {
+  background-image: var(--finish-panel-light);
+  border-color: color-mix(in srgb, var(--primary) 22%, var(--border));
+  box-shadow:
+    var(--finish-elevated-shadow),
+    0 0 55px var(--finish-violet-light);
+}
+.marketing :is(.diagram-panel, .guide-card, .profile-metrics, .profile-detail, .guide-cta),
+.marketing #features article,
+.marketing #scenarios > div:last-of-type > a {
+  background-image: var(--finish-panel-light);
+  box-shadow: var(--finish-panel-shadow);
+}
+.marketing :is(.guide-card, #features article, #scenarios > div:last-of-type > a) {
+  transition:
+    transform 240ms var(--finish-ease),
+    box-shadow 240ms ease,
+    border-color 240ms ease;
+}
+.marketing :is(.guide-cta, #cta) {
+  background:
+    radial-gradient(ellipse at 15% 0, var(--finish-violet-light), transparent 65%),
+    radial-gradient(ellipse at 100% 100%, var(--finish-blue-light), transparent 65%), var(--card);
+}
+.marketing :is(.primary-action, .bg-primary) {
+  background-image: linear-gradient(180deg, #ffffff14, #ffffff00 70%, #0000000a);
+  box-shadow:
+    inset 0 1px 0 #ffffff22,
+    0 4px 14px var(--finish-shadow);
+  transition:
+    box-shadow 180ms ease,
+    filter 180ms ease;
+}
+.marketing :is(.secondary-action, .guide-toc a) {
+  background-image: var(--finish-panel-light);
+  box-shadow: inset 0 1px 0 var(--finish-edge);
+}
+.marketing :is(#questions details, .faq-group details) {
+  transition: background-color 180ms ease;
+}
+.marketing :is(#questions details[open], .faq-group details[open]) {
+  background: color-mix(in srgb, var(--primary) 3%, transparent);
+}
+
+/* Grounded the footer with a darker material and a faint illuminated top edge. */
+.marketing .public-footer {
+  background:
+    linear-gradient(180deg, var(--finish-highlight), transparent 32%), var(--finish-raised);
+  box-shadow: inset 0 1px 0 var(--finish-edge);
+}
+:root[data-theme='light'] .marketing .public-footer {
+  background: linear-gradient(180deg, #f8fafd, #ffffff);
+}
+/* Replaced gray illustration canvases with bright paper and fine printed rules. */
+:root[data-theme='light'] .marketing :is(.diagram-panel svg, #about svg) {
+  background-color: #ffffff;
+}
+:root[data-theme='light'] .marketing svg:has(.sample-node) {
+  background-image:
+    linear-gradient(#b8cbe366 1px, transparent 1px),
+    linear-gradient(90deg, #b8cbe366 1px, transparent 1px),
+    linear-gradient(#d8e4f066 1px, transparent 1px),
+    linear-gradient(90deg, #d8e4f066 1px, transparent 1px);
+}
+.marketing .footer-project-icon {
+  filter: drop-shadow(0 2px 8px var(--finish-ring));
+}
+/* Softened the graph-paper lines without changing illustration data or series colors. */
+.marketing svg:has(.sample-node) {
+  background-color: var(--finish-raised);
+}
+.marketing .sample-node rect {
+  filter: drop-shadow(0 2px 3px var(--finish-shadow));
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .marketing :is(.guide-card, #features article, #scenarios > div:last-of-type > a):hover {
+    border-color: color-mix(in srgb, var(--primary) 40%, var(--border));
+    box-shadow: var(--finish-elevated-shadow);
+    transform: translateY(-3px);
+  }
+  .marketing :is(.primary-action, .bg-primary):hover {
+    filter: brightness(1.08);
+    box-shadow:
+      inset 0 1px 0 #ffffff30,
+      0 5px 20px var(--finish-ring);
+  }
+}
+@media (prefers-reduced-motion: no-preference) and (min-width: 850px) {
+  /* Confined ambient motion to a bounded, noninteractive hero layer. */
+  .marketing #about::before {
+    animation: public-ambient-light 20s ease-in-out infinite alternate;
+  }
+  @keyframes public-ambient-light {
+    to {
+      transform: translate(-20px, 12px) scale(1.035);
+    }
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .marketing :is(.guide-card, #features article, #scenarios > div:last-of-type > a):hover {
+    transform: none;
+  }
+}
+@media (forced-colors: active) {
+  /* Restored system text when gradient ink was unavailable or overridden. */
+  .marketing :is(#about h1 span, .guide-hero h1 span) {
+    background: none;
+    -webkit-text-fill-color: CanvasText;
+  }
+  .marketing #about::before {
+    display: none;
+  }
+}

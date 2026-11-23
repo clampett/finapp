@@ -30,7 +30,7 @@ export default function OverviewComposition({
 
   return (
     <section
-      className="my-6 p-[clamp(18px,3vw,30px)] border border-(--ui-border-2d4055) rounded-[18px] bg-[radial-gradient(ellipse_at_top_left,var(--ui-surface-223b3a4a),transparent_65%),var(--ui-surface-111b29)]"
+      className="composition-panel my-6 p-[clamp(18px,3vw,30px)] border border-(--ui-border-2d4055) rounded-[18px] bg-[radial-gradient(ellipse_at_top_left,var(--ui-surface-223b3a4a),transparent_65%),var(--ui-surface-111b29)]"
       aria-labelledby="composition-title"
     >
       <header className="flex items-start justify-between gap-5 flex-wrap">

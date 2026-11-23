@@ -8,6 +8,7 @@ import {
   simulationFields,
 } from '../simulation/simulationPreferences';
 import type { SimulationDefaults } from '../simulation/simulationPreferences';
+import { useSettingsDraft } from '../settings/settings-drafts';
 
 const card = 'space-y-4 rounded-xl border border-border bg-surface p-5 sm:p-6';
 const field = 'w-full rounded-lg border border-border bg-raised px-3 py-2 text-sm text-text';
@@ -28,6 +29,8 @@ export function SimulationPreferences({
 }) {
   const [notice, setNotice] = useState('');
   const [draft, setDraft] = useState(defaults);
+  const defaultsDirty = useSettingsDraft('simulation-defaults');
+  const assumptionsDirty = useSettingsDraft('scenario-assumptions');
   const assumptions = assumptionsFor(graph);
   function save(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -37,6 +40,7 @@ export function SimulationPreferences({
     );
     try {
       onSave(normalizeSimulationDefaults({ ...draft, ...values }));
+      defaultsDirty(false);
       setNotice('Simulation defaults saved for this browser.');
     } catch {
       setNotice('Browser storage is unavailable. Simulation defaults could not be saved.');
@@ -44,7 +48,7 @@ export function SimulationPreferences({
   }
   return (
     <>
-      <form className={card} onSubmit={save}>
+      <form className={card} onChange={() => defaultsDirty(true)} onSubmit={save}>
         <div>
           <h3 className="text-base font-semibold text-text">Forecast and debt defaults</h3>
           <p className="mt-1 text-sm text-muted">
@@ -133,6 +137,7 @@ export function SimulationPreferences({
       {ready && (
         <form
           className={card}
+          onChange={() => assumptionsDirty(true)}
           onSubmit={(event) => {
             event.preventDefault();
             const data = new FormData(event.currentTarget);
@@ -146,6 +151,7 @@ export function SimulationPreferences({
               },
             });
             setNotice('Scenario assumptions applied. Check the workspace for save status.');
+            assumptionsDirty(false);
           }}
         >
           <h3 className="text-base font-semibold text-text">Scenario cash flow assumptions</h3>
@@ -220,6 +226,8 @@ export function BalancePreferences({
   });
   const [notice, setNotice] = useState('');
   const [currency, setCurrency] = useState(display.currency);
+  const currencyDirty = useSettingsDraft('currency-display');
+  const balancesDirty = useSettingsDraft('starting-balances');
   const nodes = graph.nodes.filter(({ nodeType }) =>
     ['CHECKING', 'SAVINGS', 'INVESTMENT', 'DEBT', 'ASSET'].includes(nodeType),
   );
@@ -231,6 +239,7 @@ export function BalancePreferences({
     <>
       <form
         className={card}
+        onChange={() => currencyDirty(true)}
         onSubmit={(event) => {
           event.preventDefault();
           const rate =
@@ -238,6 +247,7 @@ export function BalancePreferences({
           try {
             localStorage.setItem(key, JSON.stringify({ currency, rate }));
             setDisplay({ currency, rate });
+            currencyDirty(false);
             setNotice('Currency display saved.');
           } catch {
             setNotice('Browser storage is unavailable. Currency display could not be saved.');
@@ -288,6 +298,7 @@ export function BalancePreferences({
       </form>
       <form
         className={card}
+        onChange={() => balancesDirty(true)}
         onSubmit={(event) => {
           event.preventDefault();
           const data = new FormData(event.currentTarget);
@@ -297,6 +308,7 @@ export function BalancePreferences({
               data.has(node.id) ? { ...node, amountOrBalance: Number(data.get(node.id)) } : node,
             ),
           });
+          balancesDirty(false);
         }}
       >
         <h3 className="text-base font-semibold text-text">Scenario starting balances</h3>

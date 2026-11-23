@@ -1,5 +1,7 @@
-import { lazy, Suspense, useEffect, useLayoutEffect, useRef, useState } from 'react';
+import { lazy, Suspense, useEffect, useRef, useState } from 'react';
 import { ArchetypeGraph } from './workspace/graphs';
+import { WorkspaceSupport } from './common/WorkspaceSupport';
+import { useWorkspaceNavigation } from './settings/useWorkspaceNavigation';
 import type { View } from './common/finance';
 import { demoProfile, API_BASE } from './common/finance';
 import { endSession, sessionHeaders } from './common/session';
@@ -15,6 +17,8 @@ import type { UserProfile } from './views/SettingsTab';
 // Deferred the independent news desk and forecast library until their tabs were opened.
 const NewsTab = lazy(() => import('./news/NewsTab'));
 const HistoryTab = lazy(() => import('./history/HistoryTab'));
+// Deferred the SVG insight carousel without adding chart-library weight to the sidebar.
+const SidebarPulse = lazy(() => import('./pulse/SidebarPulse'));
 
 const DEMO_PROFILES: Record<number, UserProfile> = {
   1: { username: 'alex_grad', displayName: 'Alex Rivera (Recent Grad)', profilePicture: null },
@@ -50,12 +54,8 @@ export default function App() {
   // Scoped the selected demo profile independently from the signed-in user;
   // the query parameter selected examples without changing account ownership.
   const [profile, setProfile] = useState(demo ? initialDemoProfile : userId);
-  const [view, setView] = useState<View>(() => {
-    const requested = params.get('view');
-    if (requested === 'settings') return requested;
-    return views.find(({ id }) => id === requested)?.id ?? 'overview';
-  });
-  const [search, setSearch] = useState('');
+  const navigation = useWorkspaceNavigation(views, `${demo ? 'demo' : 'user'}:${profile}`);
+  const { view, search, setSearch } = navigation;
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [accountOpen, setAccountOpen] = useState(false);
   const accountMenu = useRef<HTMLDivElement>(null);
@@ -88,10 +88,6 @@ export default function App() {
       profilePicture: null,
     };
   });
-  // Reset the page position before the newly selected tab was painted.
-  useLayoutEffect(() => {
-    window.scrollTo({ top: 0, behavior: 'instant' });
-  }, [view]);
   useEffect(() => {
     if (demo) {
       try {
@@ -190,18 +186,13 @@ export default function App() {
     }
   }, [demo, userId, initialDemoProfile]);
   function openView(next: View) {
-    // Stored the view in the current URL so reloads kept their place and fresh entries opened Overview.
-    const url = new URL(location.href);
-    if (next === 'overview') url.searchParams.delete('view');
-    else url.searchParams.set('view', next);
-    history.replaceState(history.state, '', url);
-    setSearch('');
     setAccountOpen(false);
-    setView(next);
+    void navigation.navigate(next);
   }
   if (!demo && !userId) return null;
   return (
-    <div className="flex min-h-dvh max-[760px]:block">
+    // Scoped the material finish to the workspace without changing its layout or navigation.
+    <div className="workspace-shell flex min-h-dvh max-[760px]:block">
       <aside
         id="workspace-sidebar"
         className={`w-54 shrink-0 border-r border-border p-[30px_18px] flex-col bg-raised sticky top-0 h-dvh max-[760px]:static max-[760px]:h-auto max-[760px]:w-full max-[760px]:px-4 max-[760px]:pt-3.75 max-[760px]:pb-2.25 max-[760px]:border-r-0 max-[760px]:border-b max-[760px]:border-border ${sidebarOpen ? 'flex' : 'hidden'}`}
@@ -216,7 +207,7 @@ export default function App() {
           />
           FinApp
         </a>
-        <div className="text-[9px] tracking-[1.6px] text-subtle m-[51px_14px_14px] max-[760px]:hidden">
+        <div className="workspace-section-label text-[9px] tracking-[1.6px] text-subtle m-[51px_14px_14px] max-[760px]:hidden">
           YOUR WORKSPACE
         </div>
         <nav
@@ -241,33 +232,15 @@ export default function App() {
             </button>
           ))}
         </nav>
-        {/* Opened help in a separate tab so the current workspace session stayed open. */}
-        <a
-          className="workspace-sidebar-help"
-          href="/faq"
-          target="_blank"
-          rel="noopener noreferrer"
-          aria-label="Help center, opens in a new tab"
-        >
-          <svg
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            strokeWidth="1.7"
-            strokeLinecap="round"
-            aria-hidden="true"
-          >
-            <circle cx="12" cy="12" r="9" />
-            <path d="M9.5 9a2.5 2.5 0 1 1 3.7 2.2c-.8.5-1.2 1-1.2 1.8m0 3h.01" />
-          </svg>
-          <span>
-            <strong>Help center</strong>
-            <small>Guides and answers</small>
-          </span>
-          <span className="workspace-help-arrow" aria-hidden="true">
-            ↗
-          </span>
-        </a>
+        <Suspense fallback={<div className="pulse-slot" aria-hidden="true" />}>
+          <SidebarPulse
+            key={`pulse-${demo}-${profile}`}
+            userId={profile}
+            demo={demo}
+            onNavigate={openView}
+          />
+        </Suspense>
+        <WorkspaceSupport />
       </aside>
       <main className="flex-1 min-w-0">
         <header className="h-18.5 flex gap-5 items-center px-8 border-b border-border bg-header max-[760px]:h-15 max-[760px]:px-4 max-[760px]:gap-2.5">
@@ -292,7 +265,7 @@ export default function App() {
               <path d="M9 4v16" />
             </svg>
           </button>
-          <div className="text-xs text-(--ui-text-7f8ea5) flex-1 max-[760px]:hidden">
+          <div className="text-[13px] text-(--ui-text-7f8ea5) flex-1 max-[760px]:hidden">
             Workspace <span className="mx-2.5 text-(--ui-text-4b5971)">/</span>{' '}
             <strong className="text-(--ui-text-bac5d7) font-medium">
               {view === 'settings' ? 'Settings' : views.find((v) => v.id === view)?.label}
@@ -515,6 +488,12 @@ export default function App() {
               activeTheme={theme}
               onSelectTheme={selectTheme}
               onNavigate={openView}
+              settingsReturnLabel={navigation.returnLabel}
+              onCloseSettings={() => {
+                setAccountOpen(false);
+                void navigation.closeSettings();
+              }}
+              registerSettingsGuard={navigation.registerGuard}
             />
           )}
         </Suspense>

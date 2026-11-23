@@ -3,6 +3,7 @@ import { API_BASE, activeGraph, parseGraph } from '../common/finance';
 import type { GraphData } from '../common/finance';
 import { newHistory, recordGraph } from './graph-workspace';
 import { clearSession, sessionHeaders } from '../common/session';
+import { notifyPulseUpdate } from '../pulse/pulse-events';
 
 export function useScenarioGraph(userId: number, demo: boolean) {
   const storageKey = `finapp-scenario-v2:${demo ? 'demo' : 'user'}:${userId}`;
@@ -85,6 +86,8 @@ export function useScenarioGraph(userId: number, demo: boolean) {
     } catch {
       /* Retained the in-memory history when browser persistence failed. */
     }
+    // Published the current graph locally so Pulse followed editing, undo, and restore without another API request.
+    notifyPulseUpdate(storageKey, graph);
   }, [graph, loaded, storageKey]);
   return {
     storageKey,

@@ -1,6 +1,10 @@
 @import 'tailwindcss';
 @import './theme-palette.css';
 @import './theme.css';
+@import './workspace-support.css';
+@import '../pulse/pulse.css';
+@import '../pulse/pulse-motion.css';
+@import './materials.css';
 
 @theme {
   --color-base: #0c1018;

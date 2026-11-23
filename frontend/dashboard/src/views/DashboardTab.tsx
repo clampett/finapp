@@ -27,7 +27,8 @@ export function DashboardTab({
         Financial Overview
       </h2>
 
-      <div className="grid grid-cols-4 gap-3.5 mb-7 max-[760px]:grid-cols-2 max-[760px]:gap-2.5 max-[760px]:mb-5.75">
+      {/* Distinguished summary materials while preserving their original figures and layout. */}
+      <div className="overview-metrics grid grid-cols-4 gap-3.5 mb-7 max-[760px]:grid-cols-2 max-[760px]:gap-2.5 max-[760px]:mb-5.75">
         <div className="p-[18px_19px] bg-surface border border-(--ui-border-283145) rounded-[11px] flex flex-col gap-2.5 max-[760px]:p-3.5">
           <span className="text-[11px] text-(--ui-text-9cacbf)">Net Worth</span>
           <strong

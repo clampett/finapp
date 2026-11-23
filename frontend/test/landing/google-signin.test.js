@@ -39,6 +39,7 @@ function googlePage({ sdk = true, enabled = true } = {}) {
   const rendered = [];
   const scripts = [];
   const lifecycle = {};
+  let themeChanged;
   let configuration;
   const identity = {
     initialize: (config) => {
@@ -56,6 +57,9 @@ function googlePage({ sdk = true, enabled = true } = {}) {
       observe() {}
     },
     MutationObserver: class {
+      constructor(callback) {
+        themeChanged = callback;
+      }
       observe() {}
     },
     fetch: async () => ({
@@ -89,6 +93,10 @@ function googlePage({ sdk = true, enabled = true } = {}) {
     identity,
     credentials,
     config: () => configuration,
+    changeTheme: (theme) => {
+      sandbox.document.documentElement.dataset.theme = theme;
+      themeChanged();
+    },
   };
 }
 
@@ -100,9 +108,21 @@ test('Google used backend configuration and a visible button on an empty form', 
   assert.equal(page.config().auto_select, false);
   assert.equal(page.rendered[0].container, page.nodes.get('google-signin-btn'));
   assert.equal(page.rendered[0].options.width, 350);
+  assert.equal(page.rendered[0].options.theme, 'outline_dark');
   page.config().callback({ credential: 'signed-credential' });
   await flush();
   assert.deepEqual(page.credentials, ['signed-credential']);
+});
+
+test('Google button followed theme changes using native light and dark outline styles', async () => {
+  const page = googlePage();
+  await flush();
+  page.changeTheme('light');
+  assert.equal(page.rendered.at(-1).options.theme, 'outline');
+  page.changeTheme('dark');
+  assert.equal(page.rendered.at(-1).options.theme, 'outline_dark');
+  assert.equal(page.rendered.at(-1).options.width, 350);
+  assert.equal(page.config().nonce, 'browser-challenge');
 });
 
 test('a blocked Google SDK showed retry and a late SDK load could recover', async () => {

@@ -1,0 +1,128 @@
+/* Anchored a compact resource group below navigation without introducing another workspace tab. */
+.workspace-support {
+  flex-shrink: 0;
+  margin-top: auto;
+  padding: 14px;
+  border: 1px solid var(--color-border);
+  border-radius: 12px;
+  background:
+    linear-gradient(
+      135deg,
+      color-mix(in srgb, var(--color-primary) 4%, transparent),
+      transparent 65%
+    ),
+    var(--color-surface);
+  color: var(--color-text);
+}
+.workspace-support a {
+  display: flex;
+  align-items: center;
+  text-decoration: none;
+  border-radius: 5px;
+}
+.workspace-support-primary {
+  gap: 8px;
+  min-height: 32px;
+  color: var(--color-text);
+}
+.workspace-support-primary strong {
+  font-size: 12px;
+  font-weight: 600;
+  line-height: 1.5;
+}
+.workspace-support-icon {
+  box-sizing: content-box;
+  width: 20px;
+  height: 20px;
+  flex-shrink: 0;
+  padding: 5px;
+  border-radius: 9px;
+  color: var(--color-primary);
+  background: color-mix(in srgb, var(--color-primary) 9%, transparent);
+}
+.workspace-support-external {
+  width: 13px;
+  height: 13px;
+  margin-left: auto;
+  flex-shrink: 0;
+  color: var(--color-muted);
+}
+.workspace-support-description {
+  margin: 10px 0 0;
+  font-size: 11px;
+  line-height: 1.6;
+  color: var(--color-muted);
+}
+.workspace-support-guide {
+  min-height: 30px;
+  gap: 8px;
+  margin-top: 12px;
+  padding-top: 10px;
+  border-top: 1px solid var(--color-border);
+  font-size: 10px;
+  line-height: 1.5;
+  color: var(--color-muted);
+}
+.workspace-support a.workspace-support-guide {
+  border-radius: 0;
+}
+.workspace-support-guide > svg:first-child {
+  width: 14px;
+  height: 14px;
+  flex-shrink: 0;
+}
+.workspace-support a:hover,
+.workspace-support a:hover .workspace-support-external {
+  color: var(--color-primary);
+}
+.workspace-support a:focus-visible {
+  outline: 2px solid var(--color-primary);
+  outline-offset: 4px;
+}
+/* Removed optional copy at short desktop heights before it could crowd the fixed navigation. */
+@media (min-width: 761px) and (max-height: 820px) {
+  .workspace-support {
+    padding: 12px;
+  }
+  .workspace-support-description {
+    display: none;
+  }
+  .workspace-support-guide {
+    margin-top: 8px;
+    padding-top: 8px;
+  }
+  #workspace-sidebar {
+    padding-block: 22px;
+  }
+}
+/* Tightened only vertical spacing on small-height windows; kept every tab and resource visible without a scrollbar. */
+@media (min-width: 761px) and (max-height: 700px) {
+  #workspace-sidebar {
+    padding-block: 18px;
+  }
+  #workspace-sidebar .workspace-section-label {
+    margin-top: 24px;
+  }
+  #workspace-sidebar > nav > button {
+    padding-block: 8px;
+  }
+}
+@media (min-width: 761px) and (max-height: 640px) {
+  #workspace-sidebar .workspace-section-label {
+    margin-top: 20px;
+  }
+  #workspace-sidebar > nav > button {
+    padding-block: 6px;
+  }
+}
+@media (max-width: 760px) {
+  .workspace-support {
+    display: none;
+  }
+}
+/* Lowered the resource group into the unused bottom inset without changing tab spacing. */
+@media (min-width: 761px) {
+  #workspace-sidebar {
+    padding-bottom: 14px;
+  }
+}

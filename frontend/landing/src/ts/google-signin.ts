@@ -65,7 +65,8 @@ export function setupGoogleSignIn(onCredential: (credential: string) => Promise<
     width = Math.min(400, Math.max(200, Math.floor(container!.getBoundingClientRect().width)));
     container!.replaceChildren();
     identity.renderButton(container!, {
-      theme: document.documentElement.dataset.theme === 'light' ? 'outline' : 'filled_black',
+      // Matched Google's native outline variants to the page theme without a contrasting logo tile.
+      theme: document.documentElement.dataset.theme === 'light' ? 'outline' : 'outline_dark',
       size: 'large',
       width,
       text: 'continue_with',

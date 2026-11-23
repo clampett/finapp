@@ -1,0 +1,235 @@
+@import '../../../shared/visual-tokens.css';
+
+/* Bridged the existing semantic utilities to the shared palette without changing
+   component behavior or the distinct meanings of positive and negative values. */
+html:root:root {
+  --color-base: var(--finish-base);
+  --color-surface: var(--finish-surface);
+  --color-raised: var(--finish-raised);
+  --color-float: var(--finish-float);
+  --color-header: var(--finish-header);
+  --color-border: var(--finish-border);
+  --color-text: var(--finish-text);
+  --color-muted: var(--finish-muted);
+  --color-subtle: var(--finish-subtle);
+  --color-primary: var(--finish-primary);
+  --color-primary-fg: var(--finish-primary-fg);
+  --color-active-bg: var(--finish-active);
+  --color-active-text: var(--finish-active-text);
+  --color-active-border: var(--finish-active-border);
+  --color-hover-bg: var(--finish-hover);
+  /* Reconciled older neutral paints with the material system; retained status hues. */
+  --ui-surface-0c1018: var(--finish-base);
+  --ui-surface-101722: var(--finish-raised);
+  --ui-surface-151c29: var(--finish-surface);
+  --ui-surface-161f2e: var(--finish-surface);
+  --ui-surface-121a27: var(--finish-raised);
+  --ui-surface-131d2b: var(--finish-surface);
+  --ui-surface-20293a: var(--finish-float);
+  --ui-surface-1a2737: var(--finish-float);
+}
+
+.workspace-shell {
+  background:
+    radial-gradient(ellipse 850px 460px at 75% 0, var(--finish-violet-light), transparent 72%),
+    radial-gradient(ellipse 650px 650px at 100% 55%, var(--finish-blue-light), transparent 75%),
+    var(--color-base);
+  -webkit-font-smoothing: antialiased;
+}
+
+/* Added depth to the fixed navigation without changing its dimensions or overflow. */
+.workspace-shell #workspace-sidebar {
+  background:
+    radial-gradient(ellipse at 0 0, var(--finish-violet-light), transparent 48%),
+    linear-gradient(180deg, var(--finish-surface), var(--finish-raised) 48%);
+  box-shadow:
+    1px 0 0 var(--finish-edge),
+    12px 0 38px var(--finish-shadow);
+}
+.workspace-shell > main > header {
+  background: var(--finish-panel-light), var(--color-header);
+  box-shadow: 0 4px 20px var(--finish-shadow);
+}
+.workspace-shell [aria-label='Main navigation'] button {
+  transition:
+    background-color 180ms ease,
+    color 180ms ease,
+    border-color 180ms ease,
+    box-shadow 180ms ease;
+}
+.workspace-shell [aria-label='Main navigation'] button[aria-current='page'] {
+  background-image: linear-gradient(110deg, var(--finish-violet-light), transparent);
+  box-shadow:
+    inset 0 1px 0 var(--finish-edge),
+    0 3px 12px var(--finish-shadow);
+}
+.workspace-shell [aria-label='Main navigation'] button[aria-current='page'] > span {
+  color: var(--color-primary);
+}
+
+/* Shaded the existing card surfaces instead of placing decorative layers above
+   charts, menus, or form controls where they could intercept pointer input. */
+.workspace-shell :is(div, section, article, form, header).bg-surface,
+.workspace-shell :is(.news-card, .news-desk-art, .history-hero-summary, .workspace-support) {
+  background-image: var(--finish-panel-light);
+  box-shadow: var(--finish-panel-shadow);
+}
+.workspace-shell .workspace-tab-intro {
+  background:
+    radial-gradient(ellipse at 100% 0, var(--finish-blue-light), transparent 65%),
+    linear-gradient(
+      115deg,
+      color-mix(in srgb, var(--tab-accent) 9%, var(--color-surface)),
+      var(--color-surface) 75%
+    );
+  box-shadow: var(--finish-panel-shadow);
+  border-inline-start-color: color-mix(in srgb, var(--tab-accent) 72%, var(--color-border));
+}
+.workspace-shell .workspace-tab-intro h2 {
+  text-wrap: balance;
+}
+.workspace-shell :is(.news-masthead, .history-hero) {
+  background: radial-gradient(ellipse at 85% 25%, var(--finish-violet-light), transparent 65%);
+}
+
+/* Refracted a quiet accent through primary actions while retaining their
+   original hit areas, disabled state, and native keyboard semantics. */
+.workspace-shell :is(button, a).bg-primary {
+  background-image: linear-gradient(180deg, #ffffff14, #ffffff00 70%, #0000000a);
+  box-shadow:
+    inset 0 1px 0 #ffffff22,
+    0 3px 9px var(--finish-shadow);
+  transition:
+    box-shadow 180ms ease,
+    filter 180ms ease;
+}
+.workspace-shell
+  :is(input, textarea, select):not(
+    [type='checkbox'],
+    [type='radio'],
+    [type='range'],
+    [type='file']
+  ) {
+  transition:
+    border-color 160ms ease,
+    box-shadow 160ms ease;
+}
+.workspace-shell :is(input, textarea, select):focus-visible {
+  box-shadow: 0 0 0 3px var(--finish-ring);
+}
+.workspace-shell :is(dialog, [role='dialog']) {
+  box-shadow: var(--finish-elevated-shadow);
+}
+.workspace-shell table thead {
+  background-image: linear-gradient(180deg, var(--finish-highlight), transparent);
+}
+.workspace-shell table tbody tr {
+  transition: background-color 160ms ease;
+}
+.workspace-shell table tbody tr:hover {
+  background-color: color-mix(in srgb, var(--color-primary) 4%, transparent);
+}
+
+/* Brought the drawing surface into the same lighting system while preserving
+   its grid, route colors, zoom geometry, and every connection hit target. */
+.workspace-shell .canvas-host {
+  box-shadow:
+    inset 0 0 65px var(--finish-shadow),
+    0 8px 24px var(--finish-shadow);
+}
+.workspace-shell .pulse-card {
+  box-shadow: var(--finish-panel-shadow);
+}
+
+/* Distinguished summary cards with reflected category light instead of loud
+   solid fills, keeping all monetary text and financial series unchanged. */
+.workspace-shell .overview-metrics > div {
+  --metric-light: var(--color-primary);
+  background-image:
+    radial-gradient(
+      ellipse at 100% 0,
+      color-mix(in srgb, var(--metric-light) 9%, transparent),
+      transparent 72%
+    ),
+    var(--finish-panel-light);
+  box-shadow:
+    inset 0 1px 0 color-mix(in srgb, var(--metric-light) 24%, transparent),
+    var(--finish-panel-shadow);
+}
+.workspace-shell .overview-metrics > div:nth-child(2) {
+  --metric-light: var(--color-blue);
+}
+.workspace-shell .overview-metrics > div:nth-child(3) {
+  --metric-light: var(--color-muted);
+}
+.workspace-shell .overview-metrics > div:nth-child(4) {
+  --metric-light: var(--color-mint);
+}
+.workspace-shell .composition-panel {
+  background:
+    radial-gradient(ellipse at 0 0, var(--finish-teal-light), transparent 65%),
+    var(--finish-panel-light), var(--color-surface);
+  box-shadow: var(--finish-panel-shadow);
+}
+/* Carried the material finish into lazy-loaded editorial and archive panels. */
+.workspace-shell :is(.history-run, .history-detail, .news-sidebar > section) {
+  background-image: var(--finish-panel-light);
+  box-shadow: var(--finish-panel-shadow);
+}
+.workspace-shell .history-run.history-selected {
+  box-shadow:
+    inset 0 1px 0 var(--finish-edge),
+    0 0 0 1px var(--color-active-border),
+    var(--finish-panel-shadow);
+}
+
+/* Removed tinted washes from daylight panels while retaining the dark materials. */
+:root[data-theme='light'] .workspace-shell .overview-metrics > div,
+:root[data-theme='light'] .workspace-shell .workspace-tab-intro {
+  background: var(--color-surface);
+  box-shadow: var(--finish-panel-shadow);
+}
+:root[data-theme='light'] .workspace-shell :is(.canvas-host, .market-chart-paper, .news-desk-art) {
+  background-color: #ffffff;
+  box-shadow: 0 1px 4px var(--finish-shadow);
+}
+/* Kept the paper texture crisp in both the shared AI and Investments price charts. */
+:root[data-theme='light'] .workspace-shell .recharts-wrapper:has(.recharts-cartesian-grid) {
+  background-color: #ffffff;
+}
+:root[data-theme='light'] .workspace-shell .market-chart-paper .recharts-wrapper {
+  /* Revealed the printed paper grid beneath the transparent market plotting layer. */
+  background-color: transparent;
+}
+:root[data-theme='light'] .workspace-shell .market-chart-paper {
+  background-image:
+    linear-gradient(#dce7f17a 1px, transparent 1px),
+    linear-gradient(90deg, #dce7f17a 1px, transparent 1px) !important;
+  background-size: 32px 32px;
+}
+
+@media (hover: hover) and (pointer: fine) {
+  /* Limited hover lighting to capable pointers; kept dashboard data stationary. */
+  .workspace-shell :is(button, a).bg-primary:not(:disabled):hover {
+    filter: brightness(1.08);
+    box-shadow:
+      inset 0 1px 0 #ffffff30,
+      0 5px 18px var(--finish-ring);
+  }
+  .workspace-shell .news-card:hover {
+    box-shadow: var(--finish-elevated-shadow);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  /* Removed added interpolation when reduced motion was requested. */
+  .workspace-shell :is(button, a, input, select, textarea, tr) {
+    transition: none;
+  }
+}
+@media (forced-colors: active) {
+  .workspace-shell,
+  .workspace-shell #workspace-sidebar,
+  .workspace-shell .workspace-tab-intro {
+    background: Canvas;
+  }
+}

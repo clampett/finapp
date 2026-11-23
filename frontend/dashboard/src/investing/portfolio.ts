@@ -1,4 +1,5 @@
 import { API_BASE } from '../common/finance';
+import { notifyPulseUpdate } from '../pulse/pulse-events';
 import { sessionHeaders } from '../common/session';
 
 export interface Holding {
@@ -168,6 +169,8 @@ export function saveLocalHoldings(storageKey: string, holdings: Holding[]) {
   } catch {
     /* Ignore private browsing quota errors */
   }
+  // Updated visible Pulse signals after an existing holdings cache changed; avoided another portfolio fetch.
+  notifyPulseUpdate(storageKey);
 }
 
 export function getStoredPortfolioValue(storageKey: string): number {

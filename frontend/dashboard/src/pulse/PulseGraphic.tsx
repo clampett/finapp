@@ -137,6 +137,7 @@ export function PulseGraphic({
       aria-label={`Trend from ${data[0].label} to ${data.at(-1)!.label}`}
       onPointerMove={(event) => {
         const box = event.currentTarget.getBoundingClientRect();
+        if (box.width <= 0) return;
         setHover(
           Math.max(
             0,

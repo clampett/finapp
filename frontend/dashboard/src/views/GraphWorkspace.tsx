@@ -1,4 +1,5 @@
 import { useCallback, useMemo, useState } from 'react';
+import { OverspendingWarning } from '../common/OverspendingWarning';
 import { ScenarioCoach } from '../coach/ScenarioCoach';
 import { BudgetingTab } from './BudgetingTab';
 import { scopeGraph } from '../workspace/graph-workspace';
@@ -104,6 +105,13 @@ export function GraphWorkspace({
       )}
       {view !== 'ai' && (
         <WorkspaceIntro view={view} live={live} t={t} demo={demo} storageStatus={storageStatus} />
+      )}
+      {loaded && (
+        <OverspendingWarning
+          income={t.income}
+          expenses={t.expenses}
+          onReviewBudget={() => onNavigate('budgeting')}
+        />
       )}
       {/* Kept scenario imports with the graph editor. */}
       {view === 'graph' && (

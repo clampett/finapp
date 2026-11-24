@@ -106,10 +106,13 @@ export function GraphWorkspace({
       {view !== 'ai' && (
         <WorkspaceIntro view={view} live={live} t={t} demo={demo} storageStatus={storageStatus} />
       )}
-      {loaded && (
+      {/* Mount only for a real shortfall. Recovery ends the dismissed episode,
+          allowing a later shortfall to warn again without reopening on every edit. */}
+      {loaded && !error && Math.round(-t.surplus * 100) > 0 && (
         <OverspendingWarning
-          income={t.income}
-          expenses={t.expenses}
+          key={storageKey}
+          income={t.takeHome}
+          expenses={t.expenses + t.payments}
           onReviewBudget={() => onNavigate('budgeting')}
         />
       )}

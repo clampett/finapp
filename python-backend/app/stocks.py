@@ -10,6 +10,7 @@ import re
 from datetime import datetime, timedelta, timezone
 
 from app.market_data import get_ticker_stats
+from app.names import lookup_name
 from app.price_cache import NoPriceData, get_prices
 
 # Suggested in the Investing tab before anyone types a symbol.
@@ -232,7 +233,7 @@ def lookup_stock(raw_symbol: str) -> dict:
     recent = prices.tail(HISTORY_POINTS)
     return {
         "symbol": symbol,
-        "name": POPULAR_STOCKS.get(symbol),
+        "name": POPULAR_STOCKS.get(symbol) or lookup_name(symbol),
         "currency": prices.attrs["currency"],
         "stats_start_date": stats.get("start_date"),
         "stats_end_date": stats.get("end_date"),

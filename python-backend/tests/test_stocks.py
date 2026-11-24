@@ -8,7 +8,7 @@ import pandas as pd
 import pytest
 from fastapi import HTTPException
 
-from app import price_cache, stocks
+from app import names, price_cache, stocks
 from app.routers import stocks as stocks_router
 
 
@@ -80,6 +80,12 @@ def test_lookup_returns_price_stats_and_a_year_of_history(market):
 
 def test_symbols_outside_the_popular_list_have_no_name(market):
     assert stocks.lookup_stock("ZZZZ")["name"] is None
+
+
+def test_a_stock_outside_the_popular_list_gets_its_name_from_yahoo(market, monkeypatch):
+    monkeypatch.setattr(names, "_fetch_name", lambda ticker: "Zed Corporation")
+    assert stocks.lookup_stock("ZZZZ")["name"] == "Zed Corporation"
+    assert stocks.lookup_stock("AAPL")["name"] == "Apple"  # built-in names win
 
 
 def test_recent_listings_show_a_price_but_no_annualized_stats(market):

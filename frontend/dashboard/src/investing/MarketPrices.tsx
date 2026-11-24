@@ -148,7 +148,124 @@ function Status({ items, error }: { items: unknown[] | null; error: string }) {
   return null;
 }
 
-function CryptoTable({ coins }: { coins: CryptoQuote[] }) {
+const POPULAR_COINS = [
+  { symbol: 'BTC', name: 'Bitcoin' },
+  { symbol: 'ETH', name: 'Ethereum' },
+  { symbol: 'SOL', name: 'Solana' },
+  { symbol: 'XRP', name: 'XRP' },
+  { symbol: 'ADA', name: 'Cardano' },
+  { symbol: 'LTC', name: 'Litecoin' },
+  { symbol: 'BNB', name: 'BNB' },
+];
+const MAX_COINS = 25;
+const COIN_PATTERN = /^[A-Z0-9]{1,15}$/;
+
+// Loaded the user's saved coin list, which starts empty like the stock holdings.
+function readCoins(key: string): string[] {
+  try {
+    const raw = localStorage.getItem(key);
+    if (raw === null) return [];
+    const parsed: unknown = JSON.parse(raw);
+    if (!Array.isArray(parsed)) return [];
+    const coins = parsed.filter(
+      (item): item is string => typeof item === 'string' && COIN_PATTERN.test(item),
+    );
+    return [...new Set(coins)].slice(0, MAX_COINS);
+  } catch {
+    return [];
+  }
+}
+
+function saveCoins(key: string, coins: string[]) {
+  try {
+    localStorage.setItem(key, JSON.stringify(coins));
+  } catch {
+    /* Ignore private browsing quota errors */
+  }
+}
+
+async function fetchCoin(symbol: string, signal: AbortSignal): Promise<CryptoQuote> {
+  const response = await fetch(`${API_BASE}/market/crypto/${encodeURIComponent(symbol)}`, {
+    signal: AbortSignal.any([signal, AbortSignal.timeout(15_000)]),
+  });
+  const body = await response.json().catch(() => null);
+  if (!response.ok) {
+    throw new Error(
+      typeof body?.detail === 'string'
+        ? body.detail
+        : `Could not look up ${symbol} (${response.status}).`,
+    );
+  }
+  if (!isCryptoQuote(body)) throw new Error('Market data returned an invalid quote.');
+  return body;
+}
+
+// Refreshed every coin in the user's list while visible and kept old prices during failures.
+function useCoinQuotes(coins: string[]) {
+  const [quotes, setQuotes] = useState<Record<string, CryptoQuote>>({});
+  const [errors, setErrors] = useState<Record<string, string>>({});
+  const listKey = coins.join(',');
+
+  useEffect(() => {
+    const list = listKey ? listKey.split(',') : [];
+    const controller = new AbortController();
+    let running = false;
+    let lastAttempt = -Infinity;
+    const load = async () => {
+      if (running || document.hidden || list.length === 0) return;
+      if (Date.now() - lastAttempt < REFRESH_MS) return;
+      lastAttempt = Date.now();
+      running = true;
+      try {
+        const results = await Promise.allSettled(
+          list.map((sym) => fetchCoin(sym, controller.signal)),
+        );
+        if (controller.signal.aborted) return;
+        const nextQuotes: Record<string, CryptoQuote> = {};
+        const nextErrors: Record<string, string> = {};
+        results.forEach((result, index) => {
+          const sym = list[index];
+          if (result.status === 'fulfilled') {
+            nextQuotes[sym] = result.value;
+          } else {
+            const reason = result.reason;
+            nextErrors[sym] =
+              reason instanceof Error && reason.name !== 'TimeoutError'
+                ? reason.message
+                : `Could not load ${sym} in time.`;
+          }
+        });
+        setQuotes((cur) => ({ ...cur, ...nextQuotes }));
+        setErrors(nextErrors);
+      } finally {
+        running = false;
+      }
+    };
+    void load();
+    // Refreshed overdue quotes when a backgrounded tab became visible again.
+    const timer = window.setInterval(load, REFRESH_MS);
+    document.addEventListener('visibilitychange', load);
+    return () => {
+      controller.abort();
+      window.clearInterval(timer);
+      document.removeEventListener('visibilitychange', load);
+    };
+  }, [listKey]);
+
+  return { quotes, errors, setQuotes };
+}
+
+function CryptoTable({
+  coins,
+  quotes,
+  errors,
+  onRemove,
+}: {
+  coins: string[];
+  quotes: Record<string, CryptoQuote>;
+  errors: Record<string, string>;
+  onRemove: (symbol: string) => void;
+}) {
   return (
     <div className={TABLE_WRAP}>
       <table className="w-full border-collapse text-left text-xs whitespace-nowrap">
@@ -158,39 +275,86 @@ function CryptoTable({ coins }: { coins: CryptoQuote[] }) {
             <th className={TH}>Price (USD)</th>
             <th className={TH}>Change since previous close</th>
             <th className={TH}>Fetched</th>
+            <th className={TH}></th>
           </tr>
         </thead>
         <tbody>
-          {coins.map((coin) => (
-            <tr key={coin.symbol}>
-              <td className={TD}>
-                <strong>{coin.symbol}</strong>
-                {coin.name && <small className="text-(--ui-text-8b9ab1)"> {coin.name}</small>}
-              </td>
-              <td className={TD}>{quotePrice(coin.price)}</td>
-              <td className={`${TD} ${tone(coin.change_percent)}`}>
-                {signed(coin.change_percent)}
-              </td>
-              <td className={TD}>{quoteTime(coin.as_of)}</td>
-            </tr>
-          ))}
+          {coins.map((sym) => {
+            const coin = quotes[sym];
+            return (
+              <tr key={sym}>
+                <td className={TD}>
+                  <strong>{sym}</strong>
+                  {coin?.name && <small className="text-(--ui-text-8b9ab1)"> {coin.name}</small>}
+                </td>
+                {coin ? (
+                  <>
+                    <td className={TD}>{quotePrice(coin.price)}</td>
+                    <td className={`${TD} ${tone(coin.change_percent)}`}>
+                      {signed(coin.change_percent)}
+                    </td>
+                    <td className={TD}>
+                      {quoteTime(coin.as_of)}
+                      {errors[sym] && (
+                        <span className="block text-coral whitespace-normal" role="status">
+                          Refresh failed. Showing last available price. {errors[sym]}
+                        </span>
+                      )}
+                    </td>
+                  </>
+                ) : (
+                  <td className={`${TD} text-(--ui-text-91a3bd)`} colSpan={3}>
+                    {errors[sym] ?? 'Loading…'}
+                  </td>
+                )}
+                <td className={TD}>
+                  <button
+                    type="button"
+                    className="inline-flex items-center justify-center gap-1.75 whitespace-nowrap rounded-[7px] px-3.25 py-2.25 text-[11px] font-medium min-h-8.5 cursor-pointer text-coral border border-(--ui-border-633246) bg-(--ui-surface-2b1b28) hover:bg-(--ui-surface-hover-3d2034)"
+                    aria-label={`Remove ${sym}`}
+                    onClick={() => onRemove(sym)}
+                  >
+                    Remove
+                  </button>
+                </td>
+              </tr>
+            );
+          })}
         </tbody>
       </table>
     </div>
   );
 }
 
-export function MarketPrices() {
-  const crypto = usePrices('crypto', isCryptoQuote);
+export function MarketPrices({ storageKey }: { storageKey: string }) {
+  // Reinitialize state and cancel in-flight lookups when the profile changes.
+  return <ProfileMarketPrices key={storageKey} storageKey={storageKey} />;
+}
+
+function ProfileMarketPrices({ storageKey }: { storageKey: string }) {
+  const coinsKey = `${storageKey}:crypto-list`;
+  const [coins, setCoins] = useState<string[]>(() => readCoins(coinsKey));
+  const currentCoins = useRef(coins);
+  const { quotes, errors, setQuotes } = useCoinQuotes(coins);
   const currencies = usePrices('currencies', isCurrencyQuote);
   const [symbol, setSymbol] = useState('');
-  const [found, setFound] = useState<CryptoQuote | null>(null);
   const [message, setMessage] = useState('');
   const [busy, setBusy] = useState(false);
   const lookup = useRef<AbortController | null>(null);
   useEffect(() => () => lookup.current?.abort(), []);
 
-  async function lookUpCoin(raw: string) {
+  function updateCoins(next: string[]) {
+    currentCoins.current = next;
+    setCoins(next);
+    saveCoins(coinsKey, next);
+  }
+
+  function removeCoin(coin: string) {
+    updateCoins(currentCoins.current.filter((item) => item !== coin));
+  }
+
+  // Looked the coin up first so a typo is never added to the list.
+  async function addCoin(raw: string) {
     const sym = raw.trim().toUpperCase();
     if (!sym) return;
     lookup.current?.abort();
@@ -199,26 +363,22 @@ export function MarketPrices() {
     setBusy(true);
     setMessage('');
     try {
-      const response = await fetch(`${API_BASE}/market/crypto/${encodeURIComponent(sym)}`, {
-        signal: AbortSignal.any([controller.signal, AbortSignal.timeout(15_000)]),
-      });
-      const body = await response.json().catch(() => null);
-      if (!response.ok) {
-        throw new Error(
-          typeof body?.detail === 'string'
-            ? body.detail
-            : `Could not look up ${sym} (${response.status}).`,
-        );
-      }
-      if (!isCryptoQuote(body)) {
-        throw new Error('Market data returned an invalid quote.');
-      }
+      const quote = await fetchCoin(sym, controller.signal);
       if (controller.signal.aborted) return;
-      setFound(body);
+      const latest = currentCoins.current;
+      if (latest.includes(quote.symbol)) {
+        setMessage(`${quote.symbol} is already in your list.`);
+        return;
+      }
+      if (latest.length >= MAX_COINS) {
+        setMessage(`Your list is full (${MAX_COINS} coins). Remove one to add another.`);
+        return;
+      }
+      setQuotes((cur) => ({ ...cur, [quote.symbol]: quote }));
+      updateCoins([...latest, quote.symbol]);
       setSymbol('');
     } catch (err) {
       if (controller.signal.aborted) return;
-      setFound(null);
       setMessage(
         err instanceof Error && err.name !== 'TimeoutError'
           ? err.message
@@ -229,33 +389,36 @@ export function MarketPrices() {
     }
   }
 
+  const popularCoins = POPULAR_COINS.filter((coin) => !coins.includes(coin.symbol));
+
   return (
     <>
       <section className="flex flex-col gap-4 mb-6" aria-label="Crypto prices">
         <div>
           <div className={LABEL}>CRYPTO</div>
-          <h3 className={HEADING}>Current crypto prices</h3>
+          <h3 className={HEADING}>Your crypto list</h3>
           <p className={COPY}>
-            Yahoo Finance prices in US dollars. FinApp checks for updates about once a minute.
+            Yahoo Finance prices in US dollars, checked about once a minute. Add any coin by its
+            symbol and remove the ones you do not want.
           </p>
         </div>
         <form
           className="flex gap-2 flex-wrap items-center"
           onSubmit={(event: FormEvent) => {
             event.preventDefault();
-            void lookUpCoin(symbol);
+            void addCoin(symbol);
           }}
         >
           <input
             className={INPUT}
             aria-label="Coin symbol"
-            placeholder="Coin symbol (for example SOL)"
+            placeholder="Coin symbol (for example AVAX)"
             value={symbol}
             maxLength={20}
             onChange={(event) => setSymbol(event.target.value)}
           />
           <button className={BUTTON} type="submit" disabled={busy || !symbol.trim()}>
-            {busy ? 'Looking up…' : 'Look up coin'}
+            {busy ? 'Adding…' : 'Add coin'}
           </button>
         </form>
         {message && (
@@ -263,19 +426,30 @@ export function MarketPrices() {
             {message}
           </p>
         )}
-        {found && (
-          <div className="flex flex-col gap-2">
-            <div className="flex items-center gap-3">
-              <div className={LABEL_BASE}>LOOKUP RESULT</div>
-              <button type="button" className={CHIP} onClick={() => setFound(null)}>
-                Clear
-              </button>
+        {popularCoins.length > 0 && (
+          <div>
+            <div className={LABEL}>POPULAR COINS</div>
+            <div className="flex flex-wrap gap-2">
+              {popularCoins.map((coin) => (
+                <button
+                  key={coin.symbol}
+                  type="button"
+                  className={CHIP}
+                  title={coin.name}
+                  disabled={busy}
+                  onClick={() => void addCoin(coin.symbol)}
+                >
+                  + {coin.symbol}
+                </button>
+              ))}
             </div>
-            <CryptoTable coins={[found]} />
           </div>
         )}
-        <Status items={crypto.items} error={crypto.error} />
-        {crypto.items && <CryptoTable coins={crypto.items} />}
+        {coins.length > 0 ? (
+          <CryptoTable coins={coins} quotes={quotes} errors={errors} onRemove={removeCoin} />
+        ) : (
+          <p className={COPY}>Your list is empty. Add a coin above or pick a popular coin.</p>
+        )}
       </section>
       <section className="flex flex-col gap-4 mb-6" aria-label="Foreign currency prices">
         <div>

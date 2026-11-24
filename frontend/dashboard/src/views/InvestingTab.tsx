@@ -83,7 +83,7 @@ export function Investing(props: InvestingProps) {
   return (
     <>
       <StockHoldings {...props} />
-      <MarketPrices />
+      <MarketPrices storageKey={props.storageKey} />
     </>
   );
 }
@@ -394,7 +394,7 @@ function StockHoldings({ storageKey, userId, demo }: InvestingProps) {
         </button>
       </form>
       <div
-        className="min-h-[1.4em] flex items-center gap-2 text-(--ui-text-91a3bd) text-[13px]"
+        className="empty:hidden flex items-center gap-2 text-(--ui-text-91a3bd) text-[13px]"
         role="status"
         aria-live="polite"
       >

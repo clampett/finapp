@@ -1,4 +1,5 @@
 import { useCallback, useMemo, useState } from 'react';
+import { OverspendingWarning } from '../common/OverspendingWarning';
 import { ScenarioCoach } from '../coach/ScenarioCoach';
 import { BudgetingTab } from './BudgetingTab';
 import { scopeGraph } from '../workspace/graph-workspace';
@@ -104,6 +105,16 @@ export function GraphWorkspace({
       )}
       {view !== 'ai' && (
         <WorkspaceIntro view={view} live={live} t={t} demo={demo} storageStatus={storageStatus} />
+      )}
+      {/* Mount only for a real shortfall. Recovery ends the dismissed episode,
+          allowing a later shortfall to warn again without reopening on every edit. */}
+      {loaded && !error && Math.round(-t.surplus * 100) > 0 && (
+        <OverspendingWarning
+          key={storageKey}
+          income={t.takeHome}
+          expenses={t.expenses + t.payments}
+          onReviewBudget={() => onNavigate('budgeting')}
+        />
       )}
       {/* Kept scenario imports with the graph editor. */}
       {view === 'graph' && (

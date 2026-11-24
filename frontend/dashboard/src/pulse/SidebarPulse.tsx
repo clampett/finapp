@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import { PulseWidget } from './PulseWidget';
 import type { View } from '../common/finance';
 
-// Measured the unused flex space rather than assigning a fixed sidebar height or adding scrolling.
+// Reserve a readable card even when navigation fills a short laptop sidebar.
 export default function SidebarPulse({
   userId,
   demo,
@@ -25,7 +25,7 @@ export default function SidebarPulse({
   }, []);
   return (
     <div ref={host} className="pulse-slot">
-      {/* Deferred data requests entirely when the sidebar had insufficient room for a usable card. */}
+      {/* Hidden navigation has zero height; defer requests until it is opened. */}
       {height >= 112 && (
         <PulseWidget
           key={`${demo}:${userId}`}

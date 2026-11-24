@@ -7,6 +7,7 @@ tried again after a short wait.
 
 import re
 import threading
+from concurrent.futures import ThreadPoolExecutor, TimeoutError
 from datetime import datetime, timedelta, timezone
 
 RETRY_AFTER = timedelta(minutes=10)  # how long a missing name is left alone
@@ -15,6 +16,9 @@ MAX_NAMES = 500  # bounds both dictionaries, so memory stays small
 _names: dict[str, str] = {}
 _retry_at: dict[str, datetime] = {}
 _lock = threading.Lock()
+_workers = ThreadPoolExecutor(max_workers=4, thread_name_prefix="market-name")
+_pending = {}
+NAME_WAIT_SECONDS = 0.15  # optional metadata must not hold up a valid price
 
 
 def _now() -> datetime:
@@ -35,11 +39,35 @@ def _fetch_name(ticker: str) -> str | None:
 def lookup_name(ticker: str) -> str | None:
     """Yahoo's name for a ticker, or None when it has none or could not be reached."""
     now = _now()
+    created = False
     with _lock:
         if ticker in _names:
             return _names[ticker]
         if _retry_at.get(ticker, now) > now:
             return None  # asked recently and got nothing, so do not ask again yet
+        future = _pending.get(ticker)
+        if future is None:
+            if len(_pending) >= 4:
+                return None  # no unbounded queue when the provider is unavailable
+            future = _workers.submit(_load_name, ticker)
+            _pending[ticker] = future
+            created = True
+    # Register outside the lock: an already-finished future invokes this inline.
+    if created:
+        future.add_done_callback(lambda completed: _forget_pending(ticker, completed))
+    try:
+        return future.result(timeout=NAME_WAIT_SECONDS)
+    except TimeoutError:
+        return None
+
+
+def _forget_pending(ticker, future):
+    with _lock:
+        if _pending.get(ticker) is future:
+            _pending.pop(ticker, None)
+
+
+def _load_name(ticker: str) -> str | None:
     try:
         name = _fetch_name(ticker)
     except Exception:
@@ -52,7 +80,7 @@ def lookup_name(ticker: str) -> str | None:
             _names[ticker] = name
             _retry_at.pop(ticker, None)
         else:
-            _retry_at[ticker] = now + RETRY_AFTER
+            _retry_at[ticker] = _now() + RETRY_AFTER
     return name
 
 

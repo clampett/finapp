@@ -293,7 +293,14 @@ function CryptoTable({
                     <td className={`${TD} ${tone(coin.change_percent)}`}>
                       {signed(coin.change_percent)}
                     </td>
-                    <td className={TD}>{quoteTime(coin.as_of)}</td>
+                    <td className={TD}>
+                      {quoteTime(coin.as_of)}
+                      {errors[sym] && (
+                        <span className="block text-coral whitespace-normal" role="status">
+                          Refresh failed. Showing last available price. {errors[sym]}
+                        </span>
+                      )}
+                    </td>
                   </>
                 ) : (
                   <td className={`${TD} text-(--ui-text-91a3bd)`} colSpan={3}>
@@ -320,8 +327,14 @@ function CryptoTable({
 }
 
 export function MarketPrices({ storageKey }: { storageKey: string }) {
+  // Reinitialize state and cancel in-flight lookups when the profile changes.
+  return <ProfileMarketPrices key={storageKey} storageKey={storageKey} />;
+}
+
+function ProfileMarketPrices({ storageKey }: { storageKey: string }) {
   const coinsKey = `${storageKey}:crypto-list`;
   const [coins, setCoins] = useState<string[]>(() => readCoins(coinsKey));
+  const currentCoins = useRef(coins);
   const { quotes, errors, setQuotes } = useCoinQuotes(coins);
   const currencies = usePrices('currencies', isCurrencyQuote);
   const [symbol, setSymbol] = useState('');
@@ -331,12 +344,13 @@ export function MarketPrices({ storageKey }: { storageKey: string }) {
   useEffect(() => () => lookup.current?.abort(), []);
 
   function updateCoins(next: string[]) {
+    currentCoins.current = next;
     setCoins(next);
     saveCoins(coinsKey, next);
   }
 
   function removeCoin(coin: string) {
-    updateCoins(coins.filter((item) => item !== coin));
+    updateCoins(currentCoins.current.filter((item) => item !== coin));
   }
 
   // Looked the coin up first so a typo is never added to the list.
@@ -351,16 +365,17 @@ export function MarketPrices({ storageKey }: { storageKey: string }) {
     try {
       const quote = await fetchCoin(sym, controller.signal);
       if (controller.signal.aborted) return;
-      if (coins.includes(quote.symbol)) {
+      const latest = currentCoins.current;
+      if (latest.includes(quote.symbol)) {
         setMessage(`${quote.symbol} is already in your list.`);
         return;
       }
-      if (coins.length >= MAX_COINS) {
+      if (latest.length >= MAX_COINS) {
         setMessage(`Your list is full (${MAX_COINS} coins). Remove one to add another.`);
         return;
       }
       setQuotes((cur) => ({ ...cur, [quote.symbol]: quote }));
-      updateCoins([...coins, quote.symbol]);
+      updateCoins([...latest, quote.symbol]);
       setSymbol('');
     } catch (err) {
       if (controller.signal.aborted) return;

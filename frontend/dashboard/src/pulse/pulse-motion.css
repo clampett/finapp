@@ -129,6 +129,7 @@
 }
 @media (max-width: 760px) {
   .pulse-slot {
-    display: none;
+    flex: none;
+    height: 248px;
   }
 }

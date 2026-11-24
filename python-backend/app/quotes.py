@@ -224,7 +224,7 @@ def _crypto_result(ticker, quote) -> dict:
     last, previous, as_of = quote
     return {
         "symbol": ticker.removesuffix("-USD"),
-        "name": _COIN_NAMES.get(ticker) or coin_name(ticker), 
+        "name": _COIN_NAMES.get(ticker) or coin_name(ticker),
         "currency": "USD",
         "price": last,
         "previous_close": previous,

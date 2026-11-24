@@ -1,4 +1,6 @@
 from datetime import datetime, timedelta, timezone
+from concurrent.futures import ThreadPoolExecutor
+from threading import Event
 
 import pytest
 
@@ -67,3 +69,44 @@ def test_a_coin_outside_the_list_gets_its_name_from_yahoo(yahoo_names, monkeypat
     assert quotes.crypto_quote("avax")["name"] == "Avalanche"
     assert quotes.crypto_quote("btc")["name"] == "Bitcoin"  # built-in names are not looked up
     assert "BTC-USD" not in yahoo_names["calls"]
+
+
+def test_slow_names_do_not_block_quotes_or_duplicate_provider_requests(monkeypatch):
+    started, release = Event(), Event()
+    calls = []
+
+    def slow_name(ticker):
+        calls.append(ticker)
+        started.set()
+        release.wait(2)
+        return "Avalanche USD"
+
+    monkeypatch.setattr(names, "_fetch_name", slow_name)
+    monkeypatch.setattr(names, "NAME_WAIT_SECONDS", 0.01)
+    try:
+        with ThreadPoolExecutor(max_workers=3) as clients:
+            requests = [clients.submit(names.lookup_name, "AVAX-USD") for _ in range(3)]
+            assert started.wait(1)
+            assert all(request.result(timeout=1) is None for request in requests)
+        assert calls == ["AVAX-USD"]
+        pending = names._pending["AVAX-USD"]
+    finally:
+        release.set()
+    assert pending.result(timeout=1) == "Avalanche USD"
+    assert names.coin_name("AVAX-USD") == "Avalanche"
+
+
+def test_name_backlog_is_bounded(monkeypatch):
+    release = Event()
+    monkeypatch.setattr(names, "NAME_WAIT_SECONDS", 0.001)
+    monkeypatch.setattr(names, "_fetch_name", lambda ticker: release.wait(2) and ticker)
+    pending = []
+    try:
+        for index in range(10):
+            assert names.lookup_name(f"SLOW{index}") is None
+        pending = list(names._pending.values())
+        assert len(pending) == 4
+    finally:
+        release.set()
+        for request in pending:
+            request.result(timeout=1)

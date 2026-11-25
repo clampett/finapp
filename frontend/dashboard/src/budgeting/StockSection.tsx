@@ -38,6 +38,7 @@ export interface StockSectionProps {
   availableAccounts: string[];
   onExecuteTrade: (e: FormEvent) => Promise<void>;
   onCancelTrade: () => void;
+  hasActiveFilters?: boolean;
 }
 
 export function StockSection({
@@ -65,6 +66,7 @@ export function StockSection({
   availableAccounts,
   onExecuteTrade,
   onCancelTrade,
+  hasActiveFilters = false,
 }: StockSectionProps) {
   return (
     <section aria-labelledby="stocks-section-heading">
@@ -170,8 +172,14 @@ export function StockSection({
             color: 'var(--ui-paint-8f9db3)',
           }}
         >
-          No stock positions yet. Click <strong>+ Add Stock Ticker</strong> to track your
-          investments.
+          {hasActiveFilters ? (
+            'No stock holdings match your search.'
+          ) : (
+            <>
+              No stock positions yet. Click <strong>+ Add Stock Ticker</strong> to track your
+              investments.
+            </>
+          )}
         </div>
       ) : (
         <div

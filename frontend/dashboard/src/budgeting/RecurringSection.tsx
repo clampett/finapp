@@ -27,6 +27,7 @@ export interface RecurringSectionProps {
   graph: GraphData;
   onSaveRecur: (e?: FormEvent) => Promise<void>;
   onCancelRecur: () => void;
+  hasActiveFilters?: boolean;
 }
 
 export function RecurringSection({
@@ -50,6 +51,7 @@ export function RecurringSection({
   graph,
   onSaveRecur,
   onCancelRecur,
+  hasActiveFilters = false,
 }: RecurringSectionProps) {
   return (
     <section aria-labelledby="recurring-section-heading">
@@ -144,8 +146,15 @@ export function RecurringSection({
             color: 'var(--ui-paint-8f9db3)',
           }}
         >
-          No recurring transactions set up yet. Click <strong>+ Add Recurring Rule</strong> to
-          template repetitive bills or paychecks.
+          {hasActiveFilters ? (
+            'No recurring transactions match your search or date filter.'
+          ) : (
+            <>
+              No recurring transactions set up yet. Click{' '}
+              <strong>+ Add Recurring Transaction</strong> to template repetitive bills or
+              paychecks.
+            </>
+          )}
         </div>
       ) : (
         <div

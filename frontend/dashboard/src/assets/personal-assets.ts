@@ -25,6 +25,7 @@ export function savePersonalAsset(
     : undefined;
   if (id && !existing) throw new Error('This asset no longer exists. Refresh the asset list.');
   // Revalued the same account instead of adding its previous and updated values together.
+  const now = new Date().toISOString();
   const node: GraphNode = {
     ...existing,
     id: existing?.id ?? `asset-${crypto.randomUUID()}`,
@@ -34,6 +35,8 @@ export function savePersonalAsset(
     interestRateApr: 0,
     assetGrowthRate: growth,
     position: existing?.position ?? placeNewNode(graph.nodes, { x: 690, y: 0 }),
+    createdAt: existing?.createdAt ?? now,
+    updatedAt: now,
   };
   return parseGraph({
     ...graph,

@@ -88,6 +88,9 @@ export interface GraphNode {
   minPayment?: number;
   frequency?: RecurrenceFrequency;
   intervalCount?: number;
+  date?: string;
+  createdAt?: string;
+  updatedAt?: string;
 }
 export interface GraphEdge {
   id: string;
@@ -566,6 +569,15 @@ export function parseGraph(value: unknown): GraphData {
         : {}),
       ...(n.intervalCount != null && Number(n.intervalCount) >= 1 && Number(n.intervalCount) <= 365
         ? { intervalCount: Math.round(Number(n.intervalCount)) }
+        : {}),
+      ...(typeof n.date === 'string' && Number.isFinite(Date.parse(n.date))
+        ? { date: n.date }
+        : {}),
+      ...(typeof n.createdAt === 'string' && Number.isFinite(Date.parse(n.createdAt))
+        ? { createdAt: n.createdAt }
+        : {}),
+      ...(typeof n.updatedAt === 'string' && Number.isFinite(Date.parse(n.updatedAt))
+        ? { updatedAt: n.updatedAt }
         : {}),
     };
   });

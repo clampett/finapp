@@ -1,3 +1,6 @@
+import { 
+  useState 
+} from 'react';
 import {
   getScenarioSalary,
   getScenarioDebts,
@@ -28,6 +31,7 @@ import { BudgetSummaryCards } from '../budgeting/BudgetSummaryCards';
 import { TransactionSection } from '../budgeting/TransactionSection';
 import { StockSection } from '../budgeting/StockSection';
 import { RecurringSection } from '../budgeting/RecurringSection';
+import { SearchFilterBar } from '../budgeting/SearchFilterBar';
 import { useBudgetData } from '../budgeting/useBudgetData';
 import { useBudgetActions } from '../budgeting/useBudgetActions';
 
@@ -53,10 +57,25 @@ export type {
   BudgetingTabProps,
 };
 
+function matchesDateRange(rawDate: string | undefined | null, startDate: string, endDate: string): boolean {
+  if (!startDate && !endDate) return true;
+  if (!rawDate) return false;
+  const normalizedDate = rawDate.includes('T') ? rawDate : `${rawDate}T12:00:00`;
+  const itemTime = new Date(normalizedDate).getTime();
+  if (Number.isNaN(itemTime)) return false;
+  const startTime = startDate ? new Date(`${startDate}T00:00:00`).getTime() : -Infinity;
+  const endTime = endDate ? new Date(`${endDate}T23:59:59`).getTime() : Infinity;
+  return itemTime >= startTime && itemTime <= endTime;
+}
+
 export function BudgetingTab(props: BudgetingTabProps) {
   const { graph } = props;
   const budgetData = useBudgetData(props);
   const actions = useBudgetActions(props, budgetData);
+ 
+  const [searchQuery, setSearchQuery] = useState('');
+  const [startDate, setStartDate] = useState('');
+  const [endDate, setEndDate] = useState('');
 
   const {
     userId,
@@ -123,6 +142,29 @@ export function BudgetingTab(props: BudgetingTabProps) {
     handleImportScenarioSalary,
     handleImportScenarioDebts,
   } = actions;
+
+  const normalizedQuery = searchQuery.trim().toLowerCase();
+  const hasActiveFilters = Boolean(normalizedQuery || startDate || endDate);
+
+  const filteredTransactions = transactions.filter((t) => {
+    const matchesName =
+      !normalizedQuery ||
+      (t.description || '').toLowerCase().includes(normalizedQuery) ||
+      (t.categoryName || '').toLowerCase().includes(normalizedQuery) ||
+      (t.accountName || '').toLowerCase().includes(normalizedQuery);
+    const txDate = t.transactionDate ?? t.date;
+    return matchesName && matchesDateRange(txDate, startDate, endDate);
+  });
+
+  const filteredRecurring = recurringList.filter((r) => {
+    const matchesName =
+      !normalizedQuery ||
+      (r.description || '').toLowerCase().includes(normalizedQuery) ||
+      (r.categoryName || '').toLowerCase().includes(normalizedQuery) ||
+      (r.accountName || '').toLowerCase().includes(normalizedQuery);
+    const recurDate = r.nextDueDate || r.startDate;
+    return matchesName && matchesDateRange(recurDate, startDate, endDate);
+  });
 
   const activeNodes = graph.nodes.filter(
     (node) => !node.archived && ['INCOME', 'EXPENSE', 'DEBT'].includes(node.nodeType),
@@ -223,6 +265,22 @@ export function BudgetingTab(props: BudgetingTabProps) {
         onImportScenarioDebts={handleImportScenarioDebts}
       />
 
+      {/* Unified Search & Date Range Filter (PBI 7) */}
+      <SearchFilterBar
+        searchQuery={searchQuery}
+        onSearchQueryChange={setSearchQuery}
+        startDate={startDate}
+        onStartDateChange={setStartDate}
+        endDate={endDate}
+        onEndDateChange={setEndDate}
+        hasActiveFilters={hasActiveFilters}
+        onClear={() => {
+          setSearchQuery('');
+          setStartDate('');
+          setEndDate('');
+        }}
+      />
+
       {/* Navigation Sub-Tabs */}
       <div
         style={{
@@ -240,7 +298,7 @@ export function BudgetingTab(props: BudgetingTabProps) {
           className={`inline-flex items-center justify-center gap-1.5 whitespace-nowrap rounded-[7px] font-medium cursor-pointer transition-colors ${activeSubTab === 'transactions' ? 'bg-primary text-primary-fg' : 'bg-transparent text-(--ui-text-97a7c2) hover:bg-(--ui-surface-hover-1a2536) hover:text-text'}`}
           style={{ padding: '6px 16px', fontSize: '14px' }}
         >
-          Transactions ({transactions.length})
+          Transactions ({filteredTransactions.length})
         </button>
         <button
           type="button"
@@ -248,7 +306,7 @@ export function BudgetingTab(props: BudgetingTabProps) {
           className={`inline-flex items-center justify-center gap-1.5 whitespace-nowrap rounded-[7px] font-medium cursor-pointer transition-colors ${activeSubTab === 'recurring' ? 'bg-primary text-primary-fg' : 'bg-transparent text-(--ui-text-97a7c2) hover:bg-(--ui-surface-hover-1a2536) hover:text-text'}`}
           style={{ padding: '6px 16px', fontSize: '14px' }}
         >
-          Recurring Transactions ({recurringList.length})
+          Recurring Transactions ({filteredRecurring.length})
         </button>
         <button
           type="button"
@@ -299,12 +357,18 @@ export function BudgetingTab(props: BudgetingTabProps) {
 
       {/* Connected owned property to the canonical scenario instead of the income ledger. */}
       {activeSubTab === 'assets' && (
-        <PersonalAssets graph={props.rawGraph ?? graph} onUpdate={props.onUpdateGraph} />
+        <PersonalAssets
+          graph={props.rawGraph ?? graph}
+          onUpdate={props.onUpdateGraph}
+          searchQuery={searchQuery}
+          startDate={startDate}
+          endDate={endDate}
+        />
       )}
       {/* SECTION 1: TRANSACTIONS */}
       {activeSubTab === 'transactions' && (
         <TransactionSection
-          transactions={transactions}
+          transactions={filteredTransactions}
           userId={userId}
           isDemo={isDemo}
           onOpenAdd={handleOpenAddTransaction}
@@ -363,7 +427,7 @@ export function BudgetingTab(props: BudgetingTabProps) {
       {/* SECTION 3: RECURRING TRANSACTIONS */}
       {activeSubTab === 'recurring' && (
         <RecurringSection
-          recurringList={recurringList}
+          recurringList={filteredRecurring}
           userId={userId}
           isDemo={isDemo}
           generating={generating}

@@ -9,9 +9,15 @@ import { savePersonalAsset } from './personal-assets';
 export function PersonalAssets({
   graph,
   onUpdate,
+  searchQuery = '',
+  startDate = '',
+  endDate = '',
 }: {
   graph: GraphData;
   onUpdate?: (graph: GraphData) => void;
+  searchQuery?: string;
+  startDate?: string;
+  endDate?: string;
 }) {
   const [editing, setEditing] = useState<string | null>(null);
   const [open, setOpen] = useState(false);
@@ -20,7 +26,26 @@ export function PersonalAssets({
   const [value, setValue] = useState('');
   const [growth, setGrowth] = useState('0');
   const [message, setMessage] = useState('');
-  const assets = graph.nodes.filter((n) => n.nodeType === 'ASSET');
+  const normalizedQuery = searchQuery.trim().toLowerCase();
+  const hasDateFilter = Boolean(startDate || endDate);
+
+  const assets = graph.nodes.filter((n) => {
+    if (n.nodeType !== 'ASSET') return false;
+    if (normalizedQuery && !n.name.toLowerCase().includes(normalizedQuery)) {
+      return false;
+    }
+    if (hasDateFilter) {
+      const rawDate = (n as GraphNode & { createdAt?: string; updatedAt?: string; date?: string }).date
+        ?? (n as GraphNode & { createdAt?: string; updatedAt?: string }).updatedAt
+        ?? (n as GraphNode & { createdAt?: string }).createdAt;
+      if (!rawDate) return false;
+      const itemTime = new Date(rawDate).getTime();
+      const startTime = startDate ? new Date(`${startDate}T00:00:00`).getTime() : -Infinity;
+      const endTime = endDate ? new Date(`${endDate}T23:59:59`).getTime() : Infinity;
+      if (itemTime < startTime || itemTime > endTime) return false;
+    }
+    return true;
+  });
   const button =
     'rounded-lg border border-border bg-surface px-3 py-2 text-xs text-text cursor-pointer hover:bg-hover-bg disabled:opacity-50';
   const field = 'w-full rounded-lg border border-border bg-raised px-3 py-2 text-sm text-text mt-2';
@@ -189,7 +214,9 @@ export function PersonalAssets({
       </div>
       {!assets.length && (
         <div className="rounded-xl border border-dashed border-border p-8 text-center text-sm text-muted">
-          Add an owned asset or review an estimate to start tracking its value.
+          {normalizedQuery || hasDateFilter
+            ? 'No assets match your search or date filter.'
+            : 'Add an owned asset or review an estimate to start tracking its value.'}
         </div>
       )}
       <p role="status" className="min-h-5 text-xs text-primary mt-4">

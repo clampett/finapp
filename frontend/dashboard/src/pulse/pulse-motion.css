@@ -1,0 +1,135 @@
+/* Condensed the chart rather than increasing sidebar height on smaller desktop windows. */
+/* Suppressed incidental travel when new data moved the selected card's position within the track. */
+.pulse-card[data-rebasing='true'] .pulse-track {
+  transition: none;
+}
+.pulse-card[data-density='compact'] {
+  padding: 8px;
+  gap: 3px;
+}
+.pulse-card[data-density='compact'] .pulse-kicker,
+.pulse-card[data-density='compact'] .pulse-detail {
+  display: none;
+}
+.pulse-card[data-density='compact'] .pulse-reading {
+  flex-direction: row;
+  align-items: center;
+  justify-content: space-between;
+  gap: 4px;
+}
+.pulse-card[data-density='compact'] .pulse-reading strong {
+  font-size: 9px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.pulse-card[data-density='compact'] .pulse-reading b {
+  font-size: 14px;
+  white-space: nowrap;
+}
+.pulse-card[data-density='compact'] .pulse-open {
+  gap: 2px;
+}
+.pulse-card[data-density='compact'] .pulse-graphic {
+  max-height: 26px;
+}
+.pulse-card[data-density='compact'] .pulse-footnote {
+  font-size: 7px;
+}
+.pulse-card[data-density='compact'] .pulse-slide[data-ai='true'] .pulse-detail {
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  font-size: 9px;
+  line-height: 1.35;
+}
+.pulse-card[data-density='compact'] .pulse-slide[data-ai='true'] .pulse-footnote {
+  display: none;
+}
+/* Centered graph slides in the space between their reading and footnote,
+   rather than leaving unused flex space below a top-aligned compact chart. */
+.pulse-card .pulse-slide[data-chart='true'] .pulse-open {
+  display: grid;
+  grid-template-rows: auto auto minmax(0, 1fr) auto auto;
+}
+.pulse-card .pulse-slide[data-chart='true'] .pulse-kicker {
+  grid-row: 1;
+}
+.pulse-card .pulse-slide[data-chart='true'] .pulse-reading {
+  grid-row: 2;
+}
+.pulse-card .pulse-slide[data-chart='true'] .pulse-graphic {
+  grid-row: 3;
+  align-self: center;
+  height: 54px;
+  min-height: 0;
+  max-height: 100%;
+}
+.pulse-card .pulse-slide[data-chart='true'] .pulse-detail {
+  grid-row: 4;
+}
+.pulse-card .pulse-slide[data-chart='true'] .pulse-footnote {
+  grid-row: 5;
+  margin-top: 0;
+}
+.pulse-card[data-density='compact'] .pulse-graphic {
+  height: 26px;
+}
+
+/* Animated only small SVG strokes and compositor transforms; respected pause, background tabs, and reduced motion. */
+.pulse-flow {
+  animation: pulse-flow 2.4s linear infinite;
+}
+.pulse-endpoint {
+  animation: pulse-glow 2s ease-in-out infinite alternate;
+}
+.pulse-draw {
+  stroke-dasharray: 1;
+  animation: pulse-draw 900ms ease-out both;
+}
+.pulse-card[data-running='false'] :is(.pulse-flow, .pulse-endpoint) {
+  animation-play-state: paused;
+}
+.pulse-thinking svg {
+  animation: pulse-spin 2s linear infinite;
+}
+@keyframes pulse-flow {
+  to {
+    stroke-dashoffset: -21;
+  }
+}
+@keyframes pulse-glow {
+  to {
+    opacity: 0.4;
+  }
+}
+@keyframes pulse-draw {
+  from {
+    stroke-dashoffset: 1;
+  }
+  to {
+    stroke-dashoffset: 0;
+  }
+}
+@keyframes pulse-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .pulse-track,
+  .pulse-dots button span {
+    transition: none;
+  }
+  .pulse-flow,
+  .pulse-endpoint,
+  .pulse-draw,
+  .pulse-thinking svg {
+    animation: none;
+  }
+}
+@media (max-width: 760px) {
+  .pulse-slot {
+    flex: none;
+    height: 248px;
+  }
+}

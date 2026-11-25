@@ -3,6 +3,8 @@ package com.finapp.javabackend.controller;
 import com.finapp.javabackend.config.SessionUser;
 import com.finapp.javabackend.dto.AuthRequest;
 import com.finapp.javabackend.dto.AuthResponse;
+import com.finapp.javabackend.dto.GoogleAuthResult;
+import com.finapp.javabackend.dto.GoogleUserInfo;
 import com.finapp.javabackend.model.entity.AuthToken;
 import com.finapp.javabackend.model.entity.User;
 import com.finapp.javabackend.model.entity.UserSession;
@@ -10,16 +12,21 @@ import com.finapp.javabackend.repository.AuthTokenRepository;
 import com.finapp.javabackend.repository.UserRepository;
 import com.finapp.javabackend.repository.UserSessionRepository;
 import com.finapp.javabackend.service.EmailService;
+import com.finapp.javabackend.service.GoogleAuthService;
+import com.finapp.javabackend.service.StockService;
+import jakarta.servlet.http.Cookie;
 import jakarta.servlet.http.HttpServletRequest;
 import java.nio.charset.StandardCharsets;
 import java.time.LocalDateTime;
 import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
-import com.finapp.javabackend.service.StockService;
 import java.util.concurrent.CompletableFuture;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseCookie;
@@ -28,10 +35,13 @@ import org.springframework.security.core.Authentication;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.server.ResponseStatusException;
 
 @RestController
 @RequestMapping("/api/v1/auth")
 public class AuthController {
+
+    private static final Logger log = LoggerFactory.getLogger(AuthController.class);
 
     @Value("${finapp.session.secure:false}")
     private boolean secureSessionCookie;
@@ -53,6 +63,151 @@ public class AuthController {
 
     @Autowired(required = false)
     private StockService stockService;
+
+    @Autowired
+    private GoogleAuthService googleAuthService;
+
+    @Value("${google.client.id:}")
+    private String googleClientId;
+
+    @GetMapping("/google/config")
+    public ResponseEntity<Map<String, Object>> googleConfig() {
+        if (googleClientId == null || googleClientId.isBlank()) {
+            return ResponseEntity.ok()
+                .header(HttpHeaders.CACHE_CONTROL, "no-store")
+                .body(Map.of("enabled", false));
+        }
+        String nonce = UUID.randomUUID().toString();
+        // Bound the signed Google nonce to this browser with an expiring HttpOnly cookie.
+        ResponseCookie challenge = ResponseCookie.from("finapp_google_nonce", nonce)
+            .httpOnly(true)
+            .secure(secureSessionCookie)
+            .path("/api/v1/auth/google")
+            .sameSite("Strict")
+            .maxAge(600)
+            .build();
+        return ResponseEntity.ok()
+            .header(HttpHeaders.CACHE_CONTROL, "no-store")
+            .header(HttpHeaders.SET_COOKIE, challenge.toString())
+            .body(Map.of("enabled", true, "clientId", googleClientId.trim(), "nonce", nonce));
+    }
+
+    @PostMapping("/google")
+    public ResponseEntity<AuthResponse> googleAuth(
+        @RequestBody Map<String, String> request,
+        HttpServletRequest httpRequest
+    ) {
+        String idTokenString = request.get("token");
+        if (
+            idTokenString == null ||
+            idTokenString.trim().isEmpty() ||
+            idTokenString.length() > 20000
+        ) {
+            return ResponseEntity.badRequest().body(
+                new AuthResponse("Google ID token is required", null)
+            );
+        }
+
+        String nonce = null;
+        if (httpRequest.getCookies() != null) {
+            for (Cookie cookie : httpRequest.getCookies()) {
+                if (cookie.getName().equals("finapp_google_nonce")) {
+                    nonce = cookie.getValue();
+                    break;
+                }
+            }
+        }
+        if (nonce == null || !nonce.matches("[a-f0-9-]{36}")) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(
+                new AuthResponse("Refresh Google sign-in and try again.", null)
+            );
+        }
+        try {
+            Optional<GoogleUserInfo> userInfoOpt = googleAuthService.verifyToken(
+                idTokenString,
+                nonce
+            );
+            if (userInfoOpt.isEmpty()) {
+                return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(
+                    new AuthResponse("Invalid or expired Google token", null)
+                );
+            }
+
+            GoogleUserInfo userInfo = userInfoOpt.get();
+            if (userInfo.email() == null || !userInfo.emailVerified()) {
+                return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(
+                    new AuthResponse("Unverified email from Google account", null)
+                );
+            }
+
+            GoogleAuthResult authResult;
+            try {
+                authResult = googleAuthService.authenticateOrCreateUser(
+                    userInfo,
+                    httpRequest.getRemoteAddr()
+                );
+            } catch (DataIntegrityViolationException collision) {
+                // Retried after a competing account transaction committed its unique email or subject.
+                authResult = googleAuthService.authenticateOrCreateUser(
+                    userInfo,
+                    httpRequest.getRemoteAddr()
+                );
+            }
+
+            ResponseCookie cookie = ResponseCookie.from("finapp_session", authResult.sessionToken())
+                .httpOnly(true)
+                .secure(secureSessionCookie)
+                .path("/")
+                .sameSite("Strict")
+                .build();
+
+            if (stockService != null) {
+                final Long uid = authResult.userId();
+                CompletableFuture.runAsync(() -> {
+                    try {
+                        stockService.updateAllStockPricesForUser(uid);
+                    } catch (Exception ignored) {}
+                });
+            }
+
+            return ResponseEntity.ok()
+                .header(HttpHeaders.CACHE_CONTROL, "no-store")
+                .header(HttpHeaders.SET_COOKIE, cookie.toString())
+                .header(
+                    HttpHeaders.SET_COOKIE,
+                    ResponseCookie.from("finapp_google_nonce", "")
+                        .httpOnly(true)
+                        .secure(secureSessionCookie)
+                        .path("/api/v1/auth/google")
+                        .sameSite("Strict")
+                        .maxAge(0)
+                        .build()
+                        .toString()
+                )
+                .body(
+                    new AuthResponse(
+                        "Google login successful",
+                        authResult.userId()
+                    ).withSessionToken(authResult.sessionToken())
+                );
+        } catch (ResponseStatusException e) {
+            return ResponseEntity.status(e.getStatusCode()).body(
+                new AuthResponse(e.getReason(), null)
+            );
+        } catch (DataIntegrityViolationException e) {
+            return ResponseEntity.status(HttpStatus.CONFLICT).body(
+                new AuthResponse(
+                    "Account setup changed while signing in. Please try Google again.",
+                    null
+                )
+            );
+        } catch (Exception e) {
+            log.error("Google authentication processing failed", e);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(
+                new AuthResponse("Google authentication failed. Please try again.", null)
+            );
+        }
+    }
 
     @PostMapping("/register")
     @Transactional
@@ -293,8 +448,7 @@ public class AuthController {
             CompletableFuture.runAsync(() -> {
                 try {
                     stockService.updateAllStockPricesForUser(uid);
-                } catch (Exception ignored) {
-                }
+                } catch (Exception ignored) {}
             });
         }
 

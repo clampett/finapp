@@ -37,6 +37,10 @@ def project_household(
     cash_start = sum(n.balance for n in nodes if n.type in ("CHECKING", "SAVINGS"))
     investment_start = sum(n.balance for n in nodes if n.type == "INVESTMENT")
 
+    # Separated illiquid property from cash and stochastic market holdings.
+    personal_assets = [n for n in nodes if n.type == "ASSET"]
+    property_start = sum(n.balance for n in personal_assets)
+
     def account_yield(kind):
         accounts = [n for n in nodes if n.type == kind]
         balance = sum(n.balance for n in accounts)
@@ -53,10 +57,17 @@ def project_household(
     debt_log = minimum_payment_schedule(debts, years * 12)
     debt_path = [row["balance"] for row in debt_log]
     # Carried opening overdrafts as borrowing so they could not be spent as reserves.
-    cash = np.full(iterations, sum((max(0.0, n.balance) for n in nodes if n.type == "CHECKING"), 0.0))
-    savings = np.full(iterations, sum((max(0.0, n.balance) for n in nodes if n.type == "SAVINGS"), 0.0))
+    cash = np.full(
+        iterations, sum((max(0.0, n.balance) for n in nodes if n.type == "CHECKING"), 0.0)
+    )
+    savings = np.full(
+        iterations, sum((max(0.0, n.balance) for n in nodes if n.type == "SAVINGS"), 0.0)
+    )
     investments = np.full(iterations, float(investment_start))
-    borrowing = np.full(iterations, sum((max(0.0, -n.balance) for n in nodes if n.type in ("CHECKING", "SAVINGS")), 0.0))
+    borrowing = np.full(
+        iterations,
+        sum((max(0.0, -n.balance) for n in nodes if n.type in ("CHECKING", "SAVINGS")), 0.0),
+    )
     contributions = np.zeros(iterations)
     plan = plan or SavingPlan()
     market = market or assumed_model()
@@ -74,7 +85,7 @@ def project_household(
     offsets = (
         rng.integers(0, len(market.returns), iterations) if market.returns is not None else None
     )
-    initial = cash_start + investment_start - sum(d.balance for d in debts)
+    initial = cash_start + investment_start + property_start - sum(d.balance for d in debts)
     forecast = [
         dict(
             year=0,
@@ -165,9 +176,17 @@ def project_household(
         if month % 12 == 0:
             # Discounted annual net worth into purchasing power before extracting
             # P10/P50/P90; the reference slot was excluded from those percentiles.
-            wealth = (cash + savings + investments - borrowing - debt_path[month]) / (
-                1 + inflation_rate
-            ) ** (month / 12)
+            # Compounded each asset independently without liquidating property for bills.
+            property_value = sum(
+                n.balance * (1 + getattr(n, "asset_growth_rate", 0)) ** (month / 12)
+                for n in personal_assets
+            )
+            property_balances = np.full(iterations, property_value)
+            # Retained opening property value in the no-growth reference path.
+            property_balances[-1] = property_start
+            wealth = (
+                cash + savings + investments + property_balances - borrowing - debt_path[month]
+            ) / (1 + inflation_rate) ** (month / 12)
             p10, p50, p90 = np.percentile(wealth[:-1], [10, 50, 90])
             forecast.append(
                 dict(

@@ -33,7 +33,7 @@ Minimums plus the chosen share of remaining surplus form one fixed monthly payme
 
 ## Checks
 
-- API gateway: `node --test frontend/api-proxy.test.js`. Java `SharedBackendSecurityTest` exercises real filters for public demos, session expiry, owner checks, and blocked unsafe bulk writes.
+- API gateway: `node --test frontend/test/server/api-proxy.test.js`. Java `SharedBackendSecurityTest` exercises real filters for public demos, session expiry, owner checks, and blocked unsafe bulk writes.
 - Frontend: `npm run build --prefix ./frontend`, `npm run lint --prefix ./frontend/dashboard`.
 - Python: install `python-backend/requirements-dev.txt`, then run `python -m unittest tests.test_simulation -v` and `python -m pytest tests/test_price_cache.py` from `python-backend`.
 - Java: `./mvnw.cmd test` from `java-backend` (requires the configured PostgreSQL instance for the application context test). MVC slice tests exercise controller contracts without security filters; they do not establish authentication correctness.
@@ -57,4 +57,4 @@ Authentication requires the HttpOnly session cookie and its matching key in sess
 
 The account seed is in java-backend/src/main/java/com/finapp/javabackend/config/LocalDevelopmentData.java. The matching testuser remains in each developer's own PostgreSQL database; it is not an authentication bypass or shared hosted account.
 
-Session checks: `node --test frontend/session.test.js`; Java LocalAuthTest and SharedBackendSecurityTest cover revocation, cookie expiry, and rejected cookie-only access.
+Session checks: `node --test frontend/test/dashboard/session.test.js`; Java LocalAuthTest and SharedBackendSecurityTest cover revocation, cookie expiry, and rejected cookie-only access.

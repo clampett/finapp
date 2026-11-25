@@ -1,9 +1,9 @@
-import { AccountEditor } from '../components/AccountEditor';
-import { Canvas } from '../components/Canvas';
-import { CanvasToolbar } from '../components/CanvasToolbar';
-import { CanvasIcon } from '../components/CanvasIcon';
-import { ConnectionEditor } from '../components/ConnectionEditor';
-import { downloadJson, typeLabel } from '../finance';
+import { AccountEditor } from './AccountEditor';
+import { Canvas } from './Canvas';
+import { CanvasToolbar } from './CanvasToolbar';
+import { CanvasIcon } from './CanvasIcon';
+import { ConnectionEditor } from './ConnectionEditor';
+import { downloadJson, typeLabel } from '../common/finance';
 import type { useGraphEditing } from './useGraphEditing';
 import type { useScenarioGraph } from './useScenarioGraph';
 

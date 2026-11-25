@@ -1,5 +1,5 @@
-import { money, totals } from '../finance';
-import type { GraphData, View } from '../finance';
+import { money, totals } from '../common/finance';
+import type { GraphData, View } from '../common/finance';
 
 export function WorkspaceIntro({
   view,

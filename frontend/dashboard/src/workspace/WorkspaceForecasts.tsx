@@ -1,10 +1,10 @@
 import { lazy, Suspense } from 'react';
 import type { ComponentProps, Dispatch, SetStateAction } from 'react';
-import type { GraphData, SimulationType } from '../finance';
+import type { GraphData, SimulationType } from '../common/finance';
 
 // Deferred loading of the simulation interface until a forecast was opened.
 const SimulationModal = lazy(() =>
-  import('../SimulationModal').then((module) => ({ default: module.SimulationModal })),
+  import('../simulation/SimulationModal').then((module) => ({ default: module.SimulationModal })),
 );
 
 export type ForecastScope = 'all' | 'selected' | 'connected';

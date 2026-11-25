@@ -9,7 +9,6 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.finapp.javabackend.config.SessionUser;
-import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import com.finapp.javabackend.dto.EdgeDTO;
 import com.finapp.javabackend.dto.GraphDTO;
 import com.finapp.javabackend.dto.NodeDTO;
@@ -23,6 +22,7 @@ import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMock
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
 import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.http.MediaType;
+import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.test.web.servlet.MockMvc;
 
 @AutoConfigureMockMvc(addFilters = false)
@@ -95,7 +95,12 @@ class GraphControllerTest {
         mockMvc
             .perform(
                 post("/api/v1/graph")
-                    .principal(new UsernamePasswordAuthenticationToken(new SessionUser(7L, "customer"), null))
+                    .principal(
+                        new UsernamePasswordAuthenticationToken(
+                            new SessionUser(7L, "customer"),
+                            null
+                        )
+                    )
                     .contentType(MediaType.APPLICATION_JSON)
                     .content(objectMapper.writeValueAsString(inputGraph))
             )

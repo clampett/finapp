@@ -287,7 +287,10 @@ public class RecurringTransactionServiceImpl implements RecurringTransactionServ
         LocalDate target
     ) {
         // Skipped estimates saved by earlier builds without deleting rules or transaction history.
-        if (recurring.getNotes() != null && recurring.getNotes().startsWith("Auto-generated dividend for ")) {
+        if (
+            recurring.getNotes() != null &&
+            recurring.getNotes().startsWith("Auto-generated dividend for ")
+        ) {
             return List.of();
         }
 

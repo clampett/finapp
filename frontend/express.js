@@ -2,8 +2,12 @@ const express = require('express');
 const path = require('path');
 const fs = require('fs');
 const rateLimit = require('express-rate-limit');
-const { createApiProxy } = require('./api-proxy');
-const { createCoachService } = require('./coach-service');
+const { createApiProxy } = require('./server/proxy/api-proxy');
+const { createCoachService } = require('./server/coach/coach-service');
+const { createCoachMarket } = require('./server/coach/coach-market');
+const { createAssetValuationService } = require('./server/coach/coach-asset-valuation');
+const { createInferenceBudget } = require('./server/coach/coach-inference-budget');
+const { createPulseService, validPulseContext } = require('./server/coach/pulse-service');
 
 const app = express();
 const PORT = process.env.PORT || 8080;
@@ -45,19 +49,145 @@ app.use(
 );
 
 // Grounded coach questions in reviewed topics and kept inference on the local runtime.
-const coach = createCoachService();
+const publicMarket = createCoachMarket({
+  upstream: process.env.FINAPP_API_UPSTREAM || 'http://127.0.0.1:8081',
+});
+const inferenceBudget = createInferenceBudget();
+const coach = createCoachService({ market: publicMarket, inferenceBudget });
+const assetValuer = createAssetValuationService({ inferenceBudget });
+const pulse = createPulseService({
+  inferenceBudget,
+  ready: async () => (await coach.status()).state === 'ready',
+});
+// Limited optional sidebar suggestions separately so animation never became unbounded model polling.
+const pulseLimit = rateLimit({
+  windowMs: 300000,
+  limit: 3,
+  standardHeaders: 'draft-7',
+  legacyHeaders: false,
+  message: {
+    code: 'rate_limit',
+    message: 'AI Pulse needs a moment. Please try again in a few minutes.',
+  },
+});
+// Limited expensive model work per client without charging ordinary status checks against that budget.
+const coachLimit = rateLimit({
+  windowMs: 60000,
+  limit: 12,
+  standardHeaders: 'draft-7',
+  legacyHeaders: false,
+  message: {
+    message: 'You’ve sent several questions quickly. Please wait a minute and try again.',
+  },
+});
+// Reported gateway readiness independently of the proxied Spring Boot health endpoint.
+app.get('/api/v1/gateway/health', (_req, res) => {
+  res.set('Cache-Control', 'no-store').json({
+    success: true,
+    data: { status: 'UP', service: 'frontend-gateway' },
+  });
+});
 app.get('/api/v1/coach/status', async (_req, res) => {
   res.set('Cache-Control', 'no-store').json(await coach.status());
 });
-app.post('/api/v1/coach/explain', express.json({ limit: '4kb' }), async (req, res) => {
+app.post('/api/v1/coach/explain', coachLimit, express.json({ limit: '16kb' }), async (req, res) => {
   res.set('Cache-Control', 'no-store');
-  if (!req.is('application/json') || !req.body || !Object.hasOwn(req.body, 'topic') ||
-      Object.keys(req.body).some((key) => !['topic', 'question', 'context'].includes(key))) {
+  if (
+    !req.is('application/json') ||
+    !req.body ||
+    !Object.hasOwn(req.body, 'topic') ||
+    Object.keys(req.body).some((key) => !['topic', 'question', 'context', 'history'].includes(key))
+  ) {
     return res.status(400).json({ message: 'Choose a help topic.' });
   }
-  const result = await coach.explain(req.body.topic, req.body.question, req.body.context);
+  const result = await coach.explain(
+    req.body.topic,
+    req.body.question,
+    req.body.context,
+    req.body.history,
+  );
   if (!result) return res.status(503).json({ message: 'Local AI explanations are unavailable.' });
   return res.json(result);
+});
+app.post(
+  '/api/v1/coach/value-asset',
+  coachLimit,
+  express.json({ limit: '16kb' }),
+  async (req, res) => {
+    res.set('Cache-Control', 'no-store');
+    if (
+      !req.is('application/json') ||
+      !req.body ||
+      typeof req.body.description !== 'string' ||
+      !req.body.description.trim() ||
+      req.body.description.length > 500
+    ) {
+      return res
+        .status(400)
+        .json({ message: 'Provide an asset description up to 500 characters.' });
+    }
+    const controller = new AbortController();
+    const disconnected = () => {
+      if (!res.writableEnded) controller.abort();
+    };
+    res.on('close', disconnected);
+    try {
+      // Cancelled local inference when the browser abandoned the estimate request.
+      const result = await assetValuer.valueAsset(req.body.description, {
+        signal: controller.signal,
+      });
+      if (controller.signal.aborted) return;
+      if (!result) return res.status(503).json({ message: 'Asset estimation is unavailable.' });
+      return res.json({ success: true, data: result });
+    } finally {
+      res.off('close', disconnected);
+    }
+  },
+);
+app.post(
+  '/api/v1/coach/pulse',
+  pulseLimit,
+  coachLimit,
+  express.json({ limit: '2kb' }),
+  async (req, res) => {
+    res.set('Cache-Control', 'no-store');
+    if (!req.is('application/json') || !validPulseContext(req.body))
+      return res.status(400).json({ message: 'Choose valid Pulse signals.' });
+    const controller = new AbortController();
+    const disconnected = () => {
+      if (!res.writableEnded) controller.abort();
+    };
+    res.on('close', disconnected);
+    try {
+      // Cancelled inference on disconnect and accepted qualitative flags only, never raw account data.
+      let failure = 'unavailable';
+      const result = await pulse.suggest(req.body, {
+        signal: controller.signal,
+        onFailure: (code) => {
+          failure = code;
+        },
+      });
+      if (controller.signal.aborted) return;
+      if (!result)
+        return res.status(503).json({
+          code: failure,
+          message: 'The AI suggestion could not be completed. Please try again.',
+        });
+      return res.json(result);
+    } finally {
+      res.off('close', disconnected);
+    }
+  },
+);
+// Returned bounded parser errors without exposing a development stack trace.
+app.use('/api/v1/coach', (error, _req, res, next) => {
+  if (error?.type === 'entity.too.large')
+    return res
+      .status(413)
+      .json({ message: 'This conversation is too long. Please shorten the message.' });
+  if (error?.type === 'entity.parse.failed')
+    return res.status(400).json({ message: 'Send a valid coach request.' });
+  return next(error);
 });
 
 app.use('/api', createApiProxy(process.env.FINAPP_API_UPSTREAM || 'http://127.0.0.1:8081'));
@@ -165,6 +295,16 @@ app.use(fileAccessLimiter, (req, res) => {
   res.status(404).sendFile(path.join(landingDir, '404.html'));
 });
 
-app.listen(PORT, () => {
+app.listen(PORT, (error) => {
+  // Handled Express 5 listen failures before announcing a usable frontend.
+  if (error) {
+    console.error(
+      error.code === 'EADDRINUSE'
+        ? `Cannot start FinApp: port ${PORT} is already in use. Stop the previous frontend and retry.`
+        : `Cannot start FinApp on port ${PORT}: ${error.message}`,
+    );
+    process.exitCode = 1;
+    return;
+  }
   console.log(`Server running at http://localhost:${PORT}`);
 });

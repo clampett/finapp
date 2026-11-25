@@ -42,9 +42,49 @@ public class MarketController {
         return forward(URI.create(pythonBaseUrl + "/api/stocks/" + encode(symbol)));
     }
 
+    // Reused the encoded proxy and Python validation for stock chart ranges.
+    @GetMapping("/stocks/{symbol}/chart")
+    public ResponseEntity<String> stockChart(
+        @PathVariable String symbol,
+        @RequestParam(defaultValue = "1y") String period
+    ) {
+        return forward(
+            URI.create(
+                pythonBaseUrl +
+                    "/api/stocks/" +
+                    encode(symbol) +
+                    "/chart?period=" +
+                    UriUtils.encodeQueryParam(period, StandardCharsets.UTF_8)
+            )
+        );
+    }
+
     @GetMapping("/crypto")
     public ResponseEntity<String> cryptoPrices() {
         return forward(URI.create(pythonBaseUrl + "/api/crypto"));
+    }
+
+    // Forwarded the fixed public briefing endpoint through the same gateway as other market data.
+    @GetMapping("/context")
+    public ResponseEntity<String> marketContext() {
+        return forward(URI.create(pythonBaseUrl + "/api/coach/market"));
+    }
+
+    // Forwarded bounded chart periods while encoding both path and query values.
+    @GetMapping("/context/{symbol}/chart")
+    public ResponseEntity<String> benchmarkChart(
+        @PathVariable String symbol,
+        @RequestParam(defaultValue = "1mo") String period
+    ) {
+        return forward(
+            URI.create(
+                pythonBaseUrl +
+                    "/api/coach/chart/" +
+                    encode(symbol) +
+                    "?period=" +
+                    UriUtils.encodeQueryParam(period, StandardCharsets.UTF_8)
+            )
+        );
     }
 
     @GetMapping("/crypto/{symbol}")
@@ -60,6 +100,12 @@ public class MarketController {
     @GetMapping("/currencies/{code}")
     public ResponseEntity<String> currencyRate(@PathVariable String code) {
         return forward(URI.create(pythonBaseUrl + "/api/currencies/" + encode(code)));
+    }
+
+    @GetMapping("/news")
+    public ResponseEntity<String> news() {
+        // Forwarded one fixed public feed route without accepting arbitrary publisher URLs.
+        return forward(URI.create(pythonBaseUrl + "/api/news"));
     }
 
     private String encode(String value) {

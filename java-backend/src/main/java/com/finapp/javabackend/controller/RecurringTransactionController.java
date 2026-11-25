@@ -27,17 +27,28 @@ public class RecurringTransactionController {
     }
 
     private Long getUserId(Authentication authentication) {
-        if (authentication == null || !(authentication.getPrincipal() instanceof SessionUser user)) {
-            throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Sign in to access recurring transactions.");
+        if (
+            authentication == null || !(authentication.getPrincipal() instanceof SessionUser user)
+        ) {
+            throw new ResponseStatusException(
+                HttpStatus.UNAUTHORIZED,
+                "Sign in to access recurring transactions."
+            );
         }
         return user.id();
     }
 
     @GetMapping
-    public ResponseEntity<ApiResponse<List<RecurringTransactionDTO>>> getRecurringTransactions(Authentication authentication) {
+    public ResponseEntity<ApiResponse<List<RecurringTransactionDTO>>> getRecurringTransactions(
+        Authentication authentication
+    ) {
         Long userId = getUserId(authentication);
-        List<RecurringTransactionDTO> list = recurringTransactionService.getRecurringTransactions(userId);
-        return ResponseEntity.ok(ApiResponse.success(list, "Recurring transactions fetched successfully"));
+        List<RecurringTransactionDTO> list = recurringTransactionService.getRecurringTransactions(
+            userId
+        );
+        return ResponseEntity.ok(
+            ApiResponse.success(list, "Recurring transactions fetched successfully")
+        );
     }
 
     @GetMapping("/{id}")
@@ -46,8 +57,13 @@ public class RecurringTransactionController {
         Authentication authentication
     ) {
         Long userId = getUserId(authentication);
-        RecurringTransactionDTO dto = recurringTransactionService.getRecurringTransaction(userId, id);
-        return ResponseEntity.ok(ApiResponse.success(dto, "Recurring transaction fetched successfully"));
+        RecurringTransactionDTO dto = recurringTransactionService.getRecurringTransaction(
+            userId,
+            id
+        );
+        return ResponseEntity.ok(
+            ApiResponse.success(dto, "Recurring transaction fetched successfully")
+        );
     }
 
     @PostMapping
@@ -56,9 +72,13 @@ public class RecurringTransactionController {
         Authentication authentication
     ) {
         Long userId = getUserId(authentication);
-        RecurringTransactionDTO created = recurringTransactionService.createRecurringTransaction(userId, request);
-        return ResponseEntity.status(HttpStatus.CREATED)
-            .body(ApiResponse.success(created, "Recurring transaction created successfully"));
+        RecurringTransactionDTO created = recurringTransactionService.createRecurringTransaction(
+            userId,
+            request
+        );
+        return ResponseEntity.status(HttpStatus.CREATED).body(
+            ApiResponse.success(created, "Recurring transaction created successfully")
+        );
     }
 
     @PutMapping("/{id}")
@@ -68,8 +88,14 @@ public class RecurringTransactionController {
         Authentication authentication
     ) {
         Long userId = getUserId(authentication);
-        RecurringTransactionDTO updated = recurringTransactionService.updateRecurringTransaction(userId, id, request);
-        return ResponseEntity.ok(ApiResponse.success(updated, "Recurring transaction updated successfully"));
+        RecurringTransactionDTO updated = recurringTransactionService.updateRecurringTransaction(
+            userId,
+            id,
+            request
+        );
+        return ResponseEntity.ok(
+            ApiResponse.success(updated, "Recurring transaction updated successfully")
+        );
     }
 
     @PostMapping("/{id}")
@@ -88,28 +114,41 @@ public class RecurringTransactionController {
     ) {
         Long userId = getUserId(authentication);
         recurringTransactionService.deleteRecurringTransaction(userId, id);
-        return ResponseEntity.ok(ApiResponse.success(null, "Recurring transaction deleted successfully"));
+        return ResponseEntity.ok(
+            ApiResponse.success(null, "Recurring transaction deleted successfully")
+        );
     }
 
     @PostMapping("/generate")
     public ResponseEntity<ApiResponse<List<TransactionDTO>>> generateDue(
-        @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate throughDate,
+        @RequestParam(required = false) @DateTimeFormat(
+            iso = DateTimeFormat.ISO.DATE
+        ) LocalDate throughDate,
         Authentication authentication
     ) {
         Long userId = getUserId(authentication);
-        List<TransactionDTO> generated = recurringTransactionService.generateDueTransactions(userId, throughDate);
-        return ResponseEntity.ok(ApiResponse.success(generated, "Due occurrences generated successfully"));
+        List<TransactionDTO> generated = recurringTransactionService.generateDueTransactions(
+            userId,
+            throughDate
+        );
+        return ResponseEntity.ok(
+            ApiResponse.success(generated, "Due occurrences generated successfully")
+        );
     }
 
     @PostMapping("/{id}/generate")
     public ResponseEntity<ApiResponse<List<TransactionDTO>>> generateForId(
         @PathVariable Long id,
-        @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate throughDate,
+        @RequestParam(required = false) @DateTimeFormat(
+            iso = DateTimeFormat.ISO.DATE
+        ) LocalDate throughDate,
         Authentication authentication
     ) {
         Long userId = getUserId(authentication);
-        List<TransactionDTO> generated = recurringTransactionService.generateForRecurringTransaction(userId, id, throughDate);
-        return ResponseEntity.ok(ApiResponse.success(generated, "Occurrences generated successfully"));
+        List<TransactionDTO> generated =
+            recurringTransactionService.generateForRecurringTransaction(userId, id, throughDate);
+        return ResponseEntity.ok(
+            ApiResponse.success(generated, "Occurrences generated successfully")
+        );
     }
 }
-

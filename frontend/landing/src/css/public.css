@@ -1,3 +1,9 @@
+/* Bounded the host to Google's supported width; retained the SDK's own hover and keyboard-focus states. */
+#google-signin-btn {
+  max-width: 400px;
+  margin-inline: auto;
+}
+
 /* Kept the public-page polish scoped so dashboard controls retained their own geometry. */
 html {
   scroll-behavior: smooth;
@@ -240,9 +246,35 @@ body {
 }
 .footer-top {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
-  gap: 48px;
+  /* Balanced the side columns so the project attribution stayed centered on wide screens. */
+  grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
+  gap: 40px;
   align-items: center;
+}
+.footer-project {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 12px;
+  text-align: center;
+}
+.footer-project-icon {
+  color: var(--primary);
+  margin-bottom: 6px;
+}
+.footer-project-name {
+  color: var(--text_color);
+  font-size: 15px;
+  font-weight: 600;
+  letter-spacing: -0.2px;
+  margin: 0;
+}
+.footer-project-detail {
+  color: var(--foreground);
+  font-size: 11px;
+  line-height: 1.6;
+  margin: 0;
 }
 /* Placed the brand before the link groups in both reading and visual order. */
 .footer-identity {
@@ -722,9 +754,16 @@ body {
   margin-top: 28px;
 }
 @media (max-width: 1050px) {
-  .footer-bottom { grid-template-columns: 1fr auto; }
+  .footer-bottom {
+    grid-template-columns: 1fr auto;
+  }
   .footer-top {
     grid-template-columns: 1fr 1fr;
+  }
+  /* Moved the attribution onto its own centered row before the side columns became crowded. */
+  .footer-project {
+    grid-column: 1 / -1;
+    order: 3;
   }
   .footer-note {
     grid-column: 1 / -1;

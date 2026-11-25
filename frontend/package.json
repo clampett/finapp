@@ -7,6 +7,7 @@
     "in": "npm install --prefix ./landing && npm install --prefix ./dashboard && npm install",
     "build": "npm run build --prefix ./landing && npm run build --prefix ./dashboard && cpy \"static/*\" \"build/landing/static/\"",
     "dev": "npm run build && node express.js",
+    "test": "node --test test/*/*.test.js",
     "format": "node scripts/format-source.mjs",
     "format:check": "node scripts/format-source.mjs --check"
   },

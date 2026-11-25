@@ -64,7 +64,7 @@ try {
     Write-Host '[DATABASE] LOCAL - testuser / test123. Each developer has a separate database.' -ForegroundColor Green
     foreach ($port in @(8080, 8081)) {
         if (Test-FinAppPortOpen $port) {
-            throw "Port $port is already in use. Stop the previous FinApp launch before retrying."
+            throw "Port $port is already in use or unavailable. Stop the previous FinApp launch before retrying."
         }
     }
     Write-Host 'Checking Docker Engine...' -ForegroundColor Cyan
@@ -158,8 +158,29 @@ try {
         PassThru               = $true
     }
     $frontendProcess = Start-Process @frontendStart
+    # Retained the child handle before an early exit so Windows could report its exit code.
+    $null = $frontendProcess.Handle
     $frontendOutput = Open-ServiceLog (Join-Path $projectRoot 'java-backend\target\finapp-web.log')
     $frontendError = Open-ServiceLog (Join-Path $projectRoot 'java-backend\target\finapp-web-error.log')
+    $frontendDeadline = (Get-Date).AddSeconds(30)
+    do {
+        Show-ServiceLogs
+        $frontendProcess.Refresh()
+        if ($frontendProcess.HasExited) {
+            $frontendProcess.WaitForExit()
+            Show-ServiceLogs
+            throw "Frontend failed to start (exit $($frontendProcess.ExitCode)). See the [WEB] output above."
+        }
+        if ($javaProcess.HasExited) {
+            throw 'Spring Boot stopped while starting the frontend. See the [SPRING] output above.'
+        }
+        if ((Get-Date) -gt $frontendDeadline) {
+            throw 'Frontend health check failed at http://127.0.0.1:8080/api/v1/gateway/health. See the [WEB] output above.'
+        }
+        # Waited for an actual gateway response before reporting that the app was ready.
+        $frontendReady = Test-FinAppBackendReady 'http://127.0.0.1:8080/api/v1/gateway/health' 'frontend-gateway'
+        if (!$frontendReady) { Start-Sleep -Milliseconds 200 }
+    } while (!$frontendReady)
     Write-Host 'FinApp: http://localhost:8080 - press Ctrl+C to stop.' -ForegroundColor Green
     if ($env:FINAPP_SKIP_OLLAMA -ne '1') {
         # Started optional downloads alongside FinApp so verification logs remained available.
@@ -188,9 +209,8 @@ try {
     if ($javaProcess.HasExited) {
         throw 'Spring Boot stopped. See the [SPRING] output above.'
     }
-    if ($frontendProcess.ExitCode -ne 0) {
-        throw "Frontend stopped (exit $($frontendProcess.ExitCode))."
-    }
+    $frontendProcess.WaitForExit()
+    throw "Frontend stopped unexpectedly (exit $($frontendProcess.ExitCode)). See the [WEB] output above."
 }
 finally {
     # Limited shutdown to this launch's process trees and infrastructure services;

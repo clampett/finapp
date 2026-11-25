@@ -24,7 +24,9 @@ public class StockController {
     }
 
     private Long getUserId(Authentication authentication) {
-        if (authentication == null || !(authentication.getPrincipal() instanceof SessionUser user)) {
+        if (
+            authentication == null || !(authentication.getPrincipal() instanceof SessionUser user)
+        ) {
             throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Sign in to access stocks.");
         }
         return user.id();
@@ -54,8 +56,9 @@ public class StockController {
     ) {
         Long userId = getUserId(authentication);
         StockDTO created = stockService.createStock(userId, request);
-        return ResponseEntity.status(HttpStatus.CREATED)
-            .body(ApiResponse.success(created, "Stock created successfully"));
+        return ResponseEntity.status(HttpStatus.CREATED).body(
+            ApiResponse.success(created, "Stock created successfully")
+        );
     }
 
     @PutMapping("/{id}")
@@ -95,4 +98,3 @@ public class StockController {
         return ResponseEntity.ok(ApiResponse.success(null, "Stock prices refreshed successfully"));
     }
 }
-

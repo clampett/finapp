@@ -12,6 +12,8 @@ from collections import deque
 from concurrent.futures import Future, ThreadPoolExecutor, wait
 from datetime import datetime, timedelta, timezone
 
+from app.names import coin_name
+
 QUOTE_TTL = timedelta(seconds=60)  # how long a quote is served without asking Yahoo again
 STALE_LIMIT = timedelta(minutes=15)  # how long an old quote may stand in during an outage
 CRYPTO_SYMBOL = re.compile(r"^[A-Z0-9]{1,15}(-USD)?$")
@@ -222,7 +224,7 @@ def _crypto_result(ticker, quote) -> dict:
     last, previous, as_of = quote
     return {
         "symbol": ticker.removesuffix("-USD"),
-        "name": _COIN_NAMES.get(ticker),  # known when typed as BTC-USD
+        "name": _COIN_NAMES.get(ticker) or coin_name(ticker),
         "currency": "USD",
         "price": last,
         "previous_close": previous,

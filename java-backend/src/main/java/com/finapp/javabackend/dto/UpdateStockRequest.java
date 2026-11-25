@@ -24,7 +24,16 @@ public record UpdateStockRequest(
         BigDecimal lastPrice,
         BigDecimal sharesOwned
     ) {
-        this(ticker, companyName, exchange, paysDividend, dividendFrequency, dividendPerShare, lastPrice, sharesOwned, null);
+        this(
+            ticker,
+            companyName,
+            exchange,
+            paysDividend,
+            dividendFrequency,
+            dividendPerShare,
+            lastPrice,
+            sharesOwned,
+            null
+        );
     }
 }
-

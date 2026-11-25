@@ -81,7 +81,9 @@ class AccountServiceTest {
             true
         );
 
-        assertThrows(ResponseStatusException.class, () -> accountService.createAccount(10L, request));
+        assertThrows(ResponseStatusException.class, () ->
+            accountService.createAccount(10L, request)
+        );
     }
 
     @Test
@@ -110,7 +112,12 @@ class AccountServiceTest {
         when(accountRepository.existsByUserIdAndName(10L, "New Name")).thenReturn(false);
         when(accountRepository.save(any(Account.class))).thenAnswer(i -> i.getArgument(0));
 
-        UpdateAccountRequest req = new UpdateAccountRequest("New Name", AccountType.savings, null, null);
+        UpdateAccountRequest req = new UpdateAccountRequest(
+            "New Name",
+            AccountType.savings,
+            null,
+            null
+        );
         AccountDTO updated = accountService.updateAccount(10L, 1L, req);
 
         assertEquals("New Name", updated.name());
@@ -127,4 +134,3 @@ class AccountServiceTest {
         verify(accountRepository).delete(acc);
     }
 }
-

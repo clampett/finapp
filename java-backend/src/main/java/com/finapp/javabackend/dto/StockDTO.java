@@ -18,4 +18,3 @@ public record StockDTO(
     OffsetDateTime createdAt,
     OffsetDateTime updatedAt
 ) {}
-

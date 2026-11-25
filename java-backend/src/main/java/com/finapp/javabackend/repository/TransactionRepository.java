@@ -9,7 +9,14 @@ import org.springframework.data.jpa.repository.JpaRepository;
 public interface TransactionRepository extends JpaRepository<Transaction, Long> {
     List<Transaction> findByUserId(Long userId);
     List<Transaction> findByUserIdOrderByTransactionDateDesc(Long userId);
-    List<Transaction> findByUserIdAndTransactionDateBetweenOrderByTransactionDateDesc(Long userId, LocalDate start, LocalDate end);
+    List<Transaction> findByUserIdAndTransactionDateBetweenOrderByTransactionDateDesc(
+        Long userId,
+        LocalDate start,
+        LocalDate end
+    );
     Optional<Transaction> findByIdAndUserId(Long id, Long userId);
-    boolean existsByRecurringTransactionIdAndTransactionDate(Long recurringTransactionId, LocalDate transactionDate);
+    boolean existsByRecurringTransactionIdAndTransactionDate(
+        Long recurringTransactionId,
+        LocalDate transactionDate
+    );
 }

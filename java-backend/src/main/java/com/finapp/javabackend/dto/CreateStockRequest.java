@@ -26,7 +26,17 @@ public record CreateStockRequest(
         BigDecimal sharesOwned,
         Long userId
     ) {
-        this(ticker, companyName, exchange, paysDividend, dividendFrequency, dividendPerShare, lastPrice, sharesOwned, userId, null);
+        this(
+            ticker,
+            companyName,
+            exchange,
+            paysDividend,
+            dividendFrequency,
+            dividendPerShare,
+            lastPrice,
+            sharesOwned,
+            userId,
+            null
+        );
     }
 }
-

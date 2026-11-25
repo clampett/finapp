@@ -1,6 +1,6 @@
 const test = require('node:test');
 const assert = require('node:assert/strict');
-const { prepareOllama } = require('../prepare-ollama.cjs');
+const { prepareOllama, startContainer } = require('../prepare-ollama.cjs');
 
 const model = { name: 'qwen2.5:1.5b' };
 const tags = (...models) => Response.json({ models });
@@ -59,4 +59,22 @@ test('reported a failed download without retrying it', async () => {
     /could not download/,
   );
   assert.equal(pulls, 1);
+});
+
+test('startContainer activates the local-ai profile for podman-compose and docker compose compatibility', async () => {
+  let invoked = false;
+  await startContainer(new AbortController().signal, {
+    spawnProcess: (cmd, args, options) => {
+      invoked = true;
+      assert.equal(cmd, 'docker');
+      assert.ok(args.includes('--profile') && args.includes('local-ai'));
+      assert.equal(options.env.COMPOSE_PROFILES, 'local-ai');
+      return {
+        once: (event, handler) => {
+          if (event === 'exit') queueMicrotask(() => handler(0));
+        },
+      };
+    },
+  });
+  assert.equal(invoked, true);
 });

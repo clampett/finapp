@@ -1,21 +1,33 @@
 # Shared startup, database configuration, and console helpers. No secrets are logged.
 function Test-FinAppPortOpen([int] $Port) {
-    # Replaced Windows connection-table queries with a bounded loopback connection,
-    # avoiding false negatives when the networking cmdlet could not list listeners.
-    $client = [System.Net.Sockets.TcpClient]::new()
-    try {
-        $connection = $client.ConnectAsync('localhost', $Port)
-        return ($connection.Wait(500) -and $client.Connected)
+    # Checked the same wildcard binding used by Node, including sockets that were
+    # reserved but could not answer a connection or appear as active listeners.
+    $address = if ([System.Net.Sockets.Socket]::OSSupportsIPv6) {
+        [System.Net.IPAddress]::IPv6Any
+    } else {
+        [System.Net.IPAddress]::Any
     }
-    catch {
+    $listener = [System.Net.Sockets.TcpListener]::new($address, $Port)
+    try {
+        $listener.Server.ExclusiveAddressUse = $true
+        if ($address.AddressFamily -eq [System.Net.Sockets.AddressFamily]::InterNetworkV6) {
+            $listener.Server.DualMode = $true
+        }
+        $listener.Start()
         return $false
     }
+    catch {
+        return $true
+    }
     finally {
-        $client.Dispose()
+        $listener.Stop()
     }
 }
 
-function Test-FinAppBackendReady([uri] $Uri = 'http://127.0.0.1:8081/api/v1/health') {
+function Test-FinAppBackendReady(
+    [uri] $Uri = 'http://127.0.0.1:8081/api/v1/health',
+    [string] $ExpectedService = 'java-backend'
+) {
     # Confirmed the application's health response instead of merely finding a port.
     # Bypassed system proxies and bounded each request for Windows PowerShell 5.1
     # compatibility, keeping normal startup retries quick and non-interactive.
@@ -34,7 +46,7 @@ function Test-FinAppBackendReady([uri] $Uri = 'http://127.0.0.1:8081/api/v1/heal
         $reader = [System.IO.StreamReader]::new($response.GetResponseStream())
         $health = $reader.ReadToEnd() | ConvertFrom-Json
         return ($health.success -eq $true -and $health.data.status -eq 'UP' -and
-            $health.data.service -eq 'java-backend')
+            $health.data.service -eq $ExpectedService)
     }
     catch {
         if ($_.Exception.Response) {

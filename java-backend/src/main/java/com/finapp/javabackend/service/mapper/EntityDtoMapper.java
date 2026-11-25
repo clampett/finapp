@@ -43,7 +43,9 @@ public final class EntityDtoMapper {
             transaction.getAccount() != null ? transaction.getAccount().getName() : null,
             transaction.getCategory() != null ? transaction.getCategory().getId() : null,
             transaction.getCategory() != null ? transaction.getCategory().getName() : null,
-            transaction.getRecurringTransaction() != null ? transaction.getRecurringTransaction().getId() : null,
+            transaction.getRecurringTransaction() != null
+                ? transaction.getRecurringTransaction().getId()
+                : null,
             transaction.getKind(),
             transaction.getDescription(),
             transaction.getAmount(),
@@ -137,4 +139,3 @@ public final class EntityDtoMapper {
         );
     }
 }
-

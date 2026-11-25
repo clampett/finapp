@@ -2,16 +2,19 @@ package com.finapp.javabackend.model.entity;
 
 import com.finapp.javabackend.model.enums.AccountType;
 import jakarta.persistence.*;
-import org.hibernate.annotations.JdbcTypeCode;
-import org.hibernate.type.SqlTypes;
 import java.math.BigDecimal;
 import java.time.OffsetDateTime;
+import org.hibernate.annotations.JdbcTypeCode;
+import org.hibernate.type.SqlTypes;
 
 @Entity
-@Table(name = "accounts", uniqueConstraints = {
-        @UniqueConstraint(columnNames = {"user_id", "name"}),
-        @UniqueConstraint(columnNames = {"id", "user_id"})
-})
+@Table(
+    name = "accounts",
+    uniqueConstraints = {
+        @UniqueConstraint(columnNames = { "user_id", "name" }),
+        @UniqueConstraint(columnNames = { "id", "user_id" }),
+    }
+)
 public class Account {
 
     @Id

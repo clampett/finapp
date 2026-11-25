@@ -23,7 +23,8 @@ public class UserServiceImpl implements UserService {
     private static final int MAX_DISPLAY_NAME_LENGTH = 50;
     private static final int MAX_PROFILE_PICTURE_BYTES = 3 * 1024 * 1024;
     private static final int MAX_PROFILE_PICTURE_DIMENSION = 2048;
-    private static final int MAX_PROFILE_PICTURE_LENGTH = 4 * ((MAX_PROFILE_PICTURE_BYTES + 2) / 3) + 23;
+    private static final int MAX_PROFILE_PICTURE_LENGTH =
+        4 * ((MAX_PROFILE_PICTURE_BYTES + 2) / 3) + 23;
     private static final Pattern DATA_URI_PATTERN = Pattern.compile(
         "^data:image/(png|jpeg|gif);base64,[A-Za-z0-9+/=]+$"
     );
@@ -42,7 +43,10 @@ public class UserServiceImpl implements UserService {
 
     private void validatePicture(String picture) {
         if (picture.length() > MAX_PROFILE_PICTURE_LENGTH) {
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Profile picture exceeds maximum allowed size");
+            throw new ResponseStatusException(
+                HttpStatus.BAD_REQUEST,
+                "Profile picture exceeds maximum allowed size"
+            );
         }
 
         var match = DATA_URI_PATTERN.matcher(picture);
@@ -52,9 +56,14 @@ public class UserServiceImpl implements UserService {
 
         // Bounded decoded bytes and dimensions before the image was decompressed.
         try {
-            byte[] bytes = Base64.getDecoder().decode(picture.substring(match.end(1) + ";base64,".length()));
+            byte[] bytes = Base64.getDecoder().decode(
+                picture.substring(match.end(1) + ";base64,".length())
+            );
             if (bytes.length > MAX_PROFILE_PICTURE_BYTES) {
-                throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Profile picture exceeds maximum allowed size");
+                throw new ResponseStatusException(
+                    HttpStatus.BAD_REQUEST,
+                    "Profile picture exceeds maximum allowed size"
+                );
             }
             try (var stream = new MemoryCacheImageInputStream(new ByteArrayInputStream(bytes))) {
                 var readers = ImageIO.getImageReaders(stream);
@@ -68,10 +77,13 @@ public class UserServiceImpl implements UserService {
                     if (!match.group(1).equals(format)) {
                         throw invalidPicture();
                     }
-                    if (reader.getWidth(0) > MAX_PROFILE_PICTURE_DIMENSION ||
-                        reader.getHeight(0) > MAX_PROFILE_PICTURE_DIMENSION) {
+                    if (
+                        reader.getWidth(0) > MAX_PROFILE_PICTURE_DIMENSION ||
+                        reader.getHeight(0) > MAX_PROFILE_PICTURE_DIMENSION
+                    ) {
                         throw new ResponseStatusException(
-                            HttpStatus.BAD_REQUEST, "Profile picture cannot exceed 2048 by 2048 pixels"
+                            HttpStatus.BAD_REQUEST,
+                            "Profile picture cannot exceed 2048 by 2048 pixels"
                         );
                     }
                     reader.read(0).flush();
@@ -85,13 +97,17 @@ public class UserServiceImpl implements UserService {
     }
 
     private ResponseStatusException invalidPicture() {
-        return new ResponseStatusException(HttpStatus.BAD_REQUEST, "Profile picture must be a valid image data URI");
+        return new ResponseStatusException(
+            HttpStatus.BAD_REQUEST,
+            "Profile picture must be a valid image data URI"
+        );
     }
 
     @Override
     @Transactional(readOnly = true)
     public UserProfileDTO getProfile(Long userId) {
-        User user = userRepository.findById(userId)
+        User user = userRepository
+            .findById(userId)
             .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "User not found"));
 
         return new UserProfileDTO(
@@ -106,7 +122,8 @@ public class UserServiceImpl implements UserService {
     @Override
     @Transactional
     public UserProfileDTO updateProfile(Long userId, UpdateUserProfileRequest request) {
-        User user = userRepository.findById(userId)
+        User user = userRepository
+            .findById(userId)
             .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "User not found"));
 
         if (request == null) {
@@ -122,7 +139,10 @@ public class UserServiceImpl implements UserService {
         if (request.displayName() != null) {
             String trimmed = request.displayName().trim();
             if (trimmed.isEmpty()) {
-                throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Display name cannot be empty");
+                throw new ResponseStatusException(
+                    HttpStatus.BAD_REQUEST,
+                    "Display name cannot be empty"
+                );
             }
             if (trimmed.length() > MAX_DISPLAY_NAME_LENGTH) {
                 throw new ResponseStatusException(

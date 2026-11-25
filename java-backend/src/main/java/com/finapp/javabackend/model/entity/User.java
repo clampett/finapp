@@ -17,6 +17,10 @@ public class User {
     @Column(nullable = false, unique = true)
     private String email;
 
+    // Bound returning Google accounts to their stable provider identity.
+    @Column(name = "google_subject", length = 255, unique = true)
+    private String googleSubject;
+
     @Column(name = "password_hash")
     private String passwordHash;
 
@@ -65,6 +69,14 @@ public class User {
 
     public void setEmail(String email) {
         this.email = email;
+    }
+
+    public String getGoogleSubject() {
+        return googleSubject;
+    }
+
+    public void setGoogleSubject(String googleSubject) {
+        this.googleSubject = googleSubject;
     }
 
     public String getPasswordHash() {

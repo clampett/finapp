@@ -25,8 +25,13 @@ public class CategoryController {
     }
 
     private Long getUserId(Authentication authentication) {
-        if (authentication == null || !(authentication.getPrincipal() instanceof SessionUser user)) {
-            throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Sign in to access categories.");
+        if (
+            authentication == null || !(authentication.getPrincipal() instanceof SessionUser user)
+        ) {
+            throw new ResponseStatusException(
+                HttpStatus.UNAUTHORIZED,
+                "Sign in to access categories."
+            );
         }
         return user.id();
     }
@@ -38,7 +43,9 @@ public class CategoryController {
     ) {
         Long userId = getUserId(authentication);
         List<CategoryDTO> categories = categoryService.getCategories(userId, kind);
-        return ResponseEntity.ok(ApiResponse.success(categories, "Categories fetched successfully"));
+        return ResponseEntity.ok(
+            ApiResponse.success(categories, "Categories fetched successfully")
+        );
     }
 
     @GetMapping("/{id}")
@@ -58,8 +65,9 @@ public class CategoryController {
     ) {
         Long userId = getUserId(authentication);
         CategoryDTO created = categoryService.createCategory(userId, request);
-        return ResponseEntity.status(HttpStatus.CREATED)
-            .body(ApiResponse.success(created, "Category created successfully"));
+        return ResponseEntity.status(HttpStatus.CREATED).body(
+            ApiResponse.success(created, "Category created successfully")
+        );
     }
 
     @PutMapping("/{id}")
@@ -83,4 +91,3 @@ public class CategoryController {
         return ResponseEntity.ok(ApiResponse.success(null, "Category deleted successfully"));
     }
 }
-

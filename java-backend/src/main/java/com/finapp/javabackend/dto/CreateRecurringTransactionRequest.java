@@ -23,7 +23,7 @@ public record CreateRecurringTransactionRequest(
     String notes
 ) {
     public int effectiveIntervalCount() {
-        return (intervalCount == null || intervalCount < 1) ? 1 : intervalCount;
+        return intervalCount == null || intervalCount < 1 ? 1 : intervalCount;
     }
 
     public LocalDate effectiveStartDate() {
@@ -37,4 +37,3 @@ public record CreateRecurringTransactionRequest(
         return effectiveStartDate();
     }
 }
-

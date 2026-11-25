@@ -39,10 +39,18 @@ class UserControllerTest {
     @Test
     void getProfile_authenticated_returnsProfile() {
         when(authentication.getPrincipal()).thenReturn(sessionUser);
-        UserProfileDTO mockProfile = new UserProfileDTO(15L, "johndoe", "john@example.com", "John Doe", null);
+        UserProfileDTO mockProfile = new UserProfileDTO(
+            15L,
+            "johndoe",
+            "john@example.com",
+            "John Doe",
+            null
+        );
         when(userService.getProfile(15L)).thenReturn(mockProfile);
 
-        ResponseEntity<ApiResponse<UserProfileDTO>> response = userController.getProfile(authentication);
+        ResponseEntity<ApiResponse<UserProfileDTO>> response = userController.getProfile(
+            authentication
+        );
 
         assertEquals(HttpStatus.OK, response.getStatusCode());
         assertNotNull(response.getBody());
@@ -61,11 +69,23 @@ class UserControllerTest {
     @Test
     void updateProfile_authenticated_returnsUpdatedProfile() {
         when(authentication.getPrincipal()).thenReturn(sessionUser);
-        UpdateUserProfileRequest request = new UpdateUserProfileRequest("Johnny", "data:image/png;base64,xyz");
-        UserProfileDTO mockProfile = new UserProfileDTO(15L, "johndoe", "john@example.com", "Johnny", "data:image/png;base64,xyz");
+        UpdateUserProfileRequest request = new UpdateUserProfileRequest(
+            "Johnny",
+            "data:image/png;base64,xyz"
+        );
+        UserProfileDTO mockProfile = new UserProfileDTO(
+            15L,
+            "johndoe",
+            "john@example.com",
+            "Johnny",
+            "data:image/png;base64,xyz"
+        );
         when(userService.updateProfile(15L, request)).thenReturn(mockProfile);
 
-        ResponseEntity<ApiResponse<UserProfileDTO>> response = userController.updateProfile(request, authentication);
+        ResponseEntity<ApiResponse<UserProfileDTO>> response = userController.updateProfile(
+            request,
+            authentication
+        );
 
         assertEquals(HttpStatus.OK, response.getStatusCode());
         assertNotNull(response.getBody());
@@ -101,4 +121,3 @@ class UserControllerTest {
         assertEquals(HttpStatus.UNAUTHORIZED, ex.getStatusCode());
     }
 }
-

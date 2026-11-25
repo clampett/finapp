@@ -1,0 +1,662 @@
+export const API_BASE = import.meta.env.VITE_API_URL || '/api/v1';
+export type NodeType =
+  'INCOME' | 'CHECKING' | 'SAVINGS' | 'INVESTMENT' | 'DEBT' | 'EXPENSE' | 'ASSET';
+export type SimulationType = 'monte_carlo' | 'markov' | 'debt';
+export type View =
+  | 'overview'
+  | 'graph'
+  | 'cashflow'
+  | 'budgeting'
+  | 'investing'
+  | 'news'
+  | 'history'
+  | 'ai'
+  | 'settings';
+export type RecurrenceFrequency =
+  'daily' | 'weekly' | 'biweekly' | 'monthly' | 'quarterly' | 'yearly';
+
+export function demoProfile(value: string | null): 1 | 2 | 3 {
+  const profile = Number(value);
+  return profile === 1 || profile === 2 || profile === 3 ? profile : 2;
+}
+
+export function recurringToMonthlyAmount(
+  amount: number,
+  frequency: RecurrenceFrequency = 'monthly',
+  intervalCount: number = 1,
+): number {
+  const count = Math.max(1, intervalCount || 1);
+  const base = Number(amount) || 0;
+  if (base <= 0) return 0;
+
+  switch (frequency) {
+    case 'daily':
+      return Math.round(((base * 365) / (12 * count)) * 100) / 100;
+    case 'weekly':
+      return Math.round(((base * 52) / (12 * count)) * 100) / 100;
+    case 'biweekly':
+      return Math.round(((base * 26) / (12 * count)) * 100) / 100;
+    case 'monthly':
+      return Math.round((base / count) * 100) / 100;
+    case 'quarterly':
+      return Math.round(((base * 4) / (12 * count)) * 100) / 100;
+    case 'yearly':
+      return Math.round((base / (12 * count)) * 100) / 100;
+    default:
+      return Math.round((base / count) * 100) / 100;
+  }
+}
+
+export function monthlyToRecurringAmount(
+  monthlyAmount: number,
+  frequency: RecurrenceFrequency = 'monthly',
+  intervalCount: number = 1,
+): number {
+  const count = Math.max(1, intervalCount || 1);
+  const base = Number(monthlyAmount) || 0;
+  if (base <= 0) return 0;
+
+  switch (frequency) {
+    case 'daily':
+      return Math.round(((base * 12 * count) / 365) * 100) / 100;
+    case 'weekly':
+      return Math.round(((base * 12 * count) / 52) * 100) / 100;
+    case 'biweekly':
+      return Math.round(((base * 12 * count) / 26) * 100) / 100;
+    case 'monthly':
+      return Math.round(base * count * 100) / 100;
+    case 'quarterly':
+      return Math.round(((base * 12 * count) / 4) * 100) / 100;
+    case 'yearly':
+      return Math.round(base * 12 * count * 100) / 100;
+    default:
+      return Math.round(base * count * 100) / 100;
+  }
+}
+
+export interface GraphNode {
+  archived?: boolean;
+  disabled?: boolean;
+  position?: { x: number; y: number };
+  id: string;
+  name: string;
+  nodeType: NodeType;
+  amountOrBalance: number;
+  interestRateApr: number;
+  // Separated property growth from stock returns and cash APR.
+  assetGrowthRate?: number;
+  minPayment?: number;
+  frequency?: RecurrenceFrequency;
+  intervalCount?: number;
+  date?: string;
+  createdAt?: string;
+  updatedAt?: string;
+}
+export interface GraphEdge {
+  id: string;
+  sourceNodeId: string;
+  targetNodeId: string;
+  monthlyFixedFlow: number | null;
+  percentageFlow: number | null;
+}
+export interface GraphData {
+  nodes: GraphNode[];
+  edges: GraphEdge[];
+  assumptions?: ScenarioAssumptions;
+}
+// Excluded archived accounts and their routes from live budgets and forecasts;
+// retained the underlying records so restoring either endpoint recovered a route.
+export function activeGraph(graph: GraphData): GraphData {
+  const nodes = graph.nodes.filter((node) => !node.archived);
+  const ids = new Set(nodes.map((node) => node.id));
+  return {
+    ...graph,
+    nodes,
+    edges: graph.edges.filter((edge) => ids.has(edge.sourceNodeId) && ids.has(edge.targetNodeId)),
+  };
+}
+export function expenseAmount(node: GraphNode, graph: GraphData, ignoreDisabled = false): number {
+  if (!ignoreDisabled && node.disabled) return 0;
+  const routes = graph.edges.filter(
+    (edge) =>
+      edge.targetNodeId === node.id &&
+      graph.nodes.some(
+        (source) =>
+          source.id === edge.sourceNodeId &&
+          (ignoreDisabled || !source.disabled) &&
+          ['INCOME', 'CHECKING'].includes(source.nodeType),
+      ),
+  );
+  if (!routes.length)
+    return recurringToMonthlyAmount(node.amountOrBalance, node.frequency, node.intervalCount);
+  const income = graph.nodes
+    .filter((n) => n.nodeType === 'INCOME' && (ignoreDisabled || !n.disabled))
+    .reduce(
+      (sum, n) => sum + recurringToMonthlyAmount(n.amountOrBalance, n.frequency, n.intervalCount),
+      0,
+    );
+  const settings = assumptionsFor(graph);
+  const takeHome = income * (settings.incomeBasis === 'gross' ? 1 - settings.taxRate / 100 : 1);
+  return routes.reduce(
+    (sum, edge) => sum + (edge.monthlyFixedFlow ?? (takeHome * (edge.percentageFlow ?? 0)) / 100),
+    0,
+  );
+}
+export interface ScenarioAssumptions {
+  incomeBasis: 'gross' | 'net';
+  taxRate: number;
+  incomeGrowth: number;
+  expenseGrowth: number;
+}
+export const defaultAssumptions: ScenarioAssumptions = {
+  incomeBasis: 'gross',
+  taxRate: 20,
+  incomeGrowth: 2.5,
+  expenseGrowth: 2.5,
+};
+export const assumptionsFor = (graph: GraphData): ScenarioAssumptions => ({
+  ...defaultAssumptions,
+  ...graph.assumptions,
+});
+export const dollars = (value: number) =>
+  new Intl.NumberFormat('en-US', {
+    style: 'currency',
+    currency: 'USD',
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  }).format(value);
+
+export function allocations(graph: GraphData, surplus: number, rate = 0) {
+  graph = activeGraph(graph);
+  let fixedInvestment = 0,
+    fixedSavings = 0,
+    percentInvestment = 0,
+    percentSavings = 0;
+  const nodes = new Map(graph.nodes.map((n) => [n.id, n]));
+  // Mirrored Python's allocation order so the visible budget and the forecast
+  // funded fixed transfers before percentages and discretionary investing.
+  for (const edge of graph.edges) {
+    const source = nodes.get(edge.sourceNodeId),
+      target = nodes.get(edge.targetNodeId);
+    if (
+      !source ||
+      !target ||
+      source.disabled ||
+      target.disabled ||
+      !['INCOME', 'CHECKING'].includes(source.nodeType)
+    )
+      continue;
+    if (target.nodeType === 'INVESTMENT') {
+      fixedInvestment += edge.monthlyFixedFlow ?? 0;
+      percentInvestment += edge.percentageFlow ?? 0;
+    } else if (target.nodeType === 'SAVINGS') {
+      fixedSavings += edge.monthlyFixedFlow ?? 0;
+      percentSavings += edge.percentageFlow ?? 0;
+    }
+  }
+  const available = Math.max(0, surplus),
+    fixed = fixedInvestment + fixedSavings;
+  const fixedScale = fixed ? Math.min(1, available / fixed) : 0;
+  const afterFixed = Math.max(0, available - fixed * fixedScale);
+  const percentScale = 1 / Math.max(100, percentInvestment + percentSavings);
+  const plannedInvestment =
+    fixedInvestment * fixedScale + afterFixed * percentInvestment * percentScale;
+  const plannedSavings = fixedSavings * fixedScale + afterFixed * percentSavings * percentScale;
+  const unassigned = Math.max(0, available - plannedInvestment - plannedSavings);
+  return {
+    plannedInvestment,
+    plannedSavings,
+    unassigned,
+    investment: plannedInvestment + (unassigned * rate) / 100,
+    cash: plannedSavings + unassigned * (1 - rate / 100),
+    overcommitted: fixed > available || percentInvestment + percentSavings > 100,
+  };
+}
+export const money = (value: number, compact = false) =>
+  new Intl.NumberFormat('en-US', {
+    style: 'currency',
+    currency: 'USD',
+    maximumFractionDigits: compact ? 1 : 0,
+    notation: compact ? 'compact' : 'standard',
+  }).format(value);
+export const types: NodeType[] = [
+  'INCOME',
+  'CHECKING',
+  'SAVINGS',
+  'INVESTMENT',
+  'DEBT',
+  'EXPENSE',
+  'ASSET',
+];
+export const colors: Record<NodeType, string> = {
+  INCOME: 'var(--ui-paint-34d399)',
+  CHECKING: 'var(--ui-paint-60a5fa)',
+  SAVINGS: 'var(--ui-paint-22d3ee)',
+  INVESTMENT: 'var(--ui-paint-a78bfa)',
+  DEBT: 'var(--ui-paint-fb7185)',
+  EXPENSE: 'var(--ui-paint-fbbf24)',
+  ASSET: 'var(--ui-paint-59c9c1)',
+};
+export const typeLabel = (type: NodeType) => type.charAt(0) + type.slice(1).toLowerCase();
+export function debtPayment(node: GraphNode, graph: GraphData, ignoreDisabled = false): number {
+  // Matched Python's payment precedence: node override, fixed incoming flows,
+  // then 2% of principal. Explicit zero payments were retained as valid choices.
+  if ((!ignoreDisabled && node.disabled) || node.amountOrBalance <= 0) return 0;
+  const payoff = node.amountOrBalance * (1 + node.interestRateApr / 1200);
+  if (node.minPayment != null) return Math.min(node.minPayment, payoff);
+  const edges = graph.edges.filter((e) => {
+    if (e.targetNodeId !== node.id) return false;
+    const src = graph.nodes.find((n) => n.id === e.sourceNodeId);
+    return !src || ignoreDisabled || !src.disabled;
+  });
+  const settings = assumptionsFor(graph);
+  const takeHome =
+    graph.nodes
+      .filter((n) => n.nodeType === 'INCOME' && (ignoreDisabled || !n.disabled))
+      .reduce(
+        (sum, n) => sum + recurringToMonthlyAmount(n.amountOrBalance, n.frequency, n.intervalCount),
+        0,
+      ) * (settings.incomeBasis === 'gross' ? 1 - settings.taxRate / 100 : 1);
+  return Math.min(
+    payoff,
+    edges.length
+      ? edges.reduce(
+          (sum, e) => sum + (e.monthlyFixedFlow ?? (takeHome * (e.percentageFlow ?? 0)) / 100),
+          0,
+        )
+      : node.amountOrBalance * 0.02,
+  );
+}
+// Reconciled active scenario balances and tracked stocks into assets, debt, and net worth.
+export function totals(graph: GraphData, portfolioValue = 0) {
+  graph = activeGraph(graph);
+  // Kept monthly flows separate from point-in-time balances. Loan minimums were
+  // deducted once from surplus, while total debt reduced net worth separately.
+  const sum = (types: NodeType[]) =>
+    graph.nodes
+      .filter((n) => !n.disabled && types.includes(n.nodeType))
+      .reduce((s, n) => s + n.amountOrBalance, 0);
+  // Separated overdrawn balances from positive cash so assets and debt reconciled with net worth.
+  const cashNodes = graph.nodes.filter(
+    (node) => !node.disabled && ['CHECKING', 'SAVINGS'].includes(node.nodeType),
+  );
+  const overdraft = cashNodes.reduce(
+    (total, node) => total + Math.max(0, -node.amountOrBalance),
+    0,
+  );
+  const income = graph.nodes
+      .filter((n) => !n.disabled && n.nodeType === 'INCOME')
+      .reduce(
+        (sum, n) => sum + recurringToMonthlyAmount(n.amountOrBalance, n.frequency, n.intervalCount),
+        0,
+      ),
+    expenses = graph.nodes
+      .filter((node) => !node.disabled && node.nodeType === 'EXPENSE')
+      .reduce((sum, node) => sum + expenseAmount(node, graph), 0),
+    debt = sum(['DEBT']) + overdraft;
+  // Kept graph investment accounts separate from tracked stocks before combining their balances.
+  const nodeInvestments = sum(['INVESTMENT']);
+  // Included owned property once without creating monthly income.
+  const personalAssets = sum(['ASSET']);
+  // Excluded invalid cached valuations before calculating assets and net worth.
+  const totalInvestments =
+    nodeInvestments + (Number.isFinite(portfolioValue) && portfolioValue > 0 ? portfolioValue : 0);
+  // Included positive cash and investments while treating overdrawn cash as a liability.
+  const assets =
+    cashNodes.reduce((total, node) => total + Math.max(0, node.amountOrBalance), 0) +
+    totalInvestments +
+    personalAssets;
+  const payments = graph.nodes
+    .filter((n) => !n.disabled && n.nodeType === 'DEBT')
+    .reduce((s, n) => s + debtPayment(n, graph), 0);
+  // Applied the saved gross/net choice everywhere rather than silently giving
+  // the overview and simulation different disposable-income formulas.
+  const settings = assumptionsFor(graph);
+  const taxes = settings.incomeBasis === 'gross' ? (income * settings.taxRate) / 100 : 0;
+  const takeHome = income - taxes;
+  const surplus = takeHome - expenses - payments;
+  return {
+    income,
+    expenses,
+    debt,
+    overdraft,
+    assets,
+    payments,
+    // Subtracted liabilities from assets rather than using net worth as a pie denominator.
+    netWorth: assets - debt,
+    taxes,
+    takeHome,
+    surplus,
+    portfolioValue,
+    nodeInvestments,
+    personalAssets,
+    totalInvestments,
+    ...allocations(graph, surplus),
+  };
+}
+// Validate database responses and imported drafts before rendering or calculating.
+export type OverviewMode = 'assets' | 'budget' | 'debt';
+export type AssetViewMode = 'overview' | 'breakdown';
+
+// Limited chart inputs to holding fields used for valuation and identification.
+export interface AssetHolding {
+  symbol: string;
+  shares: number;
+  lastPrice?: number;
+  purchasePrice?: number;
+  companyName?: string | null;
+}
+
+// Reused theme-aware colors so both appearances retained consistent chart styling.
+export const ASSET_BREAKDOWN_COLORS = [
+  'var(--ui-paint-a78bfa)',
+  'var(--ui-paint-60a5fa)',
+  'var(--ui-paint-22d3ee)',
+  'var(--ui-paint-34d399)',
+  'var(--ui-paint-fbbf24)',
+  'var(--ui-paint-fb7185)',
+  'var(--ui-paint-b69dfa)',
+  'var(--ui-paint-59c9c1)',
+  'var(--ui-paint-7baaf5)',
+  'var(--ui-paint-f87171)',
+];
+
+// Built category and account-level slices from the same balance sheet used by summary cards.
+export function overviewBreakdown(
+  graph: GraphData,
+  mode: OverviewMode,
+  portfolioValue = 0,
+  assetView: AssetViewMode = 'overview',
+  holdings: AssetHolding[] = [],
+) {
+  graph = activeGraph(graph);
+  const t = totals(graph, portfolioValue);
+
+  // Kept balance-sheet amounts separate from monthly flows; never encoded a
+  // liability or shortfall as a negative pie wedge or counted transfers twice.
+  let items: { label: string; value: number; color: string }[];
+  if (mode === 'assets') {
+    if (assetView === 'breakdown') {
+      // Retained positive account balances and kept overdrafts in the separate debt view.
+      const breakdownItems: { label: string; value: number }[] = graph.nodes
+        .filter(
+          (node) =>
+            !node.disabled &&
+            ['CHECKING', 'SAVINGS', 'INVESTMENT', 'ASSET'].includes(node.nodeType) &&
+            node.amountOrBalance > 0,
+        )
+        .map((node) => ({
+          label:
+            node.name ||
+            (node.nodeType === 'INVESTMENT'
+              ? 'Investment account'
+              : node.nodeType === 'SAVINGS'
+                ? 'Savings'
+                : 'Checking'),
+          value: node.amountOrBalance,
+        }));
+
+      // Combined repeated ticker lots and excluded malformed or unpriced holdings.
+      const stocks = new Map<string, number>();
+      for (const holding of holdings) {
+        const symbol =
+          typeof holding.symbol === 'string' ? holding.symbol.trim().toUpperCase() : '';
+        // Preserved fractional-share precision until currency values were formatted for display.
+        const value = holding.shares * (holding.lastPrice ?? 0);
+        if (
+          !symbol ||
+          !Number.isFinite(holding.shares) ||
+          holding.shares <= 0 ||
+          !Number.isFinite(holding.lastPrice) ||
+          (holding.lastPrice ?? 0) <= 0 ||
+          !Number.isFinite(value) ||
+          value <= 0
+        )
+          continue;
+        // Merged independent lots under one normalized ticker without discarding their value.
+        stocks.set(symbol, (stocks.get(symbol) ?? 0) + value);
+      }
+      // Summed priced holdings before checking them against the portfolio snapshot.
+      const stockSum = [...stocks.values()].reduce((sum, value) => sum + value, 0);
+      if (Number.isFinite(portfolioValue) && portfolioValue > 0) {
+        // Preserved the summary valuation when stale holding prices exceeded that snapshot.
+        // Avoided inventing scaled prices or counting stock value twice during a refresh.
+        if (!Number.isFinite(stockSum) || stockSum > portfolioValue) {
+          breakdownItems.push({ label: 'Stock holdings', value: portfolioValue });
+        } else {
+          stocks.forEach((value, label) => breakdownItems.push({ label, value }));
+          // Retained even a one-cent remainder so the detailed and category totals reconciled.
+          const remainder = portfolioValue - stockSum;
+          if (remainder > 0)
+            breakdownItems.push({ label: 'Other stock holdings', value: remainder });
+        }
+      }
+
+      // Assigned a theme token to each slice, cycling through the available palette.
+      items = breakdownItems.map((item, index) => ({
+        ...item,
+        color: ASSET_BREAKDOWN_COLORS[index % ASSET_BREAKDOWN_COLORS.length],
+      }));
+    } else {
+      items = [
+        {
+          label: 'Checking',
+          value: graph.nodes
+            .filter((node) => !node.disabled && node.nodeType === 'CHECKING')
+            .reduce((sum, node) => sum + Math.max(0, node.amountOrBalance), 0),
+          color: 'var(--ui-paint-60a5fa)',
+        },
+        {
+          label: 'Savings',
+          value: graph.nodes
+            .filter((node) => !node.disabled && node.nodeType === 'SAVINGS')
+            .reduce((sum, node) => sum + Math.max(0, node.amountOrBalance), 0),
+          color: 'var(--ui-paint-22d3ee)',
+        },
+        {
+          label: 'Investments',
+          value: t.totalInvestments,
+          color: 'var(--ui-paint-a78bfa)',
+        },
+        { label: 'Personal assets', value: t.personalAssets, color: colors.ASSET },
+      ];
+    }
+  } else if (mode === 'debt') {
+    items = [
+      ...graph.nodes
+        .filter((node) => !node.disabled && node.nodeType === 'DEBT')
+        .map((node, index) => ({
+          label: node.name,
+          value: node.amountOrBalance,
+          color: [
+            'var(--ui-paint-fb7185)',
+            'var(--ui-paint-fbbf24)',
+            'var(--ui-paint-b69dfa)',
+            'var(--ui-paint-59c9c1)',
+            'var(--ui-paint-7baaf5)',
+          ][index % 5],
+        })),
+      { label: 'Cash overdraft', value: t.overdraft, color: 'var(--ui-paint-fb7185)' },
+    ];
+  } else {
+    items = [
+      { label: 'Estimated taxes', value: t.taxes, color: 'var(--ui-paint-a78bfa)' },
+      { label: 'Living expenses', value: t.expenses, color: 'var(--ui-paint-fbbf24)' },
+      { label: 'Loan payments', value: t.payments, color: 'var(--ui-paint-fb7185)' },
+      {
+        label: 'Scheduled investing',
+        value: t.plannedInvestment,
+        color: 'var(--ui-paint-60a5fa)',
+      },
+      {
+        label: 'Scheduled savings',
+        value: t.plannedSavings,
+        color: 'var(--ui-paint-22d3ee)',
+      },
+      { label: 'Unassigned cash', value: t.unassigned, color: 'var(--ui-paint-6ed9b5)' },
+    ];
+  }
+  // Removed empty slices before calculating the positive total used by every percentage.
+  const positive = items.filter((item) => item.value > 0);
+  return {
+    items: positive,
+    total: positive.reduce((sum, item) => sum + item.value, 0),
+    shortfall: mode === 'budget' ? Math.max(0, -t.surplus) : 0,
+    income: t.income,
+    netWorth: t.netWorth,
+  };
+}
+export function parseGraph(value: unknown): GraphData {
+  // Treated imported JSON and server data as untrusted input before either was
+  // passed to the canvas, financial summaries, or Python simulation payload.
+  const data = value as GraphData;
+  if (
+    !data ||
+    !Array.isArray(data.nodes) ||
+    !Array.isArray(data.edges) ||
+    data.nodes.length > 200 ||
+    data.edges.length > 500
+  )
+    throw new Error('Use a FinApp JSON file with up to 200 accounts and 500 connections.');
+  const number = (v: unknown, max: number, min = 0) => {
+    const n = Number(v);
+    if (!Number.isFinite(n) || n < min || n > max)
+      throw new Error('Amounts must be finite and within the supported range.');
+    return n;
+  };
+  const nodes = data.nodes.map((n) => {
+    if (
+      ['month', 'freed_cash_flow'].includes(String(n.id)) ||
+      n.id == null ||
+      !String(n.id) ||
+      String(n.id).length > 100 ||
+      !types.includes(n.nodeType) ||
+      typeof n.name !== 'string' ||
+      !n.name.trim() ||
+      n.name.length > 100
+    )
+      throw new Error('Each account needs a unique ID, name and supported type.');
+    return {
+      id: String(n.id),
+      name: n.name.trim(),
+      nodeType: n.nodeType,
+      // Allowed a negative balance only on cash accounts.
+      amountOrBalance: number(
+        n.amountOrBalance,
+        1e12,
+        n.nodeType === 'CHECKING' || n.nodeType === 'SAVINGS' ? -1e12 : 0,
+      ),
+      // Validated signed property growth independently of bank APR.
+      interestRateApr: n.nodeType === 'ASSET' ? 0 : number(n.interestRateApr ?? 0, 100),
+      ...(n.nodeType === 'ASSET'
+        ? { assetGrowthRate: number(n.assetGrowthRate ?? 0, 100, -100) }
+        : {}),
+      ...(n.archived === true ? { archived: true } : {}),
+      ...(n.disabled === true ? { disabled: true } : {}),
+      ...(n.position &&
+      Number.isFinite(n.position.x) &&
+      Number.isFinite(n.position.y) &&
+      Math.abs(n.position.x) <= 100000 &&
+      Math.abs(n.position.y) <= 100000
+        ? { position: { x: n.position.x, y: n.position.y } }
+        : {}),
+      ...(n.minPayment != null ? { minPayment: number(n.minPayment, 1e9) } : {}),
+      ...(n.frequency &&
+      ['daily', 'weekly', 'biweekly', 'monthly', 'quarterly', 'yearly'].includes(
+        n.frequency as string,
+      )
+        ? { frequency: n.frequency as RecurrenceFrequency }
+        : {}),
+      ...(n.intervalCount != null && Number(n.intervalCount) >= 1 && Number(n.intervalCount) <= 365
+        ? { intervalCount: Math.round(Number(n.intervalCount)) }
+        : {}),
+      ...(typeof n.date === 'string' && Number.isFinite(Date.parse(n.date))
+        ? { date: n.date }
+        : {}),
+      ...(typeof n.createdAt === 'string' && Number.isFinite(Date.parse(n.createdAt))
+        ? { createdAt: n.createdAt }
+        : {}),
+      ...(typeof n.updatedAt === 'string' && Number.isFinite(Date.parse(n.updatedAt))
+        ? { updatedAt: n.updatedAt }
+        : {}),
+    };
+  });
+  const ids = new Set(nodes.map((n) => n.id));
+  if (ids.size !== nodes.length) throw new Error('Account IDs must be unique.');
+  const edges = data.edges.map((e, i) => {
+    const source = String(e.sourceNodeId),
+      target = String(e.targetNodeId);
+    // Rejected illiquid-property cash routes before budget calculations.
+    if (nodes.some((n) => n.nodeType === 'ASSET' && [source, target].includes(n.id)))
+      throw new Error(
+        'Personal assets are balance-only accounts and cannot have cash-flow connections.',
+      );
+    if (
+      !ids.has(source) ||
+      !ids.has(target) ||
+      source === target ||
+      (e.monthlyFixedFlow == null) === (e.percentageFlow == null)
+    )
+      throw new Error(
+        'Each connection must join different existing accounts with an amount or percentage.',
+      );
+    return {
+      id: String(e.id ?? `edge-${i}`),
+      sourceNodeId: source,
+      targetNodeId: target,
+      monthlyFixedFlow: e.monthlyFixedFlow == null ? null : number(e.monthlyFixedFlow, 1e9),
+      percentageFlow: e.percentageFlow == null ? null : number(e.percentageFlow, 100),
+    };
+  });
+  if (new Set(edges.map((e) => e.id)).size !== edges.length)
+    throw new Error('Connection IDs must be unique.');
+  const assumptions = assumptionsFor(data);
+  if (
+    !['gross', 'net'].includes(assumptions.incomeBasis) ||
+    !Number.isFinite(assumptions.taxRate) ||
+    assumptions.taxRate < 0 ||
+    assumptions.taxRate > 60 ||
+    !Number.isFinite(assumptions.incomeGrowth) ||
+    assumptions.incomeGrowth < -50 ||
+    assumptions.incomeGrowth > 25 ||
+    !Number.isFinite(assumptions.expenseGrowth) ||
+    assumptions.expenseGrowth < -25 ||
+    assumptions.expenseGrowth > 25
+  ) {
+    throw new Error('Use a valid income basis and supported tax and growth percentages.');
+  }
+  // Assigned missing coordinates once during validation, making first-drag undo
+  // and exported layouts reproducible instead of depending on a canvas cache.
+  const columns = [['INCOME'], ['CHECKING', 'SAVINGS'], ['EXPENSE', 'DEBT', 'INVESTMENT', 'ASSET']];
+  const positioned = nodes.map((node) => {
+    if (node.position) return node;
+    const col = columns.findIndex((column) => column.includes(node.nodeType));
+    const peers = nodes.filter((peer) => !peer.archived && columns[col].includes(peer.nodeType));
+    return {
+      ...node,
+      position: {
+        x: col * 345,
+        y:
+          Math.max(
+            0,
+            peers.findIndex((peer) => peer.id === node.id),
+          ) *
+            130 -
+          (peers.length - 1) * 65,
+      },
+    };
+  });
+  return { nodes: positioned, edges, assumptions };
+}
+export function downloadJson(value: unknown, name: string) {
+  // Released the temporary download URL after the browser had started reading
+  // it, avoiding retained Blob memory after repeated scenario exports.
+  const url = URL.createObjectURL(
+    new Blob([JSON.stringify(value, null, 2)], { type: 'application/json' }),
+  );
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = name;
+  a.click();
+  setTimeout(() => URL.revokeObjectURL(url), 1000);
+}

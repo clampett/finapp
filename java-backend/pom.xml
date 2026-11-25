@@ -19,6 +19,13 @@
     </properties>
 
     <dependencies>
+        <!-- Google API Client for OAuth ID Token Verification -->
+        <dependency>
+            <groupId>com.google.api-client</groupId>
+            <artifactId>google-api-client</artifactId>
+            <version>2.2.0</version>
+        </dependency>
+
         <!-- Java Security -->
         <dependency>
             <groupId>org.springframework.boot</groupId>

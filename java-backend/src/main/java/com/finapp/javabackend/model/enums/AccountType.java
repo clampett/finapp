@@ -6,5 +6,5 @@ public enum AccountType {
     credit_card,
     cash,
     brokerage,
-    other
+    other,
 }

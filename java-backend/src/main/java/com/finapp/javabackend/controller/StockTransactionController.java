@@ -23,8 +23,13 @@ public class StockTransactionController {
     }
 
     private Long getUserId(Authentication authentication) {
-        if (authentication == null || !(authentication.getPrincipal() instanceof SessionUser user)) {
-            throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Sign in to access stock transactions.");
+        if (
+            authentication == null || !(authentication.getPrincipal() instanceof SessionUser user)
+        ) {
+            throw new ResponseStatusException(
+                HttpStatus.UNAUTHORIZED,
+                "Sign in to access stock transactions."
+            );
         }
         return user.id();
     }
@@ -35,8 +40,13 @@ public class StockTransactionController {
         Authentication authentication
     ) {
         Long userId = getUserId(authentication);
-        List<StockTransactionDTO> list = stockTransactionService.getStockTransactions(userId, stockId);
-        return ResponseEntity.ok(ApiResponse.success(list, "Stock transactions fetched successfully"));
+        List<StockTransactionDTO> list = stockTransactionService.getStockTransactions(
+            userId,
+            stockId
+        );
+        return ResponseEntity.ok(
+            ApiResponse.success(list, "Stock transactions fetched successfully")
+        );
     }
 
     @GetMapping("/{id}")
@@ -46,7 +56,9 @@ public class StockTransactionController {
     ) {
         Long userId = getUserId(authentication);
         StockTransactionDTO dto = stockTransactionService.getStockTransaction(userId, id);
-        return ResponseEntity.ok(ApiResponse.success(dto, "Stock transaction fetched successfully"));
+        return ResponseEntity.ok(
+            ApiResponse.success(dto, "Stock transaction fetched successfully")
+        );
     }
 
     @PostMapping
@@ -55,9 +67,13 @@ public class StockTransactionController {
         Authentication authentication
     ) {
         Long userId = getUserId(authentication);
-        StockTransactionDTO created = stockTransactionService.createStockTransaction(userId, request);
-        return ResponseEntity.status(HttpStatus.CREATED)
-            .body(ApiResponse.success(created, "Stock transaction recorded successfully"));
+        StockTransactionDTO created = stockTransactionService.createStockTransaction(
+            userId,
+            request
+        );
+        return ResponseEntity.status(HttpStatus.CREATED).body(
+            ApiResponse.success(created, "Stock transaction recorded successfully")
+        );
     }
 
     @DeleteMapping("/{id}")
@@ -67,7 +83,8 @@ public class StockTransactionController {
     ) {
         Long userId = getUserId(authentication);
         stockTransactionService.deleteStockTransaction(userId, id);
-        return ResponseEntity.ok(ApiResponse.success(null, "Stock transaction deleted successfully"));
+        return ResponseEntity.ok(
+            ApiResponse.success(null, "Stock transaction deleted successfully")
+        );
     }
 }
-

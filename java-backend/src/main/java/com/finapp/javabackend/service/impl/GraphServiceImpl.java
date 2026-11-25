@@ -37,7 +37,10 @@ public class GraphServiceImpl implements GraphService {
     public GraphDTO saveGraph(Long userId, GraphDTO graphDTO) {
         // Scoped the existing graph endpoint to the authenticated owner’s default scenario.
         Long scenarioId = defaultScenario(userId);
-        if (scenarioId == null) throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Workspace not found.");
+        if (scenarioId == null) throw new ResponseStatusException(
+            HttpStatus.NOT_FOUND,
+            "Workspace not found."
+        );
         // Map DTOs -> Entities for Nodes
         List<FinancialNode> nodesToSave = graphDTO
             .nodes()
@@ -76,9 +79,14 @@ public class GraphServiceImpl implements GraphService {
                 );
                 edge.setScenarioId(scenarioId);
                 if (dto.id() != null) {
-                    edgeRepository.findByIdAndScenarioId(dto.id(), scenarioId).orElseThrow(() ->
-                        new ResponseStatusException(HttpStatus.NOT_FOUND, "Connection not found in this scenario.")
-                    );
+                    edgeRepository
+                        .findByIdAndScenarioId(dto.id(), scenarioId)
+                        .orElseThrow(() ->
+                            new ResponseStatusException(
+                                HttpStatus.NOT_FOUND,
+                                "Connection not found in this scenario."
+                            )
+                        );
                     edge.setId(dto.id());
                 }
                 return edge;
@@ -188,17 +196,27 @@ public class GraphServiceImpl implements GraphService {
 
         return new GraphDTO(nodeDTOs, edgeDTOs);
     }
+
     private Long defaultScenario(Long userId) {
-        return jdbc.queryForList(
-            "SELECT id FROM scenarios WHERE user_id = ? AND LOWER(name) = 'default'",
-            Long.class,
-            userId
-        ).stream().findFirst().orElse(null);
+        return jdbc
+            .queryForList(
+                "SELECT id FROM scenarios WHERE user_id = ? AND LOWER(name) = 'default'",
+                Long.class,
+                userId
+            )
+            .stream()
+            .findFirst()
+            .orElse(null);
     }
 
     private FinancialNode requireNode(Long nodeId, Long scenarioId) {
-        return nodeRepository.findByIdAndScenarioId(nodeId, scenarioId).orElseThrow(() ->
-            new ResponseStatusException(HttpStatus.NOT_FOUND, "Account not found in this scenario.")
-        );
+        return nodeRepository
+            .findByIdAndScenarioId(nodeId, scenarioId)
+            .orElseThrow(() ->
+                new ResponseStatusException(
+                    HttpStatus.NOT_FOUND,
+                    "Account not found in this scenario."
+                )
+            );
     }
 }

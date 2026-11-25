@@ -21,27 +21,37 @@ public class StockPositionController {
     }
 
     private Long getUserId(Authentication authentication) {
-        if (authentication == null || !(authentication.getPrincipal() instanceof SessionUser user)) {
-            throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Sign in to access stock positions.");
+        if (
+            authentication == null || !(authentication.getPrincipal() instanceof SessionUser user)
+        ) {
+            throw new ResponseStatusException(
+                HttpStatus.UNAUTHORIZED,
+                "Sign in to access stock positions."
+            );
         }
         return user.id();
     }
 
-    @GetMapping({"/api/v1/positions", "/api/v1/stocks/positions"})
-    public ResponseEntity<ApiResponse<List<StockPositionDTO>>> getPositions(Authentication authentication) {
+    @GetMapping({ "/api/v1/positions", "/api/v1/stocks/positions" })
+    public ResponseEntity<ApiResponse<List<StockPositionDTO>>> getPositions(
+        Authentication authentication
+    ) {
         Long userId = getUserId(authentication);
         List<StockPositionDTO> positions = stockPositionService.getPositions(userId);
-        return ResponseEntity.ok(ApiResponse.success(positions, "Stock positions fetched successfully"));
+        return ResponseEntity.ok(
+            ApiResponse.success(positions, "Stock positions fetched successfully")
+        );
     }
 
-    @GetMapping({"/api/v1/positions/{stockId}", "/api/v1/stocks/positions/{stockId}"})
+    @GetMapping({ "/api/v1/positions/{stockId}", "/api/v1/stocks/positions/{stockId}" })
     public ResponseEntity<ApiResponse<StockPositionDTO>> getPositionForStock(
         @PathVariable Long stockId,
         Authentication authentication
     ) {
         Long userId = getUserId(authentication);
         StockPositionDTO position = stockPositionService.getPositionForStock(userId, stockId);
-        return ResponseEntity.ok(ApiResponse.success(position, "Stock position fetched successfully"));
+        return ResponseEntity.ok(
+            ApiResponse.success(position, "Stock position fetched successfully")
+        );
     }
 }
-

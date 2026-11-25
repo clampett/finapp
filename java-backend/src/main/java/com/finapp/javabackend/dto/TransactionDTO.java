@@ -21,4 +21,3 @@ public record TransactionDTO(
     OffsetDateTime createdAt,
     OffsetDateTime updatedAt
 ) {}
-

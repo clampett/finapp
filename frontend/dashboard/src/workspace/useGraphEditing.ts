@@ -1,8 +1,8 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import type { GraphEdge, GraphNode, SimulationType, View } from '../finance';
-import { placeNewNode, recordGraph, removeSelection, travelGraph } from '../graph-workspace';
-import type { CanvasTool } from '../graph-workspace';
-import { historyShortcut } from '../ui-platform';
+import type { GraphEdge, GraphNode, SimulationType, View } from '../common/finance';
+import { placeNewNode, recordGraph, removeSelection, travelGraph } from './graph-workspace';
+import type { CanvasTool } from './graph-workspace';
+import { historyShortcut } from '../common/ui-platform';
 import type { useScenarioGraph } from './useScenarioGraph';
 
 export function useGraphEditing(
@@ -129,7 +129,11 @@ export function useGraphEditing(
     }
   };
   const arrange = () => {
-    const columns = [['INCOME'], ['CHECKING', 'SAVINGS'], ['EXPENSE', 'DEBT', 'INVESTMENT']];
+    const columns = [
+      ['INCOME'],
+      ['CHECKING', 'SAVINGS'],
+      ['EXPENSE', 'DEBT', 'INVESTMENT', 'ASSET'],
+    ];
     update({
       ...graph,
       nodes: graph.nodes.map((node) => {

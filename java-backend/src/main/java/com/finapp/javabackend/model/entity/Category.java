@@ -2,15 +2,18 @@ package com.finapp.javabackend.model.entity;
 
 import com.finapp.javabackend.model.enums.TransactionKind;
 import jakarta.persistence.*;
+import java.time.OffsetDateTime;
 import org.hibernate.annotations.JdbcTypeCode;
 import org.hibernate.type.SqlTypes;
-import java.time.OffsetDateTime;
 
 @Entity
-@Table(name = "categories", uniqueConstraints = {
-        @UniqueConstraint(columnNames = {"user_id", "kind", "name"}),
-        @UniqueConstraint(columnNames = {"id", "user_id"})
-})
+@Table(
+    name = "categories",
+    uniqueConstraints = {
+        @UniqueConstraint(columnNames = { "user_id", "kind", "name" }),
+        @UniqueConstraint(columnNames = { "id", "user_id" }),
+    }
+)
 public class Category {
 
     @Id

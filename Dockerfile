@@ -23,7 +23,8 @@ RUN pip install --no-cache-dir -r ./python/requirements.txt
 COPY python-backend/app/ ./python/app/
 COPY --from=web-build /build/frontend/build/ ./frontend/build/
 COPY --from=web-build /build/frontend/node_modules/ ./frontend/node_modules/
-COPY frontend/express.js frontend/api-proxy.js ./frontend/
+COPY frontend/express.js ./frontend/
+COPY frontend/server/ ./frontend/server/
 COPY --from=java-build /build/finapp.jar ./finapp.jar
 COPY deploy/run.py ./run.py
 RUN useradd --create-home --uid 10001 finapp && chown -R finapp:finapp /app

@@ -6,5 +6,5 @@ public enum RecurrenceFrequency {
     biweekly,
     monthly,
     quarterly,
-    yearly
+    yearly,
 }

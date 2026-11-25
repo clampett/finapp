@@ -70,7 +70,10 @@ class RecurringTransactionServiceTest {
         });
 
         CreateRecurringTransactionRequest req = new CreateRecurringTransactionRequest(
-            null, null, null, null,
+            null,
+            null,
+            null,
+            null,
             TransactionKind.expense,
             "Internet subscription",
             new BigDecimal("60.00"),
@@ -107,10 +110,15 @@ class RecurringTransactionServiceTest {
         r.setIsActive(true);
 
         LocalDate target = LocalDate.of(2026, 10, 1);
-        when(recurringRepository.findByUserIdAndIsActiveTrueAndNextDueDateLessThanEqual(7L, target))
-            .thenReturn(List.of(r));
-        when(transactionRepository.existsByRecurringTransactionIdAndTransactionDate(anyLong(), any(LocalDate.class)))
-            .thenReturn(false);
+        when(
+            recurringRepository.findByUserIdAndIsActiveTrueAndNextDueDateLessThanEqual(7L, target)
+        ).thenReturn(List.of(r));
+        when(
+            transactionRepository.existsByRecurringTransactionIdAndTransactionDate(
+                anyLong(),
+                any(LocalDate.class)
+            )
+        ).thenReturn(false);
         when(transactionRepository.save(any(Transaction.class))).thenAnswer(i -> {
             Transaction t = i.getArgument(0);
             t.setId(99L);
@@ -133,8 +141,9 @@ class RecurringTransactionServiceTest {
         estimate.setIsActive(true);
         var target = LocalDate.of(2026, 11, 3);
         estimate.setNextDueDate(target);
-        when(recurringRepository.findByUserIdAndIsActiveTrueAndNextDueDateLessThanEqual(7L, target))
-            .thenReturn(List.of(estimate));
+        when(
+            recurringRepository.findByUserIdAndIsActiveTrueAndNextDueDateLessThanEqual(7L, target)
+        ).thenReturn(List.of(estimate));
 
         // Preserved the saved estimate while preventing it from posting as received income.
         assertTrue(recurringService.generateDueTransactions(7L, target).isEmpty());
@@ -158,8 +167,9 @@ class RecurringTransactionServiceTest {
         r.setIsActive(true);
 
         LocalDate target = LocalDate.of(2026, 10, 31);
-        when(recurringRepository.findByUserIdAndIsActiveTrueAndNextDueDateLessThanEqual(7L, target))
-            .thenReturn(List.of(r));
+        when(
+            recurringRepository.findByUserIdAndIsActiveTrueAndNextDueDateLessThanEqual(7L, target)
+        ).thenReturn(List.of(r));
         when(transactionRepository.save(any(Transaction.class))).thenAnswer(i -> i.getArgument(0));
 
         List<TransactionDTO> generated = recurringService.generateDueTransactions(7L, target);
@@ -169,4 +179,3 @@ class RecurringTransactionServiceTest {
         assertFalse(r.getIsActive());
     }
 }
-

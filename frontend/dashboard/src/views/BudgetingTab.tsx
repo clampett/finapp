@@ -1,6 +1,4 @@
-import { 
-  useState 
-} from 'react';
+import { useMemo, useState } from 'react';
 import {
   getScenarioSalary,
   getScenarioDebts,
@@ -32,6 +30,13 @@ import { TransactionSection } from '../budgeting/TransactionSection';
 import { StockSection } from '../budgeting/StockSection';
 import { RecurringSection } from '../budgeting/RecurringSection';
 import { SearchFilterBar } from '../budgeting/SearchFilterBar';
+import {
+  filterPersonalAssets,
+  filterRecurringTransactions,
+  filterStocks,
+  filterTransactions,
+  normalizeSearchQuery,
+} from '../budgeting/budgeting-filters';
 import { useBudgetData } from '../budgeting/useBudgetData';
 import { useBudgetActions } from '../budgeting/useBudgetActions';
 
@@ -57,22 +62,16 @@ export type {
   BudgetingTabProps,
 };
 
-function matchesDateRange(rawDate: string | undefined | null, startDate: string, endDate: string): boolean {
-  if (!startDate && !endDate) return true;
-  if (!rawDate) return false;
-  const normalizedDate = rawDate.includes('T') ? rawDate : `${rawDate}T12:00:00`;
-  const itemTime = new Date(normalizedDate).getTime();
-  if (Number.isNaN(itemTime)) return false;
-  const startTime = startDate ? new Date(`${startDate}T00:00:00`).getTime() : -Infinity;
-  const endTime = endDate ? new Date(`${endDate}T23:59:59`).getTime() : Infinity;
-  return itemTime >= startTime && itemTime <= endTime;
+function formatTabCount(filtered: number, total: number, isFiltered: boolean): string {
+  return isFiltered ? `${filtered}/${total}` : `${total}`;
 }
 
 export function BudgetingTab(props: BudgetingTabProps) {
   const { graph } = props;
+  const assetSourceGraph = props.rawGraph ?? graph;
   const budgetData = useBudgetData(props);
   const actions = useBudgetActions(props, budgetData);
- 
+
   const [searchQuery, setSearchQuery] = useState('');
   const [startDate, setStartDate] = useState('');
   const [endDate, setEndDate] = useState('');
@@ -143,28 +142,32 @@ export function BudgetingTab(props: BudgetingTabProps) {
     handleImportScenarioDebts,
   } = actions;
 
-  const normalizedQuery = searchQuery.trim().toLowerCase();
-  const hasActiveFilters = Boolean(normalizedQuery || startDate || endDate);
+  const normalizedQuery = normalizeSearchQuery(searchQuery);
+  const hasDateFilters = Boolean(startDate || endDate);
+  const hasActiveFilters = Boolean(normalizedQuery || hasDateFilters);
+  const hasStockFilters = Boolean(normalizedQuery);
 
-  const filteredTransactions = transactions.filter((t) => {
-    const matchesName =
-      !normalizedQuery ||
-      (t.description || '').toLowerCase().includes(normalizedQuery) ||
-      (t.categoryName || '').toLowerCase().includes(normalizedQuery) ||
-      (t.accountName || '').toLowerCase().includes(normalizedQuery);
-    const txDate = t.transactionDate ?? t.date;
-    return matchesName && matchesDateRange(txDate, startDate, endDate);
-  });
+  const filteredTransactions = useMemo(
+    () => filterTransactions(transactions, searchQuery, startDate, endDate),
+    [transactions, searchQuery, startDate, endDate],
+  );
 
-  const filteredRecurring = recurringList.filter((r) => {
-    const matchesName =
-      !normalizedQuery ||
-      (r.description || '').toLowerCase().includes(normalizedQuery) ||
-      (r.categoryName || '').toLowerCase().includes(normalizedQuery) ||
-      (r.accountName || '').toLowerCase().includes(normalizedQuery);
-    const recurDate = r.nextDueDate || r.startDate;
-    return matchesName && matchesDateRange(recurDate, startDate, endDate);
-  });
+  const filteredRecurring = useMemo(
+    () => filterRecurringTransactions(recurringList, searchQuery, startDate, endDate),
+    [recurringList, searchQuery, startDate, endDate],
+  );
+
+  const filteredStocks = useMemo(() => filterStocks(stocks, searchQuery), [stocks, searchQuery]);
+
+  const totalAssetsCount = useMemo(
+    () => assetSourceGraph.nodes.filter((n) => n.nodeType === 'ASSET').length,
+    [assetSourceGraph.nodes],
+  );
+
+  const filteredAssetsCount = useMemo(
+    () => filterPersonalAssets(assetSourceGraph.nodes, searchQuery, startDate, endDate).length,
+    [assetSourceGraph.nodes, searchQuery, startDate, endDate],
+  );
 
   const activeNodes = graph.nodes.filter(
     (node) => !node.archived && ['INCOME', 'EXPENSE', 'DEBT'].includes(node.nodeType),
@@ -273,7 +276,13 @@ export function BudgetingTab(props: BudgetingTabProps) {
         onStartDateChange={setStartDate}
         endDate={endDate}
         onEndDateChange={setEndDate}
-        hasActiveFilters={hasActiveFilters}
+        hasActiveFilters={activeSubTab === 'stocks' ? hasStockFilters : hasActiveFilters}
+        showDateFilters={activeSubTab !== 'stocks'}
+        searchPlaceholder={
+          activeSubTab === 'stocks'
+            ? 'Search stocks by ticker, company, or exchange...'
+            : 'Search by name, category, or account...'
+        }
         onClear={() => {
           setSearchQuery('');
           setStartDate('');
@@ -298,7 +307,8 @@ export function BudgetingTab(props: BudgetingTabProps) {
           className={`inline-flex items-center justify-center gap-1.5 whitespace-nowrap rounded-[7px] font-medium cursor-pointer transition-colors ${activeSubTab === 'transactions' ? 'bg-primary text-primary-fg' : 'bg-transparent text-(--ui-text-97a7c2) hover:bg-(--ui-surface-hover-1a2536) hover:text-text'}`}
           style={{ padding: '6px 16px', fontSize: '14px' }}
         >
-          Transactions ({filteredTransactions.length})
+          Transactions (
+          {formatTabCount(filteredTransactions.length, transactions.length, hasActiveFilters)})
         </button>
         <button
           type="button"
@@ -306,7 +316,8 @@ export function BudgetingTab(props: BudgetingTabProps) {
           className={`inline-flex items-center justify-center gap-1.5 whitespace-nowrap rounded-[7px] font-medium cursor-pointer transition-colors ${activeSubTab === 'recurring' ? 'bg-primary text-primary-fg' : 'bg-transparent text-(--ui-text-97a7c2) hover:bg-(--ui-surface-hover-1a2536) hover:text-text'}`}
           style={{ padding: '6px 16px', fontSize: '14px' }}
         >
-          Recurring Transactions ({filteredRecurring.length})
+          Recurring Transactions (
+          {formatTabCount(filteredRecurring.length, recurringList.length, hasActiveFilters)})
         </button>
         <button
           type="button"
@@ -314,14 +325,14 @@ export function BudgetingTab(props: BudgetingTabProps) {
           className={`inline-flex items-center justify-center gap-1.5 whitespace-nowrap rounded-[7px] font-medium cursor-pointer transition-colors ${activeSubTab === 'stocks' ? 'bg-primary text-primary-fg' : 'bg-transparent text-(--ui-text-97a7c2) hover:bg-(--ui-surface-hover-1a2536) hover:text-text'}`}
           style={{ padding: '6px 16px', fontSize: '14px' }}
         >
-          Trade ledger ({stocks.length})
+          Trade ledger ({formatTabCount(filteredStocks.length, stocks.length, hasStockFilters)})
         </button>
         <button
           type="button"
           onClick={() => setActiveSubTab('assets')}
           className={`rounded-lg px-4 py-2 text-sm cursor-pointer ${activeSubTab === 'assets' ? 'bg-primary text-primary-fg' : 'text-muted hover:bg-hover-bg'}`}
         >
-          Assets
+          Assets ({formatTabCount(filteredAssetsCount, totalAssetsCount, hasActiveFilters)})
         </button>
         <button
           type="button"
@@ -358,7 +369,7 @@ export function BudgetingTab(props: BudgetingTabProps) {
       {/* Connected owned property to the canonical scenario instead of the income ledger. */}
       {activeSubTab === 'assets' && (
         <PersonalAssets
-          graph={props.rawGraph ?? graph}
+          graph={assetSourceGraph}
           onUpdate={props.onUpdateGraph}
           searchQuery={searchQuery}
           startDate={startDate}
@@ -371,6 +382,7 @@ export function BudgetingTab(props: BudgetingTabProps) {
           transactions={filteredTransactions}
           userId={userId}
           isDemo={isDemo}
+          hasActiveFilters={hasActiveFilters}
           onOpenAdd={handleOpenAddTransaction}
           onOpenAiAsset={() => setActiveSubTab('assets')}
           onEdit={handleEditTransaction}
@@ -394,12 +406,13 @@ export function BudgetingTab(props: BudgetingTabProps) {
       {/* SECTION 2: STOCKS & POSITIONS */}
       {activeSubTab === 'stocks' && (
         <StockSection
-          stocks={stocks}
+          stocks={filteredStocks}
           positions={positions}
           currentPrices={currentPrices}
           totalPurchasedValue={totalPurchasedValue}
           totalPortfolioValue={totalPortfolioValue}
           userId={userId}
+          hasActiveFilters={hasStockFilters}
           onOpenAddStock={handleOpenAddStock}
           onEditStock={handleEditStock}
           onDeleteStock={handleDeleteStock}
@@ -430,6 +443,7 @@ export function BudgetingTab(props: BudgetingTabProps) {
           recurringList={filteredRecurring}
           userId={userId}
           isDemo={isDemo}
+          hasActiveFilters={hasActiveFilters}
           generating={generating}
           scenarioSalary={scenarioSalary}
           scenarioDebts={scenarioDebts}

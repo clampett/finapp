@@ -1,8 +1,9 @@
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import type { GraphData, GraphNode } from '../common/finance';
 import { dollars } from '../common/finance';
 import { NumberField } from '../common/NumberField';
 import { AiAssetModal } from '../budgeting/AiAssetModal';
+import { filterPersonalAssets, normalizeSearchQuery } from '../budgeting/budgeting-filters';
 import { savePersonalAsset } from './personal-assets';
 
 // Reused the scenario update pipeline so balances participated in persistence, undo, and forecasts.
@@ -26,26 +27,13 @@ export function PersonalAssets({
   const [value, setValue] = useState('');
   const [growth, setGrowth] = useState('0');
   const [message, setMessage] = useState('');
-  const normalizedQuery = searchQuery.trim().toLowerCase();
+  const normalizedQuery = normalizeSearchQuery(searchQuery);
   const hasDateFilter = Boolean(startDate || endDate);
 
-  const assets = graph.nodes.filter((n) => {
-    if (n.nodeType !== 'ASSET') return false;
-    if (normalizedQuery && !n.name.toLowerCase().includes(normalizedQuery)) {
-      return false;
-    }
-    if (hasDateFilter) {
-      const rawDate = (n as GraphNode & { createdAt?: string; updatedAt?: string; date?: string }).date
-        ?? (n as GraphNode & { createdAt?: string; updatedAt?: string }).updatedAt
-        ?? (n as GraphNode & { createdAt?: string }).createdAt;
-      if (!rawDate) return false;
-      const itemTime = new Date(rawDate).getTime();
-      const startTime = startDate ? new Date(`${startDate}T00:00:00`).getTime() : -Infinity;
-      const endTime = endDate ? new Date(`${endDate}T23:59:59`).getTime() : Infinity;
-      if (itemTime < startTime || itemTime > endTime) return false;
-    }
-    return true;
-  });
+  const assets = useMemo(
+    () => filterPersonalAssets(graph.nodes, searchQuery, startDate, endDate),
+    [graph.nodes, searchQuery, startDate, endDate],
+  );
   const button =
     'rounded-lg border border-border bg-surface px-3 py-2 text-xs text-text cursor-pointer hover:bg-hover-bg disabled:opacity-50';
   const field = 'w-full rounded-lg border border-border bg-raised px-3 py-2 text-sm text-text mt-2';
@@ -72,9 +60,12 @@ export function PersonalAssets({
   }
   function update(node: GraphNode, changes: Partial<GraphNode>) {
     // Archived rather than discarded assets so restoration recovered their original assumptions.
+    const now = new Date().toISOString();
     onUpdate?.({
       ...graph,
-      nodes: graph.nodes.map((n) => (n.id === node.id ? { ...n, ...changes } : n)),
+      nodes: graph.nodes.map((n) =>
+        n.id === node.id ? { ...n, ...changes, createdAt: n.createdAt ?? now, updatedAt: now } : n,
+      ),
     });
   }
   return (

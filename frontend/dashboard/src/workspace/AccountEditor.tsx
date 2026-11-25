@@ -41,7 +41,12 @@ export function AccountEditor({
       : [];
   const submit = (e: FormEvent) => {
     e.preventDefault();
-    onSave({ ...draft, name: draft.name.trim() });
+    const now = new Date().toISOString();
+    onSave({
+      ...draft,
+      name: draft.name.trim(),
+      ...(draft.nodeType === 'ASSET' ? { createdAt: draft.createdAt ?? now, updatedAt: now } : {}),
+    });
   };
   return (
     <aside className="w-71.25 border border-(--ui-border-334055) rounded-[11px] p-4.75 bg-(--ui-surface-151d2b) shrink-0 max-md:w-full">

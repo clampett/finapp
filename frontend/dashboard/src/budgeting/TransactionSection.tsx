@@ -27,6 +27,7 @@ export interface TransactionSectionProps {
   onSaveTrans: (e?: FormEvent) => Promise<void>;
   onCancelTrans: () => void;
   onCancelAiAsset?: () => void;
+  hasActiveFilters?: boolean;
 }
 
 export function TransactionSection({
@@ -49,6 +50,7 @@ export function TransactionSection({
   onSaveTrans,
   onCancelTrans,
   onCancelAiAsset,
+  hasActiveFilters = false,
 }: TransactionSectionProps) {
   return (
     <section aria-labelledby="transactions-section-heading">
@@ -113,12 +115,21 @@ export function TransactionSection({
           }}
         >
           <p style={{ margin: '0 0 0.5rem 0', fontSize: '15px', color: 'var(--color-text)' }}>
-            No single transactions recorded yet.
+            {hasActiveFilters
+              ? 'No transactions match your search or date filter.'
+              : 'No single transactions recorded yet.'}
           </p>
           <p style={{ margin: 0, fontSize: '13px', color: 'var(--color-muted)' }}>
-            Click <strong>+ Add Transaction</strong> to record actual income or expenses. Recurring
-            salary and bills are managed in the <strong>Recurring Transactions</strong> tab. Use the
-            separate asset estimator for planning references.
+            {hasActiveFilters ? (
+              'Try adjusting or clearing your search and date range filters.'
+            ) : (
+              <>
+                Click <strong>+ Add Transaction</strong> to record actual income or expenses.
+                Recurring salary and bills are managed in the{' '}
+                <strong>Recurring Transactions</strong> tab. Use the separate asset estimator for
+                planning references.
+              </>
+            )}
           </p>
         </div>
       ) : (
